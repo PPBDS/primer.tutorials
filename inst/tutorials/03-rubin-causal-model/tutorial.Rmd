@@ -1,0 +1,1125 @@
+---
+title: "Rubin Causal Model"
+tutorial:
+  id: "03-rubin-causal-model"
+output:
+  learnr::tutorial:
+      progressive: true
+      allow_skip: true
+runtime: shiny_prerendered
+description: "Chapter 3 Tutorial"
+---
+
+<!-- DK: Why not add a hint to every question with a pointer to the relevant portion of the textbook? -->
+
+<!-- DK: Fix the tutorial. Delete the Try Agains. Give enough blank lines for what you expect them to write.  -->
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(learnr)
+library(shiny)
+library(gt)
+library(PPBDS.data)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+options(tutorial.exercise.timelimit = 60, tutorial.storage="local")
+```
+
+## Confirm Correct Package Version
+###
+
+Confirm that you have the correct version of PPBDS.data installed by pressing "Run Code."
+
+```{r confirm, exercise=TRUE}
+packageVersion('PPBDS.data')
+```
+
+The answer should be ‘0.3.2.9005’, or a higher number. If it is not, you should upgrade your installation by issuing these commands:
+
+
+```{r confirm-advice, echo=TRUE, eval=FALSE}
+remove.packages('PPBDS.data')  
+library(remotes)  
+remotes::install_github('davidkane9/PPBDS.data')  
+```
+
+Strictly speaking, it should not be necessary to remove a package. Just installing it again should overwrite the current version. But weird things sometimes happen, so removing first is the safest approach. 
+
+## Name 
+###
+
+``` {r name, echo=FALSE}
+question_text(
+  "Student Name:",
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  incorrect = "Ok"
+)
+```
+
+## Email
+
+``` {r email, echo=FALSE}
+question_text(
+  "Email:",
+  answer(NULL, correct = TRUE),
+  incorrect = "Ok",
+  try_again_button = "Modify your answer",
+  allow_retry = TRUE
+)
+```
+
+## Preceptor Tables
+
+```{r question-preceptor-tables}
+quiz(
+question_text(
+    "Give a one sentence definition of a Preceptor Table.",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  )
+)
+```
+
+## Causal effect
+###
+
+Retrys are not allowed on multiple choice questions, so read and answer carefully!
+
+### Exercise 1
+
+```{r ce-1}
+quiz(
+question("What is the Fundamental Problem of Causal Inference?",
+    answer("It is impossible to observe multiple potential outcomes at once.", correct = TRUE, message = "Nice!"),
+    answer("We don't know the potential outcomes for people not surveyed.", message = "Go read the section on Causal Effects"), 
+    allow_retry = FALSE
+  ))
+```
+
+### Exercise 2
+
+```{r ce-2}
+quiz(question_text("Explain a 'counterfactual' in a brief phrase. 'Potential outcome' might be helpful to use in your answer.",
+    allow_retry = FALSE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok")
+)
+```
+
+### Exercise 3
+
+```{r ce-3}
+quiz(
+  question_text("In one sentence, explain what a causal effect is according to the RCM?",
+  allow_retry = FALSE,
+  answer(NULL, correct = TRUE),
+  incorrect = "Ok")
+  )
+```
+
+### Exercise 4
+
+```{r ce-4}
+quiz(question("Choose the response variable.",
+         answer("$t$"),
+         answer("$u$"),
+         answer("$Y$", correct = TRUE),
+         answer("$c$"), 
+         random_answer_order = TRUE)
+     )
+```
+
+<!-- DK: This question is interesting, but not clear enough for this draft. -->
+
+<!-- ### Exercise 5 -->
+
+<!-- ```{r ce-5} -->
+<!-- quiz( -->
+<!--   question_text("Why do we need more than one response variable if we are trying to understand a causal effect? How are the two response variables different? (Two short sentences/phrases)", -->
+<!--   allow_retry = FALSE, -->
+<!--   answer(NULL, correct = TRUE), -->
+<!--   incorrect = "Ok", -->
+<!--   trim = FALSE) -->
+<!--   ) -->
+<!-- ``` -->
+
+## Potential outcomes
+###
+
+Consider both what did happen --- the factual --- and what might have happened --- the counterfactual.
+
+### Exercise 1
+
+```{r po-1}
+quiz(question_text("In two sentences, what makes a Preceptor Table ideal, and why is this generally impossible to observe? You should use the phrase 'potential outcomes' in your answer.",
+    allow_retry = FALSE,
+    answer(NULL, correct = TRUE),
+    trim = FALSE,
+    incorrect = "Ok")
+)
+```
+
+### Exercise 2
+
+```{r po-2}
+quiz(
+  question("If we did not have an ideal Preceptor Table, could we directly calculate the causal effect for an individual like Yao?",
+  answer("No", correct = TRUE),
+  answer("Yes"),
+  allow_retry = FALSE)
+)
+```
+
+
+
+## Estimands
+###
+
+<!-- DK: This section is a real mess. Please fix it. -->
+
+```{r question-estimands}
+quiz(
+
+question_text("In one sentence, define what an estimand is, and give an example.",
+    allow_retry = FALSE,
+    answer(NULL, correct = TRUE),
+    trim = FALSE,
+    incorrect = "Ok"),
+
+question_checkbox(
+  "Which of the following are examples of estimands?",
+  answer("average treatment effect", correct = TRUE),
+  answer("percent change", correct = TRUE),
+  answer("44%", correct = FALSE),
+  answer("most positive causal effect", correct = TRUE),
+  answer("+2", correct = FALSE),
+  allow_retry = FALSE, 
+  random_answer_order = TRUE)
+)
+```
+
+Use the following ideal Preceptor Table to answer some questions about potential estimands we might be interested in.
+
+```{r question-estimands2-setup, echo = FALSE}
+
+tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("11", "13", "10", "8", "6"),
+       ycontrol = c("9", "10", "11", "10", "4"),
+       ydiff = c("?", "?", "?", "?", "?")) %>%
+  gt() %>%
+  cols_label(subject = md("$$ID$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$"))  %>%
+  cols_move(columns = vars(ytreat, ycontrol), after = vars(subject)) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  cols_align(align = "left", columns = vars(subject)) %>%
+  fmt_markdown(columns = TRUE)  %>%
+  tab_spanner(label = "$$Outcomes$$", vars(ytreat, ycontrol))  %>%
+  tab_spanner(label = "$$Estimands$$", vars(ydiff))
+```
+
+<!-- DK: Need to standardize on whether or not we need the + in the answer is positive. Here we require it, elsewhere we do not. -->
+
+```{r question-estimands2-quiz}
+quiz(
+
+  question_text("What is the causal effect of the treatment on Yao (answer as +/-X)?",
+    answer("+2", correct = TRUE),
+    allow_retry = TRUE),
+
+  question("For how many of the five is the causal effect of the treatment positive?",
+    answer("1"),
+    answer("2"),
+    answer("3", correct = TRUE),
+    answer("4"),
+    answer("5"),
+    allow_retry = FALSE),
+
+  question_text("On whom did the treatment have the most negative causal effect?",
+    answer("Tahmid", correct = TRUE),
+    allow_retry = TRUE),
+
+  question_text("What was the treatment effect percentage on Diego? (answer as +/-X%)",
+    answer("+50%", correct = TRUE),
+    allow_retry = TRUE)
+)
+```
+
+## Preceptor Table structure
+###
+
+```{r question-preceptortable2}
+quiz(
+  
+question_text("In one sentence, describe the difference between an actual and ideal Preceptor Table.",
+    allow_retry = FALSE,
+    answer(NULL, correct = TRUE),
+    trim = FALSE,
+    incorrect = "Ok"
+  ),
+
+question_checkbox(
+  "Which of the following are types of columns you might expect to see in a Preceptor Table",
+  answer("ID", correct = TRUE),
+  answer("Outcomes", correct = TRUE),
+  answer("Covariates", correct = TRUE),
+  answer("Estimands", correct = TRUE),
+  answer("Predictions", correct = FALSE),
+  answer("Observations", correct = FALSE),
+  allow_retry = FALSE, 
+  random_answer_order = T
+),
+
+question_text("What is the correct order of columns in a Preceptor Table following the ID column? (list in order from left to right starting with the ID column).",
+    allow_retry = FALSE,
+    answer(NULL, correct = TRUE),
+    trim = FALSE,
+    incorrect = "Ok"
+  )
+)
+```
+
+## Simple models
+###
+
+```{r question-simplemodels}
+quiz(
+question_text("In a very short sentence or phrase, why do we need a model?",
+    allow_retry = FALSE,
+    answer(NULL, correct = TRUE),
+    trim = FALSE,
+    incorrect = "Ok"
+  )
+)
+```
+
+## A single value for tau
+###
+
+In these exercises, we will assume that the causal effect, $\tau$ (pronunced tau), is the same for everyone.
+
+### Exercise 1
+
+```{r question-singletau}
+quiz(
+question_text("In one sentence, what is the big assumption we are making about causal effect by only using one value for tau?",
+    allow_retry = FALSE,
+    answer(NULL, correct = TRUE),
+    trim = FALSE,
+    incorrect = "Ok"
+  )
+)
+```
+
+### Exercise 2
+
+<!-- DK: Why make the math hard? This should be easy to do in your head.  -->
+
+Use the following actual Preceptor Table to answer questions about a single value for tau.
+
+```{r question-singletau-setup, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("13", "11", "?", "?", "5"),
+       ycontrol = c("?", "?", "10", "12", "?"),
+       ydiff = c("?", "?", "?", "?", "?")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$ID$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  cols_move(columns = vars(ytreat, ycontrol), after = vars(subject)) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  cols_align(align = "left", columns = vars(subject)) %>%
+  tab_spanner(label = "$$Outcomes$$", vars(ytreat, ycontrol)) %>%
+  tab_spanner(label = "$$Estimands$$", vars(ydiff)) %>%
+  fmt_markdown(columns = TRUE)
+```
+
+```{r prepare-actual, echo=FALSE}
+actualPT <- tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c(13, 11, NA, NA, 5),
+       ycontrol = c(NA, NA, 10, 12, NA),
+       ydiff = c(NA, NA, NA, NA, NA))
+```
+
+<!-- CB: Don't know if this is actually useful at all but maybe people would like it to practice -->
+
+```{r question-single-tau-console, exercise=TRUE, exercise.setup = "prepare-actual"}
+
+# A tibble with the values used in the above Preceptor Table is loaded as
+# actualPT. You can use this console for your convenience, but nothing you do in
+# the console will be graded.
+
+glimpse(actualPT)
+```
+
+```{r question-singletau2}
+quiz(
+  question_text("Describe in one sentence/equation how you would estimate Yao's $Y_c(u)$. (Do not use actual numbers, use tau in your explanation).",
+    allow_retry = FALSE,
+    answer(NULL, correct = TRUE),
+    trim = FALSE,
+    incorrect = "Ok"
+  ),
+  question_text("Describe in one sentence/equation how you would estimate Tahmids's $Y_t(u)$. (Do not use actual numbers, use tau in your explanation).",
+    allow_retry = FALSE,
+    answer(NULL, correct = TRUE),
+    trim = FALSE,
+    incorrect = "Ok"
+  ),
+  question_text("Describe in one sentence/equation how you would estimate a single value for tau.",
+    allow_retry = FALSE,
+    answer(NULL, correct = TRUE),
+    trim = FALSE,
+    incorrect = "Ok"
+  )
+)
+```
+
+The same Preceptor Table and console to minimize scrolling.
+
+```{r question-singletau3-setup, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("13", "11", "?", "?", "5"),
+       ycontrol = c("?", "?", "10", "12", "?"),
+       ydiff = c("?", "?", "?", "?", "?")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$ID$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  cols_move(columns = vars(ytreat, ycontrol), after = vars(subject)) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  cols_align(align = "left", columns = vars(subject)) %>%
+  tab_spanner(label = "$$Outcomes$$", vars(ytreat, ycontrol)) %>%
+  tab_spanner(label = "$$Estimands$$", vars(ydiff)) %>%
+  fmt_markdown(columns = TRUE)
+```
+
+```{r prepare-actual2, echo=FALSE}
+actualPT <- tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c(13, 11, NA, NA, 5),
+       ycontrol = c(NA, NA, 10, 12, NA),
+       ydiff = c(NA, NA, NA, NA, NA))
+```
+
+```{r question-single-tau3-console, exercise=TRUE, exercise.setup = "prepare-actual2"}
+
+# A tibble with the values used in the above Preceptor Table is loaded as
+# actualPT. You can use this console for your convenience, but nothing you do in
+# the console will be graded.
+
+glimpse(actualPT)
+```
+
+``` {r question-single-tau3}
+quiz(
+  question_text("What is your estimate for a single value for tau? (answer as +/-X.XX)",
+    answer("-1.33", correct = TRUE),
+    allow_retry = TRUE
+  ),
+  question_text("What is your estimate for $Y_c(u)$ for Emma? (answer as XX.XX)",
+    answer("12.33", correct = TRUE),
+    allow_retry = TRUE
+  ),
+question_text("What is your estimate for $Y_t(u)$ for Cassidy? (answer as X.XX)",
+  answer("8.67", correct = TRUE),
+  allow_retry = TRUE
+  )
+)
+```
+
+## Two values for tau
+###
+
+As we do in the book, let's now assume that the causal effect varies across sexes. We will use two estimates for tau. (Cassidy and Emma are female, Tahmid, Diego, and Yao are male).
+
+### Exercise 1
+
+```{r question-twotau-setup, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("13", "11", "?", "?", "5"),
+       ycontrol = c("?", "?", "10", "12", "?"),
+       ydiff = c("?", "?", "?", "?", "?")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$ID$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  cols_move(columns = vars(ytreat, ycontrol), after = vars(subject)) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  cols_align(align = "left", columns = vars(subject)) %>%
+  tab_spanner(label = "$$Outcomes$$", vars(ytreat, ycontrol)) %>%
+  tab_spanner(label = "$$Estimands$$", vars(ydiff)) %>%
+  fmt_markdown(columns = TRUE)
+```
+
+```{r prepare-two-tau, echo=FALSE}
+actualPT <- tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c(13, 11, NA, NA, 5),
+       ycontrol = c(NA, NA, 10, 12, NA),
+       ydiff = c(NA, NA, NA, NA, NA))
+```
+
+```{r question-two-tau-console, exercise=TRUE, exercise.setup = "prepare-two-tau"}
+# A tibble with the values used in the above Preceptor Table is loaded as
+# actualPT. You can use this console for your convenience, but nothing you do in
+# the console will be graded.
+
+actualPT
+```
+
+```{r question-two-tau}
+quiz(
+  question_text("How would you calculate $\\tau_F$? Use only words and no numbers.",
+    allow_retry = FALSE,
+    answer(NULL, correct = TRUE),
+    trim = FALSE,
+    incorrect = "Ok"
+  ),
+  question_text("What is $\\tau_M$? (Answer as +/-X)",
+    answer("-3", correct = TRUE),
+    allow_retry = TRUE
+  ),
+  question_text("What is your new estimate for Diego's $Y_c(u)$? (Answer as X)",
+    answer("8", correct = TRUE),
+    allow_retry = TRUE
+  ),
+  question_text("In a couple of sentences, explain how we have two different estimates for Emma depending on assumptions we make.",
+    allow_retry = FALSE,
+    answer(NULL, correct = TRUE),
+    trim = FALSE,
+    incorrect = "Ok"
+  )
+)
+```
+
+
+## Average treatment effect
+###
+
+We will no longer make any assumptions about $\tau$. Instead, we are interested in estimating the average treatment effect, both for the entire sample and for subsets of it.
+
+
+### Exercise 1
+
+```{r question-setup, echo = FALSE}
+
+tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("11", "13", "?", "?", "6"),
+       ycontrol = c("?", "?", "11", "10", "?"),
+       ydiff = c("?", "?", "?", "?", "?")) %>%
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  fmt_markdown(columns = TRUE)
+
+```
+
+```{r question-2-2}
+quiz(
+question("Estimate the ATE based on the data given to you in the above Preceptor Table.",
+    answer("-0.5", correct = TRUE),
+    answer("+1"),
+    answer("-1.33"),
+    answer("+2"),
+    allow_retry = TRUE)
+)
+```
+
+<div id="question-2-2-hint">
+**Hint:**  Average of treated values minus the average of control values is the standard way of estimating the ATE.
+</div>
+
+<!-- DK: Shouldn't all of these be split into separate Exercises? That would mean putting each of them in their own R code chunk, which seems preferable. -->
+
+<!-- DK: Make the math easy to do in your head! Integers only. -->
+
+<!-- DK: Is there a way to ensure that the answers are correct by, for example, calculating them directly from the data which makes the table? -->
+
+<!-- DK: Cut half of these as being too repetitive. -->
+
+### Exercise 2
+
+```{r question-2-3-a--quiz}
+quiz(
+question_text("Before assigning any number to our causal effect, let's work using a single causal effect for everyone called $\\tau$. What would be Yao's $Y_c(u)$. You can write tau for $\\tau$. Don't put spaces in your answer. Your answer should look like 13+tau or 10-tau.",
+    allow_retry = TRUE,
+    answer("11-tau", correct = TRUE)
+  ),
+
+question_text("Using the same format, write Cassidy's $Y_t(u)$ in terms of $\\tau$ and the known value for Cassidy's $Y_c(u)$.",
+    allow_retry = TRUE,
+    answer("11+tau", correct = TRUE)
+  ),
+
+question_text("What is Cassidy's outcome under treatment if we assume tau to be the ATE we calculated above, which was -0.5? Note that this answer will just be a number, without any symbol.",
+    allow_retry = TRUE,
+    answer("10.5", correct = TRUE)
+  ),
+
+question_text("What is Tahmid's outcome under treatment if we assume tau to be the ATE we calculated?",
+    allow_retry = TRUE,
+    answer("9.5", correct = TRUE)
+  ),
+
+question_text(
+    "What is the treatment effect for the males in the sample?",
+    allow_retry = TRUE,
+    answer("-1.5", correct = TRUE)
+  ),
+
+question_text(
+    "What is the treatment effect for the females in the sample?",
+    allow_retry = TRUE,
+    answer("2", correct = TRUE)
+  ),
+
+question_text(
+    "What is Diego's $Y_c(u)$ if we assume his causal effect to be the estimated ATE for males",
+    allow_retry = TRUE,
+    answer("7.5", correct = TRUE)
+  ),
+
+question_text(
+    "What is Emma's $Y_c(u)$ if we assume her causal effect is the estimated ATE for females",
+    allow_retry = TRUE,
+    answer("11", correct = TRUE)
+  )
+)
+
+```
+
+### Exercise 3
+
+```{r question-2-4-quiz}
+
+quiz(
+
+question("Which of the following is NOT a reason why $\\widehat{ATE}$ a useful estimand?",
+    answer("It captures a clear and useful estimator"),
+    answer("If the treatment is randomly assigned, the estimator is unbiased"),
+    answer("You can use to fill out Preceptor Table if you assume the treatment effect is the same for everyone"),
+    answer("$\\widehat{ATE}$ always captures the correct sign (+ or -) of the true ATE", correct = TRUE, message = "Nice! This is untrue. Our estimates for ATE can often get even the direction of the ATE wrong."),
+    allow_retry = TRUE
+  ),
+
+question_text("What is the difference between $\\widehat{ATE}$ and ATE.", 
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+question_text("Describe the heterogeneous treatment effect for the variation between individuals.",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+question_text("Describe heterogeneous treatment effect for the variation between different sub-groups or variables.",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  )
+)
+
+```
+
+## Missing Data
+###
+
+Every problem in data science is ultimately a missing data problem. If the ideal Preceptor Table is available, we need only do some arithmetic. 
+
+
+### Exercise 1
+
+```{r question-3-1-quiz}
+
+quiz(
+
+question_text("In addition to not being able to observe counterfactal outcomes, what is another source of missing data in Preceptor Tables?",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+question_text("In order to apply the causal effect of a sample to the general population, our samaple must be ______ of the population.",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+question_text("Explain representativeness as a concept in sampling.",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+question_text("Describe an Infinite Preceptor Table in a few sentences. Use the word 'assumption' in your answer.",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+question_text("Is it fair to assume that the causal effect on Sam at this moment in time is the same as the causal effect would be a year from now? Explain why or why not.",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+# DK: Not sure I like this question. What is the answer?
+
+question_text("Why might Infinite Preceptor Tables include additional treatment columns?",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+# DK: How closely connected are these to the book?
+
+question_text("When you begin working on a causal question, you begin with the idea of an Infinite Preceptor Table. What three assumptions do you make to narrow this idea down to a Preceptor Table which you can work with?",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  )
+)
+
+```
+
+## Uncertainty and Confounding
+###
+
+
+<!-- This must be updated to match the latest version of the book. Needs to focus less on parameter uncertainty and more on the perfect doctor idea -- you never know if you are assigning the treatments to a truly random selection of people  -->
+
+### Exercise 1
+
+```{r question-4-1-quiz}
+
+## MB: This question is bad, but based directly in the chapter. Keep? 
+
+quiz(
+question_text("Describe the two main forms of uncertainty with using ATE as a uniform measure of causal effect.",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+question("Which of the following is NOT a good reason to doubt the certainty of your ATE?",
+    answer("The ATE wasn't calculated using an equal number of control and treatment observations", correct = TRUE),
+    answer("The sample used to calculate the ATE is too small"),
+    answer("The sample used to calculaate the ATE was not random"),
+    answer("The ATE doesn't account for individual variation in each observation"),
+    allow_retry = TRUE
+  ),
+
+question("Which of the following would make the $\\widehat{ATE}$ of a sample closer to the true ATE of a sample? (Select all that apply)",
+    answer("A truly random asssignment mechanism", correct = TRUE),
+    answer("Less variance in what is being measured", correct = TRUE),
+    answer("A larger sample", correct = TRUE),
+    answer("Adding more Spanish speakers to the platform.", message = "Being exposed to more Spanish speakers doesn't necessarily matter if their prescence already served as an effective treatment."),
+    allow_retry = TRUE
+  ),
+
+question_text("Explain what 'confounding' means in the context of an assignment mechanism.",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+question_text("The trains experiment is redone so that everyone in a certain region of the train platform is treated and another region is not. Is this a confounding element? Why?",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+question("In the context of the trains dataset, which of the following describes selection bias, a key problem to avoid when establishing an assignment mechanism?",
+    answer("The study selected a specific train station rather than measuring the effect across many"),
+    answer("Spanish speakers do not choose which platforms to sit on randomly despite the assignment mechanism assuming so", correct = TRUE),
+    answer("The individuals who were selected for interviews were disproportionately non-Spanish speakers."),
+    allow_retry = TRUE
+  )
+)
+
+```
+
+### Exercise 2
+
+```{r question-4-2-quiz}
+
+quiz(
+question_text("You are told to redo the train experiment using block randomized assignment. You have 150 commuters and the ability to sort them into 3 different platforms. How many commuters do you put on each of the 3 platforms and how many recieve the treatment?",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+question_text("Explain in a few sentences why a researcher may want to use block randomized assignment.",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+question_text("A few of the platforms in the station are too loud for the Spanish-speakers to be heard by those around them. How might this jeopardize randomization and serve as a confounding factor?",
+    allow_retry = TRUE,
+    answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  )
+)
+
+```
+
+<!-- DK: Should probably just delete this permutation question since the chapter does not explain permutation tests. But I do hope to get this back in at some point. -->
+
+<!-- Answer the following questions based on this table of a permutation test. -->
+
+<!-- ```{r question-4-3-setup, echo = FALSE} -->
+
+<!-- tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid"), -->
+<!--        ytreat = c("13", "11", "?", "?"), -->
+<!--        ycontrol = c("?", "?", "10", "12"), -->
+<!--        ydiff = c("?", "?", "?", "?")) %>% -->
+<!--   gt() %>% -->
+<!--   cols_label(subject = md("$$\\mathbf{Subject}$$"), -->
+<!--                 ytreat = md("$$Y_t(u)$$"), -->
+<!--                 ycontrol = md("$$Y_c(u)$$"), -->
+<!--                 ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>% -->
+<!--   tab_style(cell_borders(sides = "right"), -->
+<!--             location = cells_body(columns = vars(subject))) %>% -->
+<!--   tab_style(cell_text(weight = "bold"), -->
+<!--             location = cells_body(columns = vars(subject))) %>% -->
+<!--   cols_align(align = "center", columns = TRUE) %>% -->
+<!--   fmt_markdown(columns = TRUE) -->
+
+<!-- tibble(Permutation = c("#1", "#2", "#3", "#4", "#5", "#6"), -->
+<!--        `13` = c("T", "T", "T", "C", "C", "C"), -->
+<!--        `11` = c("T", "C", "C", "T", "T", "C"), -->
+<!--        `10` = c("C", "T", "C", "T", "C", "T"), -->
+<!--        `12 ` = c("C", "C", "T", "C", "T", "T"), -->
+<!--        ATE = c("+1", "0", "+2", "-2", "0", "-1")) %>% -->
+
+<!--   # Then, we use the gt function to make it pretty -->
+
+<!--   gt() %>% -->
+<!--   cols_label(Permutation = md("**Permutation**")) %>% -->
+<!--   tab_style(cell_borders(sides = "right"), -->
+<!--             location = cells_body(columns = vars(Permutation))) %>% -->
+<!--   tab_style(cell_text(weight = "bold"), -->
+<!--             location = cells_body(columns = vars(Permutation))) %>% -->
+<!--   cols_align(align = "center", columns = TRUE) -->
+
+<!-- ``` -->
+
+<!-- ```{r question-4-3-quiz} -->
+
+<!-- quiz( -->
+<!-- question_text("Explain briefly how the row #1 represents the original observations in the table above.", -->
+<!--     allow_retry = TRUE, -->
+<!--     answer(NULL, correct = TRUE), -->
+<!--     incorrect = "Ok" -->
+<!--   ), -->
+<!-- question_text("What do rows #2 through #6 represent? Why do we need them to perform a permutation test?", -->
+<!--     allow_retry = TRUE, -->
+<!--     answer(NULL, correct = TRUE), -->
+<!--     incorrect = "Ok" -->
+<!--   ), -->
+<!-- question_text("In one sentence, what is the purpose of a permutation test?", -->
+<!--     allow_retry = TRUE, -->
+<!--     answer(NULL, correct = TRUE), -->
+<!--     incorrect = "Ok" -->
+<!--   ), -->
+<!-- question_text("What does the variation in the final column tell us about the reliability of our ATE?", -->
+<!--     allow_retry = TRUE, -->
+<!--     answer(NULL, correct = TRUE), -->
+<!--     incorrect = "Ok" -->
+<!--   ) -->
+<!-- ) -->
+<!-- ``` -->
+
+### Exercise 3
+
+```{r question-4-4-quiz}
+
+quiz(
+  
+question_text("Describe validity in a few sentences. Give an example of a mistake the researchers could make that would call the validity of the model into question.",
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    incorrect = "Ok"
+  ),
+  
+question("What is external validity?",
+    answer("The data we are collecting is a legitimate measure of what we are trying to observe"),
+    answer("The population used in the study is representative of the population we hope to generalize the findings to", correct = TRUE),
+    answer("It is when the findings of a study affirm what is already known in exisiting literature"),
+    allow_retry = TRUE
+  ),
+
+question_text("What is the Hawthorne effect?",
+      allow_retry = TRUE,
+      answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+question_text("A drug is being used to test weight loss, however it can only be used on subjects 3, 4, and 5, as subjects 1 and 2 have a disease that keeps the drug from being safe for them. Should all 5 subjects be used to calculate the causal effect of the weight loss drug, or just subjects 3, 4, and 5? Why?", 
+      allow_retry = TRUE,
+      answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+question_text("In the train experiment, there were people in the experiement who waited in their cars, therefore didn't hear Spanish speakers before stepping onto the train. Should their results have been measured and included in the data? Compare this situation to the one in the previous question in your answer.", # MB: Cass
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    incorrect = "Ok"
+  ),
+
+question_text("Humility is a key step in modelling and data analysis where we acknowledge all of the things in the real world that may have messed up our experiment or predictions. Use humility and discuss one of these things in a few sentences.", # MB: CASS. examples: headphgones in couldnt hear spanish, etc
+      allow_retry = TRUE,
+      answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  )
+)
+
+```
+
+<!-- Reworked so that the out of bounds number is possible rather. The OOB being impossible is another matter.-->
+
+Miro and Jessica are two mice being given a weight-increasing drug with a causal effect of +2 oz. Miro weighs 13 oz and Jessica weighs 4 oz prior to treatment. However, their scale only goes up to 14 oz. 
+
+```{r question-4-5-setup, echo=FALSE}
+
+tibble(subject = c("Jessica", "Miro"),
+       ytreat = c("?", "?"),
+       ycontrol = c("4", "13"),
+       ydiff = c("+2", "+2")) %>%
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  fmt_markdown(columns = TRUE)
+
+```
+
+### Exercise 4
+
+```{r question-4-5-quiz}
+
+quiz(
+  question_text("What is Jessica's $Y_t(u)$ assuming $Y_t(u) - Y_c(u)$ to be his treatment effect? Leave out units in all answers for this section. Just provide the number.",
+    answer("6", correct = TRUE),
+    allow_retry = TRUE
+  ),
+  
+question_text("What is Miro's $Y_t(u)$ assuming $Y_t(u) - Y_c(u)$ to be his treatment effect?",
+    answer("15", correct = TRUE),
+    allow_retry = TRUE
+  ),
+
+question_text("What does Miro's scale say at the end of the experiment, assuming $Y_t(u) - Y_c(u)$ to be his treatment effect?",
+    answer("14", correct = TRUE),
+    allow_retry = TRUE
+  ),
+
+question("Which of the two went go off the scale after applying the treatment effect?",
+    answer("Miro", correct = TRUE),
+    answer("Jessica"),
+    allow_retry = TRUE
+  ),
+
+question_text("Write a few sentences describing censoring in statistics.",
+      allow_retry = TRUE,
+      answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  ),
+
+question_text("If many of the observations were as high as Miro's, is it the problem of the scale in the study? Why?",
+      allow_retry = TRUE,
+      answer(NULL, correct = TRUE),
+    incorrect = "Ok"
+  )
+)
+
+```
+
+
+<!-- DK: These questions were leftover from the first attempt. They are not necessarily bad, but they need to be placed somewhere sensible. -->
+
+<!-- ## What is a causal effect? -->
+
+<!-- ```{r quiz1, echo=FALSE} -->
+<!-- quiz(caption = "Quiz - Causal Effects", -->
+<!--   question("What is the Fundamental Problem of Causal Inference?", -->
+<!--     answer("It is impossible to observe multiple potential outcomes at once.", correct = TRUE, message = "Nice!"), -->
+<!--     answer("We don't know the potential outcomes for people not surveyed.", message = "Close, missing data is at the heart of inference, but this is not the Fundamental Problem of *Causal* Inference."),  -->
+<!--     allow_retry = TRUE -->
+<!--   ), -->
+<!--   question("How do we estimate causal effect?", -->
+<!--     answer("Observe someone's potential outcome under treatment and compare it to their potential outcome as control.", message = "Remember the Fundamental Problem of Causal Inference is that we cannot *observe* both potential outcomes, but you're on the right track."), -->
+<!--     answer("Only through lots of complicated coding.", message = "We can describe the process of finding the causal effect without any real code!"), -->
+<!--     answer("Find the difference between potential outcomes under treatment and potential outcomes under control.", correct = TRUE), -->
+<!--     allow_retry = TRUE -->
+<!--   ), -->
+<!--   question("What is $Y$? (Multi-response question with 2 right answers!)", type = "multiple", -->
+<!--     answer("Response variable", correct = TRUE), -->
+<!--     answer("The variable we want to explain through experimentation", correct = TRUE), -->
+<!--     answer("Causal Effect", message = "Not quite!" ), -->
+<!--     allow_retry = TRUE -->
+<!--   ) -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- The following model uses party as an explanatory variable for age. Answer the following questions using this Preceptor Table showing the outcome variable for this model, age.  -->
+
+<!-- ```{r question-4-6-setup} -->
+
+
+<!-- tibble(subject = c("1", "2", "...", "55", "...", "204", "205", "...", "1,627", "...", "N"), -->
+<!--        age = c("34", "?", "...", "36", "...", "44", "?",  "...", "50", "...", "?")) %>% -->
+<!--   gt() %>% -->
+<!--   cols_label(subject = md("**ID**"), -->
+<!--              age = md("**Age**")) %>% -->
+<!--   tab_style(cell_borders(sides = "right"), -->
+<!--             location = cells_body(columns = vars(subject))) %>% -->
+<!--   cols_align(align = "center", columns = TRUE) %>% -->
+<!--   tab_header("Preceptor Table of age ~ party") %>% -->
+<!--   fmt_markdown(columns = TRUE) -->
+
+<!-- ``` -->
+
+<!-- ```{r question-4-6-quiz} -->
+
+<!-- # MB: Cass. Talk about the math at this point. Any mathematical thing stops at the first eq. Redo formnula to annotate. FORMULA IS THE SAME. use equation, then replace variables with words -->
+
+<!-- quiz( -->
+<!-- question("Is this model predictive or causal?", -->
+<!--     answer("Causal"), -->
+<!--     answer("Predictive", correct = TRUE), -->
+<!--     allow_retry = TRUE -->
+<!--   ), -->
+<!-- question_text("Explain your answer above.", -->
+<!--     allow_retry = TRUE, -->
+<!--     answer(NULL, correct = TRUE), -->
+<!--     incorrect = "Ok" -->
+<!--   ), -->
+<!-- question_text("Is the equation for a predictive model different from that of a causal model?", -->
+<!--     answer("No", message = "They are the same! The only difference is how you interpret and use the numbers"), -->
+<!--     answer("Yes", correct = TRUE), -->
+<!--     allow_retry = TRUE -->
+<!--   ) -->
+<!-- ) -->
+
+<!-- ``` -->
+
+<!-- ## SUTVA -->
+<!-- ### -->
+
+<!-- Answer the following questions.  -->
+
+<!-- ```{r question-5-1-quiz} -->
+
+<!-- quiz( -->
+<!-- question_text("Give an example of a poor causal study because it violates the the phrase, 'no causation without manipulation'", -->
+<!--     allow_retry = TRUE, -->
+<!--     answer(NULL, correct = TRUE), -->
+<!--     incorrect = "Ok" -->
+<!--   ), -->
+
+<!-- question_text("Why is the phrase 'no causation without manipulation' more complicated when dealing with matters of race, sex, and gender?", -->
+<!--     allow_retry = TRUE, -->
+<!--     answer(NULL, correct = TRUE), -->
+<!--     incorrect = "Ok" -->
+<!--   ) -->
+<!-- ) -->
+
+<!-- ``` -->
+
+<!-- ```{r question-5-2-setup} -->
+
+<!-- tibble(subject = c("Yao"), -->
+<!--        ct = "10", -->
+<!--        tt = "9", -->
+<!--        cc = "13", -->
+<!--        tc = "12") %>% -->
+<!--   gt() %>% -->
+<!--   cols_label(subject = md("**Subject**"), -->
+<!--              ct = md("Yao = c,<br />Emma = t"), -->
+<!--              tt = md("Yao = t,<br />Emma = t"), -->
+<!--              cc = md("Yao = c,<br />Emma = c"), -->
+<!--              tc = md("Yao = t,<br />Emma = c")) %>% -->
+<!--   tab_style(cell_borders(sides = "right"), -->
+<!--             location = cells_body(columns = vars(subject))) %>% -->
+<!--   tab_style(cell_text(weight = "bold"), -->
+<!--             location = cells_body(columns = vars(subject))) %>% -->
+<!--   cols_align(align = "center", columns = TRUE) -->
+
+<!-- ``` -->
+
+<!-- ```{r question-5-2-quiz} -->
+
+<!-- quiz( -->
+<!-- question_text("Describe the stable unit treatment value assumption, or SUTVA.", -->
+<!--     allow_retry = TRUE, -->
+<!--     answer(NULL, correct = TRUE), -->
+<!--     incorrect = "Ok" -->
+<!--   ), -->
+
+<!-- question_text("What is the causal effect of the treatment on Yao?", -->
+<!--     allow_retry = TRUE, -->
+<!--     answer("-1", correct = TRUE) -->
+<!--   ), -->
+
+<!-- question_text("What is the causal effect of Emma being treated on Yao?", -->
+<!--     allow_retry = TRUE, -->
+<!--     answer("-3", correct = TRUE) -->
+<!--   ) -->
+<!-- ) -->
+
+<!-- ``` -->
+
+<!-- Correlation w potential outcomes questions and natural experiments questions-->
+
+## Submit
+
+```{r context="setup"}
+submission_ui
+```
+
+```{r context="server"}
+submission_server()
+```

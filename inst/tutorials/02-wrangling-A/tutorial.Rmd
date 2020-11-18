@@ -1,0 +1,1325 @@
+---
+title: "Wrangling-A"
+tutorial:
+  id: "02-wrangling-A"
+output:
+  learnr::tutorial:
+      progressive: true
+      allow_skip: true
+runtime: shiny_prerendered
+description: "Chapter 2 Tutorial -- Part A"
+---
+
+<!-- Things to fix in this tutorial. -->
+
+<!-- It is a bad idea to create a column called "type" since that is the name of an R function. -->
+
+<!-- Don't use a random package like fueleconomy. We need to minimize the number of extra packages we use.  -->
+
+<!-- Be careful about manipulating an object in place for no good reason. Example:  -->
+
+<!-- lexus_1998 <- lexus_1998 %>% -->
+<!--   rename("class" = type) -->
+
+<!-- Even if you need a special object called lexus_1998, just create it once. -->
+
+<!-- Each group (at least for things like characters and factors) should be introduced with a few sentences, ideally with references to the appropriate section of the book. -->
+
+<!-- We need a section devoted to read_*. We need to create, by hand, a bunch of files which are messy in various ways. We store those files in this repo. We then ask questions which require reading in those files and fixing the problems. Not sure if the files should be read in from the package itself or from the web. -->
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(stringr)
+library(learnr)
+library(skimr)
+library(shiny)
+library(PPBDS.data)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+options(tutorial.exercise.timelimit = 60, tutorial.storage="local") 
+
+# Set up stringr-objects
+
+library(dslabs)
+murders <- as_tibble(murders)
+states <- murders$state
+states2 <- murders %>%
+  select(state, abb)
+
+# Set up cars
+# DK: Creating a column called "type" is a bad idea since it is an R function
+# name. Also, why are we using this random R package?
+
+library(fueleconomy)
+lexus_2000 <- vehicles %>%
+  filter(year == 2000,
+         make == "Lexus") %>%
+  select(id, make, model, class, drive)
+
+lexus_1999 <- vehicles %>%
+  filter(year == 1999,
+         make == "Lexus") %>%
+  select(id, make, model, class, trans, drive) 
+
+lexus_1998 <- vehicles %>%
+  filter(year == 1998,
+         make == "Lexus") %>%
+  select(id, make, model, class, trans, drive) %>%
+  rename("type" = class)
+
+lexus_mileage <- vehicles %>%
+  filter(year == 2000,
+         make == "Lexus") %>%
+  select(id, hwy, cty) %>%
+  slice(3:9)
+
+# Tidy section setup
+
+library(babynames)
+cases <- tribble(
+  ~Country, ~"2011", ~"2012", ~"2013",
+      "FR",    7000,    6900,    7000,
+      "DE",    5800,    6000,    6200,
+      "US",   15000,   14000,   13000
+)
+
+cases2 <- tribble(
+  ~city, ~country,  ~continent,     ~"2011", ~"2012", ~"2013",
+  "Paris",    "FR", "Europe",           7000,    6900,    7000,
+  "Berlin",   "DE", "Europe",           5800,    6000,    6200,
+  "Chicago",  "US", "North America",   15000,   14000,   13000
+)
+
+pollution <- tribble(
+       ~city, ~size, ~amount,
+  "New York", "large",      23,
+  "New York", "small",      14,
+    "London", "large",      22,
+    "London", "small",      16,
+   "Beijing", "large",     121,
+   "Beijing", "small",     121
+)
+
+# Needed for later sections of the tutorial 
+
+library(fivethirtyeight)
+library(nycflights13)
+library(ggthemes)
+```
+
+## Confirm Correct Package Version
+###
+
+Confirm that you have the correct version of PPBDS.data installed by pressing "Run Code."
+
+```{r confirm, exercise=TRUE}
+packageVersion('PPBDS.data')
+```
+
+The answer should be ‘0.3.2.9004’, or a higher number. If it is not, you should upgrade your installation by issuing these commands:
+
+
+```{r confirm-advice, echo=TRUE, eval=FALSE}
+remove.packages('PPBDS.data')  
+library(remotes)  
+remotes::install_github('davidkane9/PPBDS.data')  
+```
+
+Strictly speaking, it should not be necessary to remove a package. Just installing it again should overwrite the current version. But weird things sometimes happen, so removing first is the safest approach. 
+
+## Name 
+###
+
+``` {r name, echo=FALSE}
+question_text(
+  "Student Name:",
+  answer(NULL, correct = TRUE),
+  incorrect = "Ok",
+  try_again_button = "Modify your answer",
+  allow_retry = TRUE
+)
+```
+
+## Email
+
+``` {r email, echo=FALSE}
+question_text(
+  "Email:",
+  answer(NULL, correct = TRUE),
+  incorrect = "Ok",
+  try_again_button = "Modify your answer",
+  allow_retry = TRUE
+)
+```
+
+## Introduction
+###
+
+This tutorial uses the following libraries: 
+
+`library(fivethirtyeight)`
+
+`library(nycflights13)`
+
+`library(dslabs)`
+
+`library(fueleconomy)`
+
+`library(babynames)`
+
+`library(ggthemes)`
+
+If you have not installed these packages, you will like encounter issues when attempting the tutorial, so make sure to do so. If you don't remember how to do so, reference the `install.packages()` function discussed in *The Primer*. 
+
+
+## Characters 
+###
+
+The first few exercises focus on various functions that can be used to manipulate strings. 
+
+### Exercise 1
+
+The `states` character vector comes installed with R and contains the names of all US states and the District of Columbia. Have a look at it by printing it to the console.
+
+```{r exercise-2-1, exercise=TRUE}
+
+```
+
+```{r exercise-2-1-hint, eval=FALSE}
+# Type `state` and press Run Code
+```
+
+
+### Exercise 2
+
+Use `str_detect()` on `states` to create a vector which will be TRUE for `states` which contain the pattern "ana" and FALSE otherwise.
+
+```{r exercise-2-2, exercise=TRUE}
+
+```
+
+```{r exercise-2-2-hint, eval=FALSE}
+str_detect(..., pattern = ...)
+```
+
+
+### Exercise 3
+
+Use `str_subset()` on `states` to create a vector of the names of the states that contain the pattern "ana".
+
+```{r exercise-2-3, exercise=TRUE}
+
+```
+
+```{r exercise-2-3-hint, eval=FALSE}
+str_subset(..., pattern = ...)
+```
+
+### Exercise 4
+
+Use `str_split()` on `states` in order to help identify states which involve two or more words in their names. Set `simplify` argument to TRUE. The result will be a character matrix with 51 rows and three columns.
+
+<!-- BG: The "simplify" argument was never mentioned in the primer.  -->
+
+```{r exercise-2-4, exercise=TRUE}
+
+```
+
+```{r exercise-2-4-hint-1, eval=FALSE}
+# A " " is the simple version of a pattern which identifies words spaces.
+````
+
+```{r exercise-2-4-hint-2, eval=FALSE}
+str_split(..., pattern = ..., simplify = TRUE)
+```
+
+
+### Exercise 5
+
+Try again to identify states whose names consist of two or more words, this time using `str_split_fixed()`.  Set the `n` argument to 2, which should split elements into two parts. Observe what happens to `District of Columbia`.
+
+```{r exercise-2-5, exercise=TRUE}
+
+```
+
+```{r exercise-2-5-hint, eval=FALSE}
+str_split_fixed(..., pattern = ..., n = ...)
+```
+
+
+### Exercise 6
+
+Using `str_sub`, create a character vector that contains only the first three letters of each state.
+
+```{r exercise-2-6, exercise=TRUE}
+
+```
+
+```{r exercise-2-6-hint, eval=FALSE}
+str_sub(states, 1, 3)
+```
+
+
+### Exercise 7
+
+Collapse `states` using `str_c()`. Separate them with a comma that is followed by a whitespace. This should create a single character object with all the states.
+
+```{r exercise-2-7, exercise=TRUE}
+
+```
+
+```{r exercise-2-7-hint, eval=FALSE}
+str_c(..., collapse = ", ")
+```
+
+
+### Exercise 8
+
+Use `str_c` to collapse states into the form `state1 & state2`. Combine the first 1-25 states with states 26-50. Note that we are excluding the 51st state.
+
+```{r exercise-2-8, exercise=TRUE}
+
+```
+
+```{r exercise-2-8-hint, eval=FALSE}
+str_c(..., ..., sep = ...)
+```
+
+```{r exercise-2-8-hint-2, eval=FALSE}
+# One approach is to use brackets ([]) to subscript out the elements of `states`
+# which you want to them combine.
+```
+
+### Exercise 9
+
+Use `str_replace()` to replace the pattern `North` with `N.`. For example, transform North Carolina into N. Carolina.
+
+```{r exercise-2-9, exercise=TRUE}
+
+```
+
+```{r exercise-2-9-hint, eval=FALSE}
+str_replace(..., pattern = ..., replacement = ...)
+```
+
+###
+
+### Exercise 10
+
+Next, let's see how the above functions can be combined with regular expressions. Use `str_subset()` on `states` to create a vector of states that have two a's with a single intervening character in their name:
+
+```{r exercise-2-10, exercise=TRUE}
+
+```
+
+```{r exercise-2-10-hint-1, eval=FALSE}
+# Consider using the regex "."
+```
+
+```{r exercise-2-10-hint-2, eval=FALSE}
+str_subset(..., pattern = ...)
+```
+
+
+### Exercise 11
+
+Use `str_subset()` to identify the same pattern as in the previous question, including now only those states where the pattern occurs at the end of their name.
+
+```{r exercise-2-11, exercise=TRUE}
+
+```
+
+```{r exercise-2-11-hint-1, eval=FALSE}
+# Consider using the pattern "a.a$"
+```
+
+```{r exercise-2-11-hint-2, eval=FALSE}
+str_subset(..., pattern = ...)
+```
+
+
+### Exercise 12
+
+Use `str_subset()` to find `states` that contain the letter "a" and then one or more characters and another a.
+
+```{r exercise-2-12, exercise=TRUE}
+
+```
+
+```{r exercise-2-12-hint-1, eval=FALSE}
+# Consider using the pattern "a.+a"
+```
+
+```{r exercise-2-12-hint-2, eval=FALSE}
+str_subset(..., pattern = ...)
+```
+
+
+### Exercise 13
+
+Does capitalization matter? Repeat the previous question but replace the first letter with a capital "A". 
+
+```{r exercise-2-13, exercise=TRUE}
+
+```
+
+```{r exercise-2-13-hint, eval=FALSE}
+str_subset(..., pattern = ...)
+```
+
+###
+
+### Exercise 14
+
+The remaining exercises in this section contain a few tasks that should improve your understanding of the above concepts. First, `glimpse()` the `states2` tibble. We will be building some pipes which always start with `states2`. 
+
+```{r exercise-2-14, exercise=TRUE}
+
+```
+
+```{r exercise-2-14-hint, eval=FALSE}
+glimpse(states2)
+```
+
+
+### Exercise 15
+
+Start a pipe with `states2` data set. Add a column `state_length` that takes the `str_length()` of each `state`.
+
+```{r exercise-2-15, exercise=TRUE}
+
+```
+
+```{r exercise-2-15-hint, eval=FALSE}
+states2 %>% 
+  mutate(... = str_length(...))
+```
+
+
+### Exercise 16
+
+Add `arrange()` to the previous pipe so that the state with the shortest name is first.
+
+```{r exercise-2-16, exercise=TRUE}
+
+```
+
+```{r exercise-2-16-hint, eval=FALSE}
+states2 %>% 
+  mutate(... = str_length(...)) %>%
+  arrange(...)
+```
+
+
+### Exercise 17
+
+Change the last line of the pipe so it is by `desc(state)`. Note how this arrangement differ from the one you got in exercise 15.
+
+```{r exercise-2-17, exercise=TRUE}
+
+```
+
+```{r exercise-2-17-hint, eval=FALSE}
+... %>% 
+  arrange(desc(...))
+```
+
+
+### Exercise 18
+
+Create a new column --- called `state_12` --- in the pipe which only contains the first two letters of each state name. 
+
+```{r exercise-2-18, exercise=TRUE}
+
+```
+
+```{r exercise-2-18-hint, eval=FALSE}
+... %>% 
+  mutate(state_12 = str_sub(state, 1, 2))
+```
+
+
+
+### Exercise 19
+
+Use `str_to_upper()` and `mutate()` to transform `state_12` so that both of the letters are capital. 
+
+Remark: The function `str_to_upper()` has not yet been introduced in the Primer. Can you still guess what it does? Have a look the help page by running `?str_to_upper`. 
+
+```{r exercise-2-19, exercise=TRUE}
+
+```
+
+```{r exercise-2-19-hint, eval=FALSE}
+... %>% 
+  mutate(state_12 = str_sub(state, 1, 2)) %>% 
+  mutate(state_12 = str_to_upper(state_12))
+```
+
+
+### Exercise 20
+
+`mutate()` a new column called `matches` that creates a TRUE or FALSE value if the first two letters of the state name (the `state_12` column) and the `abb` column match.
+
+```{r exercise-2-20, exercise=TRUE}
+
+```
+
+```{r exercise-2-20-hint-1, eval=FALSE}
+# You can use ifelse() to tests for conditions and assign values. There is also
+# a very similar function, if_else(), which does the same thing but more
+# carefully. See The Primer for details.
+```
+
+```{r exercise-2-20-hint-2, eval=FALSE}
+... %>% 
+  mutate(matches = ifelse(state_12 == abb, TRUE, FALSE))
+```
+
+
+### Exercise 21
+
+Add  `count()` to the end of the pipe to count the number of TRUE values in `matches` column.
+
+```{r exercise-2-21, exercise=TRUE}
+
+```
+
+```{r exercise-2-21-hint, eval=FALSE}
+... %>% 
+  count(matches)
+```
+
+```{r exercise-2-21-quiz}
+quiz(
+  question("How many state abbreviations match the first two letters of the state's name?",
+    answer("15"),
+    answer("42"),
+    answer("23"),
+    answer("19", correct = TRUE),
+    allow_retry = FALSE))
+```
+
+
+## Factors 
+
+### Exercise 1
+
+Let's use a data set in the `fueleconomy` package to better understand factors. First, `glimpse()` the `vehicles` data set. 
+
+```{r factors-1, exercise=TRUE}
+
+```
+
+
+### Exercise 2 
+
+Make the `class` column in the `vehicles` dataframe a factor instead of a character `chr` variable. Do this by using the `mutate()` and `as.factor()` functions. Reassign this changed dataframe as `vehicles_fct`. 
+
+
+<!-- BG: This is the first time 'as.factor' has shown up. Clarification on where it goes may be helpful directly in the question and not the hint. -->
+```{r factors-2, exercise = TRUE}
+
+```
+
+```{r factors-2-hint, eval=FALSE}
+... <- vehicles %>%
+  mutate(... = as.factor(...))
+```
+
+
+### Exercise 3
+
+Now use the `group_by()` function to group by the `class` variable. Reassign this to `vehicles_fct`.
+
+```{r factors-3-setup}
+vehicles_fct <- vehicles %>%
+  mutate(class = as.factor(class))
+```
+
+```{r factors-3, exercise = TRUE}
+
+```
+
+
+### Exercise 4
+
+Create a `mean_cty` variable using the `mutate()` and `mean()` functions on the `cty` column for the `vehicles_fct` dataframe. Reassign this mutated dataframe as `vehicles_fct`.
+
+```{r factors-4-setup}
+vehicles_fct <- vehicles %>%
+  mutate(class = as.factor(class)) %>%
+  group_by(class)
+```
+
+```{r factors-4, exercise = TRUE}
+
+```
+
+
+### Exercise 5
+
+Create a ggplot with the independent variable as `class`, the dependent variable as `mean_cty`, and the `geom_point()` function. Names this plot `vehicles_plot`.
+
+```{r factors-5-setup}
+vehicles_fct <- vehicles %>%
+  mutate(class = as.factor(class)) %>%
+  group_by(class) %>%
+  summarize(mean_cty = mean(cty))
+```
+
+```{r factors-5, exercise = TRUE}
+
+```
+
+```{r factors-5-hint-1, eval=FALSE}
+# The independent variable should always be on the x-axis and the dependent 
+# variable on the y-axis
+```
+
+```{r factors-5-hint-2, eval=FALSE}
+vehicles_plot <- ggplot(data = ..., mapping = aes(x = ..., y = ...)) +
+  ...
+```
+
+### Exercise 6
+
+Flip the coordinates of the`vehicles_plot` graphic. Reassign the flipped graphic as `vehicles_plot`.
+
+```{r factors-6-setup}
+vehicles_fct <- vehicles %>%
+  mutate(class = as.factor(class)) %>%
+  group_by(class) %>%
+  summarize(mean_cty = mean(cty), .groups = "drop_last")
+
+vehicles_plot <- ggplot(data = vehicles_fct, mapping = aes(x = class,
+                                                            y = mean_cty)) +
+  geom_point()
+```
+
+```{r factors-6, exercise = TRUE}
+
+```
+
+```{r factors-6-hint, eval = FALSE}
+# Look at the coord_flip() function
+```
+
+
+### Exercise 7
+
+Now use `fct_reorder()` to rearrange the levels of `class` variable according to the `mean_cty` variable. You will need to do this within the `ggplot()` function, so create a new plot here, and call it `vehicles_plot_2`. Once again, flip the coordinates for this new graphic. 
+
+<!-- BG: 'fct_reorder' hasn't been seen before.  -->
+
+```{r factors-7-setup}
+vehicles_fct <- vehicles %>%
+  mutate(class = as.factor(class)) %>%
+  group_by(class) %>%
+  summarize(mean_cty = mean(cty))
+```
+
+```{r factors-7, exercise = TRUE}
+
+```
+
+```{r factor-7-hint, eval=FALSE}
+vehicles_plot_2 <- ggplot(data = ..., mapping = aes(x = fct_reorder(..., ...),
+                                                    y = ...)) + 
+  ... +
+  ...
+```
+
+
+### Exercise 8
+
+Apply the classic theme `theme_classic()` and add a title and axis titles to `vehicles_plot_2`. 
+
+```{r factors-8-setup}
+vehicles_fct <- vehicles %>%
+  mutate(class = as.factor(class)) %>%
+  group_by(class) %>%
+  summarize(mean_cty = mean(cty))
+
+vehicles_plot_2 <- ggplot(data = vehicles_fct, mapping = aes(x = fct_reorder(class, 
+                                                                             mean_cty), 
+                                                             y = mean_cty)) + 
+  geom_point() + 
+  coord_flip()
+```
+
+```{r factors-8, exercise = TRUE}
+
+```
+
+
+## Lists
+
+### Exercise 1
+
+Now, let's move on to lists. This is section 2.4 in the textbook. First, we'd like you to create a list. Call this list `mylist` and let it have three items `a`, `b`, and `c`. Then, let `a` be a vector containing 1, 2, and 3. Let `b` be a vector containing 4, 5, and 6, and let `c` be a vector containing 7, 8, and 9
+
+<!-- BG: I couldn't get this part to give any output for some reason.  -->
+
+```{r lists-1, exercise=TRUE}
+
+```
+
+```{r lists-1-hint, eval=FALSE}
+# Consider using the c() function to create the individual vectors for a, b, and
+# c
+
+# You could also use the : operator 
+```
+
+
+### Exercise 2
+
+Now, call `str()` on `mylist`. 
+
+```{r lists-2-setup}
+mylist <- list(a = c(1, 2, 3), b = c(4, 5, 6), c = c(7, 8, 9))
+```
+
+```{r lists-2, exercise=TRUE}
+
+```
+
+
+### Exercise 3
+
+Extract the sub-list containing b and c using `[`. 
+
+```{r lists-3-setup}
+mylist <- list(a = c(1, 2, 3), b = c(4, 5, 6), c = c(7, 8, 9))
+```
+
+```{r lists-3, exercise = TRUE}
+
+```
+
+
+### Exercise 4
+
+Now extract a single component `a` from `mylist`
+
+```{r lists-4-setup}
+mylist <- list(a = c(1, 2, 3), b = c(4, 5, 6), c = c(7, 8, 9))
+```
+
+```{r lists-4, exercise = TRUE}
+
+```
+
+```{r lists-4-hint-1, eval=FALSE}
+# Consider using [[]]
+```
+
+```{r lists-4-hint-2, eval=FALSE}
+# Within the brackets, you can either put the index of a or "a"
+```
+
+
+### Exercise 5
+
+Now, extract the number 5 from `mylist`.
+
+```{r lists-5-setup}
+mylist <- list(a = c(1, 2, 3), b = c(4, 5, 6), c = c(7, 8, 9))
+```
+
+```{r lists-5, exercise=TRUE}
+
+```
+
+
+## Date-Times 
+
+### Exercise 1
+
+Run the `today()` and `now()` functions.
+
+```{r dttm-1, exercise=TRUE}
+
+```
+
+
+### Exercise 2
+
+Use functions such as `ymd()` or `mdy()` to convert the strings below into the proper date-time format. 
+
+```{r dttm-2, exercise=TRUE}
+date_1 <- "February 29, 2020"
+
+date_2 <- "29 February 2020"
+
+date_3 <- "2020-2-29"
+
+date_4 <- "2/29/2020 16:00:00 UTC"
+
+```
+
+
+### Exercise 3
+
+Use the `make_datetime()` function to create a date-time for the first moment of the year 2000. 
+
+```{r dttm-3, exercise=TRUE}
+
+```
+
+```{r dttm-3-hint, eval=FALSE}
+# The ideal output should be "2000-01-01 UTC"
+```
+
+
+## Binding Rows
+###
+
+
+
+### Exercise 1
+
+Run `lexus_2000` in this code chunk:
+
+```{r exercise-combining-1, exercise=TRUE}
+
+```
+
+```{r exercise-combining-1-hint, eval=FALSE}
+lexus_2000
+```
+
+
+### Exercise 2
+
+Run `lexus_1999` in the code chunk: 
+
+```{r exercise-combining-2, exercise=TRUE}
+
+```
+
+```{r exercise-combining-2-hint, eval=FALSE}
+lexus_1999
+```
+
+```{r quiz-combining-2}
+quiz(
+  question("Which variable is included in lexus_1999 but not lexus_2000",
+    answer("id"),
+    answer("make"),
+    answer("model"),
+    answer("class"),
+    answer("trans", correct = TRUE),
+    answer("drive"),
+    allow_retry = TRUE
+  )
+)
+```
+
+Think about what will happen when we try to bind the rows of these two tibbles together.
+
+
+### Exercise 3
+
+Use `bind_rows()` to bind `lexus_1999` and `lexus_2000`:
+What happens to the `trans` column?
+
+```{r question-combining-3, exercise=TRUE}
+
+```
+
+```{r question-combining-3-hint, eval=FALSE}
+bind_rows(..., ...)
+```
+
+
+### Exercise 4 
+
+Run `lexus_1998` in the following code chunk:
+
+```{r question-combining-4, exercise=TRUE}
+
+```
+
+Consider the discrepancy between the columns of `lexus_1998` and `lexus_1999`. Predict, in your head, what will happen when binding the rows of the two tibbles.
+
+
+### Exercise 5
+
+Bind the two dataframes `lexus_1998` and `lexus_1999`:
+
+```{r question-combining-5, exercise=TRUE}
+
+```
+
+```{r question-combining-5-hint, eval=FALSE}
+bind_rows(..., ...)
+```
+
+
+### Exercise 6
+
+Use the `rename()` function to change the `type` variable to `class` in the `lexus_1998` dataframe. Use the assignment operator to reassign the changed dataframe to `lexus_1998`. 
+
+```{r question-combining-6, exercise=TRUE}
+
+```
+
+```{r question-combining-6-hint, eval=FALSE}
+... <- ... %>%
+  rename(...)
+```
+
+
+### Exercise 7
+
+Use `bind_rows` to bind `lexus_1998` and `lexus_1999` again. Name this new tibble `lexus_two_year`: 
+
+```{r question-combining-7, exercise=TRUE}
+
+```
+
+```{r question-combining-7-hint, eval=FALSE}
+... <- bind_rows(..., ...)
+```
+
+
+### Exercise 8
+
+```{r question-combining-8-setup}
+lexus_1998 <- lexus_1998 %>%
+  rename("class" = type)
+lexus_two_year <- bind_rows(lexus_1998, lexus_1999)
+```
+
+Now bind the rows of `lexus_two_year` with `lexus_2000`. Use the assignment operator to call this tibble `lexus`.
+
+```{r question-combining-8, exercise=TRUE}
+
+```
+
+```{r question-combining-8-hint, eval=FALSE}
+... <- bind_rows(..., ...)
+```
+
+
+### Exercise 9
+
+```{r question-combining-9-setup}
+lexus_two_year <- bind_rows(lexus_1998, lexus_1999)
+lexus <- bind_rows(lexus_two_year, lexus_2000)
+```
+
+Now, `unite()` the `make` and `model` columns of the `lexus` dataframe. Name this united column `vehicle`, and make the separator between the previous columns a space.
+
+```{r question-combining-9, exercise=TRUE}
+
+```
+
+```{r question-combining-9-hint-1, eval=FALSE}
+lexus %>%
+  unite(..., ..., ..., sep = ...)
+```
+
+```{r question-combining-9-hint-2, eval=FALSE}
+lexus %>%
+  unite("vehicle", ..., ..., sep = " ")
+```
+
+
+## Joins
+###
+
+### Exercise 1 
+
+Let's return to the `lexus_2000` data. `glimpse()` both the `lexus_2000` dataframe and the `lexus_mileage` dataframe.
+
+```{r question-combining-10, exercise=TRUE}
+
+```
+
+```{r question-combining-10-hint, eval=FALSE}
+glimpse(... )
+
+glimpse(...)
+```
+
+
+### Exercise 2
+
+Now use the extraction operator `$` on the `id` columns of both `lexus_2000` and `lexus_mileage`.
+```{r question-combining-11, exercise=TRUE}
+
+```
+
+```{r question-combining-11-hint, eval=FALSE}
+lexus_2000$...
+
+lexus_mileage$...
+```
+
+```{r question-combining-11-quiz}
+quiz(
+  question("Which id(s) are included in the lexus_2000 dataframe but not in the lexus_mileage dataframe?",
+    answer("16365, 16366"),
+    answer("15921, 15922, 16038, 16366, 16039, 15685, 15686"),
+    answer("15801"),
+    answer("15920, 15801", correct = TRUE),
+    answer("15801, 15920, 15921"),
+    answer("15685, 16039"),
+    allow_retry = FALSE))
+```
+
+
+### Exercise 3
+
+```{r question-combining-12-quiz}
+quiz(
+  question("Which id(s) will be excluded when you full_join() both data sets?",
+    answer("None", correct = TRUE),
+    answer("16365, 16366"),
+    answer("15920, 15801"),
+    answer("15801, 15922"),
+    allow_retry = FALSE))
+```
+
+`full_join()` the `lexus_2000` and `lexus_mileage` dataframes by the `id` columns. Visually confirm your answer to the question above.
+
+```{r question-combining-12, exercise=TRUE}
+
+```
+
+```{r question-combining-12-hint, eval=FALSE}
+full_join(..., ..., by = ...)
+```
+
+
+### Exercise 4
+
+```{r question-combining-13-quiz}
+quiz(
+  question("Which id(s) will be excluded when you inner_join() both data sets?",
+    answer("None"),
+    answer("16365, 16366"),
+    answer("15920, 15801", correct = TRUE),
+    answer("15801, 15922"),
+    allow_retry = FALSE))
+```
+
+`inner_join()` the `lexus_2000` and `lexus_mileage` dataframes by the `id` columns. Visually confirm your answer to the question above.
+
+```{r question-combining-13, exercise=TRUE}
+
+```
+
+```{r question-combining-13-hint, eval=FALSE}
+inner_join(..., ..., by = ...)
+```
+
+
+### Exercise 5
+
+```{r question-combining-14-1-quiz}
+quiz(
+  question("Which id(s) will be excluded when you run left_join(lexus_2000, lexus_mileage, by = 'id')?",
+    answer("None", correct = TRUE),
+    answer("All"),
+    answer("15920, 15801"),
+    answer("15801, 15922"),
+    allow_retry = FALSE))
+
+```
+
+```{r question-combining-14-3-quiz}
+quiz(
+  question("Which id(s) will be excluded when you run left_join(lexus_mileage, lexus_2000, by = 'id')?",
+    answer("None"),
+    answer("All"),
+    answer("15920, 15801", correct = TRUE),
+    answer("15801, 15922"),
+    allow_retry = FALSE))
+```
+
+```{r question-combining-14-4-quiz}
+quiz(
+  question("Which id(s) will be excluded when you run right_join(lexus_2000, lexus_mileage, by = 'id')?",
+    answer("None"),
+    answer("All"),
+    answer("15920, 15801", correct = TRUE),
+    answer("15801, 15922"),
+    allow_retry = FALSE))
+```
+
+```{r question-combining-14-5-quiz}
+quiz(
+  question("Which id(s) will be excluded when you run right_join(lexus_mileage, lexus_2000, by = 'id')?",
+    answer("None", correct = TRUE),
+    answer("All"),
+    answer("15920, 15801"),
+    answer("15801, 15922"),
+    allow_retry = FALSE))
+```
+
+```{r question-combining-14-6-quiz}
+quiz(
+  question("Which id(s) will be excluded when you run anti_join(lexus_mileage, lexus_2000, by = 'id')?",
+    answer("None"),
+    answer("All", correct = TRUE),
+    answer("15920, 15801"),
+    answer("15801, 15922"),
+    allow_retry = FALSE))
+```
+
+```{r question-combining-14-7-quiz}
+quiz(
+  question("Which id(s) will be included when you run anti_join(lexus_2000, lexus_mileage, by = 'id')?",
+    answer("None"),
+    answer("All"),
+    answer("15920, 15801", correct = TRUE),
+    answer("15801, 15922"),
+    allow_retry = FALSE))
+```
+
+```{r question-combining-14-8-quiz}
+quiz(
+  question("Which columns will be excluded when you run semi_join(lexus_2000, lexus_mileage, by = 'id')?",
+    answer("id, hwy, cty"),
+    answer("hwy, cty", correct = TRUE),
+    answer("id, class, drive"),
+    answer("id, make, model, class, drive"),
+    allow_retry = FALSE))
+```
+
+```{r question-combining-14-9-quiz}
+quiz(
+  question("Which columns will be excluded when you run semi_join(lexus_mileage, lexus_2000, by = 'id')?",
+    answer("id, hwy, cty"),
+    answer("hwy, cty"),
+    answer("id, class, drive"),
+    answer("make, model, class, drive", correct = TRUE),
+    allow_retry = FALSE))
+```
+
+
+## Tidying Data
+###
+
+### Exercise 1 
+
+Run `table1` and `table2` in the code chunk below. 
+
+```{r tidy-1, exercise=TRUE}
+
+```
+
+```{r q2, echo = FALSE}
+question("Do the two data data sets above contain the variables **country**, 
+         **year**, **cases**, and **population**?",
+         answer("Yes", correct = TRUE, message = "If you look closely, you 
+                will see that this is the same data set as before, but organized 
+                in a new way."),
+         answer("No", message = "Don't be mislead by the two new column names: 
+                a variable and a column name are not necessarily the same thing."),
+         allow_retry = FALSE)
+```
+
+These data sets reveal something important: _you can reorganize the same set of variables, values, and observations in many different ways._
+
+It's not hard to do. If you run the code chunks below, you can see the same data displayed in three more ways. 
+
+```{r tidy-2, exercise = TRUE}
+table3
+```
+
+```{r tidy-3, exercise = TRUE}
+table4a; table4b
+```
+
+```{r tidy-4, exercise = TRUE}
+table5
+```
+
+Among our tables above, only `table1` is tidy.
+
+The tidy data format works so well for R because it aligns the structure of your data with the mechanics of R, so let's try to tidy a tibble. 
+
+
+### Exercise 2
+
+Run `cases` in the code chunk below. 
+
+```{r tidy-5, exercise = TRUE}
+cases
+```
+
+```{r tidy-6}
+quiz(
+  question("What are the variables in cases?",
+         answer("Country, 2011, 2012, and 2013"),
+         answer("Country, year, and some unknown quantity (n, count, number of cases, etc.)", correct = TRUE),
+         answer("FR, DE, and US"),
+         allow_retry = TRUE
+         )
+)
+```
+
+
+### Exercise 3
+
+You can use the `pivot_longer()` function in the **tidyr** package to convert wide data to long data. Let's use the `pivot_longer` function to tidy the data, pivoting all of the columns except for the Country column, and setting the new name to "year" and the new values to "cases".
+
+```{r tidy-7, exercise=TRUE}
+
+```
+
+```{r tidy-7-hint-1, eval=FALSE}
+# Consider using - to select the columns you want to pivot
+```
+
+```{r tidy-7-hint-2, eval=FALSE}
+cases %>%
+  pivot_longer(cols = ..., names_to = ..., values_to = ...)
+```
+
+
+### Exercise 4
+
+Try this again with `cases2`. Make sure to only include the three year columns that you want to pivot. 
+
+```{r tidy-8, exercise=TRUE}
+
+```
+
+
+### Exercise 5
+
+The `pollution` data set below displays the amount of small and large particulate in the air of three cities. It illustrates another common type of untidy data. **Narrow data** uses a literal key column and a literal value column to store multiple variables. Can you tell here which is which? Run the code chunk below. 
+
+```{r tidy-9, exercise = TRUE}
+pollution
+```
+
+```{r tidy-10}
+quiz(
+  question("Which column in pollution contains key names (i.e. variable names)?",
+         answer("city"),
+         answer("size", correct = TRUE), 
+         answer("amount"),
+         allow_retry = TRUE)
+)
+
+```
+
+
+### Exercise 6
+
+You can "spread" the keys in a key column across their own set of columns with the `pivot_wider()` function in the **tidyr** package. With pollution, set the names_from argument to "size" and the values_from argument to "amount". In addition, set the names_prefix column to "particulate_"
+
+```{r tidy-12, exercise=TRUE}
+
+```
+
+```{r tidy-12-hint, eval=FALSE}
+... %>% pivot_wider(names_from = ..., values_from = ..., names_prefix = ...)
+```
+
+
+### Exercise 7
+
+Let's apply `pivot_wider()` to a real world inquiry. The ratio of girls to boys in `babynames` is not constant across time. To explore this phenomenaon we can directly plot a ratio of boys to girls over time. To make such a plot, you would need to compute the ratio of boys to girls for each year from 1880 to 2015
+Call `babynames` first to see the data set.
+
+```{r tidy-13, exercise=TRUE}
+
+```
+
+
+### Exercise 8 
+
+First, create a variable called `babynames_wider`. And `group_by()` the `year` and `sex` variables.
+
+```{r tidy-14, exercise=TRUE}
+
+```
+
+
+### Exercise 9
+
+Now take `babynames_wider` and `summarize()` the take the `sum()` of the `n` column. Call this summarized column `total`. Be sure to reassign this to `babynames_wider`. 
+
+```{r tidy-15-setup}
+babynames_wider <- babynames %>%
+  group_by(year, sex)
+```
+
+```{r tidy-15, exercise=TRUE}
+
+```
+
+
+### Exercise 10
+
+But how can we plot this data? Our current iteration of `babynames` places the total number of boys and girls for each year in the same column, which makes it hard to use both totals in the same calculation. Use `pivot_wider()` to pivot the `sex` and `total` columns. Choos which should be the key/name and which should be the value. Be sure to reassign this to `babynames_wider`. 
+
+```{r tidy-16-setup}
+ babynames_wider <- babynames %>%
+  group_by(year, sex) %>%
+  summarize(total = sum(n), .groups = "drop_last")
+```
+
+```{r tidy-16, exercise=TRUE}
+
+```
+
+```{r tidy-16-hint, eval=FALSE}
+babynames_wider <- babynames_wider %>%
+  pivot_wider()
+```
+
+
+### Exercise 11
+
+Now, mutate a column `ratio` that divides `M/F`.
+
+```{r tidy-17-setup}
+ babynames_wider <- babynames %>%
+  group_by(year, sex) %>%
+  summarize(total = sum(n), .groups = "drop_last") %>%
+  pivot_wider(names_from = sex, values_from = total)
+```
+
+```{r tidy-17, exercise=TRUE}
+
+```
+
+
+### Exercise 12
+
+Now create a `ggplot` line plot that takes `year` on the x-axis and `ratio` on the y-axis. 
+
+```{r tidy-18-setup}
+babynames_wider <- babynames %>%
+  group_by(year, sex) %>%
+  summarize(total = sum(n), .groups = "drop_last") %>%
+  pivot_wider(names_from = sex, values_from = total) %>%
+  mutate(ratio = M / F)
+```
+
+```{r tidy-18, exercise=TRUE}
+
+```
+
+
+
+
+## Submit
+
+```{r context="setup"}
+submission_ui
+```
+
+```{r context="server"}
+submission_server()
+```
+

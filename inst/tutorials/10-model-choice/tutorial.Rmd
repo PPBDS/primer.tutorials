@@ -1,0 +1,745 @@
+---
+title: "Model Choice"
+tutorial:
+  id: "10-model-choice"
+output:
+  learnr::tutorial:
+      progressive: true
+      allow_skip: true
+runtime: shiny_prerendered
+description: "Chapter 10 tutorial"
+---
+
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(PPBDS.data)
+library(learnr)
+library(shiny)
+library(rstanarm)
+library(tidymodels)
+library(modeldata)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+
+# These models take awhile to build. 
+
+options(tutorial.exercise.timelimit = 600, 
+        tutorial.storage = "local")
+
+
+```
+
+<!-- Make instructions more didactic. Make hints look more like code. Distinction between "Start a pipe" and "Assign to". -->
+
+
+<!-- There are two main types of plots. The first type compares the the true values with the predicted values from the model. These are always interesting and highlight our central purpose: to make a model which replicates the outcomes we see in the world. The second type compares the predictions from two different models.  -->
+
+
+
+## Confirm Correct Package Version
+###
+
+Confirm that you have the correct version of PPBDS.data installed by pressing "Run Code."
+
+```{r confirm, exercise=TRUE}
+packageVersion('PPBDS.data')
+```
+
+
+The answer should be ‘0.3.2.9011’, or a higher number. If it is not, you should upgrade your installation by issuing these commands:
+
+
+
+```{r confirm-advice, echo=TRUE, eval=FALSE}
+remove.packages('PPBDS.data')  
+library(remotes)  
+remotes::install_github('davidkane9/PPBDS.data')  
+```
+
+Strictly speaking, it should not be necessary to remove a package. Just installing it again should overwrite the current version. But weird things sometimes happen, so removing first is the safest approach.
+
+
+## Name
+
+
+```{r name, echo=FALSE}
+question_text(
+  "Student Name:",
+  answer(NULL, correct = TRUE),
+  incorrect = "Ok",
+  try_again_button = "Modify your answer",
+  allow_retry = TRUE
+)
+```
+
+## Email
+
+
+``` {r email, echo=FALSE}
+question_text(
+  "Email:",
+  answer(NULL, correct = TRUE),
+  incorrect = "Ok",
+  try_again_button = "Modify your answer",
+  allow_retry = TRUE
+)
+```
+
+## Premilinaries
+###
+
+
+In this tutorial, we will be using the function `set.seed()`, which may seem unfamiliar. This function is useful for ensuring that we can reproduce the results of "random" computations.
+
+
+
+### Exercise 1
+
+Run the code below a few times. Notice how, each time, `rnorm()` produces a different random value. This is what we want any random number generator to do.
+
+```{r before, exercise = TRUE}
+rnorm(1)
+```
+
+### Exercise 2
+
+
+But what happens if we want to reproduce the same "random" result again?
+
+We can use `set.seed()` to make sure we get the same results again rather than different ones each time. Run the code a few times. Notice how we get the same 5 normally distributed numbers. 
+
+```{r ss, exercise = TRUE}
+set.seed(5)
+rnorm(5)
+```
+
+
+
+## Linear Model
+###
+
+
+Let's create the following graph. The graph compares the predicted values for Sale_Price with the true values for Sale_Price. For more details, read the first part of Chapter 10.
+
+
+
+```{r creation}
+data(ames)
+
+# Objects needed throughout section
+
+ames <- mutate(ames, 
+               Sale_Price = log10(Sale_Price))
+
+set.seed(123)
+ames_split <- initial_split(ames, prob = 0.80)
+ames_train <- training(ames_split)
+ames_test  <-  testing(ames_split)
+
+ames_rec <- 
+  recipe(Sale_Price ~ Neighborhood + Gr_Liv_Area + Year_Built + Bldg_Type + 
+           Latitude + Longitude, data = ames_train) %>%
+  step_log(Gr_Liv_Area, base = 10) %>% 
+  step_other(Neighborhood, threshold = 0.01) %>% 
+  step_dummy(all_nominal()) %>% 
+  step_interact( ~ Gr_Liv_Area:starts_with("Bldg_Type_"))
+
+lm_model <- linear_reg() %>% set_engine("lm")
+
+lm_wflow <- 
+  workflow() %>% 
+  add_model(lm_model) %>% 
+  add_recipe(ames_rec)
+
+lm_fit <- fit(lm_wflow, ames_train)
+
+ames_res_lm <- predict(lm_fit, 
+                         new_data = ames_test) %>% 
+                         bind_cols(ames_test %>% select(Sale_Price))
+
+```
+
+
+```{r sec_1}
+sec_1 <- ames_res_lm %>% 
+        ggplot(aes(x = Sale_Price, y = .pred)) + 
+        geom_abline(lty = 2) + 
+        geom_point(alpha = 0.5) + 
+        labs(title= "Predicted vs Truth",
+             subtitle = "Comparing the predicted values of Sale_Price with the true values",
+             y = "Predicted Sale Price (log10)", 
+             x = "Sale Price (log10)") +
+        coord_obs_pred()
+
+sec_1
+```
+
+<!-- DK: It is really bad, both here and in the chapter, that we just replace both ames and Sale_Price in place. Create a new data set, or at least a new variable, and use that! -->
+
+### Exercise 1
+
+`ames` is a data set which is part of the collection of **tidymodels** packages.
+Let's replace `ames` with a new object with the same name. In this new object, we want to make the outcome variable `Sale_Price` log-transformed. (We do this so no houses will be predicted to have negative prices). Use `mutate` to do this, setting `Sale_Price` to  equal `log10(Sale_Price)`.
+
+```{r mutate-1, exercise = TRUE}
+
+```
+
+
+```{r mutate-1-hint, eval= FALSE}
+
+ ames <- ames %>% 
+  mutate(Sale_Price = ...)
+]
+
+```
+
+### Exercise 2
+
+Great. Now use `set.seed()` with the argument `123` to make sure our results can be reproduced later. 
+
+```{r ss-2, exercise = TRUE}
+
+```
+
+```{r ss-2-hint, eval = FALSE}
+
+set.seed(123)
+
+```
+
+### Exercise 3
+
+Let's create an object named `ames_split`. To do so, use `initial_split()`. The first argument should be `ames`. Also set `prob` to .80.
+
+```{r ames-split, exercise = TRUE}
+
+```
+
+```{r ames-split-hint, eval = FALSE}
+
+ames_split <- initial_split(ames, prob = ...)
+
+```
+
+### Exercise 4
+
+Now create an object named `ames_train`. To do so, use `training()` with the argument `ames_split`. On the line below, create a new object named `ames_test`. To do so, use `testing()` with the argument `ames_split`.
+
+```{r training-1, exercise = TRUE}
+
+```
+
+```{r training-1-hint, eval = FALSE}
+ames_train <- training(...)
+ames_test  <-  testing(...)
+```
+
+### Exercise 5
+
+Let's now create a recipe named `ames_rec`. Assign to this object the results of using the `recipe()` command. Use the formula argument `Sale_Price ~ Neighborhood + Gr_Liv_Area + Year_Built + Bldg_Type + Latitude + Longitude`. Also set `data` to `ames_train`.
+
+```{r formula-1, exercise = TRUE}
+
+```
+
+```{r formula-1-hint, eval = FALSE}
+ames_rec <- recipe(Sale_Price ~ Neighborhood + Gr_Liv_Area +
+                   Year_Built + Bldg_Type + 
+                   Latitude + Longitude, data = ...)
+```
+
+### Exercise 6
+
+Extend the code which creates `ames_rec` by using `%>%` to add `step_log()` to make the predictor `Gr_Liv_Area` log transformed. The first argument to `step_log()` should be  `Gr_Liv_Area`. Also set `base` to 10.
+
+```{r step-log, exercise = TRUE}
+
+```
+
+```{r step-log-hint, eval = FALSE}
+ames_rec <- 
+... %>% 
+  step_log(Gr_Liv_Area, base = ...)
+```
+
+### Exercise 7
+
+Extend the pipe again. Use `step_other()` to lump the bottom 1% of the neighborhoods into one level. The first argument should be `Neighborhood`. Also set `threshold` to .01.
+
+```{r threshold, exercise = TRUE}
+
+```
+
+```{r threshold-hint, eval = FALSE}
+ames_rec <- 
+        ... %>% 
+        ... %>% 
+        step_other(Neighborhood, threshold = ...)
+```
+
+### Exercise 8
+
+Extend the pipe even further with `step_dummy()`. Its argument should be `all_nominal()`. Continue the pipe again and use `step_interact()`. The argument to `step_interact()` should be `~Gr_Liv_Area:starts_with("Bldg_Type_")`.
+
+```{r dummy, exercise = TRUE}
+
+```
+
+```{r dummy-hint, eval = FALSE}
+ames rec <- 
+       ...
+       step_dummy(...) %>% 
+<<<<<<< HEAD
+       step_interact( ~ Gr_Liv_Area:starts_with("Bldg_Type_")
+=======
+       step_interact( ~ Gr_Liv_Area:starts_with("Bldg_Type_"))
+>>>>>>> master
+```
+
+### Exercise 9
+
+Let's now create a model object named `lm_model`. To do so, we start with `linear_reg()`. Then, set the engine to "lm" using `set_engine()`. This code is separate from the code we just finished for creating `ames_rec`.
+
+```{r model-1, exercise = TRUE}
+
+```
+
+```{r model-1-hint, eval = FALSE}
+lm_model <- 
+  linear_reg() %>% 
+  set_engine(...)
+```
+
+### Exercise 10
+
+
+Let's now create a workflow object named `lm_wflow`. Start with `workflow()`, then use %>%  to add `add_model()`. Our model object `lm_model` should go inside `add_model()`. A workflow combines a model and a recipe. It is easiest to create them separately first.
+
+
+```{r workflow-1, exercise = TRUE}
+
+```
+
+```{r workflow-1-hint, eval = FALSE}
+lm_wflow <- 
+  workflow() %>% 
+  add_model(...)
+```
+
+### Exercise 11
+
+Extend the pipe with `add_recipe()`. Our previously created recipe `ames_rec` should go inside `add_recipe()`.
+
+```{r add-recipe-1, exercise = TRUE }
+
+```
+
+
+```{r add-recipe-1-hint, eval = FALSE}
+lm_wflow <- 
+  workflow() %>% 
+  add_model(lm_model) %>% 
+  add_recipe(...)
+```
+
+### Exercise 12
+
+Create a fitted object named `lm_fit`. To do so, use `fit()` to fit the model. The first argument to `fit()` should be `lm_wflow`, and the second argument should be `ames_train`.  The fitting process always requires (at least) two parts, a workflow and a data set. We could, instead, use `ames_test` here. It depends in what we want to look at. For example, we might be predictions for the data which we used to fit the model or predictions which are "out-of-sample," for data which were not used in the fitting process.
+
+```{r complete-model, exercise = TRUE}
+
+```
+
+```{r complete-model-hint, eval = FALSE}
+lm_fit <- 
+  fit(lm_wflow, ames_train)
+```
+
+### Exercise 13
+
+
+<!-- DK: Longer names might be better: ames_results_lm. Or, maybe we don't really need to specify ames at this point: results_lm. -->
+
+
+Let's now create an object named `ames_res_lm`. To do so, use `predict()` (to produce predictions). The first argument should be our fitted object `lm_fit`. The second argument should be `new_data` set to `ames_test`. 
+
+
+```{r predictions-1, exercise = TRUE}
+
+```
+
+```{r predictions-1-hint, eval = FALSE}
+ames_res_lm <- predict(lm_fit, new_data = ...)
+```
+
+### Exercise 14
+
+
+Copy and paste your work from above. Extend the code which creates `ames_res_lm` by using `%>%` to add `bind_cols()` (to match the predictions to the observed values). The argument to `bind_cols()` should be `ames_test`. (Recall that, in a pipe, the data set from above also gets passed in to `bind_cols()`.)
+
+But don't just pass in raw `ames_test`. Better to, as in Chapter 10, pipe (within the argument) `ames_test` to `select(Sale_Price)` in order to grab the true value of each sale price.
+
+Look at `ames_res_lm`. It has two columns: `.pred`, the predicted value from the model, and `Sale_Price`, the true value from the data.
+
+
+```{r bind, exercise = TRUE}
+
+```
+
+```{r bind-hint, eval = FALSE}
+ames_res_lm <- predict(lm_fit, 
+                         new_data = ...) %>% 
+                bind_cols(ames_test %>% 
+                           select(...))
+```
+
+### Exercise 15
+
+
+Let's plot the data. Start with `ames_res_lm` and use `%>%` to add `ggplot()`. Using `ggplot()`, map `Sale_Price` to the x-axis and `.pred` to the y-axis. 
+
+
+```{r atr, exercise = TRUE}
+
+```
+
+```{r atr-hint, eval = FALSE}
+ames_res_lm %>% 
+ggplot(aes(x = ..., y = ...)) + 
+  
+
+```
+
+### Exercise 16
+
+Great. Now use `geom_point()` and set `alpha` to 0.5. Add a layer `geom_abline()` with the argument `lty` set to 2. Also add the layer `coord_obs_pred()`. Title your graph "Predicted vs Truth". Your subtitle should be ""Comparing the predicted values of Sale_Price with the true values"". Also label your x-axis "Sale Price (log10)" and your y-axis "Predicted Sale Price (log10)".
+
+
+
+Reminder: This is what our graph looks like:
+ 
+```{r}
+sec_1
+
+```
+
+Your graph does not need to look exactly like ours.
+
+```{r geom_point-1, exercise = TRUE}
+
+```
+
+```{r geom_point-1-hint, eval = FALSE}
+ames_res_lm %>% 
+ggplot(aes(x = ..., y = ...)) + 
+  geom_point(alpha = ...) + 
+  geom_abline(lty = ...)  +
+  labs(title= ... ,
+      subtitle = ...,
+      y = ..., 
+      x = ...) +
+  coord_obs_pred()
+
+```
+
+## RF Model
+###
+
+Let's create the following graph. This graph shows the predictions for `Sale_Price` generated from a random forest model. It compares the predicted values with the true `Sale_Price` values.
+
+
+```{r rf}
+rf_model <- 
+  rand_forest(trees = 1000) %>% 
+  set_engine("ranger") %>% 
+  set_mode("regression")
+
+rf_wflow <- 
+  workflow() %>% 
+  add_recipe(recipe(Sale_Price ~ Neighborhood + Gr_Liv_Area + 
+                                 Year_Built + Bldg_Type,
+                    data = ames_train)) %>% 
+                    add_model(rf_model) 
+
+rf_fit <- fit(rf_wflow, ames_train)
+
+
+ames_res_rf <- predict(rf_fit, 
+                       new_data = ames_test) %>% 
+  bind_cols(ames_test %>% 
+              select(Sale_Price))
+set.seed(55)
+ames_folds <- vfold_cv(ames_train, v = 10)
+
+set.seed(130)
+rf_res <- 
+  rf_wflow %>% 
+  fit_resamples(resamples = ames_folds, 
+                control = control_resamples(save_pred = TRUE))
+
+```
+
+
+```{r make-sec_2}
+
+sec_2 <-
+  ames_res_rf %>% 
+  ggplot(aes(x = Sale_Price, y = .pred)) + 
+  geom_abline(lty = 2) + 
+  geom_point(alpha = 0.5) + 
+  labs(y = "Predicted Sale Price (log10)", 
+       x = "Sale Price (log10)") +
+  coord_obs_pred()
+
+sec_2
+```
+
+### Exercise 1 
+
+Let's create a model object named `rf_model`. To do so, use `rand_forest()`. Set `trees` to 1000. Extend the code using `%>%` to add `set_engine()` with the argument "ranger". 
+
+```{r rf-model, exercise = TRUE}
+
+```
+
+```{r rf-model-hint, eval = FALSE}
+rf_model <- 
+  rand_forest(trees = ...) %>% 
+  set_engine(...) 
+```
+
+### Exercise 2
+
+Extend your code again which creates `rf_model` with `%>%` to add `set_mode()` with the argument "regression".
+
+```{r mode-1, exercise = TRUE}
+
+```
+
+```{r mode-1-hint, eval = FALSE}
+...%>% 
+  set_mode(...)
+```
+
+### Exercise 3
+
+Great. Now create a workflow object named `rf_wflow`. Start with `workflow()`, then use `%>%` to add `add_recipe()`. The first argument should use `recipe()`. Inside `recipe()`, use the formula `Sale_Price ~ Neighborhood + Gr_Liv_Area + Year_Built + Bldg_Type`. The second argument of `add_recipe()` should be `data` set to `ames_train`.
+
+```{r workflow-2, exercise = TRUE}
+
+```
+
+```{r workflow-2-hint, eval = FALSE}
+rf_wflow <- 
+  workflow() %>% 
+  add_recipe(recipe(...,
+                    data = ...))
+```
+
+### Exercise 4
+
+Extend the code which creates `rf_wflow` to add `add_model()`. Its argument should be `rf_model`.
+
+```{r rf-wflow, exercise = TRUE}
+
+```
+
+
+```{r rf-wflow-hint, eval = FALSE}
+rf_wflow <- 
+  workflow() %>% 
+  add_recipe(recipe(...,
+                    data = ...))%>% 
+  add_model(...) 
+
+```
+
+### Exercise 5
+
+Great. Now create a fitted object named `rf_fit`. To do so, use `fit()`. The first argument should be `rf_wflow`, and the second argument should be`ames_train`.
+
+```{r rf-fit, exercise = TRUE}
+
+```
+
+```{r rf-fit-hint, eval = FALSE}
+rf_fit <- fit(..., ...)
+```
+
+### Exercise 6
+
+Let's now create an object named `ames_res_rf`. Start with `predict()`. The first argument should be our fitted object `rf_fit`. The second argument should be `new_data` set to `ames_test`. 
+
+```{r predictions-2, exercise = TRUE}
+
+```
+
+```{r predicitons-2-hint, eval = FALSE}
+
+ames_res_rf <- predict(rf_fit, new_data = ames_test)
+
+```
+
+### Exercise 7
+
+Now extend the code that creates `ames_res_rf` using `%>%` to add `bind_cols()` (Once again, we want to match the predictions to the observed values). The argument should be `ames_test`, followed by a pipe and then `select()` with the argument `Sale_Price`. Recall that `bind_cols()` will bind the columns of the tibble which is passed into it via the pipe with the tibble which is given as an argument.
+
+```{r bind-2, exercise = TRUE}
+
+```
+
+```{r bind-2-hint, eval = FALSE}
+
+`ames_res_rf`<- 
+           predict(rf_fit, new_data = ames_test)
+           bind_cols(ames_test %>% select(...))
+
+```
+
+### Exercise 8
+
+
+Let's now plot the data. Start with `ames_res_rf` and use `%>%` to `ggplot()`. Using `ggplot()`, map `Sale_Price` to the x-axis and `.pred` to the y-axis. Use `geom_point()` and set `alpha` to 0.5.
+
+
+```{r abline, exercise = TRUE}
+
+
+```
+
+
+```{r abline-hint, eval = FALSE}
+ames_res_rf %>% 
+ggplot(aes(x = ..., y = ...)) + 
+  geom_point(alpha = ...) 
+
+
+```
+
+### Exercise 9
+
+Great. Add a layer `geom_abline()` with the argument `lty` set to 2.  Also label your x-axis Sale Price (log10)" and your y-axis "Predicted Sale Price (log10)". Also add the layer `coord_obs_pred()`.
+
+
+Reminder: This is what our graph looks like:
+ 
+```{r review-sec_2}
+sec_2
+
+```
+
+Your graph does not need to look exactly like ours.
+
+```{r geom_point-2, exercise = TRUE}
+
+```
+
+```{r geom_point-2-hint, eval = FALSE}
+ames_res_rf %>% 
+  ggplot(aes(x = ..., y = ...)) + 
+  geom_point(alpha = ...) + 
+  geom_abline(lty = ...)  +
+  labs(y = ..., 
+       x = ...) +
+  coord_obs_pred()
+```
+
+## Model Comparison
+###
+
+Let's create the following graph that plots the two predictions for the random forest model and linear model against each other.
+
+```{r model_comp}
+model_comp <- 
+  tibble(rf_pred = ames_res_rf$`.pred`, 
+              lm_pred = ames_res_lm$`.pred`) %>% 
+  ggplot(aes(x = rf_pred, y = lm_pred)) +
+  geom_point(alpha = .1)+
+  geom_abline(lty = 2)  +
+   labs(title= "Comparing Predicted Values of Sale Price",
+        subtitle= "For linear and random forest models",
+        x = "Random Forest Model pred values (log10)", 
+        y = "Linear Model pred values (log10)")
+
+   
+model_comp
+
+```
+
+### Exercise 1
+
+Create a tibble with two columns. The first column should be named `rf_pred`. For `rf_pred`, use `$` to  extract the `.pred` column of`ames_res_rf`. The second column should be named `lm_pred`. For `lmpred`, use `$`to  extract the `.pred` column of`ames_res_lm`
+
+```{r tibble, exercise = TRUE}
+
+```
+
+```{r tibble-hint, eval = FALSE}
+        tibble(... = ames_res_rf$`.pred`, 
+               ... = ames_res_lm$`.pred`)
+```
+
+### Exercise 2
+
+Extend the code using `%>%` to add `ggplot()`. Using `ggplot()`, map `rf_pred` to the x-axis and `lm_pred` to the y-axis. Add the layer `geom_point()` and set `alpha` to .1.
+
+```{r pipe-2, exercise = TRUE}
+
+```
+
+```{r pipe-2-hint, eval = FALSE}
+ tibble(rf_pred = ames_res_rf$`.pred`, 
+        lm_pred = ames_res_lm$`.pred`) %>% 
+  ggplot(aes(x = rf_pred, y = lm_pred)) +
+  geom_point(alpha = ...)
+
+```
+
+### Exercise 3
+
+Add the layer `geom_abline()` and set `lty` to 2. Title your graph "Comparing Predicted Values of Sale Price" with the subtitle, "For linear and random forest models". Also, label your x-axis "Random Forest Model pred values (log10)" and your y-axis "Linear Model pred values (log10)").
+
+
+Reminder: This is what our graph looks like:
+ 
+```{r preview}
+model_comp
+
+```
+
+Your graph does not need to look exactly like ours.
+
+```{r last-2, exercise = TRUE}
+
+```
+
+```{r last-2-hint, eval = FALSE}
+
+tibble(rf_pred = ames_res_rf$`.pred`, 
+              lm_pred = ames_res_lm$`.pred`) %>% 
+ggplot(aes(x = rf_pred, y = lm_pred))+
+geom_point(alpha = .1)+
+geom_abline(lty = ...)  +
+labs(title= ...,
+     subtitle= ...,
+      x = ..., 
+      y = ...)
+
+   
+```
+
+
+
+## Submit
+
+```{r context= "setup"}
+submission_ui
+
+```
+
+```{r context="server"}
+submission_server()
+```
+
+
