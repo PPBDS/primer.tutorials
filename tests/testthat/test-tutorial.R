@@ -10,11 +10,13 @@
 # in all code chunks work correctly. So, you can't just have things like
 # library(...) around, even though that is an extremely convenient way to
 # indicate to the student that they need to use the library function with some
-# argument. The second environment is when you press "Test Package". I think
-# that all this does is to source tests/testthat.R. (And this environment is
-# (mostly) the same as when you just execute tests interactively. At least, the
-# two give the same answer.) But, in this second case, the code in hint (all?)
-# chunks is not evaluated.
+# argument. 
+
+# The second environment is when you press "Test Package". I think that all this
+# does is to source tests/testthat.R. (And this environment is (mostly) the same
+# as when you just execute tests interactively. At least, the two give the same
+# answer.) But, in this second case, the code in hint (and all other?) chunks is
+# not evaluated.
 
 # Side note: Because we use the system.package hack, we are only ever testing
 # the tutorials which are already installed. If you make a change in a file, you
@@ -39,8 +41,8 @@ library(fs)
 
 base <- system.file(package = "PPBDS.data", ".")
 
-files <- dir_ls(base, recurse = TRUE, regexp = "tutorial.Rmd") %>%
-            path_abs()
+files <- fs::dir_ls(base, recurse = TRUE, regexp = "tutorial.Rmd") %>%
+  fs::path_abs()
 
 stopifnot(length(files) > 3)
 
