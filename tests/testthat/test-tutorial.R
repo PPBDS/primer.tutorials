@@ -36,15 +36,15 @@
 # not sure if render() is the same thing.
 
 context("Tutorials")
-library(PPBDS.data)
+library(primer.data)
 library(fs)
 
-base <- system.file(package = "PPBDS.data", ".")
+base <- system.file(package = "primer.data", ".")
 
 files <- fs::dir_ls(base, recurse = TRUE, regexp = "tutorial.Rmd") %>%
   fs::path_abs()
 
-stopifnot(length(files) > 3)
+# stopifnot(length(files) > 3)
 
 # You can choose to run just a few of the portfolios through by selecting a
 # subset of files, like `files <- files[c(2)]` or `files <- files[c(1, 3:9)]`.
