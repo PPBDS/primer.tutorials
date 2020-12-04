@@ -57,6 +57,13 @@ stopifnot(length(files) > 3)
 # did them all, I got errors (all from within file 2). Not sure what to make of
 # this, other than that perhaps I should explore the new version of testthat.
 
+# This test is not complete because it does not simulate the scenario in which a
+# user runs a tutorial directly. For example, if you forget to include
+# library(primer.tutorials) in the code chunk for a tutorial, it will fail for a
+# user because it won't find submission_ui. But such a flawed tutorial.Rmd will
+# pass this test because we load library(primary.tutorials) before we start the
+# test above. Maybe this is just an edge case we can ignore.
+
 for(i in files){
   test_that(paste("rendering", i), {
     expect_output(rmarkdown::render(i, output_file = "tutorial.html"),
