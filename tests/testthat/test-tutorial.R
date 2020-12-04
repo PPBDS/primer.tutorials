@@ -62,7 +62,8 @@ stopifnot(length(files) > 3)
 # library(primer.tutorials) in the code chunk for a tutorial, it will fail for a
 # user because it won't find submission_ui. But such a flawed tutorial.Rmd will
 # pass this test because we load library(primary.tutorials) before we start the
-# test above. Maybe this is just an edge case we can ignore.
+# test above. Maybe this is just an edge case we can ignore. Why do we even need
+# to do library(primer.tutorials) above? 
 
 for(i in files){
   test_that(paste("rendering", i), {
