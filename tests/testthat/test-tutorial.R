@@ -40,7 +40,7 @@
 # deprecated. Also, do we need to load primary.data here? Why?
 
 context("Tutorials")
-library(primer.data)
+library(primer.tutorials)
 library(fs)
 
 base <- system.file(package = "primer.tutorials")
