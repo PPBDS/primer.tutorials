@@ -18,11 +18,13 @@
 #'
 #' @rdname submission_functions
 #' @export
+
 submission_server <- function(input, output) {
   p = parent.frame()
   check_server_context(p)
 
   # Evaluate in parent frame to get input, output, and session
+  
   local({
     encoded_txt = shiny::eventReactive(
       input$hash_generate,
@@ -34,11 +36,11 @@ submission_server <- function(input, output) {
       }
     )
 
-    output$downloadData <- downloadHandler(
+    output$downloadData <- shiny::downloadHandler(
       filename = "tutorial_responses.rds",
       content = function(file) {
         responses <- encoded_txt()
-        write_rds(responses, file)
+        readr::write_rds(responses, file)
       }
     )
 
@@ -78,6 +80,7 @@ is_server_context <- function(.envir) {
 #' @param compress Compression method.
 #'
 #' @export
+
 encode_obj = function(obj, compress = c("bzip2", "gzip", "xz", "none"))  {
   compress = match.arg(compress)
 
@@ -89,6 +92,7 @@ encode_obj = function(obj, compress = c("bzip2", "gzip", "xz", "none"))  {
 
 #' @rdname submission_functions
 #' @export
+
 submission_ui <- shiny::div(
   "When you have completed this tutorial, follow these steps:",
   shiny::tags$br(),
@@ -105,4 +109,6 @@ submission_ui <- shiny::div(
   )
 )
 
-utils::globalVariables(c("input", "session", "downloadHandler", "write_rds"))
+# Not really sure what this does.
+
+utils::globalVariables(c("session"))
