@@ -53,7 +53,10 @@ submission_server <- function(input, output) {
         # users to generate the hash by pressing a button. But this is hardly
         # necessary. We can just do it here, whenever users press the download
         # button. Would be nice to get the learnr people to export these
-        # functions so that the ::: hack is not necessary.
+        # functions so that the ::: hack is not necessary. I have submitted a
+        # request: https://github.com/rstudio/learnr/issues/454. The functions
+        # are small, so we might just copy them over. But given that we need
+        # learnr regardless, that seems excessive.
         
         objs <- learnr:::get_all_state_objects(session)
         objs <- learnr:::submissions_from_state_objects(objs)
@@ -127,6 +130,8 @@ submission_ui <- shiny::div(
   )
 )
 
-# Not really sure what this does.
+# This is the usual hack to avoid warnings with random global variables. But why
+# is that necessary with something like session, which we never created in the
+# first place?
 
 utils::globalVariables(c("session"))
