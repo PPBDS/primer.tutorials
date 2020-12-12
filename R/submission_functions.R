@@ -23,21 +23,13 @@ submission_server <- function(input, output) {
   p = parent.frame()
   check_server_context(p)
 
-  # Evaluate in parent frame to get input, output, and session
+  # Evaluate in parent frame to get input, output, and session.
+  
+  # What does the above comment mean? Why does this need the local(envir = p)
+  # mumbo-jumbo? Presumably, you need to be in the parent frame to do what we do
+  # below, but I don't understand why.
   
   local({
-    encoded_txt = shiny::eventReactive(
-      input$hash_generate,
-      {
-        objs = learnr:::get_all_state_objects(session)
-        objs = learnr:::submissions_from_state_objects(objs)
-
-        encode_obj(objs)
-      }
-    )
-    
-    
-    
 
     output$downloadData <- shiny::downloadHandler(
       
@@ -45,17 +37,27 @@ submission_server <- function(input, output) {
       # arguments for which is filename. We want to have the file name be
       # different for each tutorial. But how do we know the name of the tutorial
       # in the middle of the session? It is easy to access some information from
-      # the session object. For example, session$token gives us the long token.
-      # (Note that the call to session only seems to work within a reactive
-      # function like this.) I could not figure out how to get the tutorial
-      # name. But the first 5 (or any) characters from the token should be faily
-      # unique. So, appending them to "answers_" will at least make it harder
-      # for students to overwrite their own answers from previous tutorials.
+      # the session object. For example, session$token gives us a long token
+      # string, which I think is unique to each session. (Note that the call to
+      # session only seems to work within a reactive function like this.) I
+      # could not figure out how to get the tutorial name. But the first 5 (or
+      # any) characters from the token should be fairly unique. So, appending
+      # them to "answers_" will at least make it harder for students to
+      # overwrite their own answers from previous tutorials.
   
       filename = paste0("answers_", substr(session$token, 1, 5), ".rds"),
       
-      content = function(file) {
-        responses <- encoded_txt()
+      content = function(file){
+        
+        # We used to execute the next two lines in a separate step, requiring
+        # users to generate the hash by pressing a button. But this is hardly
+        # necessary. We can just do it here, whenever users press the download
+        # button. Would be nice to get the learnr people to export these
+        # functions so that the ::: hack is not necessary.
+        
+        objs <- learnr:::get_all_state_objects(session)
+        objs <- learnr:::submissions_from_state_objects(objs)
+        responses <- encode_obj(objs)
         readr::write_rds(responses, file)
       }
     )
@@ -113,13 +115,13 @@ submission_ui <- shiny::div(
   "When you have completed this tutorial, follow these steps:",
   shiny::tags$br(),
   shiny::tags$ol(
-    shiny::tags$li("Click Generate Hash. Nothing will pop up, but this will create an .rds file of your responses."),
-    shiny::tags$li("Click the Download button next to the Generate Hash button to download the .rds file. A window will pop up with some options. Choose to save the file onto your computer. Do not open it. If it offers a file named 'downloadData' without a .rds suffix, you probably forgot to press the Generate Hash button."),
+    shiny::tags$li("Click the Download button to download the .rds file. A window will pop up with some options."),
+    shiny::tags$li("The default file name will be something like answers_zzzzz.rds, where the z's are random characters."),
+    shiny::tags$li("Save the file onto your computer in a convenient location. Do not open it."),
     shiny::tags$li("Upload the file which you just downloaded to the appropriate Canvas assignment.")),
   shiny::fluidPage(
     shiny::mainPanel(
       shiny::div(id = "form",
-                 shiny::actionButton("hash_generate", "Generate Hash"),
                  shiny::downloadButton(outputId = "downloadData", label = "Download"))
     )
   )
