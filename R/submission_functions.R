@@ -35,9 +35,25 @@ submission_server <- function(input, output) {
         encode_obj(objs)
       }
     )
+    
+    
+    
 
     output$downloadData <- shiny::downloadHandler(
-      filename = "tutorial_responses.rds",
+      
+      # Next code chunk is key. downloadHandler is a function, one of the
+      # arguments for which is filename. We want to have the file name be
+      # different for each tutorial. But how do we know the name of the tutorial
+      # in the middle of the session? It is easy to access some information from
+      # the session object. For example, session$token gives us the long token.
+      # (Note that the call to session only seems to work within a reactive
+      # function like this.) I could not figure out how to get the tutorial
+      # name. But the first 5 (or any) characters from the token should be faily
+      # unique. So, appending them to "answers_" will at least make it harder
+      # for students to overwrite their own answers from previous tutorials.
+  
+      filename = paste0("answers_", substr(session$token, 1, 5), ".rds"),
+      
       content = function(file) {
         responses <- encoded_txt()
         readr::write_rds(responses, file)
@@ -98,7 +114,7 @@ submission_ui <- shiny::div(
   shiny::tags$br(),
   shiny::tags$ol(
     shiny::tags$li("Click Generate Hash. Nothing will pop up, but this will create an .rds file of your responses."),
-    shiny::tags$li("Click the Download button next to the Generate Hash button to download the .rds file. A window will pop up with some options. Choose to save the file onto your computer. Do not open it. If it offers a file without a .rds suffix, you probably forgot to press the Generate Hash button."),
+    shiny::tags$li("Click the Download button next to the Generate Hash button to download the .rds file. A window will pop up with some options. Choose to save the file onto your computer. Do not open it. If it offers a file named 'downloadData' without a .rds suffix, you probably forgot to press the Generate Hash button."),
     shiny::tags$li("Upload the file which you just downloaded to the appropriate Canvas assignment.")),
   shiny::fluidPage(
     shiny::mainPanel(
