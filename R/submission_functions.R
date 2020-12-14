@@ -22,12 +22,12 @@
 submission_server <- function(input, output) {
   p = parent.frame()
   check_server_context(p)
-
-  # Evaluate in parent frame to get input, output, and session.
   
-  # What does the above comment mean? Why does this need the local(envir = p)
-  # mumbo-jumbo? Presumably, you need to be in the parent frame to do what we do
-  # below, but I don't understand why.
+  # We need information from the parent frame --- from the learnr code which is
+  # running this tutorial. This is the environment which is calling this
+  # function, submission_server. Only this parent environment has access to
+  # objects (like input, output, and session) which we need to access. So,
+  # local() makes everything below evaluated in the parent frame.
   
   local({
 
@@ -37,15 +37,13 @@ submission_server <- function(input, output) {
       # arguments for which is filename. We want to have the file name be
       # different for each tutorial. But how do we know the name of the tutorial
       # in the middle of the session? It is easy to access some information from
-      # the session object. For example, session$token gives us a long token
-      # string, which I think is unique to each session. (Note that the call to
-      # session only seems to work within a reactive function like this.) I
-      # could not figure out how to get the tutorial name. But the first 5 (or
-      # any) characters from the token should be fairly unique. So, appending
-      # them to "answers_" will at least make it harder for students to
-      # overwrite their own answers from previous tutorials.
-  
-      filename = paste0("answers_", substr(session$token, 1, 5), ".rds"),
+      # the session object if we know the correct learnr function. (Note that
+      # the call to session only seems to work within a reactive function like
+      # this.) 
+
+      filename = paste0(learnr:::read_request(session, 
+                                              "tutorial.tutorial_id"),
+                        "_answers.rds"),
       
       content = function(file){
         
@@ -118,8 +116,8 @@ submission_ui <- shiny::div(
   "When you have completed this tutorial, follow these steps:",
   shiny::tags$br(),
   shiny::tags$ol(
-    shiny::tags$li("Click the Download button to download the .rds file. A window will pop up with some options."),
-    shiny::tags$li("The default file name will be something like answers_zzzzz.rds, where the z's are random characters."),
+    shiny::tags$li("Click the Download button to download the `.rds` file. A window will pop up with some options."),
+    shiny::tags$li("The default file name will be something like `answers_zzzzz.rds`, where the z's are random characters."),
     shiny::tags$li("Save the file onto your computer in a convenient location. Do not open it."),
     shiny::tags$li("Upload the file which you just downloaded to the appropriate Canvas assignment.")),
   shiny::fluidPage(
