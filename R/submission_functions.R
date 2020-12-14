@@ -100,6 +100,9 @@ is_server_context <- function(.envir) {
 #'
 #' @export
 
+# DK: We can delete this next function and just hard code
+# the encoding call above.
+
 encode_obj = function(obj, compress = c("bzip2", "gzip", "xz", "none"))  {
   compress = match.arg(compress)
 
