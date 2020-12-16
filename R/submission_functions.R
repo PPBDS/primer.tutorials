@@ -1,3 +1,32 @@
+# Next time we revisit this, consider some changes. First, split this file into
+# two. One part has the two functions we use: submission_server() and
+# submission_ui. The second part has all the helper functions. 
+
+# Second, bringing in the learnr functions somehow. I hate being dependent on
+# learnr given how unresponsive they are. We could just make copies of the
+# functions we use. Or we could just incorporate the key code from those
+# functions where we need them.
+
+# Third, consider getting rid of all these helper functions. If we only use
+# something once, I don't think we need a separate function. And, indeed, for
+# some of this checking, maybe we don't need it at all. We could delete
+# check_server_context() and is_server_context(). We only use a couple of lines
+# from encode_obj().
+
+# What we really want is a single function which, when called from the tutorial,
+# does all the stuff we need. But, presumably, that is impossible. We need (?) a
+# Shiny server and Shiny ui. This is not (?) any other way to produce this
+# effect.
+
+# Ought to understand and explain exactly what shiny::div() does.
+
+# Add in a function (here?) for parsing the resulting RDS files.
+
+# Add in a function (here?) for pulling out an answer key to share with
+# students. Maybe we distribute a PDF in order to make copy/pasting harder?
+
+
+
 #' @title Tutorial submission functions
 #'
 #' @description
@@ -111,6 +140,7 @@ encode_obj = function(obj, compress = c("bzip2", "gzip", "xz", "none"))  {
 
   base64enc::base64encode(comp_raw)
 }
+
 
 #' @rdname submission_functions
 #' @export
