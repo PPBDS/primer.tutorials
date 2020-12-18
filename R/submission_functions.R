@@ -18,6 +18,14 @@
 # Shiny server and Shiny ui. This is not (?) any other way to produce this
 # effect.
 
+# Want to change the color to the OK box so that it is green when students enter
+# their email or other text. This seem relevant:
+
+# https://stackoverflow.com/questions/33620133/change-the-color-of-action-button-in-shiny/35871042
+
+# But where, exactly, do we add this code given that we don't control the Shiny
+# sessions which learnr itself starts and stops?
+
 # Ought to understand and explain exactly what shiny::div() does.
 
 # Add in a function (here?) for parsing the resulting RDS files.
@@ -146,12 +154,13 @@ encode_obj = function(obj, compress = c("bzip2", "gzip", "xz", "none"))  {
 #' @export
 
 submission_ui <- shiny::div(
+  
   "When you have completed this tutorial, follow these steps:",
+  
   shiny::tags$br(),
   shiny::tags$ol(
-    shiny::tags$li("Click the Download button to download the `.rds` file. A window will pop up with some options."),
-    shiny::tags$li("The default file name will be something like `answers_zzzzz.rds`, where the z's are random characters."),
-    shiny::tags$li("Save the file onto your computer in a convenient location. Do not open it."),
+    shiny::tags$li("Click the Download button below to download a file containing your answer. A window will pop up."),
+    shiny::tags$li("Save the file onto your computer in a convenient location. It should have an 'rds' suffix. Do not open it."),
     shiny::tags$li("Upload the file which you just downloaded to the appropriate Canvas assignment.")),
   shiny::fluidPage(
     shiny::mainPanel(
