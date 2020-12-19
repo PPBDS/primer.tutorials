@@ -1,24 +1,20 @@
 TO-DO Items for Tutorials
 
-* New tutorial: 02-gathering-data. Create csv in the set up chunks for each question. Each csv file has an "issue," which can be fixed with intelligent use of read_csv. skip to get rid of top rows; no variable names; using col_types; parsing dates and other stuff; et cetera. Start with 10 questions. We can add more. Also include some Excel files. I will provide those. Maybe a Google sheet as well?
+* Change tutorial id's to just have the name, without the leading chapter numbers. This makes the default download file name nicer.
 
-
-* We use way too many random datasets from packages which need to be installed. That is no good. Fewer required packages is better since we never know when a package will disappear from CRAN. Fortunately, there are a ton of built in data sets in the tidyverse to use. Get rid of:
-
-library(dslabs)
-library(fueleconomy)
-library(babynames)
-library(fivethirtyeight)
-library(nycflights13)
-
-Biggest problem seems to be in 02-wrangling-A. That whole tutorial deserves another look.
-
-library(tidyverse)
-data()
+* New tutorial: 02-gathering-data. Add two tsv (which is tab delimitted) file. Use read_delim() to read these in. Include commas in at least one column. 
 
 * Remove all Confirm Correct Package Version questions from the top of each tutorial.
 
-* geom_col exists in a couple of places, but I removed it from Chapter 1. Do we still need it? If not, just replace it as best you can in those plots. Use Find in Files to find these.
+* geom_col exists in a couple of places, but I removed it from Chapter 2. Do we still need it? If not, just replace it as best you can in those plots. Use Find in Files to find these. Use geom_bar(). May need to manipulate the data. (Just fix in wrsngling.) Or just delete the question!
+
+* To tibble section in chapter 2, discuss weird variable names. You can have a variable named `1` or `my variable`, but in order to use it in R code, you must use backticks. Have them make, by hand, a tibble with these variable names and then access the values in those variables.
+
+
+
+
+
+
 
 
 Every exercise requires some answer from students. For example, after installing **usethis**, check the installation from the R prompt with:
@@ -29,12 +25,73 @@ The answer requires that the student paste in the resulting output. And, after t
 
 Add this advice to instructions.
 
+Text questions should return true always. This seems relevant:
+
+https://community.rstudio.com/t/embedding-open-ended-questions-in-learnr-tutorials/78288
+
+
+## How to Expand Input Rows
+
+Key function: 
+
+```
+question_ui_initialize.learnr_text <- function(question, value, ...) {
+  textInput(
+    question$ids$answer,
+    label = question$question,
+    placeholder = question$options$placeholder,
+    value = value
+  )
+}
+```
+
+The key problem is that shiny::textInput is hard-coded here. I want to use shiny::textAreaInput. It would also be nice to pass in desired values to textAreaInput() to get the number of rows that the writer wants. (There is a rows arguement for textAreaInput which does the trick nicely.)
+
+## How to Mark Text Answers as Correct
+
+https://stackoverflow.com/questions/26644680/r-whats-the-proper-way-to-overwrite-a-function-from-a-package
+
+Key is this function: 
+
+```
+question_is_correct.learnr_text <- function(question, value, ...) {
+
+  if (nchar(value) == 0) {
+    showNotification("Please enter some text before submitting", type = "error")
+    req(value)
+  }
+
+  if (isTRUE(question$options$trim)) {
+    value <- str_trim(value)
+  }
+
+  for (ans in question$answers) {
+    ans_val <- ans$option
+    if (isTRUE(question$options$trim)) {
+      ans_val <- str_trim(ans_val)
+    }
+    if (isTRUE(all.equal(ans_val, value))) {
+      return(mark_as(
+        ans$correct,
+        ans$message
+      ))
+    }
+  }
+
+  mark_as(FALSE, NULL)
+}
+```
+
+I could just replace this with our own version which always returns TRUE.
+
+https://cran.r-project.org/doc/manuals/R-exts.html#Load-hooks
+
+
 
 
 
 To discuss:
 
-Tutorials should be split up into smaller parts, say about 1 to 2 hours each, matching, as best we can, the relevant parts of the associated chapter. So, for example, wrangling-A might replace gathering-data. wrangling-B is core tidyverse coding. wrangling-C is tidyverse with more plots. We don't always need to follow this structure. For example, the tools tutorials is the one tutorial associated with the tools appendix. That is fine, and is still assigned in week 1.
 
 In many settings, it is natural for a tools question to have three parts. First, run a line of code that reports on the value of something. Example:
 
@@ -52,7 +109,8 @@ rstudioapi::readRStudioPreference(name = "load_workspace", default = "Code faile
 
 And finish with a sentence that tells the student to notice that the value has changed and that it is now correct. (Of course, we "monitor" that by making them copy/paste this last command and its return from the Console into the tutorial.)
 
-* More on weird variable names. You can have a variable named 1 or my variable, but in order to use it in R code, you must use backticks. Have them make, by hand, a tibble with these variable names and then access the values in those variables.
+
+
 
 * What to do with PDF and tinytex? This all seemed to work very easily. Maybe just install and then issue packageVersion("tinytex")?
 
