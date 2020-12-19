@@ -1,3 +1,7 @@
+# Gets rid of annoying note about "unable to verify current time".
+
+Sys.setenv('_R_CHECK_SYSTEM_CLOCK_' = 0)
+
 .onLoad <- function(libname, pkgname){
 
   # Purpose of this code is to define functions which will override their
