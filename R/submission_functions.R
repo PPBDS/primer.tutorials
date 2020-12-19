@@ -1,6 +1,6 @@
 # Next time we revisit this, consider some changes. First, split this file into
 # two. One part has the two functions we use: submission_server() and
-# submission_ui. The second part has all the helper functions. 
+# submission_ui. The second part has all the helper functions.
 
 # Second, bringing in the learnr functions somehow. I hate being dependent on
 # learnr given how unresponsive they are. We could just make copies of the
@@ -59,31 +59,30 @@
 submission_server <- function(input, output) {
   p = parent.frame()
   check_server_context(p)
-  
+
   # We need information from the parent frame --- from the learnr code which is
   # running this tutorial. This is the environment which is calling this
   # function, submission_server. Only this parent environment has access to
   # objects (like input, output, and session) which we need to access. So,
   # local() makes everything below evaluated in the parent frame.
-  
+
   local({
 
     output$downloadData <- shiny::downloadHandler(
-      
+
       # Next code chunk is key. downloadHandler is a function, one of the
       # arguments for which is filename. We want to have the file name be
       # different for each tutorial. But how do we know the name of the tutorial
       # in the middle of the session? It is easy to access some information from
       # the session object if we know the correct learnr function. (Note that
       # the call to session only seems to work within a reactive function like
-      # this.) 
+      # this.)
 
-      filename = paste0(learnr:::read_request(session, 
-                                              "tutorial.tutorial_id"),
+      filename = paste0(read_request(session, "tutorial.tutorial_id"),
                         "_answers.rds"),
-      
+
       content = function(file){
-        
+
         # We used to execute the next two lines in a separate step, requiring
         # users to generate the hash by pressing a button. But this is hardly
         # necessary. We can just do it here, whenever users press the download
@@ -92,9 +91,9 @@ submission_server <- function(input, output) {
         # request: https://github.com/rstudio/learnr/issues/454. The functions
         # are small, so we might just copy them over. But given that we need
         # learnr regardless, that seems excessive.
-        
-        objs <- learnr:::get_all_state_objects(session)
-        objs <- learnr:::submissions_from_state_objects(objs)
+
+        objs <- get_all_state_objects(session)
+        objs <- submissions_from_state_objects(objs)
         responses <- encode_obj(objs)
         readr::write_rds(responses, file)
       }
@@ -154,9 +153,9 @@ encode_obj = function(obj, compress = c("bzip2", "gzip", "xz", "none"))  {
 #' @export
 
 submission_ui <- shiny::div(
-  
+
   "When you have completed this tutorial, follow these steps:",
-  
+
   shiny::tags$br(),
   shiny::tags$ol(
     shiny::tags$li("Click the Download button below to download a file containing your answer. A window will pop up."),
