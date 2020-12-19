@@ -1,48 +1,23 @@
-# There must be a better way of doing this . . .
-
-# Purpose of this file is to define two functions which will override their
+# Purpose of this file is to define function(s) which will override their
 # equivalents from the learnr package. Then, we do the actual overriding.
 
 # Each tutorial sources this file when it starts.
 
-# Again, there must be a more elegant way of handling this issue, but I could
-# find it. Presumably, this code could go in .onLoad or something . . .
+# There must be a more elegant way of handling this issue, but I could find it.
+# Presumably, this code could go in .onLoad or some similar file that is run
+# automatically, when ever the package is loaded. But, if we did that, would it
+# work? This certainly does . . .
 
+# An earlier version overrided question_is_correct.learnr_text() because I
+# wanted the tutorial to accept any text submitted as an answer. Any text is
+# good text! The problem arises, especially with items like email, when a
+# student makes a mistake and wants to correct it. There seems to be no way to
+# "try again," on an answer which has been marked as correct.
 
+# We want to allow for 5 blank lines in text questions. This is too many for
+# things like e-mail address, but good for many other questions.
 
-question_is_correct.learnr_text <- function(question, value, ...) {
-
-  if (nchar(value) == 0) {
-    showNotification("Please enter some text before submitting", type = "error")
-    req(value)
-  }
-
-  if (isTRUE(question$options$trim)) {
-    value <- str_trim(value)
-  }
-
-  for (ans in question$answers) {
-    ans_val <- ans$option
-    if (isTRUE(question$options$trim)) {
-      ans_val <- str_trim(ans_val)
-    }
-    if (TRUE) {
-#    if (isTRUE(all.equal(ans_val, value))) {
-      return(mark_as(
-        ans$correct,
-        ans$message
-      ))
-    }
-  }
-
-  mark_as(FALSE, NULL)
-}
-
-
-environment(question_is_correct.learnr_text) <- asNamespace('learnr')
-assignInNamespace("question_is_correct.learnr_text",
-                  question_is_correct.learnr_text,
-                  ns = "learnr")
+# Need to figure out how to pass an argumeny for number of rows from the top.
 
 question_ui_initialize.learnr_text <- function(question, value, ...) {
   textAreaInput(
