@@ -68,6 +68,54 @@ submission_server <- function(input, output) {
 
   local({
 
+    # # Because learnr will not export these three functions, we have no choice but
+    # # to use ::: in order to access them. Doing do produces a NOTE when we run R
+    # # command check. I find that annoying. So, I just provide my own copies here.
+    # # This is absurd hack, but it is not clear what else one can do.
+    #
+    # read_request <- function(session, name, default = NULL) {
+    #   if (!is.null(name)) {
+    #     if (exists(name, envir = session$request))
+    #       get(name, envir = session$request)
+    #     else
+    #       default
+    #   } else {
+    #     default
+    #   }
+    # }
+    #
+    # submissions_from_state_objects <- function(state_objects) {
+    #   filtered_submissions <- filter_state_objects(state_objects, c("question_submission", "exercise_submission"))
+    #   Filter(x = filtered_submissions, function(object) {
+    #     # only return answered question, not reset questions
+    #     if (object$type == "question_submission") {
+    #       !isTRUE(object$data$reset)
+    #     } else {
+    #       TRUE
+    #     }
+    #   })
+    # }
+    #
+    # get_all_state_objects <- function(session, exercise_output = TRUE) {
+    #
+    #   # get all of the objects
+    #   objects <- get_objects(session)
+    #
+    #   # strip output (the client doesn't need it and it's expensive to transmit)
+    #   objects <- lapply(objects, function(object) {
+    #     if (object$type == "exercise_submission") {
+    #       if (!exercise_output) {
+    #         object$data["output"] <- list(NULL)
+    #       }
+    #     }
+    #     object
+    #   })
+    #
+    #   # return objects
+    #   objects
+    # }
+
+
     output$downloadData <- shiny::downloadHandler(
 
       # Next code chunk is key. downloadHandler is a function, one of the
@@ -78,7 +126,7 @@ submission_server <- function(input, output) {
       # the call to session only seems to work within a reactive function like
       # this.)
 
-      filename = paste0(read_request(session, "tutorial.tutorial_id"),
+      filename = paste0(learnr:::read_request(session, "tutorial.tutorial_id"),
                         "_answers.rds"),
 
       content = function(file){
@@ -92,8 +140,8 @@ submission_server <- function(input, output) {
         # are small, so we might just copy them over. But given that we need
         # learnr regardless, that seems excessive.
 
-        objs <- get_all_state_objects(session)
-        objs <- submissions_from_state_objects(objs)
+        objs <- learnr:::get_all_state_objects(session)
+        objs <- learnr:::submissions_from_state_objects(objs)
         responses <- encode_obj(objs)
         readr::write_rds(responses, file)
       }
@@ -169,8 +217,7 @@ submission_ui <- shiny::div(
   )
 )
 
-# This is the usual hack to avoid warnings with random global variables. But why
-# is that necessary with something like session, which we never created in the
-# first place?
+
+
 
 utils::globalVariables(c("session"))

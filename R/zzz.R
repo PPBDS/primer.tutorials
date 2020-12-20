@@ -33,59 +33,13 @@ Sys.setenv('_R_CHECK_SYSTEM_CLOCK_' = 0)
                     question_ui_initialize.learnr_text,
                     ns = "learnr")
 
-  # Because learnr will not export these three functions, we have no choice but
-  # to use ::: in order to access them. Doing do produces a NOTE when we run R
-  # command check. I find that annoying. So, I just provide my own copies here.
-  # This is absurd hack, but it is not clear what else one can do.
+  # Because learnr will not export these three functions that I use, we have no
+  # choice but to use ::: in order to access them. Doing do produces a NOTE when
+  # we run R command check. I find that annoying. I tried just providing my own
+  # copies here or in submission_functions.R, but neither seemed to work.
+  # (Perhaps the problem is that they themselves use other learnr functions
+  # which I don't have access to?) Anyway, I just went back and accepted the
+  # NOTE.
 
-  read_request <- function(session, name, default = NULL) {
-    if (!is.null(name)) {
-      if (exists(name, envir = session$request))
-        get(name, envir = session$request)
-      else
-        default
-    } else {
-      default
-    }
-  }
-
-  submissions_from_state_objects <- function(state_objects) {
-    filtered_submissions <- filter_state_objects(state_objects, c("question_submission", "exercise_submission"))
-    Filter(x = filtered_submissions, function(object) {
-      # only return answered question, not reset questions
-      if (object$type == "question_submission") {
-        !isTRUE(object$data$reset)
-      } else {
-        TRUE
-      }
-    })
-  }
-
-  get_all_state_objects <- function(session, exercise_output = TRUE) {
-
-    # get all of the objects
-    objects <- get_objects(session)
-
-    # strip output (the client doesn't need it and it's expensive to transmit)
-    objects <- lapply(objects, function(object) {
-      if (object$type == "exercise_submission") {
-        if (!exercise_output) {
-          object$data["output"] <- list(NULL)
-        }
-      }
-      object
-    })
-
-    # return objects
-    objects
-  }
-
-  # Listing these makes the annoying NOTES go away, but it is also an absurd
-  # hack. I am not even sure how it works . . .
-
-  utils::globalVariables(c("read_request",
-                           "submissions_from_state_objects",
-                           "get_all_state_objects",
-                           "filter_state_objects",
-                           "get_objects"))
+  # I really need a way to automatically test the Submit functionality.
 }
