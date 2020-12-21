@@ -78,7 +78,7 @@ submission_server <- function(input, output) {
       # the call to session only seems to work within a reactive function like
       # this.)
 
-      filename = paste0(read_request(session, "tutorial.tutorial_id"),
+      filename = paste0(learnr:::read_request(session, "tutorial.tutorial_id"),
                         "_answers.rds"),
 
       content = function(file){
@@ -92,8 +92,8 @@ submission_server <- function(input, output) {
         # are small, so we might just copy them over. But given that we need
         # learnr regardless, that seems excessive.
 
-        objs <- get_all_state_objects(session)
-        objs <- submissions_from_state_objects(objs)
+        objs <- learnr:::get_all_state_objects(session)
+        objs <- learnr:::submissions_from_state_objects(objs)
         responses <- encode_obj(objs)
         readr::write_rds(responses, file)
       }
@@ -169,8 +169,7 @@ submission_ui <- shiny::div(
   )
 )
 
-# This is the usual hack to avoid warnings with random global variables. But why
-# is that necessary with something like session, which we never created in the
-# first place?
+
+# Never understand what this hack does or why it is necessary.
 
 utils::globalVariables(c("session"))
