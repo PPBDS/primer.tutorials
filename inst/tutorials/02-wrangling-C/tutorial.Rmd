@@ -10,6 +10,11 @@ runtime: shiny_prerendered
 description: "Chapter 2 Tutorial -- Part B"
 ---
 
+
+<!-- BG: Do we like the dataset descriptions. Will the students read them? If so, should we shorten them to one sentence or is it OK? -->
+
+<!-- BG: need to replace ntile() -->
+
 <!-- Things to discuss about this tutorial: -->
 
 <!-- bind_cols(): we cut it out of the book. Still exists in Q-Guide plot. So, need to get rid of it. replace with mutate(), or some other join. Get rid of it. -->
@@ -58,25 +63,24 @@ quiz(caption = "",
 ```
 
 
-## Introduction
-###
-
-Purpose of this tutorial is to provide several full scale exercises, each using with a real data set --- one which requires some cleaning and organizing --- and finishing with a professional quality plot. We start each group by showing you the plot which we will replicate by the end.
-
-
 ## National Health and Nutrition Survey
 ###
 
-`nhanes` is a data set included in the **primer.data** package. It includes data from the "National Health and Nutrition Examination Survey," which contains the personal and physical information of 10,000 Americans from two surveys in 2009 and 2011. The goal of this series of exercises is to build, line-by-line, the code needed to recreate this plot.
+`nhanes` includes data from the "National Health and Nutrition Examination Survey," which contains the personal and physical information of 10,000 Americans from two surveys in 2009 and 2011.
+
+
+Let's recreate the following plot.
 
 ```{r}
-nhanes_plot <- nhanes %>%
+nhanes_p <- nhanes %>%
   mutate(weight = weight * 2.2, height = height / 30.48) %>%
   select(gender, weight, height, bmi) %>%
   drop_na(weight, height) %>% 
   ggplot(mapping = aes(x = weight, y = height, color = bmi)) +
     geom_jitter() +
-    geom_smooth(se = FALSE, color = "dodgerblue") +
+    geom_smooth(se = FALSE, 
+                method = "gam", 
+                formula = y ~ s(x, bs = "cs")) +
     facet_wrap(~ gender) + 
     theme_clean() + 
     labs(y = "Height (feet)",
@@ -85,19 +89,11 @@ nhanes_plot <- nhanes %>%
          subtitle = "Relation between weight and height more positive for heavy men",
          caption = "Source: NHANES")
 
-nhanes_plot
+nhanes_p
 ```
 
 
 ### Exercise 1
-
-Begin by running `summary()` on `nhanes`. Based on the results, try to guess what the units of measurement are for the `weight` and `height` variables.
-
-```{r nhanes1, exercise = TRUE}
-
-```
-
-### Exercise 2
 
 In the original tibble, `weight` is measured in kg and `height` in cm. Using `mutate()`, multiply `weight` by 2.2 and divide `height` by 30.48 to convert units into pounds and feet. 
 
@@ -105,30 +101,33 @@ In the original tibble, `weight` is measured in kg and `height` in cm. Using `mu
 
 ```
 
-```{r nhanes2-hint, eval = FALSE}
+```{r nhanes2-hint-1, eval = FALSE}
 nhanes %>%
   mutate(weight = ..., height = ...)
 ```
 
-### Exercise 3
+```{r nhanes2-hint-2, eval = FALSE}
+Use * to multiply and / to divide.
+```
 
-`select()` the `gender`, `weight`, `height`, and `bmi` columns. 
+### Exercise 2
+
+Now `select()` the `gender`, `weight`, `height`, and `bmi` columns. 
 
 ```{r nhanes3, exercise = TRUE}
 
 ```
 
-```{r nhanes3-hint, eval=FALSE}
+```{r nhanes3-hint, eval = FALSE}
 ... %>%
   select(..., ..., ..., ...)
 ```
 
-### Exercise 4
+### Exercise 3
 
-Use tidyr's `drop_na()` to remove all rows with a value of `NA` in either the `weight` or `height` columns.
+`nhanes` has NA values in some rows. Use `drop_na()` to remove all rows with a value of `NA` in the `weight`and `height` columns just to be sure.
 
-
-```{r nhanes4, exercise = TRUE, exercise.lines = 4}
+```{r nhanes4, exercise = TRUE}
 
 ```
 
@@ -137,9 +136,9 @@ Use tidyr's `drop_na()` to remove all rows with a value of `NA` in either the `w
   drop_na(..., ...)
 ```
 
-### Exercise 5
+### Exercise 4
 
-Call `ggplot()` to make a jittered scatterplot that maps `weight` to the x-axis, `height` to the y-axis, and `bmi` to the color aesthetic. 
+Use `ggplot()` to make a jittered scatterplot that maps `weight` to the x-axis, `height` to the y-axis, and `bmi` to `color`.
 
 ```{r nhanes5, exercise = TRUE}
 
@@ -147,34 +146,46 @@ Call `ggplot()` to make a jittered scatterplot that maps `weight` to the x-axis,
 
 
 ```{r nhanes5-hint-1, eval = FALSE}
-# Use geom_jitter().
+Use geom_jitter()
 ```
 
 ```{r nhanes5-hint-2, eval=FALSE}
 ... %>% 
-  gplot(data = ..., aes(x = ..., y = ..., color = ...))
+  gplot(data = ..., aes(x = ..., 
+                        y = ..., 
+                        color = ...))
 ```
 
 ### Exercise 6
 
-Add a trend line layer to your plot with `geom_smooth()`. Set the `se` argument of `geom_smooth()` to FALSE in order to remove the confidence interval, and change the `color` of the line to "dodgerblue." 
+Add a trend line with `geom_smooth()`. Set the `se` to FALSE and  set `method` to "gam".
 
 
 ```{r nhanes6, exercise = TRUE}
 
 ```
 
-
-```{r nhanes6-hint-1, eval = FALSE}
-# The se argument should be equal to FALSE.
-```
-
-```{r nhanes6-hint-2, eval=FALSE}
+```{r nhanes6-hint-2, eval = FALSE}
 ... + 
-  geom_smooth(se = ..., color = ...)
+  geom_smooth(se = ..., method = ...)
 ```
 
 ### Exercise 7
+
+Notice that we still get a message. Let's take their suggestion for formula. Within`geom_smooth()` set the `formula` argument to `y ~ s(x, bs = "cs")`.
+
+```{r nhanes1, exercise = TRUE}
+
+```
+
+```{r nhanes1-hint-2, eval = FALSE}
+... + 
+ geom_smooth(se = FALSE, 
+                method = "gam", 
+                formula = ...)
+```
+
+### Exercise 8
 
 Use `facet_wrap()` to facet the graph by `gender`.
 
@@ -183,47 +194,49 @@ Use `facet_wrap()` to facet the graph by `gender`.
 
 ```
 
-```{r nhanes7-hint, eval=FALSE}
+```{r nhanes7-hint, eval = FALSE}
 ... +
-  facet_wrap(...)
+  facet_wrap( ~ ...) 
 ```
 
+### Exercise 9
 
-### Exercise 8
-
-Finally, adjust the feel of the graph with `theme_clean()` from the **ggthemes** package. 
-
-
+Adjust the feel of the graph with the theme, `theme_clean()`.
 
 ```{r nhanes8, exercise = TRUE}
 
 ```
 
-
-### Exercise 9
-
-Great work! From this graph, we can see that children of both genders tend to grow very quickly without gaining much weight (this is the very steep slope at the beginning of the two graphs). However, after people reach between 100-120 pounds, weight gain becomes coupled with a substantially smaller increase in height. Additionally, both weight and height seem to be higher for males than for females on average. Finally, we can infer from looking at the color gradient that a high `bmi` (i.e. brighter colors) corresponds with higher weight and lower height.
-
-To finish your plot, use `labs()` to give the graph a title and subtitle of your choice. Here, again, is our version.
-
-```{r nhanes9-answer}
-nhanes_plot
+```{r nhanes8-hint, eval = FALSE}
+... +
+  theme_clean()
 ```
+
+### Exercise 10
+
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choice.
 
 ```{r nhanes9, exercise = TRUE}
 
 ```
 
+Reminder: This is what your graph should look like.
+
+```{r nhanes9-answer}
+nhanes_p
+```
 
 
 ## Kenya Voting
 ###
 
-The `kenya` data set from the **primer.data** package records the data from a study in which poll stations in Kenya were assigned to either the control group or a group in which one or more methods --- an SMS reminder, canvassing, etc. --- were used to encourage voter registration. We will recreate this plot:
+The `kenya` contains data from a study in which poll stations in Kenya were assigned to either the control group or a group in which one or more methods (an SMS reminder, canvassing, etc.) were used to encourage voter registration. 
 
+
+Let's recreate the following plot.
 
 ```{r kenya-answer}
-kenya_plot <- kenya %>%
+kenya_p <- kenya %>%
   filter(treatment %in% c("control", "local", 
                           "SMS", "canvass")) %>%
   droplevels() %>%
@@ -241,14 +254,12 @@ kenya_plot <- kenya %>%
          x = "Treatment",
          y = "Change in Mean Turnout")
 
-kenya_plot
+kenya_p
 ```
-
 
 ### Exercise 1
 
-Start by `glimpse()`'ing the `kenya` data set.
-
+`glimpse()` the `kenya` data set.
 
 ```{r kenya1, exercise = TRUE}
 
@@ -260,59 +271,46 @@ glimpse(kenya)
 
 ### Exercise 2
 
-Pipe `kenya` into the `count()` function to count the number of poll stations in each `treatment` group.
-
-
-```{r kenya2, exercise = TRUE}
-
-```
-
-```{r kenya2-hint, eval = FALSE}
-kenya %>%
-  count(...)
-```
-
-### Exercise 3
-
-Using a pipe and the `%in%` operator, `filter()` `kenya` to only the rows with a `treatment` of "control," "local," "SMS," or "canvass." 
+`filter()` `kenya` to only the rows with a `treatment` of "control," "local," "SMS," or "canvass." Use the `%in% `operator to do so.
 
 
 ```{r kenya3, exercise = TRUE}
 
 ```
 
-```{r kenya3-hint-1, eval=FALSE}
+```{r kenya3-hint-1, eval = FALSE}
 kenya %>%
   filter(treatment %in% ...)
 ```
 
-```{r kenya3-hint-2, eval=FALSE}
+```{r kenya3-hint-2, eval = FALSE}
 kenya %>%
   filter(treatment %in% c(...))
 ```
 
-### Exercise 4
+### Exercise 3
 
-Because `treatment` is a factor, call `droplevels()` immediately after the `filter()` call to avoid future complications. 
-
+Because `treatment` is a factor, use `%>% ` to  `droplevels()`. This will avoid future complications. 
 
 ```{r kenya4, exercise = TRUE}
 
 ```
 
-### Exercise 5 
+```{r kenya4-hint, eval = FALSE}
 
-`select()` the `treatment`, `mean_age`, and `reg_byrv13` columns. 
+```
 
+### Exercise 4
+
+Now `select()` the `treatment`, `mean_age`, and `reg_byrv13` columns. 
 
 ```{r kenya5, exercise = TRUE}
 
 ```
 
+### Exercise 5
 
-### Exercise 6
-
-Use tidyr's `drop_na()` to remove all rows with a value of `NA` in the `mean_age` column.
+Use `drop_na()` to remove all rows with a value of `NA` in the `mean_age` column.
 
 ```{r kenya6, exercise = TRUE}
 
@@ -326,19 +324,11 @@ kenya %>%
   drop_na(...)
 ```
 
-### Exercise 7
+### Exercise 6
 
-The dplyr `ntile()` function divides a continuous numerical value into categories depending on its size. Try running the following code to see how we can categorize the polling stations into 4 equally-sized groups based on the `distance` to the polling station.
+The `ntile()` function divides a continuous numerical value into categories depending on its size.
 
-
-```{r kenya7, exercise = TRUE}
-kenya %>%
-  mutate(distance_quartile = ntile(distance, 4))
-```
-
-### Exercise 8 
-
-Use `mutate()` and `ntile()` to create the variable `age_half`, which categorizes the `mean_age` variable into 2 groups: the younger half, and the older half. Add this to the end of our full pipe.
+Use `mutate()` and `ntile()` to create the variable `age_half`, which categorizes the `mean_age` variable into 2 groups (i.e.the younger half, and the older half).
 
 
 ```{r kenya8, exercise = TRUE}
@@ -346,97 +336,71 @@ Use `mutate()` and `ntile()` to create the variable `age_half`, which categorize
 ```
 
 ```{r kenya8-hint, eval = FALSE}
-# ntile(mean_age, 2) will categorize age into the younger half and the older
-# half.
-
+... %>% 
+  mutate ( ... = ntile(mean_age, 2)
 ```
 
-### Exercise 9
+### Exercise 7
 
 Group the data by `treatment` and `age_half`.
-
 
 ```{r kenya9, exercise = TRUE}
 
 ```
 
-```{r kenya9-hint, eval=FALSE}
+```{r kenya9-hint, eval = FALSE}
 ... %>%
   group_by(...)
 ```
 
-### Exercise 10
+### Exercise 8
 
-Using `summarize()`, calculate the variable `mean_turnout` as the average value of `reg_byrv13` in each group. Remember to set the `na.rm` argument of `mean()` to `TRUE`, as there are some `NA` values in the `reg_byrv13` column.
+Using `summarize()`, calculate the variable `mean_turnout` as the `mean()` value of `reg_byrv13` in each group. The second argument to `mean()` should set `na.rm` to `TRUE`, as there are some `NA` values in the `reg_byrv13` column.
 
 
 ```{r kenya10, exercise = TRUE}
 
 ```
 
-```{r kenya10-hint, eval=FALSE}
-# Don't forget the .groups argument to summarize(). Never ignore warning
-# messages.
+```{r kenya10-hint, eval = FALSE}
+Don't forget the .groups argument to summarize(). Never ignore warning
+messages.
 ```
 
-### Exercise 11 
+### Exercise 9
 
-Use `ggplot()` at the end of the pipe to make a bar graph with `treatment` on the x-axis and `mean_turnout` on the y-axis.
+Use `%>% `to add  `ggplot()`.  Use`fct_reorder()` to reorder the `treatment` variable by `mean_turnout` and map this to 'x`. Map `treatment` to the y-axis.
 
 ```{r kenya11, exercise = TRUE}
 
 ```
 
 
-```{r kenya11-hint-2, eval=FALSE}
+```{r kenya11-hint-1, eval = FALSE}
 Remember to use geom_col() instead of geom_bar() when 
 you map something to the y-axis.
 ```
 
-### Exercise 12 
-
-Already, we can see that one of the treatments is significantly more effective at increasing turnout than others. Continue by using `facet_wrap()` to facet the data by `age_half`. 
-
-
-```{r kenya12, exercise = TRUE}
-
+```{r kenya11-hint-2, eval = FALSE}
+... %>% 
+  ggplot(mapping = aes(x = fct_reorder(treatment, mean_turnout), 
+                       y = ...)) 
 ```
 
-<!-- DK: Get rid of facet_wrap, or anything else which does not make the final graph. -->
+### Exercise 10
 
-
-### Exercise 13
-
-To make the graph easier to read, use `fct_reorder()` to reorder the `treatment` variable by `mean_turnout`. Note, you will no longer use the `facet_wrap()`, as this will cause issues with the ordering of the `treatment` categories.
-
-
-```{r kenya13, exercise = TRUE}
-
-```
-
-```{r kenya13-hint, eval = FALSE}
-...  %>% 
-  ggplot(mapping = aes(x = fct_reorder(..., ...), 
-                       y = ...)) +
-    geom_col()
-```
-
-### Exercise 14
-
-Improve the aesthetics of the graph by changing the theme to `theme_bw()`.
+Add the theme `theme_bw()` to the plot.
 
 ```{r kenya14, exercise = TRUE}
 
 ```
 
-### Exercise 15
+### Exercise 11
 
-Great job! This graph allows us to see that the presence of a local administrator at the polling location is by far the most effective strategy for increasing voter turnout. In addition, older voters (category 2) are not only more likely to vote than younger voters, but they are also influenced to a greater extent by the presence of a local administrator.
-
-To finish your plot, use `labs()` to change the x-axis label to "Treatment." In addition, give the graph a title, subtitle and y-axis label of your choosing. Your plot should look something like this:
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choosing. Your plot should look something like this:
 
 ```{r kenya15-answer}
-kenya_plot
+kenya_p
 ```
 
 ```{r kenya15, exercise = TRUE}
@@ -462,7 +426,6 @@ sps_plot <- sps %>%
   ggplot(mapping = aes(x = fct_reorder(education, mean_change_in_expenses), 
                        y = mean_change_in_expenses, fill = treatment)) +
     geom_col(position = position_dodge(preserve = "single")) + 
-    scale_fill_brewer(palette = "Paired", labels = c("No", "Yes")) +
     theme_minimal() +
     labs(x = "Education",
          y = "Average Change in Expenses",
@@ -676,7 +639,6 @@ shaming_plot <- shaming %>%
   ggplot(mapping = aes(x = fct_reorder(treatment, pct_voted), 
                        y = pct_voted, fill = year)) +
     geom_col(position = position_dodge(preserve = "single")) +
-    coord_cartesian(ylim = c(0.2, 0.45)) +
     labs(x = "Treatment",
          y = "Voting Percentage",
          title = "Voting Rates Based on Mailings",
