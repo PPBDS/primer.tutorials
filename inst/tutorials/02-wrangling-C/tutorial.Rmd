@@ -10,6 +10,11 @@ runtime: shiny_prerendered
 description: "Chapter 2 Tutorial -- Part B"
 ---
 
+
+<!-- BG: Do we like the dataset descriptions. Will the students read them? If so, should we shorten them to one sentence or is it OK? -->
+
+<!-- BG: need to replace ntile() -->
+
 <!-- Things to discuss about this tutorial: -->
 
 <!-- bind_cols(): we cut it out of the book. Still exists in Q-Guide plot. So, need to get rid of it. replace with mutate(), or some other join. Get rid of it. -->
@@ -58,25 +63,24 @@ quiz(caption = "",
 ```
 
 
-## Introduction
-###
-
-Purpose of this tutorial is to provide several full scale exercises, each using with a real data set --- one which requires some cleaning and organizing --- and finishing with a professional quality plot. We start each group by showing you the plot which we will replicate by the end.
-
-
 ## National Health and Nutrition Survey
 ###
 
-`nhanes` is a data set included in the **primer.data** package. It includes data from the "National Health and Nutrition Examination Survey," which contains the personal and physical information of 10,000 Americans from two surveys in 2009 and 2011. The goal of this series of exercises is to build, line-by-line, the code needed to recreate this plot.
+`nhanes` includes data from the "National Health and Nutrition Examination Survey," which contains the personal and physical information of 10,000 Americans from two surveys in 2009 and 2011.
+
+
+Let's create the following plot.
 
 ```{r}
-nhanes_plot <- nhanes %>%
+nhanes_p <- nhanes %>%
   mutate(weight = weight * 2.2, height = height / 30.48) %>%
   select(gender, weight, height, bmi) %>%
   drop_na(weight, height) %>% 
   ggplot(mapping = aes(x = weight, y = height, color = bmi)) +
     geom_jitter() +
-    geom_smooth(se = FALSE, color = "dodgerblue") +
+    geom_smooth(se = FALSE, 
+                method = "gam", 
+                formula = y ~ s(x, bs = "cs")) +
     facet_wrap(~ gender) + 
     theme_clean() + 
     labs(y = "Height (feet)",
@@ -85,19 +89,11 @@ nhanes_plot <- nhanes %>%
          subtitle = "Relation between weight and height more positive for heavy men",
          caption = "Source: NHANES")
 
-nhanes_plot
+nhanes_p
 ```
 
 
 ### Exercise 1
-
-Begin by running `summary()` on `nhanes`. Based on the results, try to guess what the units of measurement are for the `weight` and `height` variables.
-
-```{r nhanes1, exercise = TRUE}
-
-```
-
-### Exercise 2
 
 In the original tibble, `weight` is measured in kg and `height` in cm. Using `mutate()`, multiply `weight` by 2.2 and divide `height` by 30.48 to convert units into pounds and feet. 
 
@@ -105,30 +101,33 @@ In the original tibble, `weight` is measured in kg and `height` in cm. Using `mu
 
 ```
 
-```{r nhanes2-hint, eval = FALSE}
+```{r nhanes2-hint-1, eval = FALSE}
 nhanes %>%
   mutate(weight = ..., height = ...)
 ```
 
-### Exercise 3
+```{r nhanes2-hint-2, eval = FALSE}
+Use * to multiply and / to divide.
+```
 
-`select()` the `gender`, `weight`, `height`, and `bmi` columns. 
+### Exercise 2
+
+Now `select()` the `gender`, `weight`, `height`, and `bmi` columns. 
 
 ```{r nhanes3, exercise = TRUE}
 
 ```
 
-```{r nhanes3-hint, eval=FALSE}
+```{r nhanes3-hint, eval = FALSE}
 ... %>%
   select(..., ..., ..., ...)
 ```
 
-### Exercise 4
+### Exercise 3
 
-Use tidyr's `drop_na()` to remove all rows with a value of `NA` in either the `weight` or `height` columns.
+`nhanes` has NA values in some rows. Use `drop_na()` to remove all rows with a value of `NA` in the `weight`and `height` columns just to be sure.
 
-
-```{r nhanes4, exercise = TRUE, exercise.lines = 4}
+```{r nhanes4, exercise = TRUE}
 
 ```
 
@@ -137,9 +136,9 @@ Use tidyr's `drop_na()` to remove all rows with a value of `NA` in either the `w
   drop_na(..., ...)
 ```
 
-### Exercise 5
+### Exercise 4
 
-Call `ggplot()` to make a jittered scatterplot that maps `weight` to the x-axis, `height` to the y-axis, and `bmi` to the color aesthetic. 
+Use `ggplot()` to make a jittered scatterplot that maps `weight` to the x-axis, `height` to the y-axis, and `bmi` to `color`.
 
 ```{r nhanes5, exercise = TRUE}
 
@@ -147,34 +146,47 @@ Call `ggplot()` to make a jittered scatterplot that maps `weight` to the x-axis,
 
 
 ```{r nhanes5-hint-1, eval = FALSE}
-# Use geom_jitter().
+Use geom_jitter()
 ```
 
-```{r nhanes5-hint-2, eval=FALSE}
+```{r nhanes5-hint-2, eval = FALSE}
 ... %>% 
-  gplot(data = ..., aes(x = ..., y = ..., color = ...))
+  gplot(data = ..., aes(x = ..., 
+                        y = ..., 
+                        color = ...)) +
+  geom_jitter()
 ```
 
 ### Exercise 6
 
-Add a trend line layer to your plot with `geom_smooth()`. Set the `se` argument of `geom_smooth()` to FALSE in order to remove the confidence interval, and change the `color` of the line to "dodgerblue." 
+Add a trend line with `geom_smooth()`. Set the `se` to FALSE and  set `method` to "gam".
 
 
 ```{r nhanes6, exercise = TRUE}
 
 ```
 
-
-```{r nhanes6-hint-1, eval = FALSE}
-# The se argument should be equal to FALSE.
-```
-
-```{r nhanes6-hint-2, eval=FALSE}
+```{r nhanes6-hint-2, eval = FALSE}
 ... + 
-  geom_smooth(se = ..., color = ...)
+  geom_smooth(se = ..., method = ...)
 ```
 
 ### Exercise 7
+
+Notice that we still get a message. Let's take their suggestion for formula. Within`geom_smooth()` set the `formula` argument to `y ~ s(x, bs = "cs")`.
+
+```{r nhanes1, exercise = TRUE}
+
+```
+
+```{r nhanes1-hint-2, eval = FALSE}
+... + 
+ geom_smooth(se = FALSE, 
+                method = "gam", 
+                formula = ...)
+```
+
+### Exercise 8
 
 Use `facet_wrap()` to facet the graph by `gender`.
 
@@ -183,47 +195,49 @@ Use `facet_wrap()` to facet the graph by `gender`.
 
 ```
 
-```{r nhanes7-hint, eval=FALSE}
+```{r nhanes7-hint, eval = FALSE}
 ... +
-  facet_wrap(...)
+  facet_wrap( ~ ...) 
 ```
 
+### Exercise 9
 
-### Exercise 8
-
-Finally, adjust the feel of the graph with `theme_clean()` from the **ggthemes** package. 
-
-
+Adjust the feel of the graph with the theme, `theme_clean()`.
 
 ```{r nhanes8, exercise = TRUE}
 
 ```
 
-
-### Exercise 9
-
-Great work! From this graph, we can see that children of both genders tend to grow very quickly without gaining much weight (this is the very steep slope at the beginning of the two graphs). However, after people reach between 100-120 pounds, weight gain becomes coupled with a substantially smaller increase in height. Additionally, both weight and height seem to be higher for males than for females on average. Finally, we can infer from looking at the color gradient that a high `bmi` (i.e. brighter colors) corresponds with higher weight and lower height.
-
-To finish your plot, use `labs()` to give the graph a title and subtitle of your choice. Here, again, is our version.
-
-```{r nhanes9-answer}
-nhanes_plot
+```{r nhanes8-hint, eval = FALSE}
+... +
+  theme_clean()
 ```
+
+### Exercise 10
+
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choice.
 
 ```{r nhanes9, exercise = TRUE}
 
 ```
 
+Reminder: This is what your graph should look like.
+
+```{r nhanes9-answer}
+nhanes_p
+```
 
 
 ## Kenya Voting
 ###
 
-The `kenya` data set from the **primer.data** package records the data from a study in which poll stations in Kenya were assigned to either the control group or a group in which one or more methods --- an SMS reminder, canvassing, etc. --- were used to encourage voter registration. We will recreate this plot:
+The `kenya` contains data from a study in which poll stations in Kenya were assigned to either the control group or a group in which one or more methods (an SMS reminder, canvassing, etc.) were used to encourage voter registration. 
 
+
+Let's create the following plot.
 
 ```{r kenya-answer}
-kenya_plot <- kenya %>%
+kenya_p <- kenya %>%
   filter(treatment %in% c("control", "local", 
                           "SMS", "canvass")) %>%
   droplevels() %>%
@@ -241,14 +255,12 @@ kenya_plot <- kenya %>%
          x = "Treatment",
          y = "Change in Mean Turnout")
 
-kenya_plot
+kenya_p
 ```
-
 
 ### Exercise 1
 
-Start by `glimpse()`'ing the `kenya` data set.
-
+`glimpse()` the `kenya` data set.
 
 ```{r kenya1, exercise = TRUE}
 
@@ -260,59 +272,46 @@ glimpse(kenya)
 
 ### Exercise 2
 
-Pipe `kenya` into the `count()` function to count the number of poll stations in each `treatment` group.
-
-
-```{r kenya2, exercise = TRUE}
-
-```
-
-```{r kenya2-hint, eval = FALSE}
-kenya %>%
-  count(...)
-```
-
-### Exercise 3
-
-Using a pipe and the `%in%` operator, `filter()` `kenya` to only the rows with a `treatment` of "control," "local," "SMS," or "canvass." 
+`filter()` `kenya` to only the rows with a `treatment` of "control," "local," "SMS," or "canvass." Use the `%in% `operator to do so.
 
 
 ```{r kenya3, exercise = TRUE}
 
 ```
 
-```{r kenya3-hint-1, eval=FALSE}
+```{r kenya3-hint-1, eval = FALSE}
 kenya %>%
   filter(treatment %in% ...)
 ```
 
-```{r kenya3-hint-2, eval=FALSE}
+```{r kenya3-hint-2, eval = FALSE}
 kenya %>%
   filter(treatment %in% c(...))
 ```
 
-### Exercise 4
+### Exercise 3
 
-Because `treatment` is a factor, call `droplevels()` immediately after the `filter()` call to avoid future complications. 
-
+Because `treatment` is a factor, use `%>% ` to  `droplevels()`. This will avoid future complications. 
 
 ```{r kenya4, exercise = TRUE}
 
 ```
 
-### Exercise 5 
+```{r kenya4-hint, eval = FALSE}
 
-`select()` the `treatment`, `mean_age`, and `reg_byrv13` columns. 
+```
 
+### Exercise 4
+
+Now `select()` the `treatment`, `mean_age`, and `reg_byrv13` columns. 
 
 ```{r kenya5, exercise = TRUE}
 
 ```
 
+### Exercise 5
 
-### Exercise 6
-
-Use tidyr's `drop_na()` to remove all rows with a value of `NA` in the `mean_age` column.
+Use `drop_na()` to remove all rows with a value of `NA` in the `mean_age` column.
 
 ```{r kenya6, exercise = TRUE}
 
@@ -326,19 +325,11 @@ kenya %>%
   drop_na(...)
 ```
 
-### Exercise 7
+### Exercise 6
 
-The dplyr `ntile()` function divides a continuous numerical value into categories depending on its size. Try running the following code to see how we can categorize the polling stations into 4 equally-sized groups based on the `distance` to the polling station.
+The `ntile()` function divides a continuous numerical value into categories depending on its size.
 
-
-```{r kenya7, exercise = TRUE}
-kenya %>%
-  mutate(distance_quartile = ntile(distance, 4))
-```
-
-### Exercise 8 
-
-Use `mutate()` and `ntile()` to create the variable `age_half`, which categorizes the `mean_age` variable into 2 groups: the younger half, and the older half. Add this to the end of our full pipe.
+Use `mutate()` and `ntile()` to create the variable `age_half`, which categorizes the `mean_age` variable into 2 groups (i.e.the younger half, and the older half).
 
 
 ```{r kenya8, exercise = TRUE}
@@ -346,97 +337,72 @@ Use `mutate()` and `ntile()` to create the variable `age_half`, which categorize
 ```
 
 ```{r kenya8-hint, eval = FALSE}
-# ntile(mean_age, 2) will categorize age into the younger half and the older
-# half.
-
+... %>% 
+  mutate ( ... = ntile(mean_age, 2)
 ```
 
-### Exercise 9
+### Exercise 7
 
 Group the data by `treatment` and `age_half`.
-
 
 ```{r kenya9, exercise = TRUE}
 
 ```
 
-```{r kenya9-hint, eval=FALSE}
+```{r kenya9-hint, eval = FALSE}
 ... %>%
   group_by(...)
 ```
 
-### Exercise 10
+### Exercise 8
 
-Using `summarize()`, calculate the variable `mean_turnout` as the average value of `reg_byrv13` in each group. Remember to set the `na.rm` argument of `mean()` to `TRUE`, as there are some `NA` values in the `reg_byrv13` column.
+Using `summarize()`, calculate the variable `mean_turnout` as the `mean()` value of `reg_byrv13` in each group. The second argument to `mean()` should set `na.rm` to `TRUE`, as there are some `NA` values in the `reg_byrv13` column.
 
 
 ```{r kenya10, exercise = TRUE}
 
 ```
 
-```{r kenya10-hint, eval=FALSE}
-# Don't forget the .groups argument to summarize(). Never ignore warning
-# messages.
+```{r kenya10-hint, eval = FALSE}
+Don't forget the .groups argument to summarize(). Never ignore warning
+messages.
 ```
 
-### Exercise 11 
+### Exercise 9
 
-Use `ggplot()` at the end of the pipe to make a bar graph with `treatment` on the x-axis and `mean_turnout` on the y-axis.
+Use `%>% `to add  `ggplot()`.  Use`fct_reorder()` to reorder the `treatment` variable by `mean_turnout` and map this to 'x`. Map `treatment` to the y-axis.
 
 ```{r kenya11, exercise = TRUE}
 
 ```
 
 
-```{r kenya11-hint-2, eval=FALSE}
+```{r kenya11-hint-1, eval = FALSE}
 Remember to use geom_col() instead of geom_bar() when 
 you map something to the y-axis.
 ```
 
-### Exercise 12 
-
-Already, we can see that one of the treatments is significantly more effective at increasing turnout than others. Continue by using `facet_wrap()` to facet the data by `age_half`. 
-
-
-```{r kenya12, exercise = TRUE}
-
+```{r kenya11-hint-2, eval = FALSE}
+... %>% 
+  ggplot(mapping = aes(x = fct_reorder(treatment, mean_turnout), 
+                       y = ...) +
+  geom_col()
 ```
 
-<!-- DK: Get rid of facet_wrap, or anything else which does not make the final graph. -->
+### Exercise 10
 
-
-### Exercise 13
-
-To make the graph easier to read, use `fct_reorder()` to reorder the `treatment` variable by `mean_turnout`. Note, you will no longer use the `facet_wrap()`, as this will cause issues with the ordering of the `treatment` categories.
-
-
-```{r kenya13, exercise = TRUE}
-
-```
-
-```{r kenya13-hint, eval = FALSE}
-...  %>% 
-  ggplot(mapping = aes(x = fct_reorder(..., ...), 
-                       y = ...)) +
-    geom_col()
-```
-
-### Exercise 14
-
-Improve the aesthetics of the graph by changing the theme to `theme_bw()`.
+Add the theme `theme_bw()` to the plot.
 
 ```{r kenya14, exercise = TRUE}
 
 ```
 
-### Exercise 15
+### Exercise 11
 
-Great job! This graph allows us to see that the presence of a local administrator at the polling location is by far the most effective strategy for increasing voter turnout. In addition, older voters (category 2) are not only more likely to vote than younger voters, but they are also influenced to a greater extent by the presence of a local administrator.
-
-To finish your plot, use `labs()` to change the x-axis label to "Treatment." In addition, give the graph a title, subtitle and y-axis label of your choosing. Your plot should look something like this:
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choosing. Your plot should look something like this:
 
 ```{r kenya15-answer}
-kenya_plot
+kenya_p
 ```
 
 ```{r kenya15, exercise = TRUE}
@@ -448,10 +414,12 @@ kenya_plot
 ## Seguro Popular
 ###
 
-The `sps` data set from the **primer.data** package contains information about a study done on a popular Mexican health insurance program, Seguro Popular. In the study, some Mexican health clusters were randomly "treated." The treatment consisted of encouragement for people in that health cluster to enroll in the health insurance program, as well as funds to improve health facilities in that cluster. We will create this plot:
+The `sps` data set contains information about a study done on a popular Mexican health insurance program, Seguro Popular. In the study, some Mexican health clusters were randomly "treated." The treatment consisted of encouragement for people in that health cluster to enroll in the health insurance program, as well as funds to improve health facilities in that cluster.
+
+Let's create the following plot.
 
 ```{r sps_plot}
-sps_plot <- sps %>%
+sps_p <- sps %>%
   filter(education %in% c("preschool", "secondary", 
                           "high school", "college")) %>%
   select(-c(health_exp_1m, t2_health_exp_1m)) %>%
@@ -462,7 +430,6 @@ sps_plot <- sps %>%
   ggplot(mapping = aes(x = fct_reorder(education, mean_change_in_expenses), 
                        y = mean_change_in_expenses, fill = treatment)) +
     geom_col(position = position_dodge(preserve = "single")) + 
-    scale_fill_brewer(palette = "Paired", labels = c("No", "Yes")) +
     theme_minimal() +
     labs(x = "Education",
          y = "Average Change in Expenses",
@@ -470,60 +437,60 @@ sps_plot <- sps %>%
          subtitle = "Honestly, not sure what is going on here . . .",
          caption = "Source: King et al. (2009)")
 
-sps_plot
+sps_p
 ```
-
-
 
 ### Exercise 1 
 
-Start by calling `glimpse()` on `sps`.
-
+`glimpse()` the dataset `sps`.
 
 ```{r sps1, exercise = TRUE}
 
 ```
 
-```{r sps1-hint, eval=FALSE}
+```{r sps1-hint, eval = FALSE}
 glimpse(...)
 ```
 
 ### Exercise 2
 
-Using a pipe and the `%in%` operator, `filter()` `sps` to the observations with an `education` of "preschool," "secondary," "high school," or "college." 
-
+`filter()` `sps` to only the rows with an `education` of "preschool," "secondary," "high school," or "college."  Use the `%in% `operator to do so.
 
 ```{r sps2, exercise = TRUE}
 
 ```
 
-```{r sps2-hint-1, eval=FALSE}
+```{r sps2-hint-1, eval = FALSE}
 sps %>%
   filter(education %in% ...)
 ```
 
-```{r sps2-hint-2, eval=FALSE}
+```{r sps2-hint-2, eval = FALSE}
 sps %>% 
   filter(education %in% c(...))
 ```
 
 ### Exercise 3
 
-Use `select()` to remove the columns `health_exp_1m` and `t2_health_exp_1m` (these measure health expenses over the past month, whereas `health_exp_3m` and `t2_health_exp_3m` measure health expenses over the past 3 months). 
+Use `select()` to remove the columns `health_exp_1m` and `t2_health_exp_1m`. 
 
 
 ```{r sps3, exercise = TRUE}
 
 ```
 
-```{r sps3-hint-1, eval=FALSE}
-# Remember that select(-column_name) returns all columns except for that column.
+```{r sps3-hint-1, eval = FALSE}
+Remember that select(-...) returns all columns except for the specified column(s).
 ```
 
-```{r sps3-hint-2, eval=FALSE}
-# Consider using c()
+```{r sps3-hint-2, eval = FALSE}
+Consider using c()
 ```
 
+```{r sps3-hint-3, eval = FALSE}
+... %>% 
+  select(-c(..., ...))
+```
 
 ### Exercise 4 
 
@@ -534,69 +501,37 @@ Use `mutate()` to create a new variable, `change_in_expenses`, equal to `health_
 
 ```
 
+```{r sps4-hint, eval = FALSE}
+... %>% 
+  mutate(... = t2_health_exp_3m - health_exp_3m) 
+```
+
 ### Exercise 5
 
 Group the data by `treatment` and `education`.
-
-
 
 ```{r sps5, exercise = TRUE}
 
 ```
 
-```{r sps5-hint, eval=FALSE}
-# Use the group_by() function.
+```{r sps5-hint, eval = FALSE}
+Use the group_by() function.
 ```
 
 ### Exercise 6
 
-Using `summarize()`, calculate `mean_change_in_expenses`, the average of the `change_in_expenses` for each group.
-
+Using `summarize()`, calculate `mean_change_in_expenses`, the` mean()` of the `change_in_expenses` for each group.
 
 ```{r sps6, exercise = TRUE}
   
 ```
 
 ```{r sps6-hint, eval = FALSE}
-# Use the summarize() function and the helper function mean(). Your pipe should
-# look like:
-
-sps %>%
-  filter(education %in% c("preschool", "secondary", "high school", "college")) %>%
-  select(-c(health_exp_1m, t2_health_exp_1m)) %>%
-  mutate(change_in_expenses = t2_health_exp_3m - health_exp_3m) %>%
-  group_by(treatment, education) %>%
-  summarize(mean_change_in_expenses = mean(change_in_expenses))
+... %>% 
+  summarize(... = mean(change_in_expenses))
 ```
 
 ### Exercise 7
-
-use `ggplot()` to make a bar graph that maps `education` to the x-axis, `mean_change_in_expenses` to the y-axis, and `treatment` to the fill aesthetic.
-
-
-```{r sps7, exercise = TRUE}
-
-```
-
-```{r sps7-hint, eval = FALSE}
-Remember to use geom_col() instead of geom_bar() 
-when mapping a variable to the y-axis.
-```
-
-### Exercise 8 
-
-Use the `position_dodge` function with `preserve` equal to "single" to create a dodged barplot. It does not work well! Don't worry, we will fix in in the next exercise.
-
-
-```{r sps8, exercise = TRUE}
-
-```
-
-```{r sps8-hint, eval = FALSE}
-You can use the position argument in the geom_col() layer
-```
-
-### Exercise 9
 
 Because `treatment` column is an integer and not a factor, we can't group our data by it. To fix this problem, use `mutate()` and `as.factor()` to change `treatment` to a factor. 
 
@@ -604,31 +539,48 @@ Because `treatment` column is an integer and not a factor, we can't group our da
 
 ```
 
+```{r sps9-hint, eval = FALSE}
+ ... %>% 
+  mutate(treatment = as.factor(...))
+```
+
+### Exercise 8
+
+Use ` %>% ` to add `ggplot()` to make a bar graph. Use`fct_reorder()` to reorder the `education` variable by `mean_change_in_expenses` and map this to `x` axis. Map `mean_change_in_expenses` to the y-axis, and `treatment` to the `fill`.
+
+
+```{r sps7, exercise = TRUE}
+
+```
+
+```{r sps7-hint-1, eval = FALSE}
+Remember to use geom_col() instead of geom_bar() 
+when mapping a variable to the y-axis.
+```
+
+```{r sps7-hint-2, eval = FALSE}
+.. %>% 
+  ggplot(mapping = aes(x = fct_reorder(education, 
+                                       mean_change_in_expenses), 
+                     y = ..., 
+                     fill = ...) +
+  geom_col()
+```
+
+### Exercise 9
+
+Within `geom_col()`, set the position argument equal to `position_dodge()`. Inside `position_dodge()`, set `preserve` equal to "single" to create a dodged barplot. It does not work well! Don't worry, we will fix in in the next exercise.
+
+```{r sps8, exercise = TRUE}
+
+```
+
+```{r sps8-hint, eval = FALSE}
+... +
+  geom_col(... = position_dodge(preserve = "..."))
+```
 
 ### Exercise 10
-
-Use `fct_reorder()` to reorder the four educations by `mean_change_in_expenses`.
-
-
-```{r sps10, exercise = TRUE}
-
-```
-
-
-### Exercise 11
-
-Change the aesthetics of the plot by using `scale_fill_brewer()` with the "Paired" palette. In addition, adjust the `labels` argument of `scale_fill_brewer()` so that the legend's labels are equal to the vector ("No", "Yes").
-
-```{r sps11, exercise = TRUE}
-
-```
-
-```{r sps11-hint, eval=FALSE}
-...  + 
-    scale_fill_brewer(palette = ..., labels = ...)
-```
-
-### Exercise 12
 
 Add `theme_minimal()` to change the style of the graph.
 
@@ -637,15 +589,15 @@ Add `theme_minimal()` to change the style of the graph.
 
 ```
 
-### Exercise 13
+### Exercise 11
 
-Great work! The first thing to notice from our graph is that all of the bars are positive, implying that all medical costs (regardless of treatment) went up over time. However, it is also clear that the treatment caused costs to rise less for all education groups. Finally, it is worth noting that the education category `preschool` is the only category that the treatment did not significantly affect costs. Since the treatment was designed to help less educated people the most, this is definitely a fact worth investigating.
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choice.
 
-To finish your plot, use `labs()` to change the x-axis label to "education." Also, give the graph a title and subtitle of your choice. Here, again, is our version:
 
+Reminder: This is what your graph should look like.
 
 ```{r sps13-answer}
-sps_plot
+sps_p
 ```
 
 ```{r sps13, exercise = TRUE}
@@ -655,17 +607,20 @@ sps_plot
 ## Shaming 
 ###
 
-The `shaming` data set chronicles a study that attempted to measure the impact of social pressure on voting. Nearly 350,000 people in Michigan were randomly assigned to 1 of 5 treatment groups before the 2006 Michigan primary. All 5 groups were sent mail before the primary: the "Civic Duty" group had an extra reminder that voting was a civic responsibility, the "Hawthorne" group was told that whether or not they voted would be in the public record, the "Self" group was actually *sent* the public record of whether or not they voted in 2004, and the "Neighbors" group was sent both their voting record and their neighbors' voting record from 2004. We will reproduce this plot.
+The `shaming` data set measures the impact of social pressure on voting. Nearly 350,000 people in Michigan were randomly assigned to 1 of 5 treatment groups before the 2006 Michigan primary. All 5 groups were sent mail before the primary: the "Civic Duty" group had an extra reminder that voting was a civic responsibility, the "Hawthorne" group was told that whether or not they voted would be in the public record, the "Self" group was actually *sent* the public record of whether or not they voted in 2004, and the "Neighbors" group was sent both their voting record and their neighbors' voting record from 2004. 
+
+Let's create the following plot.
 
 ```{r sh_goal}
-shaming_plot <- shaming %>%
+shaming_p <- shaming %>%
   select(primary_04, primary_06, treatment) %>%
   mutate(primary_04 = if_else(condition = 
                                 str_detect(primary_04, "Yes"),
-                                true = 1L,
-                                false = 0L)) %>%
+                                true = 1,
+                                false = 0)) %>%
   pivot_longer(cols = c(primary_04, primary_06), 
-               names_to = "year", values_to = "voted") %>%
+               names_to = "year", 
+               values_to = "voted") %>%
   group_by(treatment, year, voted) %>%
   summarize(num_voters = n(), .groups = "drop") %>%
   mutate(voted = if_else(condition = voted == 1,
@@ -676,7 +631,6 @@ shaming_plot <- shaming %>%
   ggplot(mapping = aes(x = fct_reorder(treatment, pct_voted), 
                        y = pct_voted, fill = year)) +
     geom_col(position = position_dodge(preserve = "single")) +
-    coord_cartesian(ylim = c(0.2, 0.45)) +
     labs(x = "Treatment",
          y = "Voting Percentage",
          title = "Voting Rates Based on Mailings",
@@ -684,12 +638,12 @@ shaming_plot <- shaming %>%
          caption = "Source: Gerber, Green, and Larimer (2008).") +
     theme_fivethirtyeight()
 
-shaming_plot
+shaming_p
 ```
 
 ### Exercise 1
 
-Start by running `skim()` on `shaming`. See if you can find out how many of the participants voted in `general_04`. Also, pay close attention to the data types of each of the variables.
+`skim()` the `shaming` data set. Pay close attention to the data types of each of the variables.
 
 ```{r shaming1, exercise = TRUE}
 
@@ -697,19 +651,30 @@ Start by running `skim()` on `shaming`. See if you can find out how many of the 
 
 ### Exercise 2
 
-Make the data set easier to visualize by limiting the columns to `treatment`, `primary_04`, and `primary_06`. 
+`select()` the columns `treatment`, `primary_04`, and `primary_06`. 
 
 ```{r shaming2, exercise = TRUE}
 
 ```
 
-```{r shaming2-hint, eval=FALSE}
-# Use the select() function.
-```
-
 ### Exercise 3
 
-Use `pivot_longer()` to map the *names* of the `primary_04` and `primary_06` columns to a new column, "year," and the *values* of those two columns to a new column, "voted." What goes wrong?
+Use `mutate()` to change the `primary_04` column. Set `primary_04` to an `if_else()` statement. Within `if_else()`, set `condition` to `str_detect()` of the string "Yes" in `primary_04`. If the condition is true, return `1`, and if the condition is false, return `0`.
+
+```{r shaming5, exercise = TRUE}
+
+```
+
+```{r shaming5-hint-1, eval = FALSE}
+mutate(primary_04 = if_else(condition = 
+                              str_detect(primary_04, "..."),
+                                true = ...,
+                                false = ...))
+```
+
+### Exercise 4
+
+Use `pivot_longer()` to map the *names* of the `primary_04` and `primary_06` columns to a new column, "year," and the *values* of those two columns to a new column, "voted."
 
 
 ```{r shaming3, exercise = TRUE}
@@ -718,99 +683,53 @@ Use `pivot_longer()` to map the *names* of the `primary_04` and `primary_06` col
 
 ```{r shaming3-hint, eval = FALSE}
 ...  %>%
-  pivot_longer(cols = ..., names_to = ..., values_to = ...)
-```
-
-### Exercise 4
-
-`pivot_longer()` won't let us combine one column of `<chr>` data with one column of `<int>` data. Therefore, we're going to have to change the data type of one of the columns.
-
-Before we do that, though, we need to understand the dplyr `if_else()` function. `if_else()` is used alongside `mutate()` to create 2 different values depending on whether a `condition` is `TRUE` or `FALSE`. `if_else()` is a more modern, and somewhat safer, version of `ifelse()`.
-
-Run the following code to see how we can categorize the `birth_year` column into 2 groups based on whether the person was born before 1950.
-
-```{r shaming4, exercise = TRUE, exercise.lines = 6}
-shaming %>%
-  select(birth_year) %>%
-  mutate(born_before_1950 = if_else(condition = birth_year < 1950,
-                                 true = "yes",
-                                 false = "no"))
+  pivot_longer(cols = ..., 
+               names_to = c(...,...),
+               values_to = ...)
 ```
 
 ### Exercise 5
 
-Now, use `if_else()` before the `pivot_longer()` statement to `mutate()` the `primary_04` column. The condition should should be a `str_detect()` of the string "Yes" in `primary_04`. If the condition is true, return 1 **as an integer**, and if the condition is false, return 0 **as an integer**. Don't forget to `pivot_longer()` once again. 
-
-
-```{r shaming5, exercise = TRUE, eval = FALSE, exercise.lines = 5}
-
-```
-
-```{r shaming5-hint-1, eval=FALSE}
-# Remember to append the letter "L" to make something an integer; e.g. 22L.
-```
-
-```{r shaming5-hint-2, eval=FALSE}
-# The condition of the if_else() should be str_detect(primary_04, "Yes").
-```
-
-### Exercise 6
-
-Great job! To continue, group the data by `treatment`, `year`, and `voted`.
-
+Great job! Now group the data by `treatment`, `year`, and `voted`.
 
 ```{r shaming6, exercise = TRUE}
 
 ```
 
-```{r shaming6-hint, eval=FALSE}
-# Use the group_by() function.
+```{r shaming6-hint, eval = FALSE}
+Use the group_by() function.
 ```
 
-### Exercise 7
+### Exercise 6
 
-Using `summarize()`, create the variable `num_voters` that simply counts the number of rows in each group.
+Using `summarize()`, create the variable `num_voters` that is set to the function `n()`, which simply counts the number of rows in each group. Then, set the argument `.groups` to "drop".
 
 ```{r shaming7, exercise = TRUE}
 
 ```
 
-```{r shaming7-hint, eval=FALSE}
-# Remember that n() counts the number of rows in each group.
+```{r shaming7-hint, eval = FALSE}
+... %>% 
+  summarize(num_voters = n(), .groups = "..."")
 ```
 
-### Exercise 8
+### Exercise 7
 
-The `voted` column is a bit difficult to understand, as a numerical value (0 or 1) is used to represent an idea (the person did or did not vote). Use another `if_else()` statement to `mutate()` the `voted` column. Condition your `if_else()` on whether `voted` is equal to 1: true should return "did_vote," and false should return "did_not_vote."
+The `voted` column is a bit difficult to understand, for the numerical value (0 or 1) is used to represent an idea (the person did or did not vote). Use `mutate()` to set `voted` to an `if_else()` statement. Within `if_else()`, set `condition` to where `voted` is equal to 1. Set `true` to "did_vote," and `false` to "did_not_vote."
 
 
 ```{r shaming8, exercise = TRUE}
 
 ```
 
-```{r shaming8-hint-1, eval=FALSE}
-# The condition of the if_else() should be voted == 1.
+```{r shaming8-hint-2, eval = FALSE}
+...%>%
+  mutate(voted = if_else(condition = voted == ...,
+                         true = "...",
+                         false = "..."))
 ```
 
-```{r shaming8-hint-2, eval=FALSE}
-# Your pipe should look something like this:
-
-shaming %>%
-  select(primary_04, primary_06, treatment) %>%
-  mutate(primary_04 = if_else(condition = 
-                                str_detect(primary_04, "Yes"),
-                                true = 1L,
-                                false = 0L)) %>%
-  pivot_longer(cols = c(primary_04, primary_06), 
-               names_to = "year", values_to = "voted") %>%
-  group_by(treatment, year, voted) %>%
-  summarize(num_voters = n(), .groups = "drop") %>%
-  mutate(voted = if_else(condition = voted == 1,
-                         true = "did_vote",
-                         false = "did_not_vote"))
-```
-
-### Exercise 9
+### Exercise 8
 
 Now, we want `did_vote` and `did_not_vote` to be their own columns. Call a `pivot_wider()` function that gets its column names from `voted` and its values from `num_voters`.
 
@@ -826,69 +745,71 @@ Now, we want `did_vote` and `did_not_vote` to be their own columns. Call a `pivo
 
 ### Exercise 10
 
-`mutate()` a new variable, `pct_voted`, equal to the number of people who `did_vote` divided by the total number of people.
+Use `mutate()` to create new variable `pct_voted` which is equal to the number of people who `did_vote` divided by the total number of people.
 
 ```{r shaming10, exercise = TRUE}
 
 ```
 
-```{r shaming10-hint, eval=FALSE}
-# Note that the total number of people is equal to (did_vote + did_not_vote).
+```{r shaming10-hint, eval = FALSE}
+Note that the total number of people is equal to (did_vote + did_not_vote). Also, use / to divide. 
 ```
 
 ### Exercise 11
 
-Call `ggplot()` to make a bar chart that maps `treatment` to the x-axis, `pct_voted` to the y-axis, and `year` to the fill aesthetic. 
+Use `%>%` to add`ggplot()` to make a bar chart. Use `fct_reorder()` to reorder the `treatment` variable by `pct_voted` and map this to `x` axis. Map `pct_voted` to the y-axis, and `year` to the `fill`.
 
 
-```{r shaming11, exercise = TRUE, exercise.lines = 14}
+```{r shaming11, exercise = TRUE}
 
 ```
 
-```{r shaming11-hint, eval = FALSE}
+```{r shaming11-hint-1, eval = FALSE}
 Remember to use geom_col() instead of geom_bar() 
 when you map something to the y-axis.
 ```
 
+```{r shaming11-hint-2, eval = FALSE}
+... %>% 
+  ggplot(mapping = aes(x = fct_reorder(treatment, pct_voted), 
+                       y = ..., 
+                       fill = ...)) +
+  geom_col()
+```
+
 ### Exercise 12
 
-A stacked barplot is very hard to analyze here. Use the `position_dodge()` function with `preserve` set to "single" to make the graph a dodged barplot.
-
-
+Within `geom_col()`, set the position argument equal to `position_dodge()`. Inside `position_dodge()`, set `preserve` equal to "single" to create a dodged barplot.
 
 ```{r shaming12, exercise = TRUE}
 
 ```
 
 ```{r shaming12-hint, eval = FALSE}
-Set the position argument of geom_col()
+... +
+  geom_col(position = position_dodge(preserve = "single"))
 ```
 
 ### Exercise 13
 
-Use `fct_reorder()` to reorder the five different `treatment`s by `pct_voted`. In other words, you need to change the value of `x`, probably using `fct_reorder()`, within the call to `aes()`.
+Add the theme `theme_fivethirtyeight()` to your plot. 
 
-```{r shaming13, exercise = TRUE}
+```{r shaming16, exercise = TRUE}
 
+```
+
+```{r shaming16-hint, eval = FALSE}
+Remember when you add a theme, you add a layer. Use +.
 ```
 
 ### Exercise 14
 
-Finally, use the `coord_cartesian` function to adjust the graph's zoom by setting `ylim` to the vector `(0.2, 0.45)`.
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choice.
 
-
-```{r shaming14, exercise = TRUE}
-
-```
-
-### Exercise 15
-
-From this graph, the first thing to notice is that all five of the treatment categories had approximately the same average voter turnout in 2004. We can also see that turnout decreased across the board in 2006. However, each additional level of social shaming led to a substantial increase in voter turnout, with the "Neighbors" treatment particularly effective.
-
-Clean up your graph with some sensible labels. Again, here is our version.
+Reminder: This is what your graph should look like. 
 
 ```{r shaming15-answer}
-shaming_plot
+shaming_p
 ```
 
 ```{r shaming15, exercise = TRUE}
@@ -944,7 +865,7 @@ q_subset <- qscores %>%
 
 ```
 
-```{r qscores4-hint-1, eval=FALSE}
+```{r qscores4-hint-1, eval = FALSE}
 # The n() function returns the number of rows in each group.
 ```
 
@@ -984,7 +905,7 @@ q_subset <- qscores %>%
 
 ```
 
-```{r qscores6-hint, eval=FALSE}
+```{r qscores6-hint, eval = FALSE}
 # Remember that a:b returns all of the numbers from a to b. For example, 1:10 returns every number between 1 and 10.
 ```
 
@@ -1023,7 +944,7 @@ q_subset <- qscores %>%
 
 ```
 
-```{r qscores8-hint, eval=FALSE}
+```{r qscores8-hint, eval = FALSE}
 qsubset <- q_subset %>%
   summarize(rnorm_values = rnorm(...))
 ```
@@ -1036,7 +957,7 @@ Great work! Our next goal will be to create a new column with the homework value
 
 ```
 
-```{r qscores9-hint, eval=FALSE}
+```{r qscores9-hint, eval = FALSE}
 # Remember to use the %in% operator.
 ```
 
@@ -1202,7 +1123,7 @@ q_plot <- ggplot(data = q_bind, mapping = aes(x = value)) +
 
 ```
 
-```{r qscores15-hint, eval=FALSE}
+```{r qscores15-hint, eval = FALSE}
 # Remember that when using facet_grid(), the variable to the left of the "~" is the variable that will be used to facet the graph into rows.
 ```
 
@@ -1378,7 +1299,7 @@ Now, use `if_else()` and `mutate()` tto create a new variable, `opinion`. `opini
 # The function we want to use for the condition is str_detect().
 ```
 
-```{r nes7-hint-3, eval=FALSE}
+```{r nes7-hint-3, eval = FALSE}
 nes %>%
   select(year, education, pres_appr, ideology, voted) %>%
   filter(education %in% c("Some Highschool", "Highschool", 
