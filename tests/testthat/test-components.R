@@ -4,9 +4,9 @@ library(primer.tutorials)
 library(tidyverse)
 library(fs)
 
-# "../../inst"
+starting_place <- "../../"
 
-starting_place <- system.file(package = "primer.tutorials")
+# starting_place <- system.file(package = "primer.tutorials")
 
 files <- fs::dir_ls(starting_place,
                     recurse = TRUE,
