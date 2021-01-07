@@ -4,12 +4,16 @@ library(primer.tutorials)
 library(tidyverse)
 library(fs)
 
-base <- system.file(package = "primer.tutorials")
+# "../../inst"
 
-files <- fs::dir_ls(base, recurse = TRUE, regexp = "tutorial.Rmd") %>%
+starting_place <- system.file(package = "primer.tutorials")
+
+files <- fs::dir_ls(starting_place,
+                    recurse = TRUE,
+                    regexp = "tutorial.Rmd") %>%
   fs::path_abs()
 
-stopifnot(length(files) > 3)
+stopifnot(length(files) > 15)
 
 # Goal is to make sure that each tutorial includes the required Information and
 # Submission sections. Unfortunately, I could not figure out how to check that a

@@ -1,7 +1,6 @@
-# Once you know where the tutorial.Rmd file is, you have to "test" it somehow.
-# As you can see, our definition of "test" is to run render() and hope there is
-# no error. There is no check to see if "tutorial.html" looks OK, just that that
-# string is returned.
+# Our definition of "test" for a tutorial file is to run render() and hope there
+# is no error. There is no check to see if "tutorial.html" looks OK, just that
+# that string is returned.
 
 # Might we do more here? For example, what we really want to confirm is that,
 # when a student presses the "Run Document" button, things will work. I am not
@@ -12,12 +11,16 @@ library(primer.tutorials)
 library(tidyverse)
 library(fs)
 
-base <- system.file(package = "primer.tutorials")
+# "../../inst"
 
-files <- fs::dir_ls(base, recurse = TRUE, regexp = "tutorial.Rmd") %>%
+starting_place <- system.file(package = "primer.tutorials")
+
+files <- fs::dir_ls(starting_place,
+                    recurse = TRUE,
+                    regexp = "tutorial.Rmd") %>%
   fs::path_abs()
 
-stopifnot(length(files) > 3)
+stopifnot(length(files) > 15)
 
 # You can choose to run just a few of the portfolios through by selecting a
 # subset of files, like `files <- files[c(2)]` or `files <- files[c(1, 3:9)]`.
