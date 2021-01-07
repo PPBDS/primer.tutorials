@@ -4,11 +4,7 @@ library(primer.tutorials)
 library(tidyverse)
 library(fs)
 
-starting_place <- "../../"
-
-# starting_place <- system.file(package = "primer.tutorials")
-
-files <- fs::dir_ls(starting_place,
+files <- fs::dir_ls("../../",
                     recurse = TRUE,
                     regexp = "tutorial.Rmd") %>%
   fs::path_abs()

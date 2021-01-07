@@ -1,14 +1,11 @@
 Testing tutorials is tricky.
 
-First, we would like to test files which are not yet installed. With test() (from devtools), things work fine. You can just use relative paths because the tests seem to be run from where the test files live. With check(), this fails. It is as if the tests are run from a different directory, so "../../inst" does not point to the current inst directory. So, the only choice is to use system.file(), as we are currently.
+First, we would like to test files which are not yet installed. This is tricky because of the "inst" directory. That directory exists, obviously, in the normal project. But, in the tarball, it has vanished. test() works on the project as it is, with "inst". check() works on the tarball, in which there is no "inst". So, you need to a way to search for files which works in both places. Key trick:
 
-Something like this works fine with test() but not with check().
-
-files <- fs::dir_ls("../../inst", recurse = TRUE, regexp = "tutorial.Rmd")
-
-Hmm. check() installs the package first, which makes the inst directory go away. Does it run the tests from inside the newly installed package?
-
-Maybe rprojroot::find_package_root_file() and related functions would be helpful.
+files <- fs::dir_ls("../../",
+                    recurse = TRUE,
+                    regexp = "tutorial.Rmd") %>%
+  fs::path_abs()
 
 Second, any code in a tutorial code chunk, including in a hint, which produces an error when run on its own will cause an error if you use R CMD check. Most common example is when you have ... to indicate to the student that they should replace the ... with something. Best solution is to set eval = FALSE in all hint chunks like this. But the same warning applies for all chunks.
 
