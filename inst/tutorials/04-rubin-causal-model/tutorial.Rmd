@@ -16,6 +16,29 @@ library(primer.tutorials)
 library(tidyverse)
 library(gt)
 
+# Key Data 
+
+gt_obj <- tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("13", "11", "11", "9", "6"),
+       ycontrol = c("9", "11", "10", "12", "4"),
+       ydiff = c("? ", "? ", "? ", "? ", "? ")) %>%
+   gt() %>%
+  cols_label(subject = md("ID"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  cols_move(columns = vars(ytreat, ycontrol), after = vars(subject)) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
+            locations = cells_column_labels(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  cols_align(align = "left", columns = vars(subject)) %>%
+  fmt_markdown(columns = TRUE) %>%
+  tab_spanner(label = "$$\\text{Outcomes}$$", vars(ytreat, ycontrol))  %>%
+  tab_spanner(label = "$$\\text{Estimand}$$", vars(ydiff))
+
+
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
@@ -27,13 +50,6 @@ options(tutorial.exercise.timelimit = 60,
 <!-- One question could take the trains data and make a Preceptor table. Learn a little gt! Would also need some manipulation to create the two potential outcome columns. -->
 
 <!-- More about confounding. Of course, it needs to be in the book. -->
-
-<!-- Is this math correct? Make it easier to do in your head! -->
-
-## Introduction
-###
-
-The Rubin Causal Model is the most popular and powerful framework for studying cause and effect in the social sciences. 
 
 
 ## Information
@@ -117,7 +133,7 @@ question_text(NULL,
 
 ### Exercise 5
 
-In two sentences, explain what what an *ideal* Preceptor Table is, and why is this generally impossible to observe. Use the phrase 'potential outcomes' in your answer.
+In two sentences, explain what what an *ideal* Preceptor Table is, and why it is generally impossible to observe. Use the phrase 'potential outcomes' in your answer.
 
 ```{r def-ex-5}
 question_text(NULL,
@@ -127,7 +143,6 @@ question_text(NULL,
     incorrect = NULL,
     options = list(nrows = 5))
 ```
-
 
 ### Exercise 6
 
@@ -143,31 +158,13 @@ question_text(NULL,
 ```
 
 
-## Causal effects
+## Causal Effect
 ###
 
 Use the following ideal Preceptor Table to answer some questions about potential estimands we might be interested in.
 
 ```{r}
-
-tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
-       ytreat = c("11", "13", "10", "8", "6"),
-       ycontrol = c("9", "10", "11", "10", "4"),
-       ydiff = c("?", "?", "?", "?", "?")) %>%
-  gt() %>%
-  cols_label(subject = md("$$ID$$"),
-                ytreat = md("$$Y_t(u)$$"),
-                ycontrol = md("$$Y_c(u)$$"),
-                ydiff = md("$$Y_t(u) - Y_c(u)$$"))  %>%
-  cols_move(columns = vars(ytreat, ycontrol), after = vars(subject)) %>%
-  tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(subject))) %>%
-  cols_align(align = "center", columns = TRUE) %>%
-  cols_align(align = "left", columns = vars(subject)) %>%
-  fmt_markdown(columns = TRUE)  %>%
-  tab_spanner(label = "$$Outcome$$", vars(ytreat, ycontrol))  %>%
-  tab_spanner(label = "$$Causal Effect$$", vars(ydiff))
-
+gt_obj
 ```
 
 ### Exercises 1 to 3
@@ -192,10 +189,10 @@ quiz(
     allow_retry = FALSE),
 
   question("On whom did the treatment have the most negative causal effect?",
-    answer("Yao"),
+    answer("Yao", correct = TRUE),
     answer("Emma"),
     answer("Cassidy"),
-    answer("Tahmid", correct = TRUE),
+    answer("Tahmid"),
     answer("Diego"),
     allow_retry = FALSE)
 )
@@ -209,35 +206,10 @@ quiz(
 In these exercises, we will assume that the causal effect, $\tau$ (pronounced tau), is the same for everyone.
 
 
-<!-- DK: Why make the math hard? This should be easy to do in your head.  -->
-
 Use the following actual Preceptor Table to answer questions about a single value for tau.
 
 ```{r question-singletau-setup}
-# First, we create a tibble with the values we want for the table
-
-gt_obj <- tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
-       ytreat = c("13", "11", "?", "?", "5"),
-       ycontrol = c("?", "?", "10", "12", "?"),
-       ydiff = c("?", "?", "?", "?", "?")) %>%
-  
-  # Then, we use the gt function to make it pretty
-  
-  gt() %>%
-  cols_label(subject = md("$$ID$$"),
-                ytreat = md("$$Y_t(u)$$"),
-                ycontrol = md("$$Y_c(u)$$"),
-                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
-  cols_move(columns = vars(ytreat, ycontrol), after = vars(subject)) %>%
-  tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(subject))) %>%
-  cols_align(align = "center", columns = TRUE) %>%
-  cols_align(align = "left", columns = vars(subject)) %>%
-  tab_spanner(label = "$$Outcomes$$", vars(ytreat, ycontrol)) %>%
-  tab_spanner(label = "$$Estimands$$", vars(ydiff)) %>%
-  fmt_markdown(columns = TRUE)
-
-gt_obj 
+gt_obj
 ```
 
 ### Exercise 1
@@ -285,27 +257,27 @@ question_text(NULL,
 quiz(
 
   question("What is your estimate for a single value for tau?",
-    answer("-2.33"),
-    answer("-1.33", correct = TRUE),
-    answer("-1"),
-    answer("0"),
-    answer("1.33"),
+    answer("-2"),
+    answer("2"),
+    answer("-1", correct = TRUE),
+    answer("1"),
+    answer("1.5"),
     allow_retry = FALSE),
 
   question("What is your estimate for $Y_c(u)$ for Emma?",
-    answer("10.33"),
-    answer("11.33"),
-    answer("12.33", correct = TRUE),
-    answer("12.67"),
+    answer("10"),
+    answer("11"),
+    answer("12", correct = TRUE),
     answer("13"),
+    answer("14"),
     allow_retry = FALSE),
 
   question("What is your estimate for $Y_t(u)$ for Cassidy?",
-    answer("6.67"),
-    answer("7.33"),
-    answer("7.67"),
-    answer("8.67", correct = TRUE),
-    answer("9"),
+    answer("6"),
+    answer("5"),
+    answer("7"),
+    answer("9", correct = TRUE),
+    answer("8"),
     allow_retry = FALSE)
 )
 ```
@@ -315,15 +287,15 @@ quiz(
 ## Two taus
 ###
 
-As we do in the book, let's now assume that the causal effect varies by sex. We will estimate two values for $\tau$: $\tau_F$ and $\tau_M$. (Cassidy and Emma are female, Tahmid, Diego, and Yao are male).
+As we do in the book, let's now assume that the causal effect varies by sex. We will estimate two values for $\tau$: $\tau_F$ and $\tau_M$. (Cassidy and Emma are female;Tahmid, Diego, and Yao are male).
 
 ```{r}
-gt_obj 
+gt_obj
 ```
 
 ### Exercise 1
 
-How would you calculate $\tau_F$? Use only words and no numbers
+How would you calculate $\tau_F$? Use only words and no numbers.
 
 ```{r 2-tau-ex-1}
 question_text(NULL,
@@ -374,12 +346,10 @@ question_text(NULL,
 ```
 
 
-
-
 ## Average treatment effect
 ###
 
-We will no longer make any assumptions about $\tau$ for any individual or group. Instead, we are interested in estimating the average treatment effect ($ATE). We have the same data as above.
+We will no longer make any assumptions about $\tau$ for any individual or group. Instead, we are interested in estimating the average treatment effect ($ATE). We have the same data as the previous sections.
 
 ```{r}
 gt_obj
@@ -415,7 +385,7 @@ question_text(NULL,
 
 ### Exercise 3
 
-What is Cassidy's outcome under treatment if we assume $\tau$ to be the $ATE$ we calculated above, which was -0.5? Note that this answer will just be a number, without any symbol.
+What is Cassidy's outcome under treatment if we assume $\tau$ to be the $ATE$ we calculated above? Note that the answer will just be a number, without any symbol.
 
 ```{r ate-ex-3}
 question_text(NULL,
@@ -443,11 +413,25 @@ question_text(NULL,
 
 ### Exercise 5
 
-<!-- DK: Does the book cover this? -->
-
 Write a paragraph about what a heterogeneous treatment effect is and situations when it is more or less common.
 
 ```{r ate-ex-5}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 7))
+```
+
+## Casual vs Predictive Models 
+###
+
+### Exercise 1
+
+Write two sentences that explain the difference between a casual model and a predictive model. 
+
+```{r models-ex-1}
 question_text(NULL,
     answer(NULL, correct = TRUE),
     allow_retry = TRUE,
