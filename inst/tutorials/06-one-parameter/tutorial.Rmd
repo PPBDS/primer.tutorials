@@ -12,9 +12,9 @@ description: "Chapter 6 tutorial"
 
 <!-- Things to Fix: -->
 
-<!-- Virtual shovel culminates in making "Distributions of 1,000 red" -->
+<!-- DONE: Virtual shovel culminates in making "Distributions of 1,000 red" -->
 
-<!-- Different sample sizes culminates in Figure 6.7, maybe simpler. Not 100 shovel size. Maybe just 5, 10, 50, 100, 500. -->
+<!-- DONE: Different sample sizes culminates in Figure 6.7, maybe simpler. Not 100 shovel size. Maybe just 5, 10, 50, 100, 500. -->
 
 <!-- Standard error just needs a question or two --- maybe a written sentence or two --- about what a standard error is. Like ch 4 tutorial questions at start. -->
 
@@ -60,6 +60,13 @@ virtual_samples <- tibble(ID = 1:1000) %>%
   mutate(numb_beads = map_int(shovel, ~ length(.$color))) %>% 
   mutate(prop_red = numb_red / numb_beads)
 
+prop_red <- function(x, shovel_size, reps){
+  tibble(ID = 1:reps) %>% 
+    mutate(shovel = map(ID, ~ sample_n(x, size = shovel_size))) %>% 
+    mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) %>% 
+    mutate(numb_beads = map_int(shovel, ~ length(.$color))) %>% 
+    mutate(prop_red = numb_red / numb_beads)
+}
 
 
 
@@ -193,42 +200,53 @@ Use `mutate()` one last time to create the variable `prop_red`, our estimate of 
 
 ### Exercise 7
 
-Awesome. Now start a pipe with `virtual_samples`. Use `ggplot()`to map `prop_red` to the x-axis. Also, add the layer `geom_histogram()` to create a histogram of our data.
+Copy/paste your code from above. Assign your code to an object named `virtual_samples`.
 
 ```{r shovel7, exercise = TRUE}
 
 ```
 
-
-```{r shovel7-hint-1, eval = FALSE}
-ggplot(aes(...)) + 
-  geom_histogram()
+```{r shovel7-hint, eval = FALSE}
+Use the assignment operator to do so.
 ```
 
 ### Exercise 8
 
-Within `geom_histrogram()` set `binwidth` to .01, boundary to .4, and `color` to "white".
+Awesome. Now start a pipe with `virtual_samples`. Use `ggplot()`to map `prop_red` to the x-axis. Also, add the layer `geom_histogram()` to create a histogram of our data.
 
 ```{r shovel8, exercise = TRUE}
 
 ```
 
-```{r shovel8-hint, eval = FALSE}
-... +
-  geom_histrogram(..., ..., ...)
+
+```{r shovel8-hint-1, eval = FALSE}
+ggplot(aes(...)) + 
+  geom_histogram()
 ```
 
 ### Exercise 9
 
-To finish, use `labs()` to give your graph the appropriate title and axis labels. See **hint** for guidance to create the symbol $\hat{p}$.
-
+Within `geom_histrogram()` set `binwidth` to .01, boundary to .4, and `color` to "white".
 
 ```{r shovel9, exercise = TRUE}
 
 ```
 
-Reminder: This is what your plot should look like. 
+```{r shovel9-hint, eval = FALSE}
+... +
+  geom_histrogram(..., ..., ...)
+```
 
+### Exercise 10
+
+To finish, use `labs()` to give your graph the appropriate title and axis labels. See **hint** for guidance to create the symbol $\hat{p}$.
+
+
+```{r shovel10, exercise = TRUE}
+
+```
+
+Reminder: This is what your plot should look like. 
 
 ```{r}
 set.seed(9)
@@ -248,308 +266,322 @@ virtual_samples %>%
          title = "Distribution of 1,000 proportions red") 
 ```
 
-```{r shovel9-hint, eval = FALSE}
+```{r shovel10-hint, eval = FALSE}
 Within labs(), set x to expression(hat(p))
 ```
 
 ## Different shovel sizes
 ###
 
-Let's create the following plot that displays different standard deviations of proportions red for 100 different shovels.
+Let's create the following plot that displays different standard deviations of red bead proportions for 100 different shovels.
 
 ```{r}
+prop_red <- function(x, shovel_size, reps){
+  tibble(ID = 1:reps) %>% 
+    mutate(shovel = map(ID, ~ sample_n(x, size = shovel_size))) %>% 
+    mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) %>% 
+    mutate(numb_beads = map_int(shovel, ~ length(.$color))) %>% 
+    mutate(prop_red = numb_red / numb_beads)
+}
+
+shovels_100 <- tibble(shovel_size = 1:100) %>%
+  mutate(prop_red_results = map(shovel_size,
+                                ~ prop_red(x = urn, 
+                                           shovel_size = .x, 
+                                           reps = 1000))) %>% 
+  mutate(prop_red_sd = map_dbl(prop_red_results, 
+                               ~ pull(., prop_red) %>% sd()))
+
+shovels_100 %>%
+ ggplot(aes(x = shovel_size, y = prop_red_sd)) +
+ geom_point() +
+ stat_function(aes(x = 1:100, colour = "red"), 
+               fun = function(.x) 1/(2 * sqrt(.x)), 
+               show.legend = FALSE) +
+ labs(x = "Shovel size",
+      y = "Standard deviation of the proportion red")
+```
+
+### Exercise 1
+
+Let's create a function that calculates the proportion of red beads. We start with hard code. Recall our code for  `virtual_samples` in the previous section. Place the code within { } of `function()`. Name the function `prop_red()`.
+
+```{r map1, exercise = TRUE}
+tibble(ID = 1:1000) %>% 
+  mutate(shovel = map(ID, ~ sample_n(urn, size = 50))) %>% 
+  mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) %>% 
+  mutate(numb_beads = map_int(shovel, ~ length(.$color))) %>% 
+  mutate(prop_red = numb_red / numb_beads)
+```
+
+```{r map1-hint, eval = FALSE}
+prop_red <- function(){
+  
+  ...
+  
+}
 
 ```
 
-<!-- ### Exercise 1 -->
+### Exercise 2
 
-<!-- Create the object `virtual_samples_30` by performing `rep_sample_n` on our object `urn` with a size of 30 and reps of 1000.  -->
+Copy/paste your code from above. Add the parameter `reps` within `function()`. Also replace the value 1000 within `tibble()` with `reps`.
 
-<!-- ```{r map2, exercise = TRUE} -->
+```{r map2, exercise = TRUE}
 
-<!-- ``` -->
+```
 
-<!-- ```{r map2-hint, eval = FALSE} -->
-<!-- virtual_samples_30 <- urn %>% -->
-<!--   rep_sample_n(size = ..., reps = ...) -->
-<!-- ``` -->
+```{r map2-hint-1, eval = FALSE}
+prop_red <- function(...){
+  tibble(ID = 1:reps) %>% 
+    ...
+}
+```
 
+### Exercise 3
 
-<!-- ### Exercise 2 -->
+Copy/paste your code from above. Add the parameter `x` within `function()`. Also replace the argument `urn` with `x` within `sample_n()`.
 
-<!-- To perform the above code three more times, let's create a function called `use_shovel`. This function draws a specified sample size with a specified number of reps. Remember that we want for size and reps to **not** be explicitly declared, so that we may use the function for any shovel size and any number of reps.  -->
+```{r map3, exercise = TRUE}
 
-<!-- ```{r map3-setup} -->
-<!-- virtual_samples_30 <- urn %>% -->
-<!--   rep_sample_n(size = 30, reps = 1000) -->
-<!-- ``` -->
+```
 
-<!-- ```{r map3, exercise = TRUE} -->
+```{r map3-hint, eval = FALSE}
+prop_red <- function(reps, ...){
+  tibble(ID = 1:reps) %>% 
+  mutate(shovel = map(ID, ~ sample_n(x, size = 50))) %>% 
+    ...
+}
+```
 
-<!-- ``` -->
+### Exercise 4
 
-<!-- ```{r map3-hint-1, eval = FALSE} -->
-<!-- use_shovel <- function(x, size, reps){ -->
-<!--   x %>% ... -->
-<!-- } -->
-<!-- ``` -->
+Copy/paste your code from above. Add the parameter `shovel_size` within `function()`. Also set `size` to `shovel_size` within 
 
-<!-- ```{r map3-hint-2, eval = FALSE} -->
-<!-- use_shovel <- function(x, size, reps){ -->
-<!--   x %>%  -->
-<!--     rep_sample_n(size = size, ...) -->
-<!-- } -->
-<!-- ``` -->
+```{r map4, exercise = TRUE}
 
-<!-- ### Exercise 3 -->
+```
 
-<!-- To test our function, call `use_shovel` with `(x = urn, size = 30, and reps = 2)` -->
+```{r map4-hint-1, eval = FALSE}
+prop_red <- function(reps, x, ...){
+  tibble(ID = 1:reps) %>% 
+  mutate(shovel = map(ID, ~ sample_n(x, size = ...))) %>% 
+    ...
+}
+```
 
-<!-- ```{r map4, exercise = TRUE} -->
+<!-- ### Exercise 5 -->
 
-<!-- ``` -->
-
-<!-- ```{r map4-hint, eval = FALSE} -->
-<!-- use_shovel(x = urn, ..., ...) -->
-<!-- ``` -->
-
-<!-- ### Exercise 4 -->
-
-<!-- Now we need a function that will calculate the proportion of beads that are red. To accomplish this, we will need to use the function `use_shovel` within another function, which we will call `prop_red`. The first line of the function `prop_red` should be `use_shovel` as we have created prior. The next parts should group results by replicate, summarize red for where the `color == "red"`, and use `mutate` to create `prop_red` for the number of red beads divided by size.  -->
-
+<!-- Now, let's test our new function `prop_red` by drawing from our urn with a size of 30 and 2 repetitions. -->
 
 <!-- ```{r map5, exercise = TRUE} -->
 
 <!-- ``` -->
 
-<!-- ```{r map5-hint-1, eval = FALSE} -->
-<!-- prop_red <- function(x, size, reps) { -->
-<!--   use_shovel(x = x, ..., ...) %>%  -->
-<!--   group_by(...) %>%  -->
-<!--   summarize(red = sum(...), .groups = ...) %>%  -->
-<!--   mutate(prop_red = .../size) -->
-<!-- } -->
-<!-- ``` -->
-
-<!-- ```{r map5-hint-2, eval = FALSE} -->
-<!-- Read "Functions are your friend!". The answer can be found there.  -->
-<!-- ``` -->
-
-<!-- ### Exercise 5 -->
-
-<!-- Now, let's test our new function `prop_red` by drawing from our urn with a size of 30 and 2 repetitions.  -->
-
-<!-- ```{r map6, exercise = TRUE} -->
-
-<!-- ``` -->
-
-<!-- ```{r map6-hint, eval = FALSE} -->
+<!-- ```{r map5-hint, eval = FALSE} -->
 <!-- prop_red(x = urn, size = ..., reps = ...) -->
 <!-- ``` -->
 
 
-<!-- ### Exercise 6 -->
+### Exercise 5
 
-<!-- Now that we have confirmed that both the `prop_red` and `use_shovel` functions are working properly, let's begin making our graph.  -->
+Great. Let's now create a `tibble()` with one variable `shovel_size`, which takes on the values 1 to 100. 
 
-<!-- To construct this graph, we will be using some mapping. This saves us the time of making three different objects (for shovels of 30, 60, and 120). Start by creating the object `shovels` which should construct a `shovel_size` column of 30, 60, and 120.  -->
+```{r map5, exercise = TRUE}
 
-<!-- ```{r map7, exercise = TRUE} -->
+```
 
-<!-- ``` -->
+```{r map5-hint, eval = FALSE}
+tibble(shovel_size = ...)
+```
 
-<!-- ```{r map7-hint, eval = FALSE} -->
-<!-- shovels <- tibble(shovel_size = c(...)) -->
-<!-- ``` -->
+### Exercise 6
 
-<!-- ### Exercise 7 -->
+Pipe your results to `mutate()` to create the variable `prop_red_results`, which is set to the function `map()`.The first argument to `map()` should be `shovel_size`. The second argument should be our function `prop_red()` where `x` is set to `urn`, `shovel_size` set to `.x` and `reps` set to 1000.
+ 
 
-<!-- We will now modify the object shovels by using a mutate to create the column `use_shovel_results`. `use_shovel_results` should use map `shovel_size` by using our function `use_shovel` with x = urn, size = ., and reps = 1000. If this sounds confusing, make sure you've looked at "Functions are your friends" carefully. -->
+```{r map6, exercise = TRUE}
 
-<!-- ```{r map8, exercise = TRUE} -->
+```
 
-<!-- ``` -->
+```{r map6-hint, eval = FALSE}
+... %>% 
+  mutate(prop_red_results = map(...,
+                                ~ prop_red(..., ..., ...)))
+```
 
-<!-- ```{r map8-hint, eval = FALSE} -->
-<!-- shovels <- shovels %>%  -->
-<!--   mutate(use_shovel_results = map(shovel_size, -->
-<!--                                   ~ use_shovel(x = ..., -->
-<!--                                                size = ..., -->
-<!--                                                reps = ...) -->
-<!-- ``` -->
+### Exercise 7
 
-<!-- ### Exercise 8 -->
+Use `mutate()` once more to create the variable `prop_red_sd` which is set to the function `map_dbl()`. The first argument to `map_dbl()` should be `prop_red_results`. The second argument should be `pull()`. The first argument to `pull()` should be `.`. The second argument should be `prop_red`.
 
-<!-- To add another column, copy the above code and call another mutate to create the column `prop_red_results`. Like our last exercise, we want to use `map` using shovel size, but (this time) with our function `prop_red` to get the proportion of red beads. We will retain the same characteristics for `prop_red` as we did for `use_shovel`: x = urn, size = .x, and reps = 1000. -->
+```{r map7, exercise = TRUE}
 
-<!-- ```{r map9, exercise = TRUE} -->
+```
 
-<!-- ``` -->
+```{r map7-hint, eval = FALSE}
+... %>% 
+mutate(... = map_dbl(..., 
+                      ~ pull(., prop_red) %>% 
+```
 
-<!-- ```{r map9-hint, eval = FALSE} -->
-<!-- shovels <- shovels %>%  -->
-<!--   ... %>%  -->
-<!--   mutate(prop_red_results = map(shovel_size, -->
-<!--                                 ~ prop_red (...)) -->
-<!-- ``` -->
+### Exercise 8
 
+Use `mutate()` once more to create the variable `prop_red_sd` which is set to the function `map_dbl()`. The first argument to `map_dbl()` should be `prop_red_results`. The second argument should be `pull()`. The first argument to `pull()` should be `.`. The second argument should be `prop_red`.
 
-<!-- ### Exercise 9  -->
+```{r map8, exercise = TRUE}
 
-<!-- <!-- DK: Make sure book covers unnnest. --> -->
+```
 
-<!-- Now that we have finished modifying our object `shovels`, let's construct our graph using ggplot! Recall that `shovels`, like any tibble with list columns, may require some manipulation before you can plot it. The key command is often `unnest()`, which splits up the specified column so that each element gets its own row. -->
+```{r map8-hint, eval = FALSE}
 
-<!-- Start by calling `shovels` and then calling `unnest` to split up the observations. Look at the resulting tibble so that you understand it. (Hint: There are some new columns.) Then, use ggplot with the `shovel_size` as the x-axis and `prop_red` as the y-axis. Add geom_point.  -->
+```
 
-<!-- ```{r map10, exercise = TRUE} -->
+### Exercise 9
 
-<!-- ``` -->
+Let's find the standard deviation of proportions red for all shovel sizes between 1 and 100. Pipe the results of `pull()` to the function `sd()`. **Note**: You are still inside `map_dbl()`.
 
-<!-- ```{r map10-hint, eval = FALSE} -->
-<!-- shovels %>%  -->
-<!--   unnest(...) %>%  -->
-<!--   ggplot(aes(x = ..., y = ...)) + -->
-<!--   geom_point() -->
-<!-- ``` -->
+```{r map9, exercise = TRUE}
 
-<!-- ### Exercise 10 -->
+```
 
-<!-- Fantastic work! To finish this graph, use labs to create a label for the x and y axis. Here is our graph for reference:  -->
+```{r map9-hint, eval = FALSE}
+mutate(prop_red_sd = map_dbl(prop_red_results, 
+                               ~ pull(., prop_red) %>% ...))
+```
 
-<!-- ```{r map-final} -->
-<!-- shovels_plot -->
-<!-- ``` -->
+### Exercise 10
 
-<!-- ```{r map11, exercise = TRUE, exercise.lines = 20} -->
+Copy/paste your code from above. Assign your code to an object named `shovels_100`. 
 
-<!-- ``` -->
+```{r map10, exercise = TRUE}
 
+```
 
-<!-- ## Standard error -->
-<!-- ### -->
+```{r map10-hint, eval = FALSE}
 
+```
 
-<!-- In the last section, we figured out that an increase in sample size leads to greater precision in the sampling distribution. But how can we mathematically measure this increase in precision? The **standard deviation** of a set of values gives us a mathematical framework for measuring precision---reread chapter 2 in the textbook if you need clarification. -->
+### Exercise 11
 
-<!-- ### -->
+Start a pipe with `shovels_100`. Use `ggplot()` to map `shovel_size` to the x-axis and `prop_red_sd` to the y-axis. Also add the layer `geom_point()`.
 
-<!-- ### Exercise 1 -->
+```{r map11, exercise = TRUE}
 
-<!-- In the code chunk below, run `sd()` (the function that returns standard deviation) on the vector `c(1, 2, 3, 4, 5)`. -->
+```
 
-<!-- ```{r sd1, exercise = TRUE} -->
-<!-- sd (c(1, 2, 3, 4, 5)) -->
-<!-- ``` -->
+```{r map11-hint, eval = FALSE}
+... %>% 
+  ggplot(aes(x = ..., y = ...)) +
+ geom_point() 
+```
 
-<!-- ```{r sd1-hint} -->
-<!-- # Remember that the vector above is equal to 1:5. -->
-<!-- ``` -->
+### Exercise 12
 
-<!-- ### Exercise 2 -->
+Add the layer `stat_function()`. Map the values 1 to 100 to the x-axis. Also set `color` to "red".
 
-<!-- Now calculate the standard deviation of the vector `c(143, 144, 145, 146, 147)`. See if you can predict what the result will be before you run the code. -->
+```{r map12, exercise = TRUE}
 
-<!-- ```{r sd2, exercise = TRUE} -->
-<!-- sd(c(143, 144, 145, 146, 147)) -->
-<!-- ``` -->
+```
 
-<!-- ```{r sd2-hint, eval = FALSE} -->
-<!-- sd(c(...)) -->
-<!-- ``` -->
+```{r map12-hint, eval = FALSE}
+... + 
+  stat_function(aes(x = ..., ...))
+```
 
-<!-- ### Exercise 3 -->
+### Exercise 13
 
-<!-- Calculate the standard deviation of the vector `c(2, 3, 4)` and compare the result to the results from the previous two exercises. -->
+Also set `fun` to `function(.x) 1/(2 * sqrt(.x))` within `stat_function()`.Also set `show.legend` to FALSE.
 
-<!-- ```{r sd3, exercise = TRUE} -->
-<!-- sd(c(2, 3, 4)) -->
-<!-- ``` -->
+```{r map13, exercise = TRUE}
 
+```
 
-<!-- ### Exercise 4 -->
+```{r map13-hint, eval = FALSE}
+... + 
+  stat_function(aes(x = 1:100, colour = "red"), 
+               fun = ..., 
+               show.legend = ...) 
+```
 
-<!-- Finally, calculate the standard deviation of `c(1, 1, 1, 5, 5)` and compare the result to the result of the first exercise. -->
+### Exercise 14
 
-<!-- ```{r sd5, exercise = TRUE} -->
-<!-- sd(c(1, 1, 1, 5, 5)) -->
+Great. Now use `labs()` to label the x-axis "Shovel size" and the y-axis 
+"Standard deviation of the proportion red". 
 
-<!-- ``` -->
+```{r map14, exercise = TRUE}
 
-<!-- ```{r sd5-hint, eval = FALSE} -->
-<!-- sd(c(...)) -->
-<!-- ``` -->
+```
 
-<!-- ### Exercise 5 -->
+Reminder: This is what your plot should look like.
 
-<!-- Let's recap the `seq()` function. Run the code below to see how we can return all multiples of 3 between 21 and 48. -->
+```{r}
+prop_red <- function(x, shovel_size, reps){
+  tibble(ID = 1:reps) %>% 
+    mutate(shovel = map(ID, ~ sample_n(x, size = shovel_size))) %>% 
+    mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) %>% 
+    mutate(numb_beads = map_int(shovel, ~ length(.$color))) %>% 
+    mutate(prop_red = numb_red / numb_beads)
+}
 
-<!-- ```{r sd5_2, exercise = TRUE} -->
-<!-- seq(from = 21, to = 48, by = 3) -->
-<!-- ``` -->
+shovels_100 <- tibble(shovel_size = 1:100) %>%
+  mutate(prop_red_results = map(shovel_size,
+                                ~ prop_red(x = urn, 
+                                           shovel_size = .x, 
+                                           reps = 1000))) %>% 
+  mutate(prop_red_sd = map_dbl(prop_red_results, 
+                               ~ pull(., prop_red) %>% sd()))
 
-<!-- ### Exercise 6 -->
+shovels_100 %>%
+ ggplot(aes(x = shovel_size, y = prop_red_sd)) +
+ geom_point() +
+ stat_function(aes(x = 1:100, colour = "red"), 
+               fun = function(.x) 1/(2 * sqrt(.x)), 
+               show.legend = FALSE) +
+ labs(x = "Shovel size",
+      y = "Standard deviation of the proportion red")
+```
 
-<!-- The code below contains our final work from the previous section, excluding our `ggplot()`. -->
+```{r map14-hint, eval = FALSE}
 
-<!-- Because we want to be more precise than the previous exercise, let's see if we can look at shovel sizes from 1 to 100, instead of 30, 60, and 120. Instead of our first line being `shovels` lets start by creating a tibble to redefine `shovel_size` for all values between 1 and 100. -->
+```
 
 
+## Posterior Distribution
+###
 
-<!-- ```{r sd6, exercise = TRUE,  exercise.lines = 13} -->
-<!-- shovels <- shovels %>%  -->
-<!--   mutate(use_shovel_results = map(shovel_size, -->
-<!--                                   ~ use_shovel(x = urn, -->
-<!--                                                size = .x, -->
-<!--                                                reps = 1000))) %>% -->
-<!--   mutate(prop_red_results = map(shovel_size, -->
-<!--                                 ~ prop_red(x = urn,  -->
-<!--                                            size = .x,  -->
-<!--                                            reps = 1000))) -->
-<!-- ``` -->
 
-<!-- ```{r sd6-hint, eval = FALSE} -->
-<!-- Replace "shovels" with tibble(shovel_size = 1:100) -->
-<!-- ``` -->
+Let's create the following plot  <!-- BG: need further explanation here -->
 
-<!-- ### Exercise 7 -->
+```{r }
+set.seed(10)
 
-<!-- Now we will need to use `mutate()` to create a column that takes the standard deviation of the proportion red found from `prop_red_results`. After copying the above work, add the column `prop_red_sd` using `map_dbl` with prop_red_results. After the ~ sign, you will want to pull using (., prop_red) to isolate the proportion red. Finally, you will take the `sd()` of that pulled value. -->
+urn_size <- 1000
+paddle_size <- 50
+reps <- 100
 
-<!-- Save your new work as `shovels_100` instead of the previous `shovels`. -->
+joint_dist <- 
+  tibble(red_in_urn = seq(from = 0, to = urn_size, by = 1)) %>% 
+    mutate(p = red_in_urn / urn_size) %>% 
+    mutate(red_in_paddle = map(p, ~ rbinom(n = reps, 
+                                               size = paddle_size, 
+                                               prob = .))) %>%
+    unnest(red_in_paddle) 
 
-<!-- ```{r sd7, exercise = TRUE, message = FALSE} -->
+joint_dist %>% 
+  filter(red_in_paddle == 17) %>% 
+  ggplot(aes(x = p)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 50) + 
+    labs(title = "Posterior Probability Distribution",
+         subtitle = "Proportion of red beads in urn is centered around 0.34",
+         x = "Proportion p of Red Beads in Urn",
+         y = "Probability") + 
+    scale_x_continuous(labels = scales::number_format()) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
 
-<!-- ``` -->
 
-<!-- ```{r sd7-hint, eval = FALSE} -->
-<!-- shovels_100 <- tibble(shovel_size = 1:100) %>%  -->
-<!--   mutate(prop_red_sd = map_dbl(prop_red_results, -->
-<!--                                ~ pull(...) %>% ...)) -->
-<!-- ``` -->
-
-<!-- ### Exercise 8 -->
-
-<!-- To visualize what we have created, perform `glimpse()` on `shovels_100`. -->
-
-<!-- ```{r sd8, exercise = TRUE, message = FALSE} -->
-
-<!-- ``` -->
-
-<!-- ### Exercise 9 -->
-
-<!-- We now have the standard deviation of proportions red for all shovel sizes between 1 and 100. We now want to use `ggplot` to visualize this difference in a `geom_point`. Assign `shovel_size` to the x-axis and `prop_red_sd` to the y-axis.  -->
-
-<!-- ```{r sd9, exercise = TRUE, message = FALSE} -->
-
-<!-- ``` -->
-
-<!-- ```{r sd9-hint, eval = FALSE} -->
-<!-- shovels_100 <- %>%  -->
-<!--   ggplot(aes(...)) + -->
-<!--   geom_point() -->
-<!-- ``` -->
-
+```
 
 
 <!-- ## Posterior distribution -->
