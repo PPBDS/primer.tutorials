@@ -1,5 +1,3 @@
-context("Confirm Information and Submission sections are correct")
-
 library(primer.tutorials)
 library(tidyverse)
 library(fs)
