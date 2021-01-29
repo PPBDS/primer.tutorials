@@ -1,4 +1,3 @@
-context("Confirm that tutorials can be rendered")
 library(primer.tutorials)
 library(tidyverse)
 library(fs)
