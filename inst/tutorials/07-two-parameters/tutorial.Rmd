@@ -88,12 +88,12 @@ ts %>%
   mutate(avg = mean(c(test1, test2, test3)))
 ```
 
-Argg! That fails! We have just calculated a single number --- the mean for all exams for all students --- and then assigned it to `avg`. By default, each operation within `mutate` is performed only columns-wise. We need something which allows us to calculate something across the rows of the tibble.
+Argg! That fails! We have just calculated a single number --- the mean for all exams for all students --- and then assigned it to `avg`. By default, each operation within `mutate` is first performed columns-wise.  R first computed the average of each column, and then averaged over the three columns as indicated in our code. We need something that allows us to only calculate the mean across the rows of the tibble.
 
 
 ### Exercise 2
 
-`rowwise()`, and helper functions like `c_across()`, allow you to compute on a tibble row by row. Run the code chunk below to see`rowwise()` do its job! 
+`rowwise()`, and helper functions like `c_across()`, allow you to compute on a tibble row by row. Run the code chunk below to see `rowwise()` do its job! 
 
 
 ```{r rowwise2, exercise = TRUE}
@@ -128,7 +128,7 @@ ts %>%
 
 ### Exercise 4
 
-Next, we'll turn back to the `nhanes` data set. Create a pipe and use `select` to pick the variables `gender`, `age` and `pulse`. Save the result in an object named `our_data`.
+For the remaining questions we will work with the `nhanes` data set. Use `select` to pick the variables `gender`, `age` and `pulse`. Assign the result to an object named `our_data`.
 
 ```{r select, exercise = TRUE}
 
@@ -148,7 +148,7 @@ our_data <- nhanes %>%
 
 ### Exercise 5
 
-`drop_na()`removes rows with any missing values from a data set. Run `skim()` on the tibble `our_data`. You will see that one of the three variables contains NA's.
+Before doing any calculations, we should get a rough overview of the data set. Run `skim()` on the tibble `our_data`. 
 
 ```{r drop_na-setup}
 
@@ -169,7 +169,7 @@ skim(our_data)
 
 ### Exercise 6
 
-Remove the observations with NA's by creating a pipe and using `drop_na()`. Save the clean tibble again as `our_data` as you did before.
+Let's get rid of all rows with any missing values. Remove the observations with NA's by creating a pipe and using `drop_na()`. Save the clean tibble again as `our_data` as you did before.
 
 ```{r drop_na2-setup}
 
@@ -196,7 +196,7 @@ our_data <- our_data %>%
 
 ### Exercise 7
 
-The function `ungroup()` removes grouping done by the `group_by()` function. Run the code below to see the cleaned-up tibble `our_data`, which has been grouped by `gender`. 
+The function `ungroup()` removes grouping done by the `group_by()` function. Run the code below to see the tibble `our_data`, which has been grouped by `gender`. 
 
 **Remember**: `group_by()` only affects how the data is grouped for subsequent operations, it does not itself change the appearance of the data!
 
@@ -238,12 +238,12 @@ our_data %>%
   ungroup()
 ```
 
-The output shows that the mean age (`m`) is 40.3 years for males and 41.7 years for females. It also shows us that the mean pulse (`x`) is 71.67 bpm for males and 75.42 bpm for females. For both calculations, the data is grouped by `Sex` and separate from one another. 
+The output shows that the mean age (`m`) is approximately 40.3 years for males and 41.7 years for females. It also shows us that the mean pulse (`x`) is 71.67 bpm for males and 75.42 bpm for females. For both calculations, the data is grouped by `Sex` and separate from one another. 
 
 
 ### Exercise 9
 
-Instead of placing `ungroup()` at the end, we are going to place it in between the two `mutate()` functions. 
+Instead of placing `ungroup()` at the end, we are going to place it in between the two `mutate()` functions. Run the following code.
 
 ```{r ungroup2-setup}
 
@@ -262,12 +262,12 @@ our_data %>%
   mutate(x_pulse = mean(pulse)) 
 ```
 
-Here our mean age (`m`), is still 40.3 years for males and 41.7 years for females. However, our mean pulse (`x`) is 73.55 bpm for every row. Because `group_by(Sex)` is removed by `ungroup()` after the first `mutate()` function, the mean score is calculated for _all participants together_, which is what we do not want! Therefore, our first placement of `ungroup()` is correct. 
+Here our mean age (`m`), is still 40.3 years for males and 41.7 years for females. However, our mean pulse (`x`) is 73.55 bpm for every row. Because `group_by(gender)` is removed by `ungroup()` after the first `mutate()` function, the mean score is calculated for _all participants together_, which is what we do not want! Therefore, our first placement of `ungroup()` is correct. 
 
 
 ### Exercise 10
 
-We can `select()` multiple variables using different methods. Let's say we wanted to select the first three variables from `nhanes`: `survey`, `gender`and `age`. One way, which we have already seen before, is to type out all names. Run the code to see this approach in action.
+We can `select()` multiple variables using different methods. Suppose we wanted to select the first three variables from `nhanes`, namely `survey`, `gender` and `age`. One way, which we have already seen before, is to type out all names. Run the code below to see this approach in action.
 
 ```{r select2, exercise = TRUE}
 nhanes %>%
@@ -287,16 +287,16 @@ nhanes %>%
 
 ### Exercise 12
 
-Awesome! We can also use `[ ]` to extract columns. This is especially useful when we want to extract variables not by their name, but by their position. Extract variable 3 from `nhanes` using this method.  
+Awesome! We can also use `[ ]` to extract columns. This is especially useful when we want to extract variables not by their name, but by their position. Extract the third variable from `nhanes` using this method.  
 
 **Note**: When you use `[ ]` , place a comma before the column number you want to extract. 
 
-```{r brackets, exercise = TRUE }
+```{r brackets1, exercise = TRUE }
 
 
 ```
 
-```{r brackets-hint, eval = FALSE }
+```{r brackets1-hint, eval = FALSE }
 nhanes[...]
 
 ```
@@ -304,29 +304,42 @@ nhanes[...]
 
 ### Exercise 13
 
+As before, we can combine `[ ]` with the `:` operator to extract multiple variables. Use this method to extract the first two variables from `nhanes`.
+
+```{r brackets2, exercise = TRUE }
+
+
+```
+
+```{r brackets2-hint-1, eval = FALSE }
+nhanes[...:...]
+
+```
+
+```{r brackets2-hint-2, eval = FALSE }
+nhanes[,1:2]
+
+```
+
+### Exercise 14
+
 We can use the function `rename()` to change the names of the variables in a tibble. For this, simply set the new name equal to the old name within `rename()`.
 
-Choose any approach you like to extract the first two variables, survey and gender, from `nhanes`. Next, add a pipe and use `set_names()` to rename the variables to “year” and “sex”.
+Copy your code from the last exercise. Add a pipe and `rename()` "survey" to "year" and "gender" to "sex".
 
 ```{r set_names, exercise = TRUE }
 
 ```
 
 ```{r set_names-hint-1, eval = FALSE }
-nhanes[...] %>% 
+nhanes[,1:2] %>% 
   rename(year = ...,
          sex = ...)
 
 ```
 
-```{r set_names-hint-2, eval = FALSE }
 
-nhanes[1:2] %>% 
-  set_names(c("year", "sex"))
-
-```
-
-### Exercise 14
+### Exercise 15
 
 The function `after_stat()` can be used to pick a different computed metric than the default (here a **fraction** instead of **count**).
 
@@ -358,9 +371,12 @@ ch7 %>%
   theme(legend.position = "none")
 ```
 
+
 ### Exercise 1
 
-As you can tell, the graph above displays "Adult Female Weight by Gender in NHANES". Let's say our motive behind generating this graph was to answer the question: _What is the probability that the next adult female we meet in Cambridge today will weigh more than 100 kilos_? Using the concept of **Wisdom**, write 3-4 sentences about whether or not this data is relevant for the problem we face. See *The Primer* for guidance.
+As you can tell, the graph above displays "Adult Female Weight by Gender in NHANES". Let's say our motive behind generating this graph was to answer the question: _What is the probability that the next adult female we meet in Cambridge today will weigh more than 100kg_? 
+
+Using the concept of **Wisdom**, write 3-4 sentences about whether or not this data is relevant for the problem we face. See *The Primer* for guidance.
 
 ```{r Wisdom}
 question_text(
@@ -373,13 +389,14 @@ question_text(
 ```
 
 
+
 ## Justice 
 
 ### Exercise 1
 
 
-$$y_i = \mu + \epsilon_i \ \ \ \ \ \ with \ \epsilon_i \sim N(0, \sigma^2)$$
-
+$$y_i = \mu + \epsilon_i \ \ \ \ \ \ with \ \ \epsilon_i \sim N(0, \sigma^2)$$
+&nbsp;
 
 Recall the mathematical relationship above. In 3-4 sentences, briefly describe in your own words what each component of this equation describes in the context of our question. You do not need to figure out how to display the symbols in your answer, just write their names, like "phi," mu," "sigma," "epsilon," "delta," and so on.  
 
@@ -396,7 +413,7 @@ question_text(
 
 ### Exercise 2
 
-Great! Next, specify which are the two parameters we want to determine. Also mention which one we care most about and why, writing no more than 4 sentences.
+Great! Next, specify which are the two parameters we want to determine. Also mention which one we care most about and why, writing no more than 3 sentences.
 
 ```{r Justice2}
 question_text(
@@ -422,6 +439,7 @@ question_text(
   allow_retry = TRUE
 )
 ```
+
 
 
 ## Courage 
@@ -493,11 +511,10 @@ ch7_female <- nhanes %>%
 Use the assignment operator: <- 
 ```
 
+
 ### Exercise 4
 
 The model summary above is still a bit complex. Instead of printing out the whole model like before, let's just use `print` to print out the parameters of the model. Set the argument `detail` to FALSE.
-
-
 
 ```{r print, exercise = TRUE}
 
@@ -507,9 +524,10 @@ The model summary above is still a bit complex. Instead of printing out the whol
 print(fit_obj, detail = ...)
 ```
 
+
 ### Exercise 5
 
-Recall that the most important single number related to a distribution is some measure of its location. The two common measures to do such are _mean_ and _median_. 
+Recall that the most important single number related to a distribution is some measure of its location. The two common measures for this are _mean_ and _median_. 
 
 In a single sentence, using your own words, describe why we use the median here.
 
@@ -526,7 +544,7 @@ question_text(
 
 ### Exercise 6
 
-Now, in two sentences, use your own words to define `MAD_SD`.
+Now, in 2 sentences, use your own words to define `MAD_SD`.
 
 ```{r MADS}
 question_text(
@@ -559,7 +577,6 @@ fit_obj %>%
 
 ```
 
-
 First, create a pipe starting with `fit_obj` and then continuing with `as_tibble()`.
 
 ```{r not_print, exercise = TRUE}
@@ -585,6 +602,7 @@ fit_obj %>%
   as_tibble() %>%
   rename(mu = `(Intercept)`) 
 ```
+
 
 ### Exercise 9
   
@@ -657,7 +675,7 @@ posterior_predict(...)
 
 ### Exercise 2
 
-The tibble you should see above has 4,000 rows. This is because `posterior_predict()` by default returns 4,000 estimates for any given woman's weight, each of which is a draw from the posterior distribution. The tibble also has 1929 columns, representing the 1929 adult women in the data set. By default, `posterior_predict()` will give us 4,000 estimates for *every* person in the data set. However, since our question only asks about a single woman's weight, we should adjust that.
+The tibble you should see above has 4,000 rows. This is because `posterior_predict()` by default returns 4,000 estimates for any given woman's weight, each of which is a draw from the posterior distribution. The tibble also has 1929 columns, representing the 1929 adult women in the data set. By default, `posterior_predict()` will give us 4,000 estimates for *every* woman in the data set. However, since our question only asks about a single woman's weight, we should adjust that.
 
 Create a tibble with one variable, `constant`, which is set equal to the value 1. Assign this tibble to an object named `newobs`.
 
@@ -676,7 +694,7 @@ newobs <- tibble(constant = 1)
 
 ### Exercise 3
 
-Use `posterior_predict()` again with `fit_obj` as the first argument. This time, however, also add the `newdata` argument and set it equal to `newobs`.
+Use `posterior_predict()` again with `fit_obj` as the first argument. This time, also add the `newdata` argument and set it equal to `newobs`.
 
 ```{r pp2-setup}
 
@@ -700,7 +718,9 @@ posterior_predict(fit_obj,
 
 ### Exercise 4
 
-Good job! We can clearly see that this only gives us 1 column as required. Copy your code from above, add another line with `as_tibble()` and assign the result to an object named `pp`.
+Good job! We can clearly see that this only gives us 1 column as required. 
+
+Copy your code from above and add another line with `as_tibble()`. Assign the result to an object named `pp`.
 
 ```{r pp3, exercise = TRUE}
 
@@ -751,7 +771,7 @@ pp %>%
 
 ### Exercise 6
 
-Lets continue the pipe even more. Use `summarize` to make the `answer` equal to the `sum` of `gt_100` divided by the the function `n()`. 
+As a final step, let's continue the pipe even more. Use `summarize()` to make the `answer` equal to the `sum` of `gt_100` divided by the the function `n()`. 
 
 ```{r summar-setup}
 
