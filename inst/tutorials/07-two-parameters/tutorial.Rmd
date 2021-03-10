@@ -33,6 +33,13 @@ fit_obj <- stan_glm(data = ch7_female,
                     family = gaussian(), 
                     refresh = 0)
 
+newobs <- tibble(constant = 1)
+
+pp <- posterior_predict(fit_obj,
+                  newdata = newobs) %>% 
+       as_tibble() %>% 
+       mutate_all(as.numeric)
+
 ts <- tibble(id = 1:4, 
              test1 = 10:13, 
              test2 = 20:23,
@@ -145,6 +152,8 @@ our_data <- nhanes %>%
               select(gender, age, pulse)
 ```
 
+`our_data` is available for use in later questions.
+
 
 ### Exercise 5
 
@@ -152,7 +161,10 @@ Before doing any calculations, we should get a rough overview of the data set. R
 
 ```{r drop_na-setup}
 
-# This is for the tibble `our_data`
+# This is for the tibble `our_data`. I didn't put it in the
+# setup chunk at the beginning since that would make it show
+# up in the last exercise when people type it. That may be
+# confusing.
 
 our_data <- nhanes %>% 
               select(gender, age, pulse)
@@ -173,7 +185,7 @@ Let's get rid of all rows with any missing values. Remove the observations with 
 
 ```{r drop_na2-setup}
 
-# This is for the tibble `our_data`
+# Setup from before.
 
 our_data <- nhanes %>% 
               select(gender, age, pulse)
@@ -202,7 +214,7 @@ The function `ungroup()` removes grouping done by the `group_by()` function. Run
 
 ```{r rowwise3-setup}
 
-# This is for the clean tibble `our_data`
+# Setup from before.
 
 our_data <- nhanes %>% 
               select(gender, age, pulse) %>% 
@@ -223,7 +235,7 @@ Notice that `ungroup()` has been placed at the end of both calculations. Run the
 
 ```{r ungroup1-setup}
 
-# This is for the clean tibble `our_data`
+# Setup from before.
 
 our_data <- nhanes %>% 
               select(gender, age, pulse) %>% 
@@ -283,6 +295,8 @@ However, being the tech wizards that we are, we want to make things as simple as
 nhanes %>%
   select(survey:age)
 ```
+
+As you can see, `:` defines a closed interval. `select` returns all columns from (and including) 'survey' to 'age' in the order they appear in the tibble.
 
 
 ### Exercise 12
@@ -347,9 +361,10 @@ Run the following code chunk.
 
 ```{r afterstat, exercise = TRUE}
 ggplot(nhanes, aes(age)) +
-  geom_histogram(aes(y = after_stat(count/sum(count))))
+  geom_histogram(bins = 40, aes(y = after_stat(count/sum(count))))
 ```
 
+As you can see, the y-axis in the plot shows the relative proportion of each age group. Without our transformation, `geom_histogram()` would display only the absolute number of each group.
 
 
 ## Wisdom
@@ -446,12 +461,12 @@ question_text(
 
 ## Courage 
 
-Let's create a Bayesian model of weight.
+Let's create a Bayesian model of female weight.
 
 
 ### Exercise 1
 
-Run the following code. 
+We will only need a subset of `nhanes`. Run the following code.
 
 ```{r ch7_female, exercise = TRUE}
 ch7_female <- nhanes %>%
@@ -462,12 +477,12 @@ ch7_female <- nhanes %>%
 ch7_female
 ```
 
-We will use the `ch_7_female` tibble in the questions which follow.
+We will use the `ch7_female` tibble in the questions which follow.
+
 
 ### Exercise 2
 
 Use `stan_glm()` to create a simple Bayesian model. Set `data` to `ch7_female`, `family` to `gaussian()`, and `refresh` to 0. The formula argument should be `weight ~ 1`.
-
 
 ```{r stanglm, exercise = TRUE}
 library(rstanarm)
@@ -485,8 +500,7 @@ stan_glm(data = ...,
 
 ### Exercise 3
 
-Great! We should save our model to be able to work with it in future questions, so we need to assign it to an object. In this case, we call it `fit_obj`. Run this code.
-
+Great! We should save our model to be able to work with it in later questions, so we need to assign it to an object. In this case, we call it `fit_obj`. Run this code.
 
 ```{r objfit, exercise = TRUE}
 fit_obj <- stan_glm(data = ch7_female,
@@ -497,11 +511,12 @@ fit_obj <- stan_glm(data = ch7_female,
 fit_obj 
 ```
 
-`fit_obj` is available for use in later questions.
+While we have saved the model, the model summary is above still somewhat complex. Let's simplify this.
+
 
 ### Exercise 4
 
-The model summary above is still a bit complex. Instead of printing out the whole model like before, let's just use `print` to print out the parameters of the model. Set the argument `detail` to FALSE.
+Instead of printing out the whole model like before, just use `print` to print out the parameters of the model. Set the `detail` argument to FALSE.
 
 ```{r print, exercise = TRUE}
 
@@ -548,13 +563,13 @@ question_text(
 
 Awesome! Now let's create the following posterior distribution.
 
-```{r courage-plot}
+```{r courage_plot}
 weight_p <- fit_obj %>% 
   as_tibble() %>% 
   rename(mu = `(Intercept)`) %>% 
   ggplot(aes(x = mu)) +
     geom_histogram(aes(y = after_stat(count/sum(count))), 
-                   binwidth = 0.02, 
+                   bins = 200, 
                    color = "white") +
     labs(title = "Posterior Probability Distribution",
          subtitle = "Average weight among American adult women in 2009",
@@ -594,7 +609,7 @@ fit_obj %>%
 
 ### Exercise 9
   
-Continue the pipe and use `ggplot()`. Map x to `mu` in the `aes` argument. Use `geom_histogram()` and map y to the`after_stat()` function. Set its argument to `count` divided by the `sum` of `count`.
+Continue the pipe and use `ggplot()`. Map x to `mu` in the `aes` argument. Use `geom_histogram()` and map y to the `after_stat()` function. Set its argument to `count` divided by the `sum` of `count`.
     
 ```{r geom_hist, exercise = TRUE}
 
@@ -618,7 +633,7 @@ fit_obj %>%
 
 ### Exercise 10
 
-Also, set `binwidth` to 0.02 and `color` to white within `geom_histogram()`.
+Also, set `bins` to 200 and `color` to white within `geom_histogram()`.
 
 ```{r geom_hist2, exercise = TRUE}
 
@@ -644,28 +659,9 @@ Use labs() to add labels.
 
 ## Temperance 
 
-<!-- TW: Please fix! -->
-
-### Exercise 1
-
 We have a model of female height in 2009. What can we do with it? Let's use it to answer out initial question: _What is the probability that the next adult female we meet in Cambridge today will weigh more than 100 kilos?_
 
-<!-- TW: Sorry! -->
-
-```{r pp1, exercise = TRUE}
-
-
-```
-
-```{r pp1-hint-1, eval=FALSE}
-fit_obj %>% 
-  posterior_predict(...)
-```
-
-
-### Exercise 2
-
-The tibble you should see above has 4,000 rows. This is because `posterior_predict()` by default returns 4,000 estimates for any given woman's weight, each of which is a draw from the posterior distribution. The tibble also has 1929 columns, representing the 1929 adult women in the data set. By default, `posterior_predict()` will give us 4,000 estimates for *every* woman in the data set. However, since our question only asks about a single woman's weight, we should adjust that.
+### Exercise 1
 
 Create a tibble with one variable, `constant`, which is set equal to the value 1. Assign this tibble to an object named `newobs`.
 
@@ -681,113 +677,144 @@ Create a tibble with one variable, `constant`, which is set equal to the value 1
 newobs <- tibble(constant = 1)
 ```
 
+`newobs` is available for use in later questions.
 
-### Exercise 3
 
-Use `posterior_predict()` again with `fit_obj` as the first argument. This time, also add the `newdata` argument and set it equal to `newobs`.
+### Exercise 2
 
-```{r pp2-setup}
+Let's now obtain some estimates for the weight of a single woman. 
 
-fit_obj <- stan_glm(data = ch7_female, 
-                    weight ~ 1, 
-                    family = gaussian(), 
-                    refresh = 0)
+Use `posterior_predict` with `fit_obj` as the first argument to get some draws from the posterior distribution of our model. Set the `newdata` argument equal to the tibble `newobs` to indicate that we only want estimates for one person.
 
-newobs <- tibble(constant = 1)
-```
-
-```{r pp2, exercise = TRUE}
+```{r pp1, exercise = TRUE}
 
 ```
 
-```{r pp2-hint, eval = FALSE}
+```{r pp1-hint, eval = FALSE}
 posterior_predict(fit_obj,
                   newdata = ...)
 ```
 
 
-### Exercise 4
+### Exercise 3
 
-Good job! We can clearly see that this only gives us 1 column as required. 
+Good job! We now have 4000 estimates for a random woman's weight in kg.
 
-Copy your code from above and add another line with `as_tibble()`. Assign the result to an object named `pp`.
+Copy your code from above and add two pipes with `as_tibble()` and `mutate_all(as.numeric)`. Assign the result to an object named `pp` to save it.
 
-```{r pp3, exercise = TRUE}
+```{r pp2, exercise = TRUE}
 
 ```
 
-```{r pp3-hint-1, eval = FALSE}
+```{r pp2-hint-1, eval = FALSE}
 ... <- posterior_predict(fit_obj,
                   newdata = newobs) %>% 
+       ... %>% 
        ...
 ```
 
-```{r pp3-hint-2, eval = FALSE}
+```{r pp2-hint-2, eval = FALSE}
 pp <- posterior_predict(fit_obj,
                   newdata = newobs) %>% 
-       as_tibble()
+       as_tibble() %>% 
+       mutate_all(as.numeric)
+```
+
+`pp` is available for use in later questions.
+
+
+### Exercise 4
+
+It is always helpful to plot our data before working with it.
+
+Start by adding a pipe to `pp` and create a histogram with `geom_histogram()`. Use `after_stat()` to display the y-axis in relative proportions of each weight group. Set `bins` to 200 and `color` to "white".
+
+```{r draw_plot1, exercise = TRUE }
+pp
+
+```
+
+```{r temperance_plot1-hint-1, eval = FALSE}
+pp %>% 
+  ggplot(aes(x = ...)) +
+    geom_histogram(aes(y = after_stat(...)),
+                   binwidth = ...,
+                   color = ...)
+```
+
+```{r temperance_plot1-hint-2, eval = FALSE}
+pp %>% 
+  ggplot(aes(x = `1`)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 200,
+                   color = "white")
 ```
 
 
 ### Exercise 5
 
-Add a pipe to `pp` and use `mutate` to create a new variable `ht_100`. `ht_100` should use an `ifelse` statement. Within `ifelse`, set prediction to a value greater than 100. Also, include both TRUE and FALSE arguments. 
+Your code should now look as shown below.
 
-```{r ifelse-setup}
+Add `labs()` to title your histogram "4000 Draws from Posterior Distribution" with the subtitle, "Average weight of a random American adult woman in 2009". Name the x-axis "Weight in Kilograms" and the y-axis "Probability". Finally, add a layer and use `theme_classic()`. 
 
-fit_obj <- stan_glm(data = ch7_female, 
-                    weight ~ 1, 
-                    family = gaussian(), 
-                    refresh = 0)
-
-newobs <- tibble(constant = 1)
-
-pp <- posterior_predict(fit_obj,
-                  newdata = newobs) %>% 
-       as_tibble()
-
-```
-
-```{r ifelse, exercise = TRUE }
-pp
-
-```
-
-```{r ifelse-hint, eval = FALSE}
+```{r draw_plot2, exercise = TRUE}
 pp %>% 
-  mutate(... = ifelse(`1` > ..., TRUE, FALSE))
+  ggplot(aes(x = `1`)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 200,
+                   color = "white")
+
 ```
 
+```{r draw_plot2-hint, eval = FALSE}
+pp %>% 
+  ggplot(aes(x = `1`)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))), 
+                   binwidth = 0.02, 
+                   color = "white") +
+    labs(title = ...,
+         subtitle = ...,
+         x = ...,
+         y = ...) +
+    theme_classic()
+```
+
+&nbsp;
+
+How does the distribution of our 4000 estimates compare to the actual posterior distribution you plotted earlier? As a reminder, it looked like this:
+
+```{r courage_plot2}
+fit_obj %>% 
+  as_tibble() %>% 
+  rename(mu = `(Intercept)`) %>% 
+  ggplot(aes(x = mu)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))), 
+                   bins = 200, 
+                   color = "white") +
+    labs(title = "Posterior Probability Distribution",
+         subtitle = "Average weight among American adult women in 2009",
+         x = "Weight in Kilograms",
+         y = "Probability") +
+    theme_classic()
+```
 
 ### Exercise 6
 
-As a final step, let's continue the pipe even more. Use `summarize()` to make the `answer` equal to the `sum` of `ht_100` divided by the the function `n()`. 
+The histogram already shows approximately what the answer to our question might be. Let's calculate it exactly.
 
-```{r summar-setup}
+Determine the proportion of all women in `pp` who weigh more than 100kg.
 
-fit_obj <- stan_glm(data = ch7_female, 
-                    weight ~ 1, 
-                    family = gaussian(), 
-                    refresh = 0)
-
-newobs <- tibble(constant = 1)
-
-pp <- posterior_predict(fit_obj,
-                  newdata = newobs) %>% 
-       as_tibble()
+```{r frac, exercise = TRUE}
 
 ```
 
-```{r summar, exercise = TRUE}
-
+```{r frac-hint-1, eval = FALSE}
+sum(... > 100) / length(...)
 ```
 
-```{r summar-hint, eval = FALSE}
-pp %>% 
-  mutate(gt_100 = ifelse(... > 100, TRUE, FALSE)) %>% 
-  summarize(... = sum(...) / ...)
+```{r frac-hint-2, eval = FALSE}
+sum(pp$`1` > 100) / length(pp$`1`)
 ```
-
 
 ## Submit
 
