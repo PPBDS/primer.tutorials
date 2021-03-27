@@ -10,24 +10,36 @@ runtime: shiny_prerendered
 description: "Chapter 10 tutorial"
 ---
 
+<!-- BG: add a question somewhere about the different between the avg. mean of data set vs mu (get the point of population across?) -->
 
 ```{r setup, include = FALSE}
 library(learnr)
 library(primer.tutorials)
 library(tidyverse)
+library(primer.data)
 library(rstanarm)
 
 knitr::opts_chunk$set(echo = FALSE)
-options(tutorial.exercise.timelimit = 60, 
+options(tutorial.exercise.timelimit = 600,   # Extra time for model building
         tutorial.storage = "local") 
 
-# These models take awhile to build. 
+# Need to mutate election_age to be centered; zero means the mean value.
 
+ch10 <- governors %>% 
+  select(last_name, year, state, sex, lived_after, election_age) %>% 
+  mutate(c_election_age = election_age - mean(election_age))
 
+gov_1 <- stan_glm(data = ch10,
+                  formula = lived_after ~ sex + c_election_age,
+                  refresh = 0,
+                  seed = 12)
+
+gov_2 <- stan_glm(data = ch10,
+                  formula = lived_after ~ sex*c_election_age,
+                  refresh = 0,
+                  seed = 13)
 
 ```
-
-
 
 ## Information
 ###
@@ -48,8 +60,495 @@ quiz(caption = "",
     incorrect = NULL))
 ```
 
+## EDA of governors 
+###
+
+Let's create the following graph.
+
+```{r prep-EDA}
+EDA_p <- ch10 %>%
+  ggplot(aes(x = sex, y = lived_after)) +
+  geom_boxplot() +
+  labs(title = "US Gubernatorial Candidate Years Lived Post-Election",
+       subtitle = "Male candidates live much longer after the election",
+       caption = "Data: Barfort, Klemmensen and Larsen (2019)",
+       x = "Gender",
+       y = "Years Lived After Election") +
+  scale_y_continuous(labels = scales::label_number()) +
+  theme_classic() 
+
+EDA_p
+```
+
+### Exercise 1
+
+Start a pipe with `governors`. Select the `last_name`, `year`, `sex`, `state`, `lived_after`, and `election_age` variables. Save your code to an object named `ch_10`.
 
 
+```{r eda-1, exercise = TRUE}
+
+```
+
+### Exercise 2
+
+Pipe your results to `ggplot()`. Map `sex` to the x-axis and `lived_after` to the y axis. Use `geom_boxplot`.
+
+
+```{r eda-2, exercise = TRUE}
+
+```
+
+### Exercise 3
+
+Use ` labs()` to add the appropriate title, subtitle, and axis labels. Also add the layer `theme_classic()`.
+
+```{r eda-3, exercise = TRUE}
+
+```
+
+### Exercise 4
+
+Let's also change the y-axis values to look nicer. Use `scale_y_continuous()`. Within `scale_y_continuous()`, set the`labels` to `scales:: label_number()`. 
+
+Reminder: This is what your plot should look like.
+
+```{r}
+EDA_p
+```
+
+```{r eda-4, exercise = TRUE}
+
+```
+
+
+## Wisdom
+###
+
+
+Consider the following question: _Would male candidates or female candidates for the United States Senate live longer after an election held today?_
+
+
+Using **Wisdom**, write a paragraph about whether or not this data --- which covers gubernatorial elections from 1945 to 2012 --- is relevant for the problem we face. See *The Primer* for guidance.
+
+```{r wisdom-1}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 6))
+```
+
+
+## Justice and Courage I
+###
+
+
+### Exercise 1
+
+
+Let's build a model. Our outcome variable will be `lived_after`, we will have two explanatory variables: `c_election_age` and `sex`. Recall `c_election_age` is the number of years a candidate has been alive, as of Election Day, relative to the average years alive of all candidates on their respective election days. Below is the math we will be using. 
+
+$$ lived\_after_i =  \beta_0 + \beta_1 male_i + \beta_2 election\_age\_c_i + \epsilon_i $$
+
+Looking at the model above, which are the parameters? You do not need to figure out how to display the symbols in your answer, just write their names (i.e. "epsilon," "delta," etc. ).
+
+```{r jc-ex-1}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 6))
+```
+
+### Exercise 2 
+
+Great! Now write a sentence for each parameter that describes what it means.
+
+```{r jc-ex-2}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 6))
+```
+
+### Exercise 3
+
+Let's implement the model using `stan_glm()`. The formula argument should be `lived_after ~ sex + c_election_age`. Set `data` to`ch_10`, and `refresh` to 0.  Also set the `seed` argument to 12. Assign your work to an object named `gov_1`.
+
+
+```{r jc-ex-3, exercise = TRUE}
+
+```
+
+
+```{r jc-ex-3-hint, eval = FALSE}
+gov_1 <- stan_glm(data = ...,
+                  formula = ...,
+                  refresh = ...,
+                  seed = )
+```
+
+### Exercise 4
+
+Use `print()` to look at our parameter values. Set the `detail` argument to FALSE.
+
+```{r jc-ex-4, exercise = TRUE}
+
+```
+ 
+```{r jc-ex-4-hint, eval = FALSE}
+print(gov_1, detail = ...)
+```
+
+### Exercise 5
+
+Look at the results above. Write two sentences, using your own words, that explain the meaning of the Median value of `(Intercept)`.
+
+```{r jc-ex-5}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+### Exercise 6
+
+Write two sentences that explain how you would estimate the `lived_after` value for a male candidate, who has been alive the average number of years of all candidates. In addition to your explanation, provide a numeric value. Note that we do not want you to use `posterior_predict()` or anything fancy. Answer this question by simply looking at the model printout. 
+
+```{r jc-ex-6}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+### Exercise 7
+
+Let's create the following posterior probability distribution for $\beta_2$, the coefficient for `c_election_age`.
+
+```{r prep-jc-ex-7}
+gov1_p <- gov_1 %>% 
+  as_tibble() %>% 
+  ggplot(aes(c_election_age)) + 
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100) +
+    labs(title = "Posterior Distribution of the Coefficient of `c_election_age`",
+         y = "Probability",
+         x = "Coefficient of `c_election_age`") + 
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+gov1_p
+```
+
+### Exercise 8
+
+Start a pipe with `gov_1` and use `as_tibble()`
+
+```{r jc-ex-8, exercise = TRUE}
+
+```
+
+
+```{r jc-ex-8-hint, eval = FALSE}
+gov_2 %>% 
+  as_tibble()
+```
+
+### Exercise 9
+
+Pipe the results above to `ggplot()`. Map `c_election_age` to the x-axis.
+
+```{r jc-ex-11, exercise = TRUE}
+
+```
+
+```{r jc-ex-11-hint, eval = FALSE}
+... %>% 
+  ggplot(aes(...)) +
+    geom_histogram(aes(y = after_stat(.../sum(...))),
+                   bins = 100,
+                   alpha = 0.5,
+                   position = "identity") 
+
+```
+
+### Exercise 12
+
+Use ` labs()` to add the appropriate title, subtitle, and axis labels. Also add the layer `theme_classic()`.
+
+
+```{r jc-ex-12, exercise = TRUE}
+
+```
+
+```{r jc-ex-12-hint, eval = FALSE}
+
+```
+
+### Exercise 13
+
+Use `scale_y_continuous()` to put the y-axis in percent format. Within `scale_y_continuous()`, set `labels` to `scales::percent_format()`. Within `percent_format()` set `accuracy` to 1.
+
+
+Reminder: This is what your plot should look like.
+
+```{r}
+gov1_p
+```
+
+```{r jc-ex-14-hint, eval = FALSE}
+
+```
+
+### Exercise 14
+
+In two sentences, provide an interpretation of the graph you just created. 
+
+```{r jc-ex-15}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+
+## Justice and Courage II
+### 
+
+Let's build another model. The outcome variable of `lived_after` will now a function of the two explanatory variables we used above, c_election_age and sex, and of their interaction. 
+
+Note that there are now two different slopes to consider: one for only male candidates and one for only female candidates. In the previous model we built, there was one slope for both men and women. Here is the math:
+
+$$ lived\_after_i =  \beta_0 + \beta_1 male_i + \beta_2 election\_age\_c_i + \\ \beta_3 male_i *  election\_age\_c_i + \epsilon_i $$
+
+### Exercise 1
+
+Let's implement the model using `stan_glm()`. The formula argument should be `lived_after ~ state + sex*election_age`. Set `data` to`ch_10`, `refresh` to 0, and set the `seed` argument to 13. Assign your work to an object named `gov_2`. 
+
+```{r jc2-ex1, exercise = TRUE}
+
+```
+
+
+
+```{r jc2-ex1-hint, eval = FALSE}
+... <- stan_glm(data = ...,
+                formula = ...,
+                refresh = ...,
+                seed = ...)
+```
+
+### Exercise 2
+
+Use `print()` to look at our parameter values. Set the `detail` argument to FALSE.
+
+```{r jc2-ex2, exercise = TRUE}
+
+```
+ 
+```{r jc2-ex2-hint, eval = FALSE}
+print(gov_2, detail = ...)
+```
+
+### Exercise 3
+
+Look at the results above. Write two sentences, using your own words, explaining the significance of the value for the Median of (Intercept), which should be something around 16.5. (The exact value will vary because of the inherent randomness in fitting Bayesian models.)
+
+```{r jc-2-ex-3}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 6))
+```
+
+### Exercise 4
+
+Write two sentences that explain how you would find the slope value for a male candidate. In addition to your explanation, provide the numerical value.
+
+```{r jc-2-ex-4}
+question_text(
+  "Answer:",
+  answer(NULL, correct = TRUE),
+  incorrect = "Ok",
+  try_again_button = "Modify your answer",
+  allow_retry = TRUE
+)
+```
+
+### Exercise 5
+
+Let's now create the following posterior probability distribution that shows the average slope values for men and women.
+
+```{r prep-state_p}
+gov2_p <- gov_2 %>% 
+  as_tibble() %>% 
+  mutate(slope_men = c_election_age + `sexMale:c_election_age`) %>% 
+  rename(slope_women = c_election_age) %>% 
+  select(slope_women, slope_men) %>% 
+  pivot_longer(cols = slope_women:slope_men, 
+               names_to = "parameters",
+               values_to = "slope") %>% 
+  ggplot(aes(slope, fill = parameters)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = 0.5, 
+                   bins = 100, 
+                   position = "identity") +
+    labs(title = "Posterior for Slope of Years-Lived on Years-to_Live",
+         subtitle = "Men have a steeper slope",
+         x = "slope",
+         y = "Probability") + 
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic() 
+
+gov2_p
+```
+
+### Exercise 6
+
+Start a pipe with `gov_2` and use `as_tibble()`. Continue the pipe and use `mutate()` to create the variable `slope_men`. `slope_men` should be equal to the following argument: `c_election_age + sexMale:c_election_age`. Make sure you place backticks on either side of the parentheses enclosing "sexMale:c_election_age".
+
+```{r jc-2-ex-6, exercise = TRUE}
+
+```
+
+
+```{r jc-2-ex-6-hint, eval = FALSE}
+
+```
+
+### Exercise 7
+
+Continue the pipe and use `mutate()` to create the variable `slope_women`. `slope_women` should be equal to `c_election_age`.Also use `select()` to keep just two variables: `slope_women` and `slope_men`.
+
+
+```{r jc-2-ex-7, exercise = TRUE}
+
+```
+
+```{r jc-2-ex-7-hint, eval = FALSE}
+
+```
+
+### Exercise 8
+
+Pipe your results to `pivot_longer()`. Within `pivot_longer()`, set `cols` to `slope_women` and `slope_men` (Make sure you insert a colon between them). `names_to` should be set to "parameters" and `values_to` should be set to "slope".
+
+```{rjc-2-ex-8, exercise = TRUE}
+
+```
+
+```{r jc2-ex-8-hint, eval = FALSE}
+
+```
+
+### Exercise 9
+
+Pipe the results above to `ggplot()`. Map `slope` to the x-axis, and map `parameters` to the  `fill` aesthetic. Use `geom_histogram()` with the same tricks we use in the chapter: `after_stat()`, `bins`, `alpha` and `position`.
+
+```{r jc2-ex-9, exercise = TRUE}
+
+```
+
+```{r jc2-ex-9-hint, eval = FALSE}
+... %>% 
+  ggplot(aes(..., fill = ...)) +
+    geom_histogram(aes(y = after_stat(.../sum(...))),
+                   bins = 100,
+                   alpha = 0.5,
+                   position = "identity") 
+
+```
+
+### Exercise 10
+
+Use ` labs()` to add the appropriate title, subtitle, and axis labels. Also add the layer `theme_classic()`.
+
+
+```{r jc2-ex-10, exercise = TRUE}
+
+```
+
+```{r jc2-ex-10-hint, eval = FALSE}
+
+```
+
+### Exercise 11
+
+Now use `scale_y_continuous()` to put the y-axis in percent format. Within `scale_y_continuous()`, set `labels` to `scales::percent_format()`. Within `percent_format()` set `accuracy` to 1.
+
+
+Reminder: This is what your plot should look like.
+
+```{r}
+gov2_p
+```
+
+```{r jc2-ex-11, eexercise = TRUE}
+
+```
+
+```{r jc2-ex-11-hint, eval = FALSE}
+
+```
+
+### Exercise 12
+
+In two sentences, provide an interpretation of the graph you just created. 
+
+```{r jc2-ex-12}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+
+## Temperance I
+###
+
+Let's build a model to answer the following question: *How long will a female candidate and male candidate, both 5 years older than the average candidate — live after the election?*
+
+Recall that 52 is the average age of candidates in the data. This means that `c_election_age` will be 5 for these candidates.
+
+<!-- BG: do the newobs/ posterior_epred() appraoch  -->
+
+
+
+## Temperance II
+###
+
+In our last section, we used an “on average” interpretation of the question. Let's get more specific. *How would the lived_after values vary between the female candidate and the male candidate, both 5 years older than the average age of candidates?* 
+
+In this section, we will interpret this question in a different way, as asking for a prediction for two individuals. This means we need to use `posterior_predict()`.
+
+
+### Exercise
+
+Using **Temperance**, write a paragraph about how you should use this estimate. Are you sure it is correct? How safely can you apply data from 8 years ago to today? How similar is the population from which you drew the data to the population to which you hope to apply your model? See *The Primer* for guidance.
+
+```{r t-2-ex-11}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 6))
+```
 
 ## Submit
 
@@ -60,4 +559,3 @@ submission_ui
 ```{r context = "server"}
 submission_server()
 ```
-
