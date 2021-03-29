@@ -40,7 +40,6 @@ liberal_false_slope <- att_start
 
 liberal_true_int <- intercept + liberal_true
 liberal_true_slope <- att_start
-
 ```
 
 ## Information
@@ -76,6 +75,8 @@ ggplot(trains, aes(x = att_start, y = att_end, color = liberal)) +
        color = "Liberal?")
 ```
 
+<!-- DK: This is a bad question. What question are we trying to answer? Given that tie it to population and representativeness. -->
+
 The following plot shows a comparison of three variables in the `trains` dataset. Using **Wisdom**, write a paragraph about whether or not the variables `att_start` and `liberal` should be used to predict `att_end`. See *The Primer* for guidance.
 
 ```{r wisdom-1}
@@ -95,7 +96,7 @@ Let's build a model. Our outcome variable will be `att_end` and we will have two
 $$y_i = \beta_0  + \beta_1 x_1 + \beta_2 x_2$$ 
 
 where 
-$y = att_end$, $x_1 = `att_start`$, and $x_2 = `liberal`$,
+$y = att\_end$, $x_1 = att\_start$, and $x_2 = liberal$,
 
 If liberal = FALSE:
 
@@ -427,64 +428,97 @@ question_text(NULL,
 ## Temperance
 ###
 
-In this section , we will be answering the following questions: 
+Consider:
 
-*Among all people who have an `att_start` value of 10, what proportion are not liberal?*
+*If there is a group of 10 people at the train station today, all liberal, five of whom have an `att_start` value of 13 and five of whom that have an `att_start` value of 8, how many will have an att_end of greater than 9 at the end of the experiment?*
 
+We will create a plot of the posterior probability distribution of this unknown number that looks something like this:
 
-*If there is a group of four people at the train station today, two of whom that have an `att_start` value of 13 and two of whom that have an att_start value of 8, how many will be liberal?*
+```{r}
+newobs <- tibble(liberal = TRUE, 
+       att_start = c(rep(13, 5), rep(8, 5)))
+
+temp_p <- posterior_predict(fit_1, newobs) %>% 
+  as_tibble() %>% 
+  mutate_all(as.numeric) %>% 
+  rowwise() %>% 
+  mutate(total = sum(c_across() > 9)) %>% 
+  ggplot(aes(x = total)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+    labs(title = "Posterior for Number of People with `att_end` > 9",
+         subtitle = "Six is the most likely number, but values from 5 to 8 are plausible",
+         x = "Number",
+         y = "Probability") +
+    scale_x_continuous(breaks = 3:10,
+      labels = scales::number_format(accuracy = 1)) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+    theme_classic()
+
+temp_p
+```
+
 
 
 **Note:** Make sure you copy/paste your code for each step to the next question. If you do not, you will get an error that your object does not exist. 
 
 ### Exercise 1
 
-Let's begin by answering the first question. To do so, create a tibble a named `newobs` that has one variable `att_start1` set to 10.
+Let's begin by answering the first question. To do so, create a tibble a named `newobs` that has ten rows, one for each of the people in our question.
 
 ```{r temp-1, exercise = TRUE}
 
 ```
 
 ```{r temp-1-hint, eval = FALSE}
-
+newobs <- tibble(liberal = TRUE, 
+       att_start = c(rep(13, 5), rep(8, 5)))
 ```
 
 ### Exercise 2
 
-Use `posterior_epred()`. The first argument to `posterior_epred()` should be `fit_1`. Also set `newdata` to `newobs`.
+Use `posterior_predict()`. The first argument to `posterior_predict()` should be `fit_1`. Also set `newdata` to `newobs`.
 
 ```{r temp-2, exercise = TRUE}
 
 ```
 
 ```{r temp-2-hint, eval = FALSE}
-
+posterior_predict(fit_1, 
+                  newdata = newobs)
 ```
 
 ### Exercise 3
 
-Pipe the results of `posterior_epred()` to `as_tibble()`. Save your results to an object named `pe`.
+Pipe the results of `posterior_predict()` to `as_tibble()`.
 
 ```{r temp-3, exercise = TRUE}
 
 ```
 
 ```{r temp-3-hint, eval = FALSE}
-
+... %>% 
+  as_tibble() 
 ```
 
 ### Exercise 4
 
-Pipe the results of `posterior_epred()` to `as_tibble()`.
+Extend the pipe with `mutate_all(as.numeric)`.
 
 ```{r temp-4, exercise = TRUE}
 
 ```
 
+```{r temp-4-hint, eval = TRUE}
+... %>%  
+  mutate_all(as.numeric)
+```
 
 ### Exercise 5
 
-Write a paragraph that interprets the tibble you just created. Make sure to answer the question in your response. 
+Write a paragraph that interprets the tibble you just created. Make sure to answer the question in your response. Make sure to use the word "draws."
+
+<!-- DK: Could provide more guidance. -->
 
 ```{r temp-5}
 question_text(NULL,
@@ -495,22 +529,30 @@ question_text(NULL,
     options = list(nrows = 3))
 ```
 
+
+
 ### Exercise 6
 
-Let's now answer the second question. Start by creating a tibble named `newobs` that has one variable `att_start`. Use the `c()` and `rep()` function to create two observations for each `att_start` value.
+Continue your pipe `rowwise()` and then use `mutate()` with `sum()` and `c_across()` to make a new variable named `total` which is the sum of people with `att_end` greater than 9. 
+
 
 ```{r temp-6, exercise = TRUE}
 
 ```
 
 ```{r temp-6-hint, eval = FALSE}
-newobs <- tibble(att_start = c(rep(13, 2),
-                            rep(8, 2)
+... %>% 
+  rowwise() %>% 
+  mutate(total = sum(c_across() > 9))
 ```
 
 ### Exercise 7
 
-Use `posterior_predict()`. The first argument to `posterior_predict()` should be `fit_1`. Also set `newdata` to `newobs`. Then, pipe your results to `as_tibble()`. 
+Extend the pipe to create a plot. Recall that this is what it looks like:
+
+```{r}
+temp_p
+```
 
 
 ```{r temp-7, exercise = TRUE}
@@ -518,70 +560,20 @@ Use `posterior_predict()`. The first argument to `posterior_predict()` should be
 ```
 
 ```{r temp-7-hint, eval = FALSE}
-newobs <- tibble(att_start = c(rep(13, 2),
-                               rep(8, 2)))
-
-posterior_predict(fit_4, 
-                  newdata = newobs) %>% 
-  as_tibble()
-                                                 
+... %>% 
+  ggplot(aes(x = total)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+    labs(title = ...,
+         subtitle = ...,
+         x = "Number",
+         y = "Probability") +
+    scale_x_continuous(breaks = ...,
+      labels = scales::number_format(accuracy = ...)) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = ...)) +
+    theme_classic()
 ```
 
-### Exercise 8
-
-Continue your pipe with` mutate_all()` with the argument `as.numeric`. Then, use `rowwise()`. 
-
-
-```{r temp-8, exercise = TRUE}
-
-```
-
-```{r temp-8-hint, eval = FALSE}
-newobs <- tibble(att_start = c(rep(13, 2),
-                               rep(8, 2)))
-
-posterior_predict(fit_4, 
-                  newdata = newobs) %>% 
-  as_tibble() %>% 
-  mutate_all(...) %>% 
-  rowwise()
-                                                 
-```
-
-### Exercise 9
-
-Lastly, use `mutate()` and set `total` to `sum(c_across)`.
-
-
-```{r temp-9, exercise = TRUE}
-
-```
-
-```{r temp-9-hint, eval = FALSE}
-newobs <- tibble(att_start = c(rep(13, 2),
-                               rep(8, 2)))
-
-posterior_predict(fit_4, 
-                  newdata = newobs) %>% 
-  as_tibble() %>% 
-  mutate_all(as.numeric) %>% 
-  rowwise() %>% 
-  mutate(total = sum(c_across()))
-                                                 
-```
-
-### Exercise 10
-
-Write a paragraph that interprets the tibble you just created. Make sure to answer the question in your response. 
-
-```{r temp-10}
-question_text(NULL,
-    answer(NULL, correct = TRUE),
-    allow_retry = TRUE,
-    try_again_button = "Edit Answer",
-    incorrect = NULL,
-    options = list(nrows = 3))
-```
 
 ## Submit
 
