@@ -25,10 +25,21 @@ options(tutorial.exercise.timelimit = 60,
 # These models take awhile to build. 
 
 
+ch_11 <- shaming %>% 
+  filter(treatment %in% c("Control", "Neighbors")) %>% 
+  droplevels() %>% 
+  mutate(solo = ifelse(hh_size == 1, TRUE, FALSE)) %>% 
+  select(primary_06, treatment, solo, sex, age)
 
+sham_1 <- stan_glm(data = ch_11, 
+                 formula = primary_06 ~ treatment + age, 
+                 refresh = 0)
+
+sham_2 <- stan_glm(data = ch_11, 
+                 formula = primary_06 ~ age + solo + treatment + solo * treatment,
+                 refresh = 0)
 ```
 
-<!-- DK: nnet example and code students use does not match up. How is that possible!?! -->
 
 ## Information
 ###
@@ -49,81 +60,521 @@ quiz(caption = "",
     incorrect = NULL))
 ```
 
-
-## EDA cces
+## EDA of shaming
 ###
-
-<!-- DK: Better to build these pipes by just spitting them out until the end and then, last step, put the assignment at the front. -->
-
-`cces` is a data set which is part of the collection of **primer.data** packages. Let's start by familiarizing ourselves with this data set.
 
 
 ### Exercise 1
 
-Let's first run `glimpse()` to see all the different variables in the `cces` dataset. 
+First `glimpse()` the `shaming` data to familiarize yourself with the variables.
 
-```{r glimpse, exercise = TRUE}
+```{r eda-1, exercise = TRUE}
 
-```
-
-
-```{r glimpse-hint, eval = FALSE}
-glimpse(cces)
 ```
 
 ### Exercise 2
 
-As you can see there are lots of observations! For our purposes, we are going to narrow our data.
+Let’s focus on a subset of the data to work with. Start a pipe with `shaming`. `filter()` to where treatment is either "Control" or "Neighbors".
 
-Let's create an object named `ch_11`. To do so, start with `cces`. Use `%>%` to add `select()` to select `year`, `gender`, `race`, `approval`, and `age`. 
-
-```{r select-1, exercise = TRUE}
+```{r eda-2, exercise = TRUE}
 
 ```
 
 
-```{r select-1-hint, eval = FALSE}
-ch_11 <- 
-  cces %>%
-  select(...)
-
+```{r eda-2-hint, eval = FALSE}
+When you filter(), consider using the %in% operator along with the function c()
 ```
 
 ### Exercise 3
 
-Extend the pipe using `filter()`. Set `year` equal to `2016`. Also, use `drop_na()` to get rid of any rows with missing data.
+Continue your pipe to `drop_levels()`. Then use `mutate()` to create the variable `solo` which returns TRUE if `hh_size` is equal to 1. 
 
-```{r filter, exercise = TRUE }
+```{r eda-3, exercise = TRUE }
 
 ```
 
-```{r filter-hint, eval = FALSE }
-ch_11 <-
-  cces %>%
-  select(year, gender, race, age, approval) %>%
-  filter(year == ...) %>% 
-  drop_na()
+```{r eda-3-hint, eval = FALSE }
+... %>% 
+  mutate(solo = ifelse(hh_size == 1, TRUE, FALSE)) 
 ```
-
 
 ### Exercise 4
 
-`ch_11` is still too big. So, let's add `sample_n(1000)` to the end of the pipe so that we only keep 1,000 observations. Let's also use `set.seed(9)` at the top so that we only get the same sample. Note that `set.seed()` is never part of a pipe. It is a stand-alone line of code. 
+Continue the pipe and `select()` the variables `primary_06`, `treatment`, `solo`, `sex` and `age`. Save the results of your code to an object named `ch_11`.
 
-```{r filter-last, exercise = TRUE }
+```{r eda-4, exercise = TRUE }
 
 ```
 
-```{r filter-last-hint, eval = FALSE }
-set.seed(9)
-ch_11 <-
-  cces %>%
-  select(year, gender, race, age, approval) %>%
-  filter(year == ...) %>% 
-  drop_na() %>% 
-  sample_n(1000)  
+```{r eda-4-hint, eval = FALSE }
+ch_11 <- shaming %>% 
+  filter(treatment %in% c("Control", "Neighbors")) %>% 
+  droplevels() %>% 
+  mutate(solo = ifelse(hh_size == 1, TRUE, FALSE)) %>% 
+  select(primary_06, treatment, solo, sex, age)
 ```
 
+## Wisdom
+###
+
+Consider the following question: 
+
+<!-- BG: need question here  -->
+
+Using **Wisdom**, write a paragraph about whether or not this data --- which covers voter turnout for the primary election in 2006 --- is relevant for the problem we face. See *The Primer* for guidance.
+
+```{r wisdom-1}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 6))
+```
+
+
+## Justice and Courage I
+###
+
+Let’s begin by building a model with four parameters. The outcome variable will be `primary_06`, which represents whether a citizen voted or not. We will model `primary_06` against the `age` and `treatment` variables to see if there is a connection.
+
+### Exercise 1
+
+Let's implement the model using `stan_glm()`. The `formula` argument should be `primary_06 ~ treatment + age`. Set `data` to`ch_11`, and `refresh` to 0. Save your results to an object named `sham_1`.
+
+
+```{r jc-ex-1, exercise = TRUE}
+
+```
+
+
+```{r jc-ex-1-hint, eval = FALSE}
+sham_1 <- stan_glm(data = ...,
+                  formula = ...,
+                  refresh = ...)
+```
+
+### Exercise 2
+
+Use `print()` to look at our parameter values. Set the `detail` argument to FALSE.
+
+```{r jc-ex-2, exercise = TRUE}
+
+```
+
+```{r jc-ex-2-hint, eval = FALSE}
+print(sham_1, detail = ...)
+```
+
+### Exercise 3
+
+Look at the results above. Write two sentences, using your own words, that explain the meaning of the Median value of `(Intercept)`.
+
+```{r jc-ex-3}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+### Exercise 4
+
+Now write two sentences, using your own words, that explains how you calculate the percent voting in the Neighbors group.
+
+```{r jc-ex-4}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+### Exercise 5
+
+Let’s model the following posterior probability distribution for the rates of voting.
+
+```{r}
+sham_p <- sham_1 %>% 
+  as_tibble() %>% 
+  mutate(Neighbors = `(Intercept)` + `treatmentNeighbors`) %>% 
+  mutate(Control = `(Intercept)`) %>% 
+  select(Neighbors, Control) %>% 
+  pivot_longer(cols = Neighbors:Control,
+               names_to = "parameters",
+               values_to = "percent_voting") %>% 
+  ggplot(aes(percent_voting, fill = parameters)) +
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = 0.5, 
+                   bins = 100, 
+                   position = "identity") +
+    labs(title = "Posterior Probability Distribution",
+         subtitle = "for Control versus Neighbors voting rates",
+         x = "% of group voting",
+         y = "Probability") + 
+    scale_x_continuous(labels = scales::number_format()) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+sham_p
+```
+
+### Exercise 6
+
+Start a pipe with `sham_1` and use `as_tibble()`
+
+```{r jc-ex-5, exercise = TRUE}
+
+```
+
+
+```{r jc-ex-5-hint, eval = FALSE}
+sham_1 %>%
+  as_tibble()
+```
+
+### Exercise 7
+
+Continue the pipe and use `mutate()` to create the variable `Neighbors`, which should be equal to the following argument: `(Intercept)` + `treatmentNeighbors`. Make sure you place backticks around (Intercept) and treatmentNeighbors.
+
+```{r jc-ex-6, exercise = TRUE}
+
+```
+
+
+```{r jc-ex-6-hint, eval = FALSE}
+sham_1 %>%
+  as_tibble() %>%
+  mutate(Neighbors = ... + treatmentNeighbors)
+```
+
+### Exercise 8
+
+Continue your pipe with `mutate()` to create the variable `Control` which is equal to `(Intercept)`. Make sure you place backticks around (Intercept).
+
+
+```{r jc-ex-7, exercise = TRUE}
+
+```
+
+
+```{r jc-ex-7-hint, eval = FALSE}
+... %>% 
+  mutate(Control = ...)
+```
+
+### Exercise 9
+
+Now `select()` the variables `Control` and `Neighbors`.
+
+```{r jc-ex-8, exercise = TRUE}
+
+```
+
+```{r jc-ex-8-hint, eval = FALSE}
+... %>%
+ select(...,...)
+```
+
+### Exercise 10
+
+Pipe your results to `pivot_longer()`. Within `pivot_longer()`, set `cols` to `Neighbors:Control`. Also set `names_to` to "parameters" and `values_to` should be set to "percent_voting".
+
+```{r jc-ex-9, exercise = TRUE}
+
+```
+
+```{r jc-ex-9-hint, eval = FALSE}
+... %>%
+  pivot_longer(cols = ...,
+               names_to = ...,
+               values_to = ...)
+```
+
+### Exercise 11
+
+Pipe the results to `ggplot()`. Map `percent_voting` to the x-axis, and map `parameters` to the  `fill` aesthetic. Use `geom_histogram()` with the same tricks we use in the chapter: `after_stat()`, `bins`, `alpha` and `position`.
+
+```{r jc-ex-10, exercise = TRUE}
+
+```
+
+```{r jc-ex-10-hint, eval = FALSE}
+... %>%
+  ggplot(aes(..., fill = ...)) +
+    geom_histogram(aes(y = after_stat(.../sum(...))),
+                   bins = 100,
+                   alpha = 0.5,
+                   position = "identity")
+
+```
+
+### Exercise 12
+
+Use `labs()` to add the appropriate title, subtitle, and axis labels. Also add the layer `theme_classic()`.
+
+
+```{r jc-ex-11, exercise = TRUE}
+
+```
+
+### Exercise 13
+
+Now use `scale_x_continuous()` to put the y-axis in percent format. Within `scale_x_continuous()`, set `labels` to `scales::number_format()`.
+
+
+```{r jc-ex-12, exercise = TRUE}
+
+```
+
+```{r jc-ex-12-hint, eval = FALSE}
+... +
+  scale_x_continuous(labels = ...)
+```
+
+### Exercise 14
+
+Now use `scale_y_continuous()` to put the y-axis in percent format. Within `scale_y_continuous()`, set `labels` to `scales::percent_format()`.
+
+Reminder: This is what your plot should look like.
+
+```{r}
+sham_p
+```
+
+```{r jc-ex-13, exercise = TRUE}
+
+```
+
+```{r jc-ex-13-hint, eval = FALSE}
+... +
+  scale_y_continuous(labels = ...)
+```
+
+### Exercise 15
+
+In two sentences, provide an interpretation of the graph you just created.
+
+```{r jc2-ex-14}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+## Justice and Courage II
+###
+
+The model we will now build that has 55 parameters! We will look at `primary_06` variable as a function of age, solo, treatment, and the interaction between solo and treatment (i.e. solo*treatment). 
+
+### Exercise 1
+
+Let's implement the model using `stan_glm()`. The `formula` argument should be `lived_after ~ state + sex*election_age`. Set `data` to`ch_11`, and `refresh` to 0. Save your results to an object named `sham_2`.
+
+
+```{r jc2-ex-1, exercise = TRUE}
+
+```
+
+
+```{r jc2-ex-1-hint, eval = FALSE}
+There should be three arguments to stan_glm()
+```
+
+### Exercise 2
+
+Use `print()` to look at our parameter values. Set the `digits` argument to 3.
+
+```{r jc2-ex-2, exercise = TRUE}
+
+```
+
+```{r jc2-ex-2-hint, eval = FALSE}
+print(sham_2, digits = ...)
+```
+
+### Exercise 3
+
+Look at the results above. Write two sentences, using your own words, that explain the meaning of the value of `soloTRUE:treatmentNeighbors`.
+
+```{r jc2-ex-3}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+### Exercise 4
+
+Let's create the following posterior distribution for the likeliness of voting for solo households.
+
+```{r}
+sham2_p <- sham_2 %>% 
+  as_tibble() %>% 
+  mutate(Control = `soloTRUE`) %>% 
+  mutate(Neighbors = `soloTRUE` + `soloTRUE:treatmentNeighbors`) %>% 
+  select(Neighbors, Control) %>% 
+  pivot_longer(cols = Neighbors:Control,
+               names_to = "parameters",
+               values_to = "percent_voting") %>% 
+  ggplot(aes(percent_voting, fill = parameters)) +
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = 0.5, 
+                   bins = 100, 
+                   position = "identity") +
+    labs(title = "Posterior Probability Distribution for Solo Households",
+         subtitle = "Solo households with Neighbors treatment are more likely to vote",
+         x = "% of group voting",
+         y = "Probability") + 
+    scale_x_continuous(labels = scales::number_format()) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+sham2_p
+```
+
+### Exercise 5
+
+Start a pipe with `sham_2` and use `as_tibble()`
+
+```{r jc2-ex-5, exercise = TRUE}
+
+```
+
+
+```{r jc2-ex-5-hint, eval = FALSE}
+sham_2 %>%
+  as_tibble()
+```
+
+### Exercise 6
+
+Continue the pipe and use `mutate()` to create the variable `Control`, which should be equal to the following argument: `soloTRUE`. Make sure you place backticks around "soloTRUE".
+
+```{r jc2-ex-6, exercise = TRUE}
+
+```
+
+
+```{r jc2-ex-6-hint, eval = FALSE}
+sham_2 %>%
+  as_tibble() %>%
+  mutate(Control= `soloTRUE`)
+```
+
+### Exercise 7
+
+Continue the pipe and use `mutate()` to create the variable `Neighbors`, which should be equal to the following argument: `soloTRUE` + `soloTRUE:treatmentNeighbors`. Make sure you place backticks around "soloTRUE" and "treatmentNeighbors".
+
+```{r jc2-ex-7, exercise = TRUE}
+
+```
+
+
+```{r jc-2-ex-7-hint, eval = FALSE}
+sham_2 %>%
+  as_tibble() %>%
+  mutate(Neighbors = ... + `treatmentNeighbors`)
+```
+
+### Exercise 8
+
+Now `select()` the variables `Control` and `Neighbors`.
+
+```{r jc2-ex-8, exercise = TRUE}
+
+```
+
+```{r jc2-ex-8-hint, eval = FALSE}
+... %>%
+ select(...,...)
+```
+
+### Exercise 9
+
+Pipe your results to `pivot_longer()`. Within `pivot_longer()`, set `cols` to `Neighbors:Control`. Also set `names_to` to "parameters" and `values_to` should be set to "percent_voting".
+
+```{r jc2-ex-9, exercise = TRUE}
+
+```
+
+```{r jc2-ex-9-hint, eval = FALSE}
+... %>%
+  pivot_longer(cols = ...,
+               names_to = ...,
+               values_to = ...)
+```
+
+### Exercise 10
+
+Pipe the results to `ggplot()`. Map `percent_voting` to the x-axis, and map `parameters` to the  `fill` aesthetic. Use `geom_histogram()` with the same tricks we use in the chapter: `after_stat()`, `bins`, `alpha` and `position`.
+
+```{r jc2-ex-10, exercise = TRUE}
+
+```
+
+```{r jc2-ex-10-hint, eval = FALSE}
+... %>%
+  ggplot(aes(..., fill = ...)) +
+    geom_histogram(aes(y = after_stat(.../sum(...))),
+                   bins = 100,
+                   alpha = 0.5,
+                   position = "identity")
+
+```
+
+### Exercise 11
+
+Use `labs()` to add the appropriate title, subtitle, and axis labels. Also add the layer `theme_classic()`.
+
+
+```{r jc2-ex-11, exercise = TRUE}
+
+```
+
+### Exercise 12
+
+Now use `scale_x_continuous()` to put the y-axis in percent format. Within `scale_x_continuous()`, set `labels` to `scales::number_format()`.
+
+
+```{r jc2-ex-12, exercise = TRUE}
+
+```
+
+```{r jc2-ex-12-hint, eval = FALSE}
+... +
+  scale_x_continuous(labels = ...)
+```
+
+### Exercise 13
+
+Now use `scale_y_continuous()` to put the y-axis in percent format. Within `scale_y_continuous()`, set `labels` to `scales::percent_format()`.
+
+Reminder: This is what your plot should look like.
+
+```{r}
+sham2_p
+```
+
+```{r jc2-ex-13, exercise = TRUE}
+
+```
+
+```{r jc2-ex-13-hint, eval = FALSE}
+... +
+  scale_y_continuous(labels = ...)
+```
+
+## Temperance 
+###
+
+<!-- BG: insert question from Wisdom section -->
 
 
 
