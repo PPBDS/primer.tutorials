@@ -17,6 +17,8 @@ library(tidyverse)
 library(primer.data)
 library(rstanarm)
 library(skimr)
+library(ggdist)
+
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
@@ -29,7 +31,8 @@ ch_11 <- shaming %>%
   filter(treatment %in% c("Control", "Neighbors")) %>% 
   droplevels() %>% 
   mutate(solo = ifelse(hh_size == 1, TRUE, FALSE)) %>% 
-  select(primary_06, treatment, solo, sex, age)
+  select(primary_06, treatment, solo, sex, age) %>% 
+  slice_sample(n = 10000, replace = FALSE)
 
 sham_1 <- stan_glm(data = ch_11, 
                  formula = primary_06 ~ treatment + age, 
@@ -38,6 +41,15 @@ sham_1 <- stan_glm(data = ch_11,
 sham_2 <- stan_glm(data = ch_11, 
                  formula = primary_06 ~ age + solo + treatment + solo * treatment,
                  refresh = 0)
+
+
+treatment = c("Neighbors", "Control")
+solo = c(TRUE,FALSE)
+age = c(30, 45, 60)
+
+newobs <- expand_grid(treatment, solo, age) %>% 
+  mutate(names = paste(treatment, solo, age, sep = "_"))
+
 ```
 
 
@@ -100,26 +112,44 @@ Continue your pipe to `drop_levels()`. Then use `mutate()` to create the variabl
 
 ### Exercise 4
 
-Continue the pipe and `select()` the variables `primary_06`, `treatment`, `solo`, `sex` and `age`. Save the results of your code to an object named `ch_11`.
+Continue the pipe and `select()` the variables `primary_06`, `treatment`, `solo`, `sex` and `age`. 
 
 ```{r eda-4, exercise = TRUE }
 
 ```
 
 ```{r eda-4-hint, eval = FALSE }
+shaming %>% 
+  filter(treatment %in% c("Control", "Neighbors")) %>% 
+  droplevels() %>% 
+  mutate(solo = ifelse(hh_size == 1, TRUE, FALSE)) %>% 
+  select(..., ..., ...., ..., ...)
+```
+
+### Exercise 5
+
+Finally, let's limit our observations to 10,000 rows. To do so, use `sample_n()` and set the `n` argument to 10,000. Also set `replace` to FALSE. Save the results of your code to an object named `ch_11`.
+
+```{r eda-5, exercise = TRUE }
+
+```
+
+```{r eda-5-hint, eval = FALSE }
 ch_11 <- shaming %>% 
   filter(treatment %in% c("Control", "Neighbors")) %>% 
   droplevels() %>% 
   mutate(solo = ifelse(hh_size == 1, TRUE, FALSE)) %>% 
-  select(primary_06, treatment, solo, sex, age)
+  select(primary_06, treatment, solo, sex, age) %>% 
+  slice_sample(...,...)
 ```
+
 
 ## Wisdom
 ###
 
 Consider the following question: 
 
-<!-- BG: need question here  -->
+*What is the influence on different types of postcards on the likelihood of voting for various types of people who live alone?*
 
 Using **Wisdom**, write a paragraph about whether or not this data --- which covers voter turnout for the primary election in 2006 --- is relevant for the problem we face. See *The Primer* for guidance.
 
@@ -373,7 +403,7 @@ The model we will now build that has 55 parameters! We will look at `primary_06`
 
 ### Exercise 1
 
-Let's implement the model using `stan_glm()`. The `formula` argument should be `lived_after ~ state + sex*election_age`. Set `data` to`ch_11`, and `refresh` to 0. Save your results to an object named `sham_2`.
+Let's implement the model using `stan_glm()`. The `formula` argument should be `primary_06 ~ age + solo + treatment + solo * treatment`. Set `data` to`ch_11`, and `refresh` to 0. Save your results to an object named `sham_2`.
 
 
 ```{r jc2-ex-1, exercise = TRUE}
@@ -574,9 +604,245 @@ sham2_p
 ## Temperance 
 ###
 
-<!-- BG: insert question from Wisdom section -->
+Consider: 
+
+*What is the influence on different types of postcards on the likelihood of voting for various types of people who live alone?*
 
 
+Let's create the following posterior probability distribution. 
+
+**Note:** The types of people included in this distribution are people who are 30, 45, 60 years old. For every age, each treatment (Neighbors and Control) and living situation (lives alone or not) is accounted for. 
+
+```{r}
+treatment = c("Neighbors", "Control")
+solo = c(TRUE,FALSE)
+age = c(30, 45, 60)
+
+newobs <- expand_grid(treatment, solo, age) %>% 
+  mutate(names = paste(treatment, solo, age, sep = "_"))
+  
+temp_p <- posterior_epred(sham_2,
+                      newdata = newobs) %>%
+  as_tibble() %>%
+  set_names(newobs$names) %>% 
+  mutate(solo_30       = Neighbors_TRUE_30 - Control_TRUE_30,
+         `not-solo_30` = Neighbors_FALSE_30 - Control_FALSE_30,
+         solo_45       = Neighbors_TRUE_45 - Control_TRUE_45,
+         `not-solo_45` = Neighbors_FALSE_45 - Control_FALSE_45,
+         solo_60       = Neighbors_TRUE_60 - Control_TRUE_60,
+         `not-solo_60` = Neighbors_FALSE_60 - Control_FALSE_60) %>% 
+  select(solo_30:`not-solo_60`) %>% 
+  pivot_longer(names_to = "Group",
+               values_to = "Treatment_Effect",
+               cols = everything()) %>% 
+ separate(Group, c("Solo", "Age"), "_") %>% 
+  ggplot(aes(x = Treatment_Effect, y = Age, alpha = .5, fill = Solo)) +
+           stat_slab() +
+           guides(alpha = FALSE) +
+  labs(title = "Treatment Effects of Different Post Cards on Various Types of People",
+       subtitle = "People who do not live alone are more likely to vote",
+       x = "Treatment Effect",
+       y = "Age")
+  
+temp_p
+```
+
+### Exercise 1
+
+We want to make sure our data includes every possible combination. To do so, let's start by creating three separate objects that includes the information what we want to combine. The first object should be `treatment`, which is set equal to "Neighbors" and "Control". The second object should be `solo` , which is set to TRUE and FALSE. THe third object should be `age` which is set to 30,45,60.
+
+```{r temp1, exercise = TRUE}
+
+```
+
+
+```{r temp1-hint, eval = FALSE}
+treatment = c("Neighbors", "Control")
+solo = c(..., ...)
+age = c(..., ..., ...)
+```
+
+### Exercise 2
+
+Great. The function `expand_grid()` allows us to create a tibble from all combinations of inputs, which is our goal. Use `expand_grid()` with the arguments `treatment`, `solo`, and `age`. 
+
+```{r temp2, exercise = TRUE}
+
+```
+
+
+```{r temp2-hint, eval = FALSE}
+expand_grid(...,...,...)
+```
+
+### Exercise 3
+
+Pipe the results of `expand_grid()` to `mutate()`and set `names` to the function `paste()`. Within `paste()` use the arguments `treatment`, `solo`, and `age`. Also, set `sep` to "_". 
+
+
+```{r temp3, exercise = TRUE}
+
+```
+
+
+```{r temp3-hint, eval = FALSE}
+... %>% 
+  mutate(names = paste(..., ... , ..., sep = "_"))
+```
+
+### Exercise 4
+
+Great. Now use `posterior_epred()`. The first argument to `posterior_epred()` should be `sham_2`. Also set `newdata` to `newobs`.
+
+```{r temp4, exercise = TRUE}
+
+```
+
+
+```{r temp4-hint, eval = FALSE}
+posterior_epred(sham_2,
+                  newdata = newobs)
+```
+
+### Exercise 5
+
+Pipe the results of `posterior_epred()` to `as_tibble()`. Also, use the function `set_names()` with the argument `newobs$names`. 
+
+
+```{r temp5, exercise = TRUE}
+
+```
+
+
+```{r temp5-hint, eval = FALSE}
+... %>%
+  as_tibble() %>%
+  set_names(newobs$names)
+```
+
+### Exercise 6
+
+Continue the pipe with `mutate()` and create a variable for each treatment effect. There should be six treatment effects in total (solo and not solo for every age). See *hint* for an example of what the first two treatment effects could look like.
+
+
+```{r temp6, exercise = TRUE}
+
+```
+
+
+```{r temp6-hint, eval = FALSE}
+... %>% 
+    mutate(solo_30 = Neighbors_TRUE_30 - Control_TRUE_30,
+         `not-solo_30` = Neighbors_FALSE_30 - Control_FALSE_30)
+```
+
+```{r temp6-hint-2, eval = FALSE}
+Note: We use back ticks with `not-solo_60` because the hyphen - is an irregular character so we need to tell R to ignore it.
+```
+
+
+### Exercise 7
+
+Great. Now continue your pipe and use `select()` to grab all the treatment effect variables you just created. You can use the `:` shortcut rather than writing out all the names. For example, if the first treatment effect variables you created was `solo_30` and the last one you created was ``not-solo_60``, your code would look like: select(solo_30: `not-solo_60`).
+
+```{r temp7, exercise = TRUE}
+
+```
+
+
+```{r temp7-hint, eval = FALSE}
+
+```
+
+### Exercise 8
+
+Pipe your results to `pivot_longer()`. Set `names_to` to "Group", `values_to` to "Treatment_Effect", and `cols` to `everything().
+
+```{r temp8, exercise = TRUE}
+
+```
+
+
+```{r temp8-hint, eval = FALSE}
+... %>% 
+  pivot_longer(names_to = ...,
+               values_to = ...,
+               cols = ...)
+```
+
+### Exercise 9
+
+The function `separate()` turns one column into multiple columns. Continue your pipe and use `separate()`. The first argurment to `separate()` should be `Group`. The second argument should be c("Solo", "Age"). The third argument should be ` "_", which tells R what each column should be separated by. 
+
+```{r temp9, exercise = TRUE}
+
+```
+
+
+```{r temp9-hint, eval = FALSE}
+ ... %>% 
+ separate(Group, c("Solo", "Age"), "_") 
+```
+
+### Exercise 10
+
+Now pipe your results to `ggplot()`. Map `Treatment_Effect` to the x-axis and `Age` to the y-axis. Map `Solo` to `fill` and set alpha to .5. Also add the layer `stat_slab()`. Note: `stat_slab()` acts like geom which does all the work to create the graphic. 
+
+
+```{r temp10, exercise = TRUE}
+
+```
+
+
+```{r temp10-hint, eval = FALSE}
+%>% 
+  ggplot(aes(..., ..., ..., ...) +
+           stat_slab()
+```
+
+### Exercise 11
+
+Now add the layer `guides()` and set the `alpha` argument to FALSE.
+
+<!-- BG: should we explain what guides means here? -->
+
+```{r temp11, exercise = TRUE}
+
+```
+
+
+```{r temp11-hint, eval = FALSE}
+... +
+  guides(alpha = FALSE)
+```
+
+### Exercise 12
+
+Finally, use `labs()` to add the appropriate title, subtitle, and axis labels to your graph.
+
+Reminder: This is what your graph should look like. 
+
+```{r}
+temp_p
+```
+
+```{r temp12, exercise = TRUE}
+
+```
+
+### Exercise 13
+
+Great! Now write a paragraph that interprets the graph you just created.
+
+
+```{r temp13}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 6))
+```
 
 ## Submit
 
