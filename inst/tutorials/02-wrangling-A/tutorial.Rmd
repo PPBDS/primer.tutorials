@@ -1,73 +1,35 @@
 ---
 title: "Wrangling A"
 tutorial:
-  id: "wrangling-a"
-output: 
+  id: "wrangling-A"
+output:
   learnr::tutorial:
-    progressive: true
-    allow_skip: true
+      progressive: true
+      allow_skip: true
 runtime: shiny_prerendered
-description: "Chapter 2 Wrangling Data"
+description: "Chapter 2: Wrangling -- A"
 ---
 
 ```{r setup, include = FALSE}
 library(learnr)
 library(primer.tutorials)
 library(tidyverse)
-library(readxl)
-library(png)
-library(grid)
-
+library(lubridate)
+library(stringr)
+library(skimr)
+library(primer.data)
+library(nycflights13)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
-# Dealing with external files in tutorials is confusing! The biggest problem is
-# figuring out when things will be evaluated and where. There is some discussion
-# here: https://rstudio.github.io/learnr/. It certainly seems that setup chunks
-# are not evaluated until Run Code is pressed on the Exercise chunk.
+# Key Data
 
-# We need to get the example file into the working area for each question. I
-# initially had this material in its own R code chunk. But then the function was
-# not available when the tutorial was run from the Tutorial Pane. Why? 
-
-# I used to believe that any objects which you always want around for the entire
-# portfolio should be created here, in the main set-up chunk. That seems to both
-# work (an object is available) and fail (you get a weird warning message about
-# the object not being available).  For example, code which creates an object
-# called `www` does work in that www is around for later questions, but it also
-# makes this warning:
-
-# Warning: Error in paste0: object 'www' not found
-
-# Very confusing! Since everything works, this must be a weird evaluation timing
-# issue . . .
-
-# For some usage, you want to interact with the file in its main location,
-# without copying it over. For that purpose, you need the path to where the
-# package is installed.
-
-# Is there a way to force the deletion of any previous work, whenever you
-# install a new version of the package? (Maybe just changing the version number
-# does this. Maybe using the `id` designation.) There seem to be at least two
-# kinds of work that stay on. First, the answers which you have already given,
-# which can be removed by hitting the Start Over button. Second, the html file
-# itself seems to (often) be a previous version, rather than the latest.
+cces_filt <- cces %>%
+  filter(ideology %in% c("Conservative", "Not Sure", 
+                        "Moderate", "Liberal"))
 ```
-
-<!-- Would be nice if running the code did not produce TRUE and the col types message. But I can't think of a way to get rid of that, and still get the object printed out. -->
-
-<!-- Couple more questions using col_types argument.  -->
-
-<!-- Show how to use the result from running it initially to make the warning disappear. -->
-
-<!-- Couple questions on read json? Like we do in the book? -->
-
-<!-- Couple questions on reading in data from the web, like a Wikipedia table? -->
-
-<!-- Couple questions on using an API? -->
-
 
 
 ## Information
@@ -90,428 +52,537 @@ quiz(caption = "",
 ```
 
 
-## CSV Files
+## Characters 
 ###
 
-We begin by learning how to use `read_csv()` to read in CSV files. "CSV" stands for **c**omma-**s**eparated **v**alues, meaning that the variable names and data values are separated by commas in the file.
+A string is one or more characters that are enclosed inside a pair of matching 'single' or "double quotes". We will now use various functions to manipulate strings
 
 ### Exercise 1
 
-```{r ex-1-setup}
-file.copy(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "test_1.csv"), ".")
-```
+Type `state.name` into the code chunk below to inspect a character vector that contains the names of all US states.
 
-Consider the contents of the `test_1.csv` file.
-
-```{r, comment=''}
-cat(readLines(paste0(system.file("www/", package = "primer.tutorials"),
-                     "test_1.csv")), sep = "\n")
-```
-
-Write code for reading this file into R.
-
-```{r ex-1, exercise = TRUE}
+```{r exercise-2-1, exercise = TRUE}
 
 ```
-
-```{r ex-1-hint, eval = FALSE}
-Use `read_csv()` and set the `file` argument to "test_1.csv".
-```
-
-The result when your code is run should look like this:
-
-```{r}
-read_csv(paste0(system.file("www/", package = "primer.tutorials"), 
-                "test_1.csv"),
-         col_types = cols(a = col_double(),
-                          b = col_double(),
-                          c = col_double()))
-```
-
-The rest of the exercises in this tutorial are like this one. We aren't creating any new R objects. We are just reading in data from different files and looking at the resulting object, which will almost always be a tibble. Also, ignore the message about column specification for now. 
 
 ### Exercise 2
 
-```{r ex-2-setup}
-file.copy(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "test_2.csv"), ".")
-```
+Use `str_detect()` to create a vector which will be TRUE for states which contain the pattern "ana" and FALSE otherwise. The first argument to `str_detect()` should be `state.name`. The second argument set `pattern` to "ana".
 
-Consider the contents of the `test_2.csv` file. 
-
-```{r, comment=''}
-cat(readLines(paste0(system.file("www/", package = "primer.tutorials"), 
-                     "test_2.csv")), sep = "\n")
-```
-
-Write code for skipping the text at the top of this file. 
-
-```{r ex-2, exercise = TRUE}
+```{r exercise-2-2, exercise = TRUE}
 
 ```
 
-```{r ex-2-hint-1, eval = FALSE}
-Use the `skip` argument set to 2.
+```{r exercise-2-2-hint, eval = FALSE}
+str_detect(..., pattern = ...)
 ```
-
-```{r ex-2-hint-2, eval = FALSE}
-read_csv(file = "test_2.csv",
-          skip = ...)
-```
-The result when your code is run should look like this:
-
-```{r}
-read_csv(paste0(system.file("www/", package = "primer.tutorials"), 
-                "test_2.csv"),
-         skip = 2,
-         col_types = cols(a = col_double(),
-                          b = col_double(),
-                          c = col_double()))
-```
-
-There are many arguments to `read_csv()` which allow us to deal with data formatted in different ways. Many of these argument also apply to other functions for reading in data, like `read_excel()`.
 
 ### Exercise 3
 
+Great. Now use  `str_detect()` on `state.name` to create a vector which will be TRUE for states which contain the pattern "do" and FALSE otherwise.
 
-```{r ex-3-setup}
-file.copy(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "test_3.csv"), ".")
-```
-
-Consider the contents of the `test_3.csv` file. 
-
-```{r, comment=''}
-cat(readLines(paste0(system.file("www/", package = "primer.tutorials"), 
-                     "test_3.csv")), sep = "\n")
-```
-
-Write code that will create default names for the file.
-
-```{r ex-3, exercise = TRUE}
+```{r exercise-2-22, exercise = TRUE}
 
 ```
 
-```{r ex-3-hint-1, eval = FALSE}
-Use the `col_names argument and set it to FALSE
-```
-
-```{r ex-3-hint-2, eval = FALSE}
-read_csv(file = "...",
-          col_names = ...)
-```
-
-The result when your code is run should look like this:
-
-```{r}
-read_csv(paste0(system.file("www/", package = "primer.tutorials"), 
-                "test_3.csv"),
-         col_names = FALSE)
-        
+```{r exercise-2-22-hint, eval = FALSE}
+Your code should look similar to the previous question, only changing what the pattern argument is set to.
 ```
 
 ### Exercise 4
 
-```{r ex-4-setup}
-file.copy(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "test_3.csv"), ".")
-```
+Now use `str_detect()` to find states that match state names that have a “a,” followed by any single character, followed by “o.” 
 
-Consider, again, the contents of the `test_3.csv` file. 
-
-```{r, comment=''}
-cat(readLines(paste0(system.file("www/", package = "primer.tutorials"), 
-                     "test_3.csv")), sep = "\n")
-```
-
-Write code that names the columns `a`, `b` and `c`.
-
-```{r ex-4, exercise=TRUE}
+```{r exercise-222-15, exercise = TRUE}
 
 ```
 
-```{r ex-4-hint, eval=FALSE}
-Use the `col_names` argument and set its argument to c("a", "b", "c") 
+```{r exercise-222-15-hint-1, eval = FALSE}
+Set the pattern argument to "a.o"
 ```
 
-The result when your code is run should look like this:
-
-```{r}
-read_csv(paste0(system.file("www/", package = "primer.tutorials"), 
-                "test_3.csv"),
-         col_names = (c("a", "b", "c")),
-         col_types = cols(a = col_double(),
-                          b = col_double(),
-                          c = col_double()))
+```{r exercise-222-15-hint-2, eval = FALSE}
+str_detect(..., pattern = "a.o")
 ```
 
 ### Exercise 5
 
-```{r ex-5-setup}
-file.copy(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "test_5.csv"), ".")
-```
+Use `str_length()` with the argument `state.name` to count the characters in string. 
 
-Consider the contents of the `test_5.csv` file. Note the "." for the first value for `b`. In this file, a period indicates a missing value. **This is not always true.** Missing values can be indicated in many different ways. And, sometimes, a period is just a period.
-
-```{r, comment=''}
-cat(readLines(paste0(system.file("www/", package = "primer.tutorials"), 
-                     "test_5.csv")), sep = "\n")
-```
-
-Write code to recognize the `.` value for `b` as an NA value.
-
-```{r ex-5, exercise = TRUE}
+```{r exercise-2-15, exercise = TRUE}
 
 ```
 
-```{r ex-5-hint, eval = FALSE}
-Use the `na` argument and set it to "."
-```
-
-The result when your code is run should look like this:
-
-```{r}
-read_csv(paste0(system.file("www/", package = "primer.tutorials"), 
-                "test_5.csv"),
-         na = ".")
+```{r exercise-2-15-hint, eval = FALSE}
+str_length(...)
 ```
 
 ### Exercise 6
 
-```{r ex-6-setup}
-file.copy(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "test_6.csv"), ".")
-```
+Great. Now use `str_sub` to create a character vector that contains only the first three letters of each state.
 
-Consider the contents of the `test_6.csv` file. 
-
-```{r, comment=''}
-cat(readLines(paste0(system.file("www/", package = "primer.tutorials"), 
-                     "test_6.csv")), sep = "\n")
-```
-
-Write code for skipping the text lines within the file.
-
-```{r ex-6, exercise = TRUE}
+```{r exercise-2-6, exercise = TRUE}
 
 ```
 
-```{r ex-6-hint-1, eval = FALSE}
-Use the `comment` argument and set it to "#".
+```{r exercise-2-6-hint-1, eval = FALSE}
+str_sub(state.name, ..., ...)
 ```
 
-```{r ex-6-hint-2, eval = FALSE}
-read_csv(file = "...",
-          comment = "...")
-```
-
-The result when your code is run should look like this:
-
-```{r}
-read_csv(paste0(system.file("www/", package = "primer.tutorials"), 
-                "test_6.csv"),
-         comment = "#")
+```{r exercise-2-6-hint-2, eval = FALSE}
+str_sub(state.name, 1, 3)
 ```
 
 ### Exercise 7
 
-```{r ex-7-setup}
-file.copy(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "test_7.csv"), ".")
-```
+Collapse `state.name` using `str_c()`. Separate them with a comma that is followed by a whitespace. This should create a single character object with all the states.
 
-Consider the contents of the `test_7.csv` file. 
-
-```{r, comment=''}
-cat(readLines(paste0(system.file("www/", package = "primer.tutorials"), 
-                     "test_7.csv")), sep = "\n")
-```
-
-Write code to make sure the column `grade` appear as an integer variable (`<int>`), and `student` as a character variable (`<chr>`).
-
-```{r ex-7, exercise=TRUE}
+```{r exercise-2-7, exercise = TRUE}
 
 ```
 
-```{r ex-7-hint, eval=FALSE}
-Use the col_types argument and set it to cols(grade = col_integer(),
-                                                student = col_character())
+```{r exercise-2-7-hint, eval = FALSE}
+str_c(..., collapse = ", ")
 ```
 
-The result when your code is run should look like this:
+### Exercise 8
 
-```{r}
-read_csv(paste0(system.file("www/", package = "primer.tutorials"), 
-                "test_7.csv"),
-         col_types = cols(
-  grade = col_integer(),
-  student = col_character()
-))
+Use `str_replace()` to replace the pattern `North` with `N.`. For example, transform North Carolina into N. Carolina.
+
+```{r exercise-2-9, exercise = TRUE}
+
+```
+
+```{r exercise-2-9-hint, eval = FALSE}
+str_replace(..., pattern = ..., replacement = "...")
+```
+
+### Exercise 9
+
+Use `str_replace()` to replace the pattern `South` with `S.`. For example, transform South Carolina into S. Carolina.
+
+```{r exercise-2-99, exercise = TRUE}
+
+```
+
+```{r exercise-2-99-hint, eval = FALSE}
+Your code shoud look similar to the previous exercise, only changing what the pattern and replacement arguments are set to.
 ```
 
 
-## Text Files
+## Factors 
 ###
 
-CSV files are one type of **text** file. A text file is any file which includes plain text. The contents of such files are easy to look at in any text editor, or in RStudio.
+Factors are categorical variables that may only take on a specified set of values. 
 
 ### Exercise 1
 
-```{r delim-1-setup}
-file.copy(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "delim_1.txt"), ".")
-```
+Use `select()` to look at the `ideology` variable of the `cces` data set.
 
-Consider the contents of the text file `delim_1.txt`:
-
-```{r}
-cat(readLines(paste0(system.file("www/", 
-                                 package = "primer.tutorials"), 
-                     "delim_1.txt")), 
-    sep = "\n")
-```
-
-Write code for reading this file in to R. The values in the file are separated by pipes rather than commas. So, instead of `read_csv()`, you should use `read_delim()`. 
-
-```{r delim-1, exercise=TRUE}
+```{r factors-1, exercise = TRUE}
 
 ```
 
-```{r delim-1-hint, eval = FALSE}
-Set the file argument to "delim_1.txt". Also use the `delim` argument and set it to "|"
-```
-
-The result when your code is run should look like this:
-
-```{r}
-read_delim(paste0(system.file("www/", package = "primer.tutorials"), 
-                "delim_1.txt"), delim = "|")
-```
-
-Note how the spaces and commas are included in the values for `town`. You can't use `read_csv()` if some of your columns have commas in them.
-
-
-### Exercise 2
-
-```{r delim-2-setup}
-file.copy(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "delim_2.txt"), ".")
-```
-
-Consider the contents of the text file `delim_2.txt`:
-
-```{r}
-cat(readLines(paste0(system.file("www/", 
-                                 package = "primer.tutorials"), 
-                     "delim_2.txt")), 
-    sep = "\n")
-```
-
-Write code for reading this file in to R, using the argument tricks you used in the previous question. Also, use the `col_types` argument to both prevent the col_types message from printing out and to set `population` as an integer.
-
-```{r delim-2, exercise=TRUE}
-
-```
-
-```{r delim-2-hint, eval = FALSE}
-Set the `col_types` argument to 
-cols(date = col_date(format = ""),
-     population = col_integer(),
-     town = col_character())
-```
-
-The result when your code is run should look like this:
-
-```{r}
-read_delim(paste0(system.file("www/", package = "primer.tutorials"), 
-                "delim_2.txt"), 
-           delim = "|",
-           col_types = 
-             cols(date = col_date(format = ""),
-                  population = col_integer(),
-                  town = col_character()))
-```
-
-Sadly, many text files you encounter will be much more of a mess than these examples. 
-
-## Excel Files
-###
-
-Excel is a spreadsheet program that use tables to analyze, store, or manipulate data. The tables are composed of cells which include text, numbers, or formulas.
-
-
-### Exercise 1
-
-```{r excel-1-setup}
-file.copy(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "excel_1.xlsx"), ".")
-```
-
-Consider the contents of the excel file `excel_1.xlsx`:
-
-```{r}
-file <- paste0(system.file("images/", 
-                           package = "primer.tutorials"),
-               "excel_1.png")
-img <- readPNG(file)
-grid.raster(img)
-```
-
-Write code for reading this file in to R. Use the `read_excel()` function from the **readxl** package. (You may assume that the package has already been loaded for you.)
-
-```{r excel-1, exercise=TRUE}
-
-```
-
-```{r excel-1-hint, eval = FALSE}
-Use `read_excel()` and set the `file` argument to `excel_1.xlsx`.
-```
-
-
-The result when your code is run should look like this:
-
-```{r}
-read_excel(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "excel_1.xlsx"))
-
+```{r factors-1-hint, eval = FALSE}
+cces %>% 
+  select(...)
 ```
 
 ### Exercise 2
 
-```{r excel-2-setup}
-file.copy(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "excel_1.xlsx"), ".")
+Use `str()` with the argument `cces$ideology`. On the line below, use `levels()` with the same argument. 
+
+```{r factors-3, exercise = TRUE}
+
 ```
 
-Let's once again consider the contents of `excel_1.xlsx`. However, we want to look at the second sheet of the file. **Note**: Sheet 1 is the default when looking at an Excel file, so the last exercise only showed us the contents of Sheet 1.
+```{r factors-3-hint, eval = FALSE}
+str(...)
+levels(...)
+```
 
+### Exercise 3
+
+Let's now get a frequency table as a tibble. Use `fct_count()` with the argument `cces$ideology`.
+
+```{r factors-4, exercise = TRUE}
+
+```
+
+
+```{r factors-4-hint, eval = FALSE}
+fct_count(...)
+```
+
+### Exercise 4
+
+Now use `nlevels()` with the argument `cces$ideology` to find the number of existing levels.
+
+```{r factors-5, exercise = TRUE}
+
+```
+
+### Exercise 5
+
+Now `filter()` `cces` to to only a few ideologies: `Conservative` , `Moderate`, `Liberal` and `Not Sure`. Save your work to an object named `cces_filt`.
+
+```{r factors-6, exercise = TRUE}
+
+```
+
+```{r factors-6-hint-1, eval = FALSE}
+Use in %>%  and c() within filter(). Within c(), place the ideologies in quotes. 
+```
+
+```{r factors-6-hint-2, eval = FALSE}
+cces_filt <- cces %>%
+  filter(... %in% c(..., ..., ..., ...))
+```
+
+### Exercise 6
+
+Now use `nlevels()` with the argument `cces_filt`. Notice that the same number of levels pop up.
+
+```{r factors-7-setup}
+cces_filt <- cces %>%
+  filter(ideology %in% c("Conservative", "Moderate", " Liberal","Not Sure"))
+```
+
+
+```{r factors-7, exercise = TRUE}
+
+```
+
+```{r factors-7-hint, eval = FALSE}
+nlevels(...)
+```
+<!-- I had to pipe the code from the previous exercise in order to get the desired output. The code in the hint kept the output at 6 levels.
+What worked for me was cces_filt <- cces %>% filter(ideology %in% c("Conservative" ...)) %>% droplevels() -->
+
+### Exercise 7
+
+Let's drop all the unused levels. Start a pipe with `cces_filt`. Use `%>%` to add the function `droplevels()`. Then on the line below, use `nlevels()` once gain to see how many levels exist. Notice the difference?
+
+```{r factors-8-setup}
+cces_filt <- cces %>%
+  filter(ideology %in% c("Conservative", "Moderate", " Liberal","Not Sure"))
+```
+
+```{r factors-8, exercise = TRUE}
+
+```
+
+```{r factors-8-hint-1, eval = FALSE}
+Use the argument cces_filt inside nlevels()
+```
+
+```{r factors-8-hint-2, eval = FALSE}
+cces_filt %>% 
+  droplevels()
+nlevels(...)
+```
+
+### Exercise 8
+
+Now try ordering the levels of `cces$ideology` by frequency. Use ` %>% ` to add the function `fct_infreq()`. Then on the line below, use `levels()` to display the levels by frequency.
+
+```{r factors-9, exercise = TRUE}
+
+```
+
+
+## Lists
+###
+
+A list is the object which contains various data types such as logicals, integers, characters, and even another list!
+
+
+### Exercise 1
+
+Create a list with three items `a`, `b`, and `c`. Have `a` take on the values 1, 2, and 3. Have `b` take on the values 4, 5, and 6. Have `c` take on the values  7, 8, and 9. Assign your list to an object named `my_list`.
+
+
+```{r lists-1, exercise = TRUE}
+
+```
+
+```{r lists-1-hint-1, eval = FALSE}
+Use the c() function to create the individual vectors for a, b, and c. 
+```
+
+```{r lists-1-hint-2, eval = FALSE}
+my_list <- list(a = c(...), b = c(...), c = c(...))
+```
+
+### Exercise 2
+
+Now, use `str()` with the argument `my_list`. 
+
+```{r lists-2-setup}
+my_list <- list(a = c(1, 2, 3), b = c(4, 5, 6), c = c(7, 8, 9))
+```
+
+```{r lists-2, exercise = TRUE}
+
+```
+
+### Exercise 3
+
+Let's now extract a single component `a` from `my_list` using `[ ]`.
+
+```{r lists-4-setup}
+my_list <- list(a = c(1, 2, 3), b = c(4, 5, 6), c = c(7, 8, 9))
+```
+
+```{r lists-4, exercise = TRUE}
+
+```
+
+```{r lists-4-hint-1, eval = FALSE}
+You need to use " " because a is a character.
+str(my_list[" "])
+```
+
+### Exercise 4
+
+Now, extract the number 5 from `my_list` using `[ ]`.
+
+```{r lists-5-setup}
+my_list <- list(a = c(1, 2, 3), b = c(4, 5, 6), c = c(7, 8, 9))
+```
+
+```{r lists-5, exercise = TRUE}
+
+```
+
+```{r lists-5-hint-1, eval = FALSE}
+str(...[ ])
+```
+
+
+
+## Combining Data
+###
+
+Bringing together data from different sources is one of the most common data science tasks. 
+
+
+### Exercise 1
+
+Inspect the dataset `band_instruments` by typing its name below and hitting Run Code.
+
+```{r exercise-combining-1, exercise = TRUE}
+
+```
+
+### Exercise 2
+
+Run the code to look at the following data frames.
+
+```{r question-combining-3, exercise = TRUE}
+band_instruments
+band_instruments2
+band_members
+```
+
+Consider the discrepancy between the columns of `band_instruments2` and the columns of both `band_members` and `band_instruments`. Predict, in your head, what will happen when binding the rows of the two tibbles.
+
+
+### Exercise 3
+
+Use `bind_rows()` to combine the two data frames `band_instruments2` and `band_members`.
+
+```{r question-combining-5, exercise = TRUE}
+
+```
+
+```{r question-combining-5-hint, eval = FALSE}
+bind_rows(..., ...)
+```
+
+
+### Exercise 4
+
+Use the extraction operator `$` on the `plays` column of `band_instruments`.
+
+```{r question-combining-11, exercise = TRUE}
+
+```
+
+```{r question-combining-11-hint, eval = FALSE}
+band_instruments$...
+```
+
+### Exercise 5
+
+Now use `inner_join()` with the `band_instruments` and `band_instruments2` tibbles with the `by` argument set to "plays". 
+
+```{r question-combining-13, exercise = TRUE}
+
+```
+
+```{r question-combining-13-hint, eval = FALSE}
+inner_join(..., ..., by = "...")
+```
+
+The fact that one tibble uses the word "name" and the other "artist" for the same thing causes trouble when we try to bring the data together.
+
+### Exercise 6
+
+Let's focus on the `band_members` and `band_instruments` tibbles for the remaining questions in this session.
+
+Use `left_join()` with `band_members` as the first argument and `band_instruments` as the second.
+
+```{r, cd-ex-6, exercise = TRUE}
+
+```
+
+```{r, cd-ex-6-hint, eval = FALSE}
+left_join(band_members, ...)
+```
+
+Your results should look like this:
 
 ```{r}
-file <- paste0(system.file("images/", 
-                           package = "primer.tutorials"),
-               "excel_2.png")
-img <- readPNG(file)
-grid.raster(img)
+left_join(band_members, band_instruments)
 ```
 
-```{r excel-2, exercise = TRUE}
+Note how Keith disappears because he does not appear in `band_members`. Note how what Mick plays is NA because there is no corresponding row in band_instruments.
+
+### Exercise 7
+
+Use `left_join()` with `band_instruments` as the first argument and `band_members` as the second.
+
+```{r, cd-ex-7, exercise = TRUE}
 
 ```
 
-```{r excel-2-hint, eval = FALSE}
-Use the `sheet` argument to look at other sheets. Set `sheet` to "Sheet2".
+```{r, cd-ex-7-hint, eval = FALSE}
+left_join(band_instruments, ...)
 ```
 
-
-The result when your code is run should look like this:
+Your results should look like this:
 
 ```{r}
-read_excel(paste0(system.file("www/", package = "primer.tutorials"), 
-                 "excel_1.xlsx"), sheet = "Sheet2")
+left_join(band_instruments, band_members)
 ```
-<!-- When I run read_excel("excel_1.xlsx", sheet = "Sheet2") I get "`path` does not exist: 'excel_1.xlsx'". Also, the hint in this exercise doesn't show up. -->
+
+Keith is back but John has disappeared. Whenever we use `left_join()`, the rows kept are determined by the first tibble.
+
+<!-- DK: Could do some more. -->
+
+## Date-Times 
+###
+
+Let's practice using some functions that work with date and time.
+
+### Exercise 1
+
+Run the `today()` and `now()` functions below.
+
+```{r dttm-1, exercise = TRUE}
+
+```
+
+### Exercise 2
+
+Now use the function `ymd()` to convert the string below into the proper date-time format. 
+
+```{r dttm-2, exercise = TRUE}
+date_1 <- "2020-2-29"
+```
+
+```{r dttm-2-hint, eval = FALSE}
+Use the argument date_1 within ymd()
+```
+
+### Exercise 3
+
+Now create a date-time by adding an underscore then “h,” “m,” and “s” to the name of the `ymd()` parsing function.
+
+```{r dt-3, exercise = TRUE}
+date_2 <- "2017-01-31 20:11:59"
+
+```
+
+```{r dt-3-hint, eval = FALSE}
+Use the function ymd_hms() with the argument date_2.
+```
+
+### Exercise 4
+
+The following code below selects time-related data from the `flights` dataset from the **nycflights13** package. Use `mutate()` to create a new variable `arrival`. `arrival` should be set to the function `make_datetime()` with all selected variables as its argument.
+
+```{r dttm-3, exercise = TRUE}
+flights %>% 
+  select(year, month, day, hour, minute)
+```
+
+```{r dttm-3-hint, eval = FALSE}
+flights %>% 
+  select(year, month, day, hour, minute) %>% 
+  mutate(... = make_datetime(year, ...,...,..., ...))
+```
+
+
+## Tidying Data
+###
+
+For a dataset to be tidy, each variable must have its own column, each observation must have its own row, and each value must have its own cell.
+
+### Exercise 1
+
+Run `relig_income` in the code chunk below. Notice how wide it is.
+
+```{r tidy-5, exercise = TRUE}
+
+```
+
+### Exercise 3
+
+You can use the `pivot_longer()` to convert wide data to long data. Let's use the `pivot_longer` to tidy the `relig_income` data. Pivot all columns except for the `cols` to everything but the `religion` column. Set `names_to` to "income" and`values_to` to "count". 
+
+```{r tidy-7, exercise = TRUE}
+
+```
+
+```{r tidy-7-hint-1, eval = FALSE}
+Consider using - to select the columns you want to pivot
+```
+
+```{r tidy-7-hint-2, eval = FALSE}
+relig_income %>% 
+  pivot_longer(cols = -religion,
+               names_to = ...,
+               values_to = ...)
+```
+
+### Exercise 4
+
+Let's now look at the `us_rent_income` data set. Call the data set below. 
+
+```{r tidy-ee, exercise = TRUE}
+
+```
+
+```{r tidy-ee-hint, eval = FALSE}
+
+```
+
+### Exercise 5
+
+You can "spread" the keys in a key column across their own set of columns with the `pivot_wider()`. Use `pivot_wider()` to tidy the `us_rent_income` data. Set `names_from` to `variable` and set `values_from`  to `c(estimate, moe))`.
+
+
+```{r tidy-12, exercise = TRUE}
+
+```
+
+```{r tidy-12-hint, eval = FALSE}
+... %>% 
+  pivot_wider(names_from = ..., 
+              values_from = ...)
+```
 
 ## Submit
 
@@ -522,3 +593,4 @@ submission_ui
 ```{r context = "server"}
 submission_server()
 ```
+

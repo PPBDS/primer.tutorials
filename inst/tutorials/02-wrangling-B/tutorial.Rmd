@@ -7,8 +7,24 @@ output:
       progressive: true
       allow_skip: true
 runtime: shiny_prerendered
-description: "Chapter 2 Tutorial -- Part A"
+description: "Chapter 2: Wrangling -- B"
 ---
+
+
+<!-- BG: Do we like the dataset descriptions. Will the students read them? If so, should we shorten them to one sentence or is it OK? -->
+
+<!-- BG: need to replace ntile() -->
+
+<!-- Things to discuss about this tutorial: -->
+
+<!-- bind_cols(): we cut it out of the book. Still exists in Q-Guide plot. So, need to get rid of it. replace with mutate(), or some other join. Get rid of it. -->
+
+<!-- ntile(): I added a quick sentence in the primer, a word or two I read in the help page because I saw it in this tutorial. I'm confused about it. DK: Use quantile() instead? -->
+
+<!-- scale_fill_brewer(), coord_cartesian(), and  scale_linetype() all have no explanation in primer. DK: So, don't use them. Or give a clear hint. -->
+
+<!-- DK: See below for problems with qscores question. -->
+
 
 ```{r setup, include = FALSE}
 library(learnr)
@@ -18,17 +34,14 @@ library(lubridate)
 library(stringr)
 library(skimr)
 library(primer.data)
-library(nycflights13)
 
 knitr::opts_chunk$set(echo = FALSE)
-options(tutorial.exercise.timelimit = 600, 
+options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
 
-# Key Data
+# Needed for later sections of the tutorial 
 
-cces_filt <- cces %>%
-  filter(ideology %in% c("Conservative", "Not Sure", 
-                        "Moderate", "Liberal"))
+library(ggthemes)
 ```
 
 
@@ -52,536 +65,1185 @@ quiz(caption = "",
 ```
 
 
-## Characters 
+## National Health and Nutrition Survey
 ###
 
-A string is one or more characters that are enclosed inside a pair of matching 'single' or "double quotes". We will now use various functions to manipulate strings
+`nhanes` includes data from the "National Health and Nutrition Examination Survey," which contains the personal and physical information of 10,000 Americans from two surveys in 2009 and 2011.
+
+
+Let's create the following plot.
+
+```{r}
+nhanes_p <- nhanes %>%
+  mutate(weight = weight * 2.2, height = height / 30.48) %>%
+  select(gender, weight, height, bmi) %>%
+  drop_na(weight, height) %>% 
+  ggplot(mapping = aes(x = weight, y = height, color = bmi)) +
+    geom_jitter() +
+    geom_smooth(se = FALSE, 
+                method = "gam", 
+                formula = y ~ s(x, bs = "cs")) +
+    facet_wrap(~ gender) + 
+    theme_clean() + 
+    labs(y = "Height (feet)",
+         x = "Weight (pounds)",
+         title = "Height Versus Weight in the US",
+         subtitle = "Relation between weight and height more positive for heavy men",
+         caption = "Source: NHANES")
+
+nhanes_p
+```
+
 
 ### Exercise 1
 
-Type `state.name` into the code chunk below to inspect a character vector that contains the names of all US states.
+In the tibble, `weight` is measured in kg and `height` in cm. Using `mutate()`, multiply `weight` by 2.2 and divide `height` by 30.48 to convert units into pounds and feet. 
 
-```{r exercise-2-1, exercise = TRUE}
+```{r nhanes2, exercise = TRUE}
 
+```
+
+```{r nhanes2-hint-1, eval = FALSE}
+nhanes %>%
+  mutate(weight = ..., 
+         height = ...)
+```
+
+```{r nhanes2-hint-2, eval = FALSE}
+Use * to multiply and / to divide.
+```
+
+```{r nhanes2-hint-3, eval = FALSE}
+nhanes %>%
+  mutate(weight = ... * ..., 
+         height = .../ ...)
 ```
 
 ### Exercise 2
 
-Use `str_detect()` to create a vector which will be TRUE for states which contain the pattern "ana" and FALSE otherwise. The first argument to `str_detect()` should be `state.name`. The second argument set `pattern` to "ana".
+Now `select()` the `gender`, `weight`, `height`, and `bmi` columns. 
 
-```{r exercise-2-2, exercise = TRUE}
+```{r nhanes3, exercise = TRUE}
 
 ```
 
-```{r exercise-2-2-hint, eval = FALSE}
-str_detect(..., pattern = ...)
+```{r nhanes3-hint, eval = FALSE}
+... %>%
+  select(..., ..., ..., ...)
 ```
 
 ### Exercise 3
 
-Great. Now use  `str_detect()` on `state.name` to create a vector which will be TRUE for states which contain the pattern "do" and FALSE otherwise.
+`nhanes` has NA values in some rows. Start a pipe with `nhanes`. Use `drop_na()` with the arguments `weight`and `height` to remove all rows with a value of NA in the those columns.
 
-```{r exercise-2-22, exercise = TRUE}
+```{r nhanes4, exercise = TRUE}
 
 ```
 
-```{r exercise-2-22-hint, eval = FALSE}
-Your code should look similar to the previous question, only changing what the pattern argument is set to.
+```{r nhanes4-hint, eval = FALSE}
+... %>%
+  drop_na(..., ...)
 ```
 
 ### Exercise 4
 
-Now use `str_detect()` to find states that match state names that have a “a,” followed by any single character, followed by “o.” 
+Continue you pipe with `ggplot()`. Also add the layer `geom_jitter()` to make a jittered scatterplot. Map `weight` to the x-axis, `height` to the y-axis, and `bmi` to `color`.
 
-```{r exercise-222-15, exercise = TRUE}
-
-```
-
-```{r exercise-222-15-hint-1, eval = FALSE}
-Set the pattern argument to "a.o"
-```
-
-```{r exercise-222-15-hint-2, eval = FALSE}
-str_detect(..., pattern = "a.o")
-```
-
-### Exercise 5
-
-Use `str_length()` with the argument `state.name` to count the characters in string. 
-
-```{r exercise-2-15, exercise = TRUE}
+```{r nhanes5, exercise = TRUE}
 
 ```
 
-```{r exercise-2-15-hint, eval = FALSE}
-str_length(...)
+
+```{r nhanes5-hint-1, eval = FALSE}
+... %>% 
+  ggplot(data = ..., aes(x = ..., 
+                        y = ..., 
+                        color = ...)) +
+  geom_jitter()
 ```
 
 ### Exercise 6
 
-Great. Now use `str_sub` to create a character vector that contains only the first three letters of each state.
+Add a trend line with the layer `geom_smooth()`. Set the argument `se` to FALSE and set `method` to "gam".
 
-```{r exercise-2-6, exercise = TRUE}
+```{r nhanes6, exercise = TRUE}
 
 ```
 
-```{r exercise-2-6-hint-1, eval = FALSE}
-str_sub(state.name, ..., ...)
-```
-
-```{r exercise-2-6-hint-2, eval = FALSE}
-str_sub(state.name, 1, 3)
+```{r nhanes6-hint-2, eval = FALSE}
+... + 
+  geom_smooth(se = ..., method = ...)
 ```
 
 ### Exercise 7
 
-Collapse `state.name` using `str_c()`. Separate them with a comma that is followed by a whitespace. This should create a single character object with all the states.
+Notice that we still get a message. Within `geom_smooth()` set the `formula` argument to `y ~ s(x, bs = "cs")`.
 
-```{r exercise-2-7, exercise = TRUE}
+```{r nhanes1, exercise = TRUE}
 
 ```
 
-```{r exercise-2-7-hint, eval = FALSE}
-str_c(..., collapse = ", ")
+```{r nhanes1-hint-2, eval = FALSE}
+... + 
+ geom_smooth(se = FALSE, 
+             method = "gam", 
+             formula = ...)
 ```
 
 ### Exercise 8
 
-Use `str_replace()` to replace the pattern `North` with `N.`. For example, transform North Carolina into N. Carolina.
+Use `facet_wrap()` to facet the graph by `gender`.
 
-```{r exercise-2-9, exercise = TRUE}
+```{r nhanes7, exercise = TRUE}
 
 ```
 
-```{r exercise-2-9-hint, eval = FALSE}
-str_replace(..., pattern = ..., replacement = "...")
+```{r nhanes7-hint, eval = FALSE}
+... +
+  facet_wrap( ~ ...) 
 ```
 
 ### Exercise 9
 
-Use `str_replace()` to replace the pattern `South` with `S.`. For example, transform South Carolina into S. Carolina.
+Adjust the feel of the graph by adding the theme `theme_clean()`.
 
-```{r exercise-2-99, exercise = TRUE}
+```{r nhanes8, exercise = TRUE}
 
 ```
 
-```{r exercise-2-99-hint, eval = FALSE}
-Your code shoud look similar to the previous exercise, only changing what the pattern and replacement arguments are set to.
+```{r nhanes8-hint-1, eval = FALSE}
+Recall that when you add a theme, you add a layer! Use the + operator.
+```
+
+```{r nhanes8-hint-2, eval = FALSE}
+... +
+  theme_clean()
+```
+
+### Exercise 10
+
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choice.
+
+```{r nhanes9, exercise = TRUE}
+
+```
+
+Reminder: This is what your plot should look like.
+
+```{r nhanes9-answer}
+nhanes_p
 ```
 
 
-## Factors 
+## Kenya Voting
 ###
 
-Factors are categorical variables that may only take on a specified set of values. 
+The `kenya` contains data from a study in which poll stations in Kenya were assigned to either the control group or a group in which one or more methods (an SMS reminder, canvassing, etc.) were used to encourage voter registration. 
+
+
+Let's create the following plot.
+
+```{r kenya-answer}
+kenya_p <- kenya %>%
+  filter(treatment %in% c("control", "local", 
+                          "SMS", "canvass")) %>%
+  droplevels() %>%
+  select(treatment, mean_age, reg_byrv13) %>%
+  drop_na(mean_age) %>%
+  mutate(age_half = ntile(mean_age, 2)) %>%
+  group_by(treatment, age_half) %>%
+  summarize(mean_turnout = mean(reg_byrv13, na.rm = TRUE),
+            .groups = "drop") %>% 
+  ggplot(mapping = aes(x = fct_reorder(treatment, mean_turnout), 
+                       y = mean_turnout)) +
+    geom_col() +
+    theme_bw() +
+    labs(title = "Turnout Changes in a Kenyan Election",
+         subtitle = "Local canvassing has the largest effect",
+         x = "Treatment",
+         y = "Change in Mean Turnout")
+
+kenya_p
+```
 
 ### Exercise 1
 
-Use `select()` to look at the `ideology` variable of the `cces` data set.
+`glimpse()` the `kenya` data set.
 
-```{r factors-1, exercise = TRUE}
+```{r kenya1, exercise = TRUE}
 
 ```
 
-```{r factors-1-hint, eval = FALSE}
-cces %>% 
-  select(...)
+```{r kenya1-hint, eval = FALSE}
+glimpse(...)
 ```
 
 ### Exercise 2
 
-Use `str()` with the argument `cces$ideology`. On the line below, use `levels()` with the same argument. 
+`filter()` `kenya` to only the rows that have a `treatment` of "control," "local," "SMS," or "canvass." Use the `%in% `operator with `c()` to do so.
 
-```{r factors-3, exercise = TRUE}
+```{r kenya3, exercise = TRUE}
 
 ```
 
-```{r factors-3-hint, eval = FALSE}
-str(...)
-levels(...)
+```{r kenya3-hint-1, eval = FALSE}
+kenya %>%
+  filter(treatment %in% c(..., ..., ..., ...))
 ```
 
 ### Exercise 3
 
-Let's now get a frequency table as a tibble. Use `fct_count()` with the argument `cces$ideology`.
+Because `treatment` is a factor, use `%>% ` to  `droplevels()`. This will avoid future complications. 
 
-```{r factors-4, exercise = TRUE}
+```{r kenya4, exercise = TRUE}
 
 ```
 
-
-```{r factors-4-hint, eval = FALSE}
-fct_count(...)
+```{r kenya4-hint, eval = FALSE}
+... %>% 
+  drop_levels()
 ```
 
 ### Exercise 4
 
-Now use `nlevels()` with the argument `cces$ideology` to find the number of existing levels.
+Now `select()` the `treatment`, `mean_age`, and `reg_byrv13` columns. 
 
-```{r factors-5, exercise = TRUE}
+```{r kenya5, exercise = TRUE}
 
 ```
 
 ### Exercise 5
 
-Now `filter()` `cces` to to only a few ideologies: `Conservative` , `Moderate`, `Liberal` and `Not Sure`. Save your work to an object named `cces_filt`.
+Use `drop_na()` to remove all rows with a NA value in the `mean_age` column.
 
-```{r factors-6, exercise = TRUE}
+```{r kenya6, exercise = TRUE}
 
 ```
 
-```{r factors-6-hint-1, eval = FALSE}
-Use in %>%  and c() within filter(). Within c(), place the ideologies in quotes. 
-```
-
-```{r factors-6-hint-2, eval = FALSE}
-cces_filt <- cces %>%
-  filter(... %in% c(..., ..., ..., ...))
+```{r kenya6-hint, eval = FALSE}
+kenya %>%
+  filter(treatment %in% c("control", "local", "SMS", "canvass")) %>%
+  droplevels() %>%
+  select(treatment, mean_age, reg_byrv13)
+  drop_na(...)
 ```
 
 ### Exercise 6
 
-Now use `nlevels()` with the argument `cces_filt`. Notice that the same number of levels pop up.
+Use `mutate()` to create the variable `age_half`, which is set to `ntile()`. The first argument to `ntile()` should be `mean_age`. The second argument should be 2.
 
-```{r factors-7-setup}
-cces_filt <- cces %>%
-  filter(ideology %in% c("Conservative", "Moderate", " Liberal","Not Sure"))
-```
+**Note**: The `ntile()` function divides a continuous numerical value into categories depending on its size.
 
 
-```{r factors-7, exercise = TRUE}
+```{r kenya8, exercise = TRUE}
 
 ```
 
-```{r factors-7-hint, eval = FALSE}
-nlevels(...)
+```{r kenya8-hint, eval = FALSE}
+... %>% 
+  mutate ( ... = ntile(mean_age, 2)
 ```
-<!-- I had to pipe the code from the previous exercise in order to get the desired output. The code in the hint kept the output at 6 levels.
-What worked for me was cces_filt <- cces %>% filter(ideology %in% c("Conservative" ...)) %>% droplevels() -->
 
 ### Exercise 7
 
-Let's drop all the unused levels. Start a pipe with `cces_filt`. Use `%>%` to add the function `droplevels()`. Then on the line below, use `nlevels()` once gain to see how many levels exist. Notice the difference?
+Group the data by `treatment` and `age_half`.
 
-```{r factors-8-setup}
-cces_filt <- cces %>%
-  filter(ideology %in% c("Conservative", "Moderate", " Liberal","Not Sure"))
-```
-
-```{r factors-8, exercise = TRUE}
+```{r kenya9, exercise = TRUE}
 
 ```
 
-```{r factors-8-hint-1, eval = FALSE}
-Use the argument cces_filt inside nlevels()
-```
-
-```{r factors-8-hint-2, eval = FALSE}
-cces_filt %>% 
-  droplevels()
-nlevels(...)
+```{r kenya9-hint, eval = FALSE}
+... %>%
+  group_by(..., ...)
 ```
 
 ### Exercise 8
 
-Now try ordering the levels of `cces$ideology` by frequency. Use ` %>% ` to add the function `fct_infreq()`. Then on the line below, use `levels()` to display the levels by frequency.
+Using `summarize()`, calculate the variable `mean_turnout` as a `mean()` statement. The first argument to `mean()` should be `reg_byrv13`. The second argument to `mean()` should set `na.rm` to `TRUE`, as there are some NA values in the `reg_byrv13` column.
 
-```{r factors-9, exercise = TRUE}
+
+```{r kenya10, exercise = TRUE}
+
+```
+
+```{r kenya10-hint-1, eval = FALSE}
+... %>% 
+  summarize(... = mean(..., na.rm = ...))
+```
+
+```{r kenya10-hint-2, eval = FALSE}
+Don't forget the .groups argument to summarize(). Never ignore warning
+messages.
+```
+
+### Exercise 9
+
+Use `%>% `to add  `ggplot()`.  Use `fct_reorder()` to reorder the `treatment` variable by `mean_turnout` and map this to the x-axis. Also, map `mean_turnout` to the y-axis. Also add the layer `geom_col()`.
+
+```{r kenya11, exercise = TRUE}
 
 ```
 
 
-## Lists
+```{r kenya11-hint-1, eval = FALSE}
+... %>% 
+  ggplot(mapping = aes(x = fct_reorder(treatment, mean_turnout), 
+                       y = ...) +
+  geom_col()
+```
+
+### Exercise 10
+
+Add the theme `theme_bw()` to the plot.
+
+```{r kenya14, exercise = TRUE}
+
+```
+
+```{r kenya14-hint-1, eval = FALSE}
+... +
+  theme_bw()
+```
+
+### Exercise 11
+
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choosing. 
+
+Reminder: This is what your plot should look like.
+
+```{r kenya15-answer}
+kenya_p
+```
+
+```{r kenya15, exercise = TRUE}
+
+```
+
+
+
+## Seguro Popular
 ###
 
-A list is the object which contains various data types such as logicals, integers, characters, and even another list!
+The `sps` data set contains information about a study done on a popular Mexican health insurance program, Seguro Popular. In the study, some Mexican health clusters were randomly "treated." The treatment consisted of encouragement for people in that health cluster to enroll in the health insurance program, as well as funds to improve health facilities in that cluster.
 
+Let's create the following plot.
 
-### Exercise 1
+```{r sps_plot}
+sps_p <- sps %>%
+  filter(education %in% c("preschool", "secondary", 
+                          "high school", "college")) %>%
+  select(-c(health_exp_1m, t2_health_exp_1m)) %>%
+  mutate(change_in_expenses = t2_health_exp_3m - health_exp_3m) %>%
+  group_by(treatment, education) %>%
+  summarize(mean_change_in_expenses = mean(change_in_expenses)) %>%
+  mutate(treatment = as.factor(treatment)) %>% 
+  ggplot(mapping = aes(x = fct_reorder(education, mean_change_in_expenses), 
+                       y = mean_change_in_expenses, fill = treatment)) +
+    geom_col(position = position_dodge(preserve = "single")) + 
+    theme_minimal() +
+    labs(x = "Education",
+         y = "Average Change in Expenses",
+         title = "Spending Changes and Seguro Popular",
+         subtitle = "Honestly, not sure what is going on here . . .",
+         caption = "Source: King et al. (2009)")
 
-Create a list with three items `a`, `b`, and `c`. Have `a` take on the values 1, 2, and 3. Have `b` take on the values 4, 5, and 6. Have `c` take on the values  7, 8, and 9. Assign your list to an object named `my_list`.
+sps_p
+```
 
+### Exercise 1 
 
-```{r lists-1, exercise = TRUE}
+`glimpse()` the dataset `sps`.
+
+```{r sps1, exercise = TRUE}
 
 ```
 
-```{r lists-1-hint-1, eval = FALSE}
-Use the c() function to create the individual vectors for a, b, and c. 
-```
-
-```{r lists-1-hint-2, eval = FALSE}
-my_list <- list(a = c(...), b = c(...), c = c(...))
+```{r sps1-hint, eval = FALSE}
+glimpse(...)
 ```
 
 ### Exercise 2
 
-Now, use `str()` with the argument `my_list`. 
+`filter()` `sps` to only the rows with an `education` of "preschool," "secondary," "high school," or "college."  Use the `%in%` and `c()` to do so.
 
-```{r lists-2-setup}
-my_list <- list(a = c(1, 2, 3), b = c(4, 5, 6), c = c(7, 8, 9))
+```{r sps2, exercise = TRUE}
+
 ```
 
-```{r lists-2, exercise = TRUE}
+```{r sps2-hint-1, eval = FALSE}
+sps %>%
+  filter(education %in% ...)
+```
 
+```{r sps2-hint-2, eval = FALSE}
+sps %>% 
+  filter(education %in% c(..., ..., ..., ...))
 ```
 
 ### Exercise 3
 
-Let's now extract a single component `a` from `my_list` using `[ ]`.
+Use `select()` to remove the columns `health_exp_1m` and `t2_health_exp_1m`. 
 
-```{r lists-4-setup}
-my_list <- list(a = c(1, 2, 3), b = c(4, 5, 6), c = c(7, 8, 9))
-```
-
-```{r lists-4, exercise = TRUE}
+```{r sps3, exercise = TRUE}
 
 ```
 
-```{r lists-4-hint-1, eval = FALSE}
-You need to use " " because a is a character.
-str(my_list[" "])
+```{r sps3-hint-1, eval = FALSE}
+Remember that select(-...) returns all columns except for the specified column(s) that come after - 
 ```
 
-### Exercise 4
-
-Now, extract the number 5 from `my_list` using `[ ]`.
-
-```{r lists-5-setup}
-my_list <- list(a = c(1, 2, 3), b = c(4, 5, 6), c = c(7, 8, 9))
+```{r sps3-hint-2, eval = FALSE}
+Consider using c()
 ```
 
-```{r lists-5, exercise = TRUE}
-
+```{r sps3-hint-3, eval = FALSE}
+... %>% 
+  select(-c(..., ...))
 ```
 
-```{r lists-5-hint-1, eval = FALSE}
-str(...[ ])
-```
+### Exercise 4 
+
+Use `mutate()` to create a new variable, `change_in_expenses`, which is equal to `health_exp_3m` subtracted from `t2_health_exp_3m` (this measures the change in expenses after the treatment period). 
 
 
-
-## Combining Data
-###
-
-Bringing together data from different sources is one of the most common data science tasks. 
-
-
-### Exercise 1
-
-Inspect the dataset `band_instruments` by typing its name below and hitting Run Code.
-
-```{r exercise-combining-1, exercise = TRUE}
+```{r sps4, exercise = TRUE}
 
 ```
 
-### Exercise 2
-
-Run the code to look at the following data frames.
-
-```{r question-combining-3, exercise = TRUE}
-band_instruments
-band_instruments2
-band_members
-```
-
-Consider the discrepancy between the columns of `band_instruments2` and the columns of both `band_members` and `band_instruments`. Predict, in your head, what will happen when binding the rows of the two tibbles.
-
-
-### Exercise 3
-
-Use `bind_rows()` to combine the two data frames `band_instruments2` and `band_members`.
-
-```{r question-combining-5, exercise = TRUE}
-
-```
-
-```{r question-combining-5-hint, eval = FALSE}
-bind_rows(..., ...)
-```
-
-
-### Exercise 4
-
-Use the extraction operator `$` on the `plays` column of `band_instruments`.
-
-```{r question-combining-11, exercise = TRUE}
-
-```
-
-```{r question-combining-11-hint, eval = FALSE}
-band_instruments$...
+```{r sps4-hint, eval = FALSE}
+... %>% 
+  mutate(... = t2_health_exp_3m - health_exp_3m) 
 ```
 
 ### Exercise 5
 
-Now use `inner_join()` with the `band_instruments` and `band_instruments2` tibbles with the `by` argument set to "plays". 
+Group the data by `treatment` and `education`.
 
-```{r question-combining-13, exercise = TRUE}
+```{r sps5, exercise = TRUE}
 
 ```
 
-```{r question-combining-13-hint, eval = FALSE}
-inner_join(..., ..., by = "...")
+```{r sps5-hint, eval = FALSE}
+Use the group_by() function.
 ```
-
-The fact that one tibble uses the word "name" and the other "artist" for the same thing causes trouble when we try to bring the data together.
 
 ### Exercise 6
 
-Let's focus on the `band_members` and `band_instruments` tibbles for the remaining questions in this session.
+Using `summarize()`, calculate `mean_change_in_expenses`, the` mean()` of the `change_in_expenses` for each group.
 
-Use `left_join()` with `band_members` as the first argument and `band_instruments` as the second.
-
-```{r, cd-ex-6, exercise = TRUE}
-
+```{r sps6, exercise = TRUE}
+  
 ```
 
-```{r, cd-ex-6-hint, eval = FALSE}
-left_join(band_members, ...)
+```{r sps6-hint, eval = FALSE}
+... %>% 
+  summarize(... = mean(...))
 ```
-
-Your results should look like this:
-
-```{r}
-left_join(band_members, band_instruments)
-```
-
-Note how Keith disappears because he does not appear in `band_members`. Note how what Mick plays is NA because there is no corresponding row in band_instruments.
 
 ### Exercise 7
 
-Use `left_join()` with `band_instruments` as the first argument and `band_members` as the second.
+Because `treatment` column is not a factor, we can't group our data by it. To fix this, use `mutate()` and set `treatment` to `as.factor()` with the argument `treatment`. 
 
-```{r, cd-ex-7, exercise = TRUE}
+```{r sps9, exercise = TRUE}
 
 ```
 
-```{r, cd-ex-7-hint, eval = FALSE}
-left_join(band_instruments, ...)
+```{r sps9-hint, eval = FALSE}
+ ... %>% 
+  mutate(treatment = as.factor(...))
 ```
 
-Your results should look like this:
+### Exercise 8
 
-```{r}
-left_join(band_instruments, band_members)
+Use `%>%` to add `ggplot()`. Use `fct_reorder()` to reorder the `education` variable by `mean_change_in_expenses` and map this to x-axis. Map `mean_change_in_expenses` to the y-axis, and `treatment` to the `fill`. Also add the layer `geom_col()`.
+
+
+```{r sps7, exercise = TRUE}
+
 ```
 
-Keith is back but John has disappeared. Whenever we use `left_join()`, the rows kept are determined by the first tibble.
+```{r sps7-hint-1, eval = FALSE}
+.. %>% 
+  ggplot(mapping = aes(x = fct_reorder(education, 
+                                       mean_change_in_expenses), 
+                     y = ..., 
+                     fill = ...) +
+  geom_col()
+```
 
-<!-- DK: Could do some more. -->
+### Exercise 9
 
-## Date-Times 
+Within `geom_col()`, set the position argument equal to `position_dodge()`. Inside `position_dodge()`, set `preserve` equal to "single" to create a dodged barplot.
+
+```{r sps8, exercise = TRUE}
+
+```
+
+```{r sps8-hint, eval = FALSE}
+... +
+  geom_col(... = position_dodge(preserve = "..."))
+```
+
+### Exercise 10
+
+Add `theme_minimal()` to change the style of the graph.
+
+```{r sps12, exercise = TRUE}
+
+```
+
+### Exercise 11
+
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choice.
+
+
+Reminder: This is what your plot should look like.
+
+```{r sps13-answer}
+sps_p
+```
+
+```{r sps13, exercise = TRUE}
+
+```
+
+## Shaming 
 ###
 
-Let's practice using some functions that work with date and time.
+The `shaming` data set measures the impact of social pressure on voting. Nearly 350,000 people in Michigan were randomly assigned to 1 of 5 treatment groups before the 2006 Michigan primary. All 5 groups were sent mail before the primary: the "Civic Duty" group had an extra reminder that voting was a civic responsibility, the "Hawthorne" group was told that whether or not they voted would be in the public record, the "Self" group was actually *sent* the public record of whether or not they voted in 2004, and the "Neighbors" group was sent both their voting record and their neighbors' voting record from 2004. 
+
+Let's create the following plot.
+
+```{r sh_goal}
+shaming_p <- shaming %>%
+  select(primary_04, primary_06, treatment) %>%
+  mutate(primary_04 = if_else(condition = 
+                                str_detect(primary_04, "Yes"),
+                                true = 1,
+                                false = 0)) %>%
+  pivot_longer(cols = c(primary_04, primary_06), 
+               names_to = "year", 
+               values_to = "voted") %>%
+  group_by(treatment, year, voted) %>%
+  summarize(num_voters = n(), .groups = "drop") %>%
+  mutate(voted = if_else(condition = voted == 1,
+                         true = "did_vote",
+                         false = "did_not_vote")) %>%
+  pivot_wider(names_from = voted, values_from = num_voters)  %>%
+  mutate(pct_voted = did_vote / (did_vote + did_not_vote)) %>% 
+  ggplot(mapping = aes(x = fct_reorder(treatment, pct_voted), 
+                       y = pct_voted, fill = year)) +
+    geom_col(position = position_dodge(preserve = "single")) +
+    labs(x = "Treatment",
+         y = "Voting Percentage",
+         title = "Voting Rates Based on Mailings",
+         subtitle = "Shaming people makes them more likely to vote",
+         caption = "Source: Gerber, Green, and Larimer (2008).") +
+    theme_fivethirtyeight()
+
+shaming_p
+```
 
 ### Exercise 1
 
-Run the `today()` and `now()` functions below.
+`skim()` the `shaming` data set. Pay close attention to the data types of each of the variables.
 
-```{r dttm-1, exercise = TRUE}
+```{r shaming1, exercise = TRUE}
 
 ```
 
 ### Exercise 2
 
-Now use the function `ymd()` to convert the string below into the proper date-time format. 
+`select()` the columns `treatment`, `primary_04`, and `primary_06` of the `shaming` dataset.
 
-```{r dttm-2, exercise = TRUE}
-date_1 <- "2020-2-29"
+```{r shaming2, exercise = TRUE}
+
 ```
 
-```{r dttm-2-hint, eval = FALSE}
-Use the argument date_1 within ymd()
+```{r shaming2-hint, eval = FALSE}
+shaming %>% 
+  select(..., ..., ..., ...)
 ```
 
 ### Exercise 3
 
-Now create a date-time by adding an underscore then “h,” “m,” and “s” to the name of the `ymd()` parsing function.
+Use `mutate()` to change the `primary_04` column. Set `primary_04` to an `if_else()` statement. Within `if_else()`, set `condition` to `str_detect()` of the string "Yes" in `primary_04`. If the condition is true, return `1`, and if the condition is false, return `0`.
 
-```{r dt-3, exercise = TRUE}
-date_2 <- "2017-01-31 20:11:59"
+```{r shaming5, exercise = TRUE}
 
 ```
 
-```{r dt-3-hint, eval = FALSE}
-Use the function ymd_hms() with the argument date_2.
+```{r shaming5-hint-1, eval = FALSE}
+mutate(primary_04 = if_else(condition = 
+                              str_detect(primary_04, "..."),
+                                true = ...,
+                                false = ...))
 ```
 
 ### Exercise 4
 
-The following code below selects time-related data from the `flights` dataset from the **nycflights13** package. Use `mutate()` to create a new variable `arrival`. `arrival` should be set to the function `make_datetime()` with all selected variables as its argument.
-
-```{r dttm-3, exercise = TRUE}
-flights %>% 
-  select(year, month, day, hour, minute)
-```
-
-```{r dttm-3-hint, eval = FALSE}
-flights %>% 
-  select(year, month, day, hour, minute) %>% 
-  mutate(... = make_datetime(year, ...,...,..., ...))
-```
+Use `pivot_longer()` to map the *names* of the `primary_04` and `primary_06` columns to a new column, "year,". Map the  *values* of the two columns to a new column, "voted."
 
 
-## Tidying Data
-###
-
-For a dataset to be tidy, each variable must have its own column, each observation must have its own row, and each value must have its own cell.
-
-### Exercise 1
-
-Run `relig_income` in the code chunk below. Notice how wide it is.
-
-```{r tidy-5, exercise = TRUE}
+```{r shaming3, exercise = TRUE}
 
 ```
 
-### Exercise 3
-
-You can use the `pivot_longer()` to convert wide data to long data. Let's use the `pivot_longer` to tidy the `relig_income` data. Pivot all columns except for the `cols` to everything but the `religion` column. Set `names_to` to "income" and`values_to` to "count". 
-
-```{r tidy-7, exercise = TRUE}
-
-```
-
-```{r tidy-7-hint-1, eval = FALSE}
-Consider using - to select the columns you want to pivot
-```
-
-```{r tidy-7-hint-2, eval = FALSE}
-relig_income %>% 
-  pivot_longer(cols = -religion,
+```{r shaming3-hint, eval = FALSE}
+...  %>%
+  pivot_longer(cols = c(..., ...), 
                names_to = ...,
                values_to = ...)
 ```
 
-### Exercise 4
+### Exercise 5
 
-Let's now look at the `us_rent_income` data set. Call the data set below. 
+Great job! Now group the data by `treatment`, `year`, and `voted`.
 
-```{r tidy-ee, exercise = TRUE}
+```{r shaming6, exercise = TRUE}
 
 ```
 
-```{r tidy-ee-hint, eval = FALSE}
+```{r shaming6-hint, eval = FALSE}
+Use the group_by() function.
+```
 
+### Exercise 6
+
+Use `summarize()` to create the variable `num_voters`, which is set to the function `n()`. Then, set the argument `.groups` to "drop".
+
+**Note:** `n()` simply counts the number of rows in each group. 
+
+```{r shaming7, exercise = TRUE}
+
+```
+
+```{r shaming7-hint, eval = FALSE}
+... %>% 
+  summarize(num_voters = n(), .groups = "...")
+```
+
+### Exercise 7
+
+The `voted` column is a bit difficult to understand, for the numerical value (0 or 1) is used to represent an idea (the person did or did not vote). Use `mutate()` to set `voted` to an `if_else()` statement. Within `if_else()`, set `condition` to where `voted` is equal to 1. Set `true` to "did_vote," and `false` to "did_not_vote."
+
+
+```{r shaming8, exercise = TRUE}
+
+```
+
+```{r shaming8-hint-2, eval = FALSE}
+...%>%
+  mutate(voted = if_else(condition = voted == ...,
+                         true = "...",
+                         false = "..."))
+```
+
+### Exercise 8
+
+Let's `did_vote` and `did_not_vote` as their own columns. Call `pivot_wider()` that gets its column `names_from` `voted` and its `values_from` `num_voters`.
+
+
+```{r shaming9, exercise = TRUE}
+
+```
+
+```{r shaming9-hint, eval = FALSE}
+...  %>%
+  pivot_wider(names_from = ..., 
+              values_from = ...)
+```
+
+### Exercise 10
+
+Use `mutate()` to create a new variable `pct_voted`, which is equal to the number of people who `did_vote` divided by the total number of people.
+
+```{r shaming10, exercise = TRUE}
+
+```
+
+```{r shaming10-hint-1, eval = FALSE}
+Note that the total number of people is equal to (did_vote + did_not_vote). Also, use / to divide. 
+```
+
+```{r shaming10-hint-2, eval = FALSE}
+... %>% 
+  mutate(... = ... / (did_vote + did_not_vote))
+```
+
+### Exercise 11
+
+Use `%>%` to add `ggplot()`. Use `fct_reorder()` to reorder the `treatment` variable by `pct_voted` and map this to x-axis. Map `pct_voted` to the y-axis, and `year` to the `fill`. Also add the layer `geom_col()`.
+
+
+```{r shaming11, exercise = TRUE}
+
+```
+
+```{r shaming11-hint-1, eval = FALSE}
+... %>% 
+  ggplot(mapping = aes(x = fct_reorder(treatment, pct_voted), 
+                       y = ..., 
+                       fill = ...)) +
+  geom_col()
+```
+
+### Exercise 12
+
+Within `geom_col()`, set the position argument equal to `position_dodge()`. Inside `position_dodge()`, set `preserve` equal to "single" to create a dodged barplot.
+
+```{r shaming12, exercise = TRUE}
+
+```
+
+```{r shaming12-hint, eval = FALSE}
+... +
+  geom_col(position = position_dodge(preserve = "..."))
+```
+
+### Exercise 13
+
+Add the theme `theme_fivethirtyeight()` to your plot. 
+
+```{r shaming16, exercise = TRUE}
+
+```
+
+```{r shaming16-hint, eval = FALSE}
+Remember when you add a theme, you add a layer. Use +.
+```
+
+### Exercise 14
+
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choice.
+
+Reminder: This is what your plot should look like. 
+
+```{r shaming15-answer}
+shaming_p
+```
+
+```{r shaming15, exercise = TRUE}
+
+```
+
+## Q-Guide
+###
+
+<!-- DK: Getting some errors here, like "object `q_subset` not found". Not sure what to make of this. Does not seem to happen to everyone. Why haven't we fixed this to make the plot once, save the code, and then reuse it!? -->
+
+The `qscores` data set includes information about 748 courses at Harvard during the 2018-2019 school year, including their department, student enrollment, average time spent on homework, and the average student rating of the course.
+
+Let's create the following plot.
+
+```{r}
+q_subset_2 <- qscores %>%
+  filter(department %in% c("ECON", "MATH", "GOV")) %>%
+  arrange(department)
+
+q_subset <- qscores %>%
+  select(department, hours) %>%
+  group_by(department) %>%
+  summarize(num_classes = n(), 
+            mean_hours = mean(hours), 
+            sd_hours = sd(hours)) %>%
+  arrange(desc(num_classes)) %>%
+  slice(1:3) %>%
+  group_by(department) %>%
+  summarize(rnorm_values = rnorm(n = num_classes, 
+                                 mean = mean_hours, 
+                                 sd = sd_hours)) %>%
+  arrange(department)
+
+q_join <- left_join(q_subset, q_subset_2, by = "department") %>%
+  pivot_longer(cols = c(rnorm_values, hours), 
+               names_to = "type", 
+               values_to = "value")
+
+ggplot(data = q_join, mapping = aes(x = value)) +
+    geom_histogram(binwidth = 2) +
+     facet_wrap(~ department) + 
+  theme_bw()+
+  labs(title = " Homework Patterns of Harvard Classes by Department",
+       x = "Value",
+       y= "Count",
+       caption = "Source: Q-Guide Web App")
+
+```
+
+### Exercise 1
+
+Use `sample_n()` to view 5 random rows in the data set `qscores`.
+
+```{r qscores1a, exercise = TRUE}
+
+```
+
+```{r qscores1a-hint, eval = FALSE}
+qscores %>% 
+  sample_n(...)
+```
+
+### Exercise 2
+
+Let's practice using summary statistics with our data. Take the `mean()` of the `hours` column. Use the `$` operator to extract the `hours` column.
+
+```{r qscores1b, exercise = TRUE}
+
+```
+
+```{r qscores1b-hint, eval = FALSE}
+mean(qscores$hours)
+```
+
+### Exercise 3
+
+Let's calculate the *95th confidence interval*, the center of the distribution +/- two times the standard deviation. 
+
+To do so, use the `c()` function. The first argument to `c()` should take the `mean()` and add it to two times the value of `sd()`.  The second argument to `c()` should take the `mean()`of  and subtract the value of 2 times the `sd()`.
+
+```{r qscores1c, exercise = TRUE}
+
+```
+
+```{r qscores1c-hint-1, eval = FALSE}
+Inside the mean() and sd() functions, use the argument qscores$hours.
+Use + to add and * to multiply.
+```
+
+```{r qscores1c-hint-2, eval = FALSE}
+c(mean(...) + 2 * sd(...), 
+  mean(...) - 2 * sd(...))
+```
+
+### Exercise 3
+
+Now that we have explored our data, let's build our plot. Start a pipe with `qscores` and `select()` the `department` and `hours` columns.
+
+```{r qscores2, exercise = TRUE}
+
+```
+
+```{r qscores2-hint, eval = FALSE}
+qscores %>%
+  select(..., ...)
+```
+
+### Exercise 4
+
+Now group the data by `department`.
+
+```{r qscores3, exercise = TRUE}
+
+```
+
+```{r qscores3-hint, eval = FALSE}
+Use the group_by() function.
 ```
 
 ### Exercise 5
 
-You can "spread" the keys in a key column across their own set of columns with the `pivot_wider()`. Use `pivot_wider()` to tidy the `us_rent_income` data. Set `names_from` to `variable` and set `values_from`  to `c(estimate, moe))`.
+Use `summarize()` to create 3 new variables. `num_classes` should be set to `n()`. `mean_hours` should equal the `mean()` of `hours`. `sd_hours` should equal the `sd()` of `hours`.
 
 
-```{r tidy-12, exercise = TRUE}
+```{r qscores4, exercise = TRUE}
 
 ```
 
-```{r tidy-12-hint, eval = FALSE}
+```{r qscores4-hint-1, eval = FALSE}
+The n() function returns the number of rows in each group.
+```
+
+```{r qscores4-hint-2, eval = FALSE}
+qscores %>%
+  ... %>%
+  ... %>%
+  summarize(num_classes = n(), 
+            mean_hours = ..., 
+            sd_hours = ...)
+```
+
+### Exercise 6
+
+`arrange()` the data set by `num_classes` in `desc()`ending order.
+
+```{r qscores5, exercise = TRUE}
+
+```
+
+```{r qscores5-hint, eval = FALSE}
+... %>%
+  arrange(desc(...))
+```
+
+### Exercise 7
+
+Now use `slice()` to return the top 3 rows of the data set, i.e. the 3 largest departments at Harvard by number of classes.
+
+```{r qscores6, exercise = TRUE}
+
+```
+
+```{r qscores6-hint-1, eval = FALSE}
+Remember that a:b returns all of the numbers from a to b. For example, 1:10 returns every number between 1 and 10.
+```
+
+```{r qscores6-hint-2, eval = FALSE}
 ... %>% 
-  pivot_wider(names_from = ..., 
-              values_from = ...)
+  slice (...)
+```
+
+### Exercise 8
+
+Group the data by `department` again. We do this because the data is no longer grouped since we removed some `department`s with our `slice()` statement.
+
+```{r qscores7, exercise = TRUE}
+
+```
+
+```{r qscores7-hint, eval = FALSE}
+... %>%
+  group_by(department)
+```
+
+### Exercise 9
+
+Using `summarize()`, create a new variable, `rnorm_values`, which should be equal to the result of an `rnorm()` statement. Within `rnorm()`, set `n` equal to `num_classes`, `mean` to `mean_hours`, and `sd` to `sd_hours`.
+
+
+```{r qscores8, exercise = TRUE}
+
+```
+
+```{r qscores8-hint, eval = FALSE}
+... %>%
+  summarize(rnorm_values = rnorm(... = ..., 
+                                 ... = ..., 
+                                 ... = ...))
+```
+
+### Exercise 10
+
+Lastly, `arrange()` your data by `department`. Assign all your work you have done so far to an object named `q_subset`.
+
+```{r qscores0, exercise = TRUE}
+
+```
+
+### Exercise 11
+
+Our next goal will be to create a new column with the homework values of the *actual* Harvard classes. Start a new pipe with `qscores`.`filter()` `qscores` to the "ECON," "MATH," and "GOV" departments (which we have already discovered are the 3 largest departments in our data set).
+
+```{r qscores9, exercise = TRUE}
+
+```
+
+```{r qscores9-hint-1, eval = FALSE}
+Remember to use the %in% operator along with the c() function.
+```
+
+```{r qscores9-hint-2, eval = FALSE}
+qscores %>%
+  filter(department %in% c(..., ..., ...))
+```
+
+### Exercise 12
+
+Lastly, `arrange()` by `department`. Assign your code to an object named `q_subset2`.
+
+```{r qscores10, exercise = TRUE}
+
+```
+
+```{r qscores10-hint, eval = FALSE}
+q_subset_2 <- qscores %>%
+  filter(department %in% c("ECON", "MATH", "GOV")) %>% 
+  arrange(...)
+```
+
+### Exercise 13
+
+Finally, use `left_join()`. The first argument to `left_join()` should be `q_subset` and the second argument should be `q_subset_2`. The third argument should set `by` to "department".
+
+```{r qscores12-setup}
+q_subset_2 <- qscores %>%
+  filter(department %in% c("ECON", "MATH", "GOV")) %>%
+  arrange(department)
+
+q_subset <- qscores %>%
+  select(department, hours) %>%
+  group_by(department) %>%
+  summarize(num_classes = n(), 
+            mean_hours = mean(hours), 
+            sd_hours = sd(hours)) %>%
+  arrange(desc(num_classes)) %>%
+  slice(1:3) %>%
+  group_by(department) %>%
+  summarize(rnorm_values = rnorm(n = num_classes, 
+                                 mean = mean_hours, 
+                                 sd = sd_hours)) %>%
+  arrange(department)
+```
+
+
+```{r qscores12, exercise = TRUE}
+
+```
+
+```{r qscores12-hint, eval = FALSE}
+left_join(..., ..., by = "...")
+```
+
+### Exercise 14
+
+Let's now use `pivot_longer()` to transform the columns `rnorm_values` and `hours`. Pivot the `names_to` "type" and `values_to` "value". Assign your code to an object named `q_join`.
+
+
+```{r qscores13-setup}
+q_subset_2 <- qscores %>%
+  filter(department %in% c("ECON", "MATH", "GOV")) %>%
+  arrange(department)
+
+q_subset <- qscores %>%
+  select(department, hours) %>%
+  group_by(department) %>%
+  summarize(num_classes = n(), 
+            mean_hours = mean(hours), 
+            sd_hours = sd(hours)) %>%
+  arrange(desc(num_classes)) %>%
+  slice(1:3) %>%
+  group_by(department) %>%
+  summarize(rnorm_values = rnorm(n = num_classes, 
+                                 mean = mean_hours, 
+                                 sd = sd_hours)) %>%
+  arrange(department)
+```
+
+```{r qscores13, exercise = TRUE}
+
+```
+
+```{r qscores13-hint, eval = FALSE}
+q_join <- left_join(q_subset, q_subset_2, by = "department") %>%
+  pivot_longer(cols = c(rnorm_values, hours), 
+               names_to = "...", 
+               values_to = "...")
+```
+
+### Exercise 15
+
+Use ` %>% ` to add `ggplot()`. Set `data` to `q_join`. Maps `value` to the x-axis. Also add the layer `geom_histogram()`. Within `geom_histogram()` set `binwidth` of 2.
+
+```{r qscores14-setup}
+q_join <- left_join(q_subset, q_subset_2, by = "department") %>%
+  pivot_longer(cols = c(rnorm_values, hours), 
+               names_to = "type", 
+               values_to = "value")
+```
+
+```{r qscores14, exercise = TRUE}
+
+```
+
+```{r qscores14-hint, eval = FALSE}
+ggplot(data = ..., 
+       mapping = aes(x = ...)) +
+    geom_histogram(binwidth = ...)
+```
+
+### Exercise 16
+
+Add the layer `facet_wrap()` to facet our histogram by `department`. Also change the aesthetic of our plot by adding the layer `theme_bw()`.
+
+```{r qscores15-setup}
+q_join <- left_join(q_subset, q_subset_2, by = "department") %>%
+  pivot_longer(cols = c(rnorm_values, hours), 
+               names_to = "type", 
+               values_to = "value")
+```
+
+```{r qscores15, exercise = TRUE}
+
+```
+
+```{r qscores15-hint-1, eval = FALSE}
+Within facet_wrap(), remember to put a ~ before the variable you want to facet by.
+```
+
+```{r qscores15-hint-2, eval = FALSE}
+... + 
+  facet_wrap(...) +
+  theme_bw()
+```
+
+### Exercise 17
+
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choice.
+
+Reminder: This is what your plot should look like. 
+
+```{r}
+q_subset_2 <- qscores %>%
+  filter(department %in% c("ECON", "MATH", "GOV")) %>%
+  arrange(department)
+
+q_subset <- qscores %>%
+  select(department, hours) %>%
+  group_by(department) %>%
+  summarize(num_classes = n(), 
+            mean_hours = mean(hours), 
+            sd_hours = sd(hours)) %>%
+  arrange(desc(num_classes)) %>%
+  slice(1:3) %>%
+  group_by(department) %>%
+  summarize(rnorm_values = rnorm(n = num_classes, 
+                                 mean = mean_hours, 
+                                 sd = sd_hours)) %>%
+  arrange(department)
+
+q_join <- left_join(q_subset, q_subset_2, by = "department") %>%
+  pivot_longer(cols = c(rnorm_values, hours), 
+               names_to = "type", 
+               values_to = "value")
+
+ggplot(data = q_join, mapping = aes(x = value)) +
+    geom_histogram(binwidth = 2) +
+     facet_wrap(~ department) + 
+  theme_bw()+
+  labs(title = " Homework Patterns of Harvard Classes by Department",
+       x = "Value",
+       y= "Count",
+       caption = "Source: Q-Guide Web App")
+
+```
+
+```{r qscores16-setup}
+q_subset_2 <- qscores %>%
+  filter(department %in% c("ECON", "MATH", "GOV")) %>%
+  arrange(department)
+
+q_subset <- qscores %>%
+  select(department, hours) %>%
+  group_by(department) %>%
+  summarize(num_classes = n(), 
+            mean_hours = mean(hours), 
+            sd_hours = sd(hours)) %>%
+  arrange(desc(num_classes)) %>%
+  slice(1:3) %>%
+  group_by(department) %>%
+  summarize(rnorm_values = rnorm(n = num_classes, 
+                                 mean = mean_hours, 
+                                 sd = sd_hours)) %>%
+  arrange(department)
+
+q_join <- left_join(q_subset, q_subset_2, by = "department") %>%
+  pivot_longer(cols = c(rnorm_values, hours), 
+               names_to = "type", 
+               values_to = "value")
+```
+
+```{r qscores16, exercise = TRUE}
+
 ```
 
 ## Submit
