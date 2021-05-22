@@ -14,6 +14,7 @@ description: "Chapter 3: Working with APIs"
 library(learnr)
 library(primer.tutorials)
 library(tidyverse)
+library(httr)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
@@ -36,6 +37,133 @@ quiz(caption = "",
     allow_retry = TRUE,
     try_again_button = "Edit Answer",
     incorrect = NULL))
+```
+
+## Queries
+
+### Exercise 1
+
+Before we can dig into the data, we must first locate and extract the data we want. 
+
+Because the Iowa Environmental Mesonet doesn't require us to use a user-specific API key, we can use a base URL to send an HTTP request. Create an object named `meso_url` that contains the URL listed in **Primer** chapter `3.6`. 
+
+```{r create_url, exercise = TRUE}
+
+```
+
+```{r create_url-hint, eval = FALSE}
+The URL should be a text string when being assigned to an object. 
+```
+
+### Exercise 2
+
+
+
+```{r}
+
+```
+
+```{r}
+
+anchorage = PANC
+Boston = Bos
+San Fran = SFO
+denver = DEN
+Maimi = MIA
+
+denver <- GET(url = meso_url,
+                    query = list(station = c("DEN"),
+                                 data = "tmpf",
+                                 year1 = "2019",
+                                 month1 = "1",
+                                 day1 = "1",
+                                 year2 = "2019",
+                                 month2 = "12",
+                                 day2 = "31",
+                                 tz = "America/Denver",
+                                 format = "comma")) %>%
+  content() %>% 
+  read_csv(skip = 5, na = "M")
+
+anchorage <- GET(url = meso_url,
+                    query = list(station = c("PANC"),
+                                 data = "tmpf",
+                                 year1 = "2019",
+                                 month1 = "1",
+                                 day1 = "1",
+                                 year2 = "2019",
+                                 month2 = "12",
+                                 day2 = "31",
+                                 tz = "America/Anchorage",
+                                 format = "comma")) %>%
+  content() %>% 
+  read_csv(skip = 5, na = "M")
+
+boston <- GET(url = meso_url,
+                    query = list(station = c("BOS"),
+                                 data = "tmpf",
+                                 year1 = "2019",
+                                 month1 = "1",
+                                 day1 = "1",
+                                 year2 = "2019",
+                                 month2 = "12",
+                                 day2 = "31",
+                                 tz = "America/New_York",
+                                 format = "comma")) %>%
+  content() %>% 
+  read_csv(skip = 5, na = "M")
+
+san_francisco <- GET(url = meso_url,
+                    query = list(station = c("SFO"),
+                                 data = "tmpf",
+                                 year1 = "2019",
+                                 month1 = "1",
+                                 day1 = "1",
+                                 year2 = "2019",
+                                 month2 = "12",
+                                 day2 = "31",
+                                 tz = "America/Los_Angeles",
+                                 format = "comma")) %>%
+  content() %>% 
+  read_csv(skip = 5, na = "M")
+
+miami <- GET(url = meso_url,
+                    query = list(station = c("MIA"),
+                                 data = "tmpf",
+                                 year1 = "2019",
+                                 month1 = "1",
+                                 day1 = "1",
+                                 year2 = "2019",
+                                 month2 = "12",
+                                 day2 = "31",
+                                 tz = "America/New_York",
+                                 format = "comma")) %>%
+  content() %>% 
+  read_csv(skip = 5, na = "M")
+
+
+merged <- bind_rows(anchorage, boston, denver, miami, san_francisco)
+
+merged1 <- merged %>% 
+  separate(col = valid,
+           into = c("date", NA),
+           sep = " ") %>% 
+  group_by(station, date) %>% 
+   summarise(avg_temp = mean(tmpf, na.rm = TRUE),
+             .groups = "drop")
+
+merged1 %>% 
+  ggplot(aes(x = station, y = avg_temp)) +
+  geom_jitter()
+
+# cleanup workflow
+
+d <- denver %>% 
+  separate(col = valid,
+           into = c("date", NA),
+           sep = " ") %>%
+  group_by(date) %>%
+  summarise(avg_temp = mean(tmpf, na.rm = TRUE))
 ```
 
 
