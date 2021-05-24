@@ -19,7 +19,7 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
 
-# Objects created here are available in every code chunk.
+# Makes URL use simpler throughout the exercises. 
 
 meso_url <- "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py/"
 
@@ -63,10 +63,24 @@ quiz(caption = "",
 In order to get data from an API, we use the **httr** package.
 
 
-<!-- DK: First question, library(httr). -->
-
 ### Exercise 1
 
+Load the `httr` package.  
+
+```{r library, exercise = T}
+
+```
+
+```{r library-hint, eval = FALSE}
+Use the library(...) command. 
+```
+
+### 
+
+We now have access to the `httr` package. 
+
+
+### Exercise 2
 
 Because the Iowa Environmental Mesonet doesn't require us to use a user-specific API key, we can use a base URL to send an HTTP request. 
 
@@ -78,21 +92,42 @@ Create an object named `meso_url` that contains the URL listed in **Primer** cha
 
 ```
 
-```{r create_url-hint, eval = FALSE}
+```{r create_url-hint-1, eval = FALSE}
 The URL should be a text string when being assigned to an object. 
+```
+
+```{r create_url-hint-2, eval = FALSE}
+meso_url <- "your link here" 
 ```
 
 ###
 
-Tell me something useful.
+In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. This is a simpler example of API use in which we don't need to protect a uniquely generated access key. 
 
-### Exercise 2
 
-Now we want to know more about average temperatures across the U.S. in 2019. Use the object created above to fill in the `url` argument and the appropriate city abbreviation for Denver within the `GET()` function to create an object named `denver`. Note that we want to know the temperature in Farenheight degrees, and that you should also tell the query what year you are interested in. 
+### Exercise 3
+
+From the `httr` package, run the GET() command that takes in `meso_url` to fill the `url` argument. Use the `class()` function to return the class of the `GET()` command. 
+
+```{r query-0, exercise = TRUE}
+
+```
+
+```{r query-0-hint, eval = FALSE}
+
+class(GET(url = ...))
+
+```
+
+###
+
+Note that even without a query specification, the GET command has a distinct return given only an API key. 
+
+### Exercise 4
+
+Again, use `meso_url` to fill the `url` argument and then add the `query` argument set equal to a list of parameters which you wish to specify the parameters of your query. We want to know the temperature in Farenheight degrees in Denver, CO starting in 2017. Save the output as an object named `denver`. 
 
 ```{r query-1, exercise = TRUE}
-
-
 
 ```
 
@@ -107,21 +142,47 @@ The abbreviation for temperature in F* is "tmpf".
                                  year1 = ...))
 ```
 
-### Exercise 3
+### 
 
-Notice that we can't quite use the output given from that query - though it does return something. Now you should extend the query to include the start and end point of your time frame - the first and last days of the year.
+There are several different types of data to be had from this API, including the temperature in degrees celsius, which come with different `data` query arguments. Notice that we can't quite use the output given from that query - though it does return various bits of information about the query itself.
+
+### Exercise 5
+
+You should extend `denver`to include the start and end point of your time frame - we are interested in the daily records between 2017 and 2019. You should also specify the appropriate time zone for the station listed. 
 
 ```{r query-2, exercise = TRUE}
 
 ```
 
-```{r query-2-hint, eval = FALSE}
+```{r query-2-hint-1, eval = FALSE}
+
 The start and end args. follow the naming system year1, year2, month1, month2 etc. 
+
+The time zone for the Denver station is "America/Denver". 
 ```
 
-### Exercise 4
+```{r query-2-hint-2, eval = FALSE}
 
-While that was more specific, we still get unusable data. This time, add the time zone 'tz' argument to the query as well as setting the format argument equal to 'comma' (as in Comma Separated Variables). 
+denver <- GET(url = meso_url,
+                    query = list(station = "DEN",
+                                 data = "tmpf",
+                                 year1 = "2017",
+                                 month1 = ...,
+                                 day1 = ...,
+                                 year2 = "2019",
+                                 month2 = ...,
+                                 day2 = ...,
+                                 tz = ...))
+
+```
+
+###
+
+The output has changed slightly, but we still don't have the proper tibble that we would like to work with. Note the size change of the object. 
+
+### Exercise 6
+
+Now, set the query format argument equal to 'comma' (as in Comma Separated Variables). Then, to convert this data to a more familiar format, add the `content()` and `read_csv()` functions immediately following the `GET()` query to convert the jibberish from the query response into a nicely formatted tibble. Save this output as an object named 'denver'. 
 
 ```{r query-3, exercise = TRUE}
 
@@ -132,9 +193,7 @@ The time zone for Denver is "America/Denver".
 ```
 
 
-### Exercise 5
 
-Finally, to convert this data to a more familiar format, add the `content()` and `read_csv()` functions immediately following the `GET()` query to convert the jibberish from the query response into a nicely formatted tibble. Save this output as an object named 'denver'. 
 
 ```{r query-4, exercise = TRUE}
 
@@ -142,9 +201,11 @@ Finally, to convert this data to a more familiar format, add the `content()` and
 ```
 
 ```{r query-4-hint, eval = FALSE}
-... <- GET(...) %>% 
-  content() %>% ...
 
+denver <- GET(url = ...
+              query = list(...)) %>% 
+  ... %>% 
+  read_csv(... , ...)
 
 Make sure that you address the NA values properly. See the Primer for examples. 
 ```
@@ -160,7 +221,7 @@ Now that we have our data, we can proceed to work with it. We will now create th
 denver <- GET(url = meso_url,
                     query = list(station = c("DEN"),
                                  data = "tmpf",
-                                 year1 = "2019",
+                                 year1 = "2017",
                                  month1 = "1",
                                  day1 = "1",
                                  year2 = "2019",
@@ -199,12 +260,14 @@ denver <- GET(url = meso_url,
 
 # cleanup workflow
 
-# d <- denver %>% 
-#   separate(col = valid,
-#            into = c("date", NA),
-#            sep = " ") %>%
-#   group_by(date) %>%
-#   summarise(avg_temp = mean(tmpf, na.rm = TRUE))
+d <- denver %>%
+  separate(col = valid,
+           into = c("date", NA),
+           sep = " ") %>%
+  group_by(date) %>%
+  summarise(avg_temp = mean(tmpf, na.rm = TRUE),
+            .groups = "drop")
+
 ```
 
 
