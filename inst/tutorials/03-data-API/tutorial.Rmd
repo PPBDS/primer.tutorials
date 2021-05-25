@@ -23,8 +23,15 @@ options(tutorial.exercise.timelimit = 60,
 
 meso_url <- "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py/"
 
+
 ```
 
+
+<!-- Do not even mention API keys in the initial Query section. Too confusing! Instead, have the second section, called "API Keys" walk through the concept. 
+
+This second section would show an example of using a key we provide in a call to a the API. First question, run GET without API key. Get back this failure. Sad! Then run this command with API key. Get back data. Cool! Then run `usethis::edit_r_environ()`
+
+-->
 
 <!-- > denver <- GET(url = meso_url) -->
 <!-- > denver -->
@@ -109,6 +116,8 @@ You will now have access to this object throughout the rest of the tutorial.
 
 ### Exercise 3
 
+`GET()` is the key command in the **httr** package. Use `GET()` with the `url` argument set to `meso_url`. Assign the resulting object to `my.response`. In the second line, run `class()` on `my.response`.
+
 From the `httr` package, run the GET() command that takes in `meso_url` to fill the `url` argument. Use the `class()` function to return the class of the `GET()` command. 
 
 ```{r query-0, exercise = TRUE}
@@ -116,9 +125,11 @@ From the `httr` package, run the GET() command that takes in `meso_url` to fill 
 ```
 
 ```{r query-0-hint, eval = FALSE}
+my.respone <- GET(url = url_meso)
+```
 
-class(GET(url = ...))
-
+```{r query-0-hint-2, eval = FALSE}
+class(my.response)
 ```
 
 ###
@@ -204,9 +215,7 @@ Make sure that you properly address NA values - see Primer for examples.
 
 We will now create the following plot of daily average temperatures in Denver, CO from 2017 to 2019. 
 
-```{r plot_example}
-
-
+```{r get_denver_data}
 denver <- GET(url = meso_url,
                     query = list(station = c("DEN"),
                                  data = "tmpf",
@@ -220,16 +229,19 @@ denver <- GET(url = meso_url,
                                  format = "comma")) %>%
   content() %>% 
   read_csv(skip = 5, na = "M")
+```
 
-d1 <- denver %>% 
+### Exercise 1
+
+```{r make_plot_1}
+denver_p <- denver %>% 
   separate(col = valid,
            into = c("date", NA),
            sep = " ") %>%
   group_by(date) %>%
   summarise(avg_temp = mean(tmpf, na.rm = TRUE),
-            .groups = "drop")
-
-denver_p <- d1 %>% ggplot(aes(y = avg_temp,
+            .groups = "drop") %>% 
+  ggplot(aes(y = avg_temp,
                   x = date)) +
   geom_point() + 
   scale_x_discrete(breaks = c("2017-06-01", "2018-06-01", "2019-06-01")) +
@@ -239,10 +251,8 @@ denver_p <- d1 %>% ggplot(aes(y = avg_temp,
        caption = "Source: Iowa Environmental Mesonet")
 
 denver_p
-
 ```
 
-### Exercise 1
 
 Beginning with the `denver` object that you created in the previous section, you will need to reformat the date slightly in order to calculate the daily avg. temperature. Using the `separate()` function, remove the timestamp from the given date variable and rename the remaining column "date". Save this as an object named `d1`
 
