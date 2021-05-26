@@ -1,0 +1,926 @@
+---
+title: "Wrangling C"
+tutorial:
+  id: "wrangling-c"
+output:
+  learnr::tutorial:
+      progressive: true
+      allow_skip: true
+runtime: shiny_prerendered
+description: "Chapter 2: Wrangling -- C"
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(primer.tutorials)
+library(tidyverse)
+library(lubridate)
+library(stringr)
+library(skimr)
+library(primer.data)
+library(ggdist)
+
+knitr::opts_chunk$set(echo = FALSE)
+options(tutorial.exercise.timelimit = 60, 
+        tutorial.storage = "local") 
+library(ggthemes)
+```
+
+## Information
+###
+
+```{r information}
+quiz(caption = "",
+  question_text(
+    "Name:",
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL),
+  question_text(
+    "Email:",
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL))
+```
+
+## National Health and Nutrition Survey
+###
+
+`nhanes` includes data from the "National Health and Nutrition Examination Survey," which contains the personal and physical information of 10,000 Americans from two surveys in 2009 and 2011.
+
+###
+
+Let's create the following plot.
+
+```{r}
+nhanes_p1 <- nhanes %>% 
+  select(bmi, gender, depressed) %>% 
+  drop_na(depressed, bmi) %>% 
+  ggplot(aes(x = bmi, fill = gender)) +
+  geom_histogram(alpha = .5, bins = 100, position = "identity") +
+  facet_wrap(~ depressed) +
+  coord_cartesian(xlim = c(16, 60)) +
+  labs(title = "BMI and Days Depressed",
+       subtitle = "Most participants did not feel depressed at all", 
+       x = "BMI", 
+       y = "Depression", 
+       fill = "Sex",
+       caption = "National Health and Nutrition Examination Survey") +
+  theme_classic() 
+
+nhanes_p1
+```
+
+### Exercise 1
+
+`skim()` the `nhanes` data set.
+
+```{r nhanes1, exercise = TRUE}
+
+```
+
+```{r nhanes1-hint, eval = FALSE}
+skim(...)
+```
+
+###
+
+Note that gender has no missing values. 
+
+### Exercise 2
+
+Now `select()` the `gender`, `depressed`, and `bmi` columns. 
+
+```{r nhanes2, exercise = TRUE}
+
+```
+
+```{r nhanes2-hint, eval = FALSE}
+... %>%
+  select(..., ..., ...)
+```
+
+### Exercise 3
+
+`nhanes` has NA values in some rows. Start a pipe with `nhanes`. Use `drop_na()` with the arguments `bmi`and `depressed` to remove all rows with a value of NA in the those columns.
+
+```{r nhanes3, exercise = TRUE}
+
+```
+
+```{r nhanes3-hint, eval = FALSE}
+... %>%
+  drop_na(..., ...)
+```
+
+### Exercise 4
+
+Continue your pipe with `ggplot()`. Add the layer `geom_histogram()`. Map `bmi` to the x-axis, and `gender` to `fill`.
+
+```{r nhanes4, exercise = TRUE}
+
+```
+
+```{r nhanes4-hint-1, eval = FALSE}
+... %>% 
+  ggplot(data = ..., aes(x = ..., 
+                        fill = ...)) +
+  geom_histogram()
+```
+
+### 
+
+Remember that histogram has a default `y` which are the counts it tabulates for each bin from our data. 
+
+### Exercise 5
+
+Within geom_histogram, set the argument `position` equal to "identity", set the argument `alpha` = `0.5`, and set the argument `bins` = 100. 
+
+```{r nhanes5, exercise = TRUE}
+
+```
+
+```{r nhanes5-hint-1, eval = FALSE}
+... %>% 
+  geom_histogram(position = "identity", alpha =  ..., 
+                        bins = ...)) 
+```
+
+###
+
+For histogram and bar plots, `position` is by default "stacked", which stacks different colors of the same x value on top of one another. position being equal to "idenitity", makes it so that different colors overlap, which can be seen when the opacity of the colors is increased. 
+
+### Exercise 6
+
+Add the layer `coord_cartesian` and  set the argument `xlim` equal to the vector `c(16, 60)`, which limits the x-axis domain to a minimum of 16 and a maximum of 60. 
+
+```{r nhanes6, exercise = TRUE}
+
+```
+
+```{r nhanes6-hint-1, eval = FALSE}
+... %>% 
+  coord_cartesian(xlim = c(...,...))
+```
+
+### Exercise 7
+
+Add the layer `facet_wrap()` to facet the histogram by `depressed`. 
+
+```{r nhanes7, exercise = TRUE}
+
+```
+
+```{r nhanes7-hint-1, eval = FALSE}
+Within facet_wrap(), remember to put a ~ before the variable you want to facet by.
+```
+
+```{r nhanes7-hint-2, eval = FALSE}
+... + 
+  facet_wrap(...) +
+  theme_classic()
+```
+
+### 
+
+### Exercise 8
+
+Adjust the feel of the graph by adding the theme `theme_classic()`.
+
+```{r nhanes8, exercise = TRUE}
+
+```
+
+```{r nhanes8-hint-1, eval = FALSE}
+Recall that when you add a theme, you add a layer! Use the + operator.
+```
+
+```{r nhanes8-hint-2, eval = FALSE}
+... +
+  theme_clean()
+```
+
+###
+
+Facet wrapping keeps the same y axis scale, which allows us to compare the sizes of data we have for each level of Depressed
+
+### Exercise 9
+
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, legend heading, and caption of your choice. To change the legend heading from the name of the tibble column, set the argument `fill` = "..."
+
+```{r nhanes9, exercise = TRUE}
+
+```
+
+```{r nhanes9-hint-1, eval = FALSE}
+labs(... ,
+     fill = "...",
+     ...)
+```
+Reminder: This is what your plot should look like.
+
+```{r nhanes9-answer}
+nhanes_p1
+```
+
+### Exercise 10
+
+In the exercise below is code which creates the previous plot. While it allowed us to compare the amounts of data across groups, the different height scales did not allow easy comparison of the shape of each distribution across groups.
+
+###
+
+Let's make the following plot.
+
+```{r}
+nhanes_p2 <- nhanes %>% 
+  select(bmi, gender, depressed) %>% 
+  drop_na(depressed, bmi) %>% 
+  ggplot(aes(x = bmi, fill = gender)) +
+  geom_density(alpha = .5)  +
+  facet_wrap(~ depressed) +
+  coord_cartesian(xlim = c(16, 60)) +
+  labs(title = "BMI and Days Depressed",
+       subtitle = "Most depressed females heavier than most depressed males", 
+       x = "BMI", 
+       y = "Probability", 
+       fill = "Sex",
+       caption = "National Health and Nutrition Examination Survey") +
+  theme_classic() 
+
+nhanes_p2
+```
+
+###
+
+First remove the layer `geom_histogram()` and replace it with `geom_density()`. Set `alpha` = .5.
+
+```{r nhanes10, exercise = TRUE}
+ nhanes %>% 
+  select(bmi, gender, depressed) %>% 
+  drop_na(depressed, bmi) %>% 
+  ggplot(aes(x = bmi, fill = gender)) +
+  geom_histogram(alpha = .5, bins = 100, position = "identity") +
+  facet_wrap(~ depressed) +
+  coord_cartesian(xlim = c(16, 60)) +
+  labs(title = "BMI and Days Depressed",
+       subtitle = "Most participants did not feel depressed at all", 
+       x = "BMI", 
+       y = "Count", 
+       fill = "Sex",
+       caption = "National Health and Nutrition Examination Survey") +
+  theme_classic() 
+```
+
+```{r nhanes10-hint, eval = FALSE}
+... +
+  geom_density(alpha = ...) +
+  ...
+```
+
+###
+
+A density plot is a smoothed-out histogram. Also, instead of tabulating raw counts as the histogram does, a density plot tabulates counts relative to the total number counted (for each facet). This is what makes each histogram of the three histograms to be of comparable height.
+
+### Exercise 11
+
+Copy and paste the code above. Now within the layer `labs()`, set `y` from "Count" to "Probability". Also, set the subtitle to state an observation this graph allows us to more clearly see.
+
+```{r nhanes11, exercise = TRUE}
+
+```
+
+```{r nhanes11-hint, eval = FALSE}
+... +
+  labs(title = "BMI and Days Depressed",
+       subtitle = "...", 
+       x = "BMI", 
+       y = "...", 
+       fill = "Sex",
+       caption = "National Health and Nutrition Examination Survey") +
+  ...
+```
+
+### Exercise 12
+
+In the exercise below is code which creates the previous plot. While it allowed us to compare the shape of the each distribution across groups, a single x axis would allow us to more easily see what is happening at a particular BMI through all the graphs. 
+
+###
+
+Let's make the following plot.
+
+```{r}
+nhanes_p3 <- nhanes %>% 
+  select(bmi, gender, depressed) %>% 
+  drop_na(depressed, bmi) %>% 
+  ggplot(aes(x = bmi, y = depressed, fill = gender)) +
+  stat_slab(alpha = .5)  +
+  coord_cartesian(xlim = c(16, 60)) +
+  scale_y_discrete(labels = c("No Days", "Several Days", "Most Days")) +
+  labs(title = "BMI and Days Depressed",
+       subtitle = "Most often depressed females of higher BMI than most often depressed males", 
+       x = "BMI", 
+       y = "Days Depressed", 
+       fill = "Sex",
+       caption = "National Health and Nutrition Examination Survey") +
+  theme_classic() 
+
+nhanes_p3
+```
+
+###
+
+ First remove the layer `geom_density()` and replace it with `stat_slab()`. Set `alpha` = .5.
+ 
+```{r nhanes12, exercise = TRUE}
+ nhanes %>% 
+  select(bmi, gender, depressed) %>% 
+  drop_na(depressed, bmi) %>% 
+  ggplot(aes(x = bmi, fill = gender)) +
+  geom_density(alpha = .5)  +
+  facet_wrap(~ depressed) +
+  coord_cartesian(xlim = c(16, 60)) +
+  labs(title = "BMI and Days Depressed",
+       subtitle = "Most often depressed females have highest increase in BMI compared to same-sex peers", 
+       x = "BMI", 
+       y = "Probability", 
+       fill = "Sex",
+       caption = "National Health and Nutrition Examination Survey") +
+  theme_classic()  
+```
+
+```{r nhanes12-hint, eval = FALSE}
+... +
+  geom_density(alpha = ...) +
+  ...
+```
+
+###
+
+### Exercise 13
+
+Remove the layer `facet_wrap`. Within `ggplot()`, map `depressed` to the y-axis
+
+```{r nhanes13, exercise = TRUE}
+
+```
+
+```{r nhanes13-hint, eval = FALSE}
+  ggplot(aes(..., y = "...", ...)
+```
+
+### Exercise 14
+
+Add the layer `scale_y_discrete()`. Set the argument `labels` equal to a vector of strings `c("No Days, " Several Days", "Most Days")`. 
+
+```{r nhanes14, exercise = TRUE}
+
+```
+
+```{r nhanes14-hint-1, eval = FALSE}
+  ... +
+  scale_y_discrete(labels = ...) +
+  ... +
+```
+
+```{r nhanes14-hint-2, eval = FALSE}
+  ... +
+  scale_y_discrete(labels = c("No Days", "Several Days", "Most Days")) +
+  ... +
+```
+
+### 
+
+The vector renames the y-axis breaks from bottom to top based on the respective names given in the vector.
+We use discrete because the y-axis measures discrete, as opposed to continuous or binned, variables.
+
+### Exercise 15
+
+Copy and paste the code above. Now within the layer `labs()`, set `y` from "Probability" to "" (blank). Also, set the subtitle to state an observation this graph allows us to more clearly see.
+
+```{r nhanes15, exercise = TRUE}
+
+```
+
+
+```{r nhanes15-hint-1, eval = FALSE}
+... +
+  labs(title = "BMI and Days Depressed",
+       subtitle = "...", 
+       x = "BMI", 
+       y = "", 
+       fill = "Sex",
+       caption = "National Health and Nutrition Examination Survey") +
+  ...
+```
+
+## Michigan Voter Experiment
+###
+
+Let's create the following plot.
+
+```{r}
+shaming_p <- shaming %>% 
+  mutate(id = 1:length(primary_06)) %>% 
+  pivot_longer(cols = primary_00:general_04,
+               names_to = "year",
+               values_to = "voted") %>% 
+  mutate(voted = if_else(voted == "Yes", 1, 0)) %>% 
+  pivot_wider(names_from = year, 
+              values_from = voted) %>% 
+  rowwise() %>% 
+  mutate(vote_sum = sum(primary_00, general_00, primary_02, general_02, primary_04, general_04)) %>% 
+  mutate(vote_sum = as.character(vote_sum),
+         primary_06 = as.character(primary_06)) %>% 
+  select(age, vote_sum, primary_06) %>% 
+  ggplot(aes(x = age, y = vote_sum)) +
+  stat_slab() +
+  theme_classic() +
+  labs(title = "Age Distributions by Voting History",
+       subtitle = "Those who have voted less are younger.", 
+       x = "Age", 
+       y = "Number of Times Voted", 
+       caption = "Gerber, Green, and Larimer (2008)") +
+  coord_cartesian(xlim = c(18, 90))
+
+shaming_p
+```
+
+### Exercise 1
+
+`skim()` the `shaming` data set.
+
+```{r shaming1, exercise = TRUE}
+
+```
+
+```{r shaming1-hint, eval = FALSE}
+skim(...)
+```
+
+###
+
+Notice that this data set has no missing values. 
+
+### Exercise 2
+
+Let's convert the voting records for the election before the 2006 primary into binary. To do so we will use `pivot_longer()` to transform the six columns into one column, make the change into binary, and then use `pivot_wider()` to transform the data back into the original format. However, because there does not exist a column that uniquely identifies each row, `pivot_wider()` cannot match data with the data that belonged to its original row. 
+
+###
+
+Let's create a variable that uniquely identifies each row. Begin a pipe from `shaming`. Use `mutate` to create the column `id`. Set this equal to the expression `1:length(primary_06)`, an expression for an integer series from one until the number of rows in the column `primary_06`. 
+
+```{r shaming2, exercise = TRUE}
+
+```
+
+```{r shaming2-hint-1, eval = FALSE}
+... %>% 
+  mutate(id = ...)
+```
+
+```{r shaming2-hint-2, eval = FALSE}
+... %>% 
+  mutate(id = 1:length(primary_06))
+```
+
+###
+By default, `pivot_wider()` attempts to use all columns to define unique rows. In many data sets, these columns provide uniquely identifying information on their own. 
+
+### Exercise 3
+
+Use `pivot_longer()` to combine the contents of the columns from `primary_00` to `general_04` into one column. Set the column names to go to a new column called `"election"` and the values to go to a column called, `"voted"`. 
+
+```{r shaming3, exercise = TRUE}
+
+```
+
+```{r shaming3-hint-1, eval = FALSE}
+... %>% 
+  pivot_longer(cols = ...:...,
+               ...)
+```
+
+```{r shaming3-hint-2, eval = FALSE}
+pivot_longer(cols = primary_00:general_04,
+               names_to = "...",
+               values_to = "...")
+```
+
+### 
+
+Because the columns we have selected are consecutive, we can use the `:` to more quickly name them as a group. Look at the `tidyr_tidy_select` page for more operators which make it easier to select variables. 
+
+### Exercise 4
+
+Use `mutate()` to change the `voted` column into a column of the same name, but which has `1` and `0` instead of `"Yes"` and `"No"`. Set `voted` equal to an `if_else()` function whose condition is `voted ==  "Yes"`. Set the results, for if true and false, to be `1` and `0`, respectively. 
+
+```{r shaming4, exercise = TRUE}
+
+```
+
+```{r shaming4-hint-1, eval = FALSE} 
+... %>% 
+ mutate(voted = if_else(...))
+```
+
+```{r shaming4-hint-2, eval = FALSE}
+... %>% 
+ mutate(voted = if_else(...))
+```
+
+### Exercise 5
+
+Use `pivot_wider()` to transform the contents of `voted` back into six columns. Set the names of these new columns to come from `election` and their values to come from `voted`. 
+
+```{r shaming5, exercise = TRUE}
+
+```
+
+```{r shaming5-hint-1, eval = FALSE}  
+... %>% 
+pivot_wider(names_from = ..., 
+              values_from = ...)
+```
+
+### 
+
+Notice how quotes are not needed when referring to existing columns in `pivot_wider()`, but are needed when creating new columns in `pivot_longer()`.
+
+### Exercise 6
+
+Use `mutate()` to create a new column called `vote_sum`. Set this equal to the sum of the columns from `primary_00` to `general_04`.
+
+```{r shaming6, exercise = TRUE}
+
+```
+
+```{r shaming6-hint-1, eval = FALSE}  
+... %>% 
+pivot_wider(names_from = ..., 
+              values_from = ...)
+```
+
+### Exercise 7 
+
+Add `rowwise()` to the pipe so that R performs the following mutate operation for each row. Use `mutate()` to change the `vote_sum` column into a column of the same name, whose contents are characters rather than numbers. Use the `as.character()` function. 
+
+```{r shaming7, exercise = TRUE}
+
+```
+
+```{r shaming7-hint-1, eval = FALSE}  
+rowwise() %>% 
+mutate(... = as.character(...))
+```
+
+```{r shaming7-hint-2, eval = FALSE}  
+rowwise() %>% 
+mutate(vote_sum = as.character(vote_sum))
+```
+
+### 
+
+Recall that we will be using these numbers which represent vote histories as different categories for our age distributions. When we put these on the y-axis in numeric form, ggplot gets confused because it thinks we are putting a continuous variable on the y-axis. 
+
+### Exercise 8 
+
+Select the columns relevant for our plot `age` and `vote_sum`.
+
+```{r shaming8, exercise = TRUE}
+
+```
+
+```{r shaming8-hint-1, eval = FALSE}  
+... %>% 
+select(..., ..., ...)
+```
+
+### Exercise 9 
+
+Continue your pipe with `ggplot()`. Add the layer `slab_stat()`. Map `age` to the x-axis and `vote_sum` to the y-axis.
+
+```{r shaming9, exercise = TRUE}
+
+```
+
+```{r shaming9-hint-1, eval = FALSE}  
+... %>% 
+  ggplot(data = ..., aes(x = ..., 
+                        fill = ...)) +
+  geom_histogram()
+```
+
+### Exercise 10
+
+Add the layer `coord_cartesian()` use the argument `xlim` to change the x-axis domain to have a minimum of 18 and maximum of 90. 
+
+```{r shaming10, exercise = TRUE}
+
+```
+
+```{r shaming10-hint-1, eval = FALSE}
+... %>% 
+  coord_cartesian(xlim = c(...,...))
+```
+
+### Exercise 11 
+
+Adjust the feel of the graph by adding the theme `theme_classic()`.
+
+```{r shaming11, exercise = TRUE}
+
+```
+
+```{r shaming11-hint-1, eval = FALSE}
+Recall that when you add a theme, you add a layer! Use the + operator.
+```
+
+```{r shaming11-hint-2, eval = FALSE}
+... +
+  theme_clean()
+```
+
+###
+
+Facet wrapping keeps the same y axis scale, which allows us to compare the sizes of data we have for each level of Depressed
+
+### Exercise 12
+
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, legend heading, and caption of your choice. 
+
+```{r shaming12, exercise = TRUE}
+
+```
+
+Reminder: This is what your plot should look like.
+
+```{r shaming12-answer}
+shaming_p
+```
+
+## Harvard QScores
+###
+
+Let's create the following plot.
+
+```{r}
+qscores_p <- qscores %>% 
+ mutate(enrollment_groups = case_when(enrollment >= 16 & enrollment < 30 ~ "16-30",
+            enrollment >= 30 &  enrollment < 50  ~ "30-50",
+            enrollment >= 50 & enrollment < 100 ~ "50-100",
+            enrollment >= 100 ~ "100+")) %>% 
+  mutate(introduction = str_detect(name, "Introduction")) %>% 
+  select(rating, enrollment_groups, introduction) %>% 
+  ggplot(aes(rating, enrollment_groups, fill = introduction)) +
+  stat_halfeye(position = "dodge") + 
+  coord_cartesian(xlim = c(2.7, 5)) +
+  scale_y_discrete(limits = c("16-30", "30-50", "50-100", "100+")) +
+  labs(title = "Ratings Distribution by Enrollment", 
+       subtitle = 'Classes of Higher Enrollment and "Introduction" Classses Have
+Lower Ratings',
+x = "Rating", 
+y = "Entollment",
+caption = "Harvard College", 
+fill = '"Introduction" in Course Title') +
+  theme_classic()
+
+qscores_p
+```
+
+### Exercise 1
+
+Run `c(min(qscores$enrollment), mean(qscore$enrollment), max(qscores$enrollment))` to see the minimum and maximum enrollment value in this data. Run the equivalent command for the ratings of the classs.
+
+```{r qscores1, exercise = TRUE}
+
+```
+
+###
+
+Notice how much closer the mean rating is to the maximum than the minimum. 
+
+### Exercise 2
+
+Let's create a column that groups the classes into four different groups based on enrollment size. Use `mutate()` to create a new column called `enrollment_groups`. Set `enrollment_groups` equal to the function `case_when()`, which can take multiple arguments of the syntax `enrollment >= 16 & enrollment < 30 ~ "16-30"`, in which the part left of the `~` is the condition, and the part right of the `~` is the result when the condition is meant. Using this example as the first, create four groups, named "16-30", "30-50", "50-100", and "100+". 
+
+```{r qscores2, exercise = TRUE}
+
+```
+
+```{r qscores2-hint-1, eval = FALSE}
+... %>% 
+mutate(enrollment_groups = case_when(enrollment >= 16 & enrollment < 30 ~ "16-30",
+            ...")
+```
+
+```{r qscores2-hint-2, eval = FALSE}
+... %>% 
+  mutate(enrollment_groups = case_when(enrollment >= 16 & enrollment < 30 ~ "16-30",
+            ... >= ... &  ... < ...  ~ "30-50",
+            ... >= ... & ... < ... ~ "50-100",
+            ... >= ... ~ "100+")
+```
+
+###
+
+If you  forget the `=` you may accidentally exclude data.
+
+### Exercise 3
+
+Let's create a column that is `TRUE` whenever a course has `"Introduction"` in its title. Use `mutate()` to create a new column, called `introduction` and set it equal to the function str_detect(). The first argument should be the column through which you want to search and the second should be the pattern for which you are searching. 
+
+```{r qscores3, exercise = TRUE}
+
+```
+
+```{r qscores3-hint-1, eval = FALSE}
+... %>% 
+  mutate(... = str_detect(name, "Introduction"))
+```
+
+### 
+
+`str_detect` only has this function, to detect the presence or absence of a string by returning `TRUE` or `FALSE`. 
+
+### Exercise 4
+
+Select the columns relevant for our plot `rating`, `enrollment_groups`, and `introduction`. 
+
+```{r qscores4, exercise = TRUE}
+
+```
+
+```{r qscores4-hint-1, eval = FALSE}  
+... %>% 
+select(..., ..., ...)
+```
+
+### Exercise 5
+
+Continue your pipe with `ggplot()`. Add the layer `stat_halfeye()`. Map `rating` to the x-axis, `enrollment_groups` to the y-axis, and `introduction` to fill.
+
+```{r qscores5, exercise = TRUE}
+
+```
+
+```{r qscores5-hint-1, eval = FALSE}  
+... %>% 
+  ggplot(aes(x = ..., y = ...,
+                        fill = ...)) +
+  stat_halfeye()
+```
+
+### 
+
+Remember that `x =` and `y =` can always be omitted in `ggplot(aes())` provided that they are put in the correct order. 
+
+### Exercisse 6
+
+Within `stat_halfeye` set the argument `position` = "dodge".
+
+```{r qscores6, exercise = TRUE}
+
+```
+
+```{r qscores6-hint-1, eval = FALSE}
+... %>% 
+  stat_halfeye(position = "dodge")
+```
+
+### Exercise 7
+
+Add the layer `coord_cartesian()` use the argument `xlim` to change the x-axis domain to have a minimum of 2.7 and maximum of 5. 
+
+```{r qscores7, exercise = TRUE}
+
+```
+
+```{r scores7-hint-1, eval = FALSE}
+... %>% 
+  coord_cartesian(xlim = c(...,...))
+```
+
+### Exercise 8 
+
+Add the layer `scale_y_discrete()` to change the order of groups on our y-axis. Set the argument `limits` to a vector of the group names in the correct order `c("16-30", "30-50", "50-100", "100+")`. 
+
+```{r qscores8, exercise = TRUE}
+
+```
+
+```{r qscores8-hint-1, eval = FALSE}
+  ... +
+  scale_y_discrete(labels = ...) +
+  ... +
+```
+
+```{r qscores8-hint-2, eval = FALSE}
+  ... +
+  scale_y_discrete(labels = c("16-30", "30-50", "50-100", "100+")) +
+  ... +
+```
+
+###
+
+When using `scale_y_discrete(labels = ...)` in this way, the strings in the vector must correspond to exactly to their existing names. 
+
+### Exercise 9
+
+Adjust the feel of the graph by adding the theme `theme_classic()`.
+
+```{r qscores9, exercise = TRUE}
+
+```
+
+```{r qscores9-hint-1, eval = FALSE}
+Recall that when you add a theme, you add a layer! Use the + operator.
+```
+
+```{r qscores9-hint-2, eval = FALSE}
+... +
+  theme_clean()
+```
+
+###
+
+Facet wrapping keeps the same y axis scale, which allows us to compare the sizes of data we have for each level of Depressed
+
+### Exercise 10
+
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, legend heading, and caption of your choice.To change the legend heading from the name of the tibble column, set the argument `fill` = "..." 
+
+```{r qscores10, exercise = TRUE}
+
+```
+
+```{r qscores10-hint-1, eval = FALSE}
+labs(... ,
+     fill = "...",
+     ...)
+```
+
+Reminder: This is what your plot should look like.
+
+```{r qscores10-answer}
+qscores_p
+```
+
+## Kenya Voter Registration Experiment
+###
+
+Let's create the following plot.
+
+```{r}
+kenya_p <- kenya %>% 
+  mutate(poverty_groups = case_when(poverty >= .18 & poverty < .35 ~ "1st Quartile",
+            poverty >= .35 &  poverty < .43  ~ "2nd Quartile",
+            poverty >= .43 & poverty < .49 ~ "3rd Quartile",
+            poverty >= .49 ~ "4th Quartile")) %>% 
+  mutate(age_groups = case_when(mean_age < 41.5  ~ "1st Half",
+                                     mean_age >= 41.5  ~ "2nd Half")) %>% 
+  select(reg_byrv13, treatment, poverty_groups, age_groups) %>% 
+  drop_na() %>%
+  ggplot(aes(reg_byrv13, poverty_groups, fill = age_groups)) +
+  stat_halfeye(position = "dodge") +
+  coord_cartesian(xlim = c(0, .06)) +
+  scale_x_continuous(labels = scales::percent_format()) +
+  scale_y_discrete(labels = c("1st Quartile (Least Poverty)", "2nd Quartile", "3rd Quartile", "4th Quartile (Most Poverty)")) +
+  labs(title = "Distribution of New Registered Voters by Poverty and Age Groups",
+       subtitle = "Poorer and older districts have a greater percentage of 
+new registered voters",
+       x = "Percent of New Registered Voters", 
+       y = "Poverty", 
+       fill = "Mean Age") +
+  theme_classic()
+```
+## Nominate
+###  
+
+Let's create the following plot.
+
+```{r}
+nominate_p <-nominate %>% 
+  filter(party %in% c("Democrat", "Republican")) %>%
+  mutate(Economic = nominate_dim1,
+         Social = nominate_dim2) %>% 
+  pivot_longer(cols = Economic:Social,
+               names_to = "type",
+               values_to = "value") %>% 
+  drop_na() %>% 
+ggplot(aes(x = congress, y = value, color = party)) +
+  geom_dots() +
+    facet_wrap(~type) +
+  scale_color_manual(values = c("#00BFC4", "#F8766D")) +
+  labs(title = "Ideologocial Position of Democratts and Republicans",
+       subtitle = "Economic positions of different parties tend to move in opposite directions", 
+       x = "Session of Congress", 
+       y = "", 
+       caption = "Source: Voteview") +
+  scale_y_continuous(labels = c("-1.0 (Leftmost)", "-0.5", "0.0", "0.5", "1.0 (Rightmost)")) +
+  theme_classic()
+
+nominate_p
+```
+
