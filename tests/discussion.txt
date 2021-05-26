@@ -1,17 +1,20 @@
 Testing tutorials is tricky.
 
-First, we would like to test files which are not yet installed. This is tricky because of the "inst" directory. That directory exists, obviously, in the normal project. But, in the tarball, it has vanished. test() works on the project as it is, with "inst". check() works on the tarball, in which there is no "inst". So, you need to a way to search for files which works in both places. Key trick:
+There are several different places that the tutorial.Rmd files live on the computer. Most importantly, they live in the cloned repo, the location for the files that we are actually editing. These are the only ones we really want to test. But they also live installed in the renv/library within that directory. These files are ignored by Git but they still exist. Third, the files live in any installed version of the package in the main home library, outside of the renv. Fourth, during the check process, the files are copied from the repo into the tar ball which is to be checked.
+
+Theoretically, none of this should matter! We only want to check the "true" files from the cloned repo. Just render those! The main problem with this is that there are two ways to test files in R. We can use Build -> Test Package. This does not build a new tar ball. Instead, it simply sources test/testthat.R. In this scenario, the "inst" directory still exists and must be accounted for. The second way to test is Build -> Check Package. This does testing the "right way," by building the tar ball. But the tar ball does not include the "inst" directory. This means the paths to find the tutorial.Rmd files differ in the two scenarios.   
+
+Right now, the key trick we use to deal with this is:
 
 files <- fs::dir_ls("../../",
                     recurse = TRUE,
                     regexp = "tutorial.Rmd") %>%
   fs::path_abs()
 
-Second, any code in a tutorial code chunk, including in a hint, which produces an error when run on its own will cause an error if you use R CMD check. Most common example is when you have ... to indicate to the student that they should replace the ... with something. Best solution is to set eval = FALSE in all hint chunks like this. But the same warning applies for all chunks.
+The "trick" here is that we assume (correctly?) that the test scripts (test-render.R and test-components.R) are run from the tests/testthat directory which is where they live. (I am honestly confused about how we can know this.) Two levels up from this location is the main primer.tutorials directory. From there, we look for all tutorial.Rmd files recursively. This will find them in both cases which we care about: if not tar-balled (so within the inst directory) or tar-balled. The problem is that it also finds the tutorial.Rmd files in the renv directories! So, we end up testing stuff twice, including stuff which might be old, if we have not re-installed the package locally after whatever changes we made. 
+  
 
-Testing is hard. There are (at least) two different environments in which we run tests. First, and most important, is when we run R CMD check. This is the most rigorous check. It requires that code written in all code chunks (including hints) work correctly. So, you can't just have things like library(...) around, even though that is an extremely convenient way to indicate to the student that they need to use the library function with some argument.
-
-The second environment is when you press "Test Package". I think that all this does is to source tests/testthat.R. (And this environment is (mostly) the same as when you just execute tests interactively. At least, the two give the same answer.) But, in this second case, the code in hint (and all other?) chunks is not evaluated. The same problem arises if you just use "Run Document," as students will do (in effect) when the press Start Tutorial.
+There may be other differences between running Test Package and Check Package, but I am not sure.
 
 I think that, in order to simulate the test that is run with R CMD check, you need, from the R Console, to type:
 
