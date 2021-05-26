@@ -53,7 +53,13 @@ print(files)
 #   files <- files[! str_detect(files, tutorial_dir_to_ignore)]
 # }
 
-# Case 
+# Case 2. Assign files to just the file we want to test. Note that this is a
+# total hack! You need to hard code in the full path, which means you need to
+# have a sense of your paths. But you only need to change the top 4 levels to
+# match your set up. Of course, we really should split the path into two parts,
+# with the top portion being automatically created.
+
+files <- "/Users/davidkane/Desktop/projects/primer.tutorials.Rcheck/primer.tutorials/tutorials/02-wrangling-B/tutorial.Rmd"
 
 
 # This test is not complete because it does not simulate the scenario in which a
