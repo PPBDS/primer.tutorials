@@ -2,6 +2,7 @@ library(primer.tutorials)
 library(tidyverse)
 library(stringr)
 library(fs)
+library(rprojroot)
 
 # Our definition of "test" for a tutorial file is to run render() and hope there
 # is no error. There is no check to see if "tutorial.html" looks OK, just that
@@ -34,8 +35,8 @@ files <- fs::dir_ls("../../",
 
 stopifnot(length(files) > 15)
 
-print(paste0("The number of test files is ", length(files), ".\n"))
-print(files)
+# print(paste0("The number of test files is ", length(files), ".\n"))
+# print(files)
 
 # There are two problems with this list of files. First, it is long! There are a
 # lot of tutorials and they take a while to run. There is not a lot to be done
@@ -59,7 +60,7 @@ print(files)
 # match your set up. Of course, we really should split the path into two parts,
 # with the top portion being automatically created.
 
-files <- "/Users/davidkane/Desktop/projects/primer.tutorials.Rcheck/primer.tutorials/tutorials/02-wrangling-B/tutorial.Rmd"
+# files <- "/Users/davidkane/Desktop/projects/primer.tutorials.Rcheck/primer.tutorials/tutorials/02-wrangling-C/tutorial.Rmd"
 
 
 # This test is not complete because it does not simulate the scenario in which a

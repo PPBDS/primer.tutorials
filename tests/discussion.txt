@@ -1,25 +1,38 @@
 Testing tutorials is tricky.
 
-There are several different places that the tutorial.Rmd files live on the computer. Most importantly, they live in the cloned repo, the location for the files that we are actually editing. These are the only ones we really want to test. But they also live installed in the renv/library within that directory. These files are ignored by Git but they still exist. Third, the files live in any installed version of the package in the main home library, outside of the renv. Fourth, during the check process, the files are copied from the repo into the tar ball which is to be checked.
-
-But the tar ball is trickier then it appears! Within the tar ball, the tutorial.Rmd files show up in two places. Example:
+There are several different places that the tutorial.Rmd files live on the computer. Most importantly, they live in the cloned repo, the location for the files that we are actually editing. These are the only ones we really want to test. But they also live installed in the renv/library within that directory. These files are ignored by Git but they still exist. Third, the files live in any installed version of the package in the main home library, outside of the renv. Fourth, during the check process, the files are copied from the repo into the tar ball which is to be checked. Fifth, the tar ball is trickier then it appears! Within the check directory which is created from the tar ball, the tutorial.Rmd files show up in two places. Example:
 
 /Users/davidkane/Desktop/projects/primer.tutorials.Rcheck/primer.tutorials/tutorials/00-git-and-github/tutorial.Rmd
 /Users/davidkane/Desktop/projects/primer.tutorials.Rcheck/00_pkg_src/primer.tutorials/inst/tutorials/00-git-and-github/tutorial.Rmd
 
-
-
 Theoretically, none of this should matter! We only want to check the "true" files from the cloned repo. Just render those! The main problem with this is that there are two ways to test files in R. We can use Build -> Test Package. This does not build a new tar ball. Instead, it simply sources test/testthat.R. In this scenario, the "inst" directory still exists and must be accounted for. The second way to test is Build -> Check Package. This does testing the "right way," by building the tar ball. But the tar ball does not include the "inst" directory. This means the paths to find the tutorial.Rmd files differ in the two scenarios.   
 
-Right now, the key trick we use to deal with this is:
+What should we do? Split the problem into three parts. First, we need to create the main path which starts off the paths to the tutorial.Rmd files. This will be something like:
+
+/Users/davidkane/Desktop/projects
+
+Second, we need the next part of the path, which has at least two main forms. (And perhaps these are the only two forms we care about.)
+
+primer.tutorials.Rcheck/primer.tutorials/tutorials 
+primer.tutorials/inst/tutorials 
+
+The first of these is what the path looks ike during checking, i.e., during R CMD check. The second is what the path looks like during Test Package (I think).
+
+The third part of the path is the directory and file name:
+
+00-git-and-github/tutorial.Rmd
+
+So, we should use the rprojroot package to build these paths. But I am too lazy to do that today! Instead, we use this:
 
 files <- fs::dir_ls("../../",
                     recurse = TRUE,
                     regexp = "tutorial.Rmd") %>%
   fs::path_abs()
 
-The "trick" here is that we assume (correctly?) that the test scripts (test-render.R and test-components.R) are run from the tests/testthat directory which is where they live. (I am honestly confused about how we can know this.) Two levels up from this location is the main primer.tutorials directory. From there, we look for all tutorial.Rmd files recursively. This will find them in both cases which we care about: if not tar-balled (so within the inst directory) or tar-balled. The problem is that it also finds the tutorial.Rmd files in the renv directories! So, we end up testing stuff twice, including stuff which might be old, if we have not re-installed the package locally after whatever changes we made. 
+The "trick" here is that we assume (correctly?) that the test scripts (test-render.R and test-components.R) are run from the tests/testthat directory which is where they live. (I am honestly confused about how we can know this.) Two levels up from this location is the main primer.tutorials directory. From there, we look for all tutorial.Rmd files recursively. This will find them in both cases which we care about: if not tar-balled (so within the inst directory) or tar-balled. The problem is that it also finds the tutorial.Rmd files in the renv directories and the src/ files in the tar ball! So, we end up testing stuff twice or even three times, including stuff which might be old, if we have not re-installed the package locally after whatever changes we made. 
   
+
+# Other Notes
 
 There may be other differences between running Test Package and Check Package, but I am not sure.
 
