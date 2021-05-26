@@ -3,10 +3,6 @@ library(tidyverse)
 library(stringr)
 library(fs)
 
-# I am very confused about testing! In particular, does it matter if I install
-# the latest version of this package before I run Check Package. I hope not! But
-# the fact that I am not sure about this is a sign of my ignorance.
-
 # Our definition of "test" for a tutorial file is to run render() and hope there
 # is no error. There is no check to see if "tutorial.html" looks OK, just that
 # that string is returned.
@@ -38,8 +34,8 @@ files <- fs::dir_ls("../../",
 
 stopifnot(length(files) > 15)
 
-# print(paste0("The number of test files is ", length(files), ".\n"))
-# print(files)
+print(paste0("The number of test files is ", length(files), ".\n"))
+print(files)
 
 # There are two problems with this list of files. First, it is long! There are a
 # lot of tutorials and they take a while to run. There is not a lot to be done
