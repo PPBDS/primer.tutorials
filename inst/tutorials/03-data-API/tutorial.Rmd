@@ -15,6 +15,7 @@ library(learnr)
 library(primer.tutorials)
 library(tidyverse)
 library(httr)
+library(WDI)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
@@ -409,33 +410,109 @@ d1 %>% ggplot(aes(y = ...,
 
 In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. This is a simpler example of API use in which we don't need to protect a uniquely generated access key.
 
-### New API topic
+## The World Bank
 
-<!-- Experimented with several things including RapidAPI, but to little / no avail -->
+```{r wb_setup, eval = FALSE, echo = FALSE}
+ratio <- WDI(
+  country = "all",
+  indicator = "BI.WAG.PRVS.FM.SM",
+  start = 1990,
+  end = 2020,
+  extra = FALSE,
+  cache = NULL,
+  latest = NULL,
+  language = "en"
+)
+```
 
+
+World Bank Data: the **WDI** package. This API application benefits from having a package built around it. You can learn more about the package [here](http://vincentarelbundock.github.io/WDI/). 
+
+###
 ### Exercise 1
 
-```{r eval = FALSE}
+The most complex part of this edition of an API call on the World Bank's data is the data indicator - the obscure name string that selects the type of information pulled. Thankfully - there are some handy functions from the **WDI** package we can use. 
 
-# this is example code created by `rapidapi` - I can't get it to behave
+###
 
-library(httr)
+On the first line, load the **WDI** package. On the subsequent line, use `WDIsearch()` to look for indicator descriptions for "investment", and take a look at the results. 
 
-url <- "https://covid-19-data.p.rapidapi.com/report/country/code"
+```{r wdi-00, exercise = TRUE}
 
-queryString <- list(
-  code = "us",
-  date = "2020-04-01"
-)
-
-response <- VERB("GET", url, 
-                 add_headers(x_rapidapi-key = 
-                               'e74658ae25msh79ada6e78af34c6p163bc6jsn6e11ab5d4ae8',
-                               x_rapidapi-host = 'covid-19-data.p.rapidapi.com'),
-                 query = queryString, content_type("application/octet-stream"))
-
-content(response, "text")
 ```
+
+```{r wdi-00-hint, eval = FALSE}
+library(WDI)
+WDIsearch(...)[1:10,] 
+
+# or
+
+WDIsearch(...) %>% 
+  head(...)
+```
+
+###
+
+This works for an array of terms that the World Bank may have data about - feel free to explore! It is important to note the indicator of the data you wish to extract as it must be entered in your query. 
+
+### Exercise 2
+
+We are curious which countries had the most even private sector wage allocation between males and females, as measured by the average group wage across business sectors between 1990 and 2020. 
+
+###
+
+Create an object named `ratio` and use the `WDI()` function to query the appropriate data. Remember that unless we wish to know about a certain country, we should query "all" countries. 
+
+The "extra", "cache", and "latest" arguments should be negated, and language should be english. 
+
+```{r wdi-01, exercise = TRUE}
+
+```
+
+```{r wdi-01-hint, eval = FALSE}
+ratio <- WDI(
+  country = "all",
+  indicator = ...,
+  start = ...,
+  end = ...,
+  extra = ...,
+  cache = ...,
+  latest = NULL,
+  language = ...
+)
+```
+
+###
+
+Note that we also get the Country code along with the data and year as requested. 
+NA values are common as some metrics are more difficult to measure consistently over time for various reporting, cooperation, or development issues among others. 
+
+### Exercise 3
+
+Now that we have our data, copy the code used above and begin creating a plot that answers our question. If we are interested in those countries that have the most closely aligned female and male wage allocations - we would expect the ratio to be 1.0.
+
+###
+
+Create a new column named 'spread' that subtracts 1 from our indicator column in 'ratio', then drop NA values from the `spread` column. Be sure to reassign this change to `ratio`. 
+
+```{r wdi-02, exercise = TRUE}
+
+```
+
+```{r wdi-02-hint}
+ratio <- ratio %>% 
+  mutate(spread = ...) %>% 
+  drop_na(...)
+```
+
+###
+
+This allows us to analyze the data in terms of deviation from equal allocations across both sides - where $n > 1$ indicates skew toward females and $n < 0$ indicates skew toward males in terms of wage levels. 
+
+### Exercise 4
+
+
+
 
 
 ## Submit
