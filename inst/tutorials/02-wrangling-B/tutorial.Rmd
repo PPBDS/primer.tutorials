@@ -14,11 +14,12 @@ description: "Chapter 2: Wrangling -- B"
 
 <!-- Replace ntile() because it is no longer in the book. Maybe quintile() can be used? -->
 
-<!-- bind_cols(): we cut it out of the book. Still exists in Q-Guide plot. So, need to get rid of it. replace with mutate(), or some other join. Get rid of it. -->
+<!-- NL: The effect of grouping with ntile() in Kenya was not obvious to me. Should this be more explicitly introduced as an alternative to fill? -->
 
-<!-- scale_fill_brewer(), coord_cartesian(), and  scale_linetype() all have no explanation in primer. DK: So, don't use them. Or give a clearer hint. -->
+<!-- scale_fill_brewer(), coord_cartesian(), and  scale_linetype() all have no explanation in primer. DK: So, don't use them. Or give a clearer hint. [done. However, coord_cartesian() is used in the textbook (1.4.5) and is used exclusively in Wrangling C. scale_x_continuous(limits) does not work with ggdist] -->
 
-<!-- DK: See below for problems with qscores question. Ignore this for now. -->
+<!-- DK: See below for problems with qscores question. Ignore this for now. [I am not sure whether or not this has been resolved. I do not get an error.] -->
+
 
 
 ```{r setup, include = FALSE}
@@ -68,8 +69,6 @@ quiz(caption = "",
 
 ###
 
-<!-- NL: Is there a reason we are using gam over loess for geom_smooth. I don't think gam is in the textbook? -->
-
 Let's create the following plot.
 
 ```{r}
@@ -80,8 +79,8 @@ nhanes_p <- nhanes %>%
   ggplot(mapping = aes(x = weight, y = height, color = bmi)) +
     geom_jitter() +
     geom_smooth(se = FALSE, 
-                method = "gam", 
-                formula = y ~ s(x, bs = "cs")) +
+                method = "loess", 
+                formula = y ~ x) +
     facet_wrap(~ gender) + 
     theme_clean() + 
     labs(y = "Height (feet)",
@@ -174,7 +173,7 @@ Continue you pipe with `ggplot()`. Also add the layer `geom_jitter()` to make a 
 
 ### Exercise 6
 
-Add a trend line with the layer `geom_smooth()`. Set the argument `se` to FALSE and set `method` to "gam".
+Add a trend line with the layer `geom_smooth()`. Set the argument `se` to FALSE and set `method` to "loess".
 
 ```{r nhanes6, exercise = TRUE}
 
@@ -187,7 +186,7 @@ Add a trend line with the layer `geom_smooth()`. Set the argument `se` to FALSE 
 
 ### Exercise 7
 
-Notice that we still get a message. Within `geom_smooth()` set the `formula` argument to `y ~ s(x, bs = "cs")`.
+Notice that we still get a message. Within `geom_smooth()` set the `formula` argument to `y ~ x`.
 
 ```{r nhanes7, exercise = TRUE}
 
@@ -196,7 +195,7 @@ Notice that we still get a message. Within `geom_smooth()` set the `formula` arg
 ```{r nhanes7-hint-2, eval = FALSE}
 ... + 
  geom_smooth(se = FALSE, 
-             method = "gam", 
+             method = "loess", 
              formula = ...)
 ```
 
@@ -250,6 +249,7 @@ nhanes_p
 
 The `kenya` contains data from a study in which poll stations in Kenya were assigned to either the control group or a group in which one or more methods (an SMS reminder, canvassing, etc.) were used to encourage voter registration. 
 
+
 ###
 
 Let's create the following plot.
@@ -279,7 +279,7 @@ kenya_p
 
 ### Exercise 1
 
-`glimpse()` the `kenya` data set.
+`
 
 ```{r kenya1, exercise = TRUE}
 
@@ -377,7 +377,7 @@ Group the data by `treatment` and `age_half`.
 
 ### Exercise 8
 
-Using `summarize()`, calculate the variable `mean_turnout` as a `mean()` statement. The first argument to `mean()` should be `reg_byrv13`. The second argument to `mean()` should set `na.rm` to `TRUE`, as there are some NA values in the `reg_byrv13` column.
+Using `summarize()`, calculate the variable `mean_turnout` as a `mean()` statement. The first argument to `mean()` should be `reg_byrv13`. The second argument to `mean()` should set `na.rm` to `TRUE`, as there are some NA values in the `reg_byrv13` column. Set the argument `.groups` equal to `"drop"`. 
 
 
 ```{r kenya10, exercise = TRUE}
@@ -386,13 +386,18 @@ Using `summarize()`, calculate the variable `mean_turnout` as a `mean()` stateme
 
 ```{r kenya10-hint-1, eval = FALSE}
 ... %>% 
-  summarize(... = mean(..., na.rm = ...))
+  summarize(... = mean(..., na.rm = ...),
+            .groups = "...")
 ```
 
 ```{r kenya10-hint-2, eval = FALSE}
 Do not forget the .groups argument to summarize(). Never ignore warning
 messages.
 ```
+
+###
+
+`.groups` is an argument which tells `summarize()` what to do with the grouping of the data after it has used the grouping to produce its summary. `.groups` does not affect the data in the summary tibble. You can either `"keep"` the grouping, `"drop"` the grouping, or `"drop_last"`, i.e. to drop "one"the last" variable (this is because retaining all the same groups after summary creates groups which only contain single rows). `"drop_last"` is the default in most cases, but you will receive a warning message if it is excluded. 
 
 ### Exercise 9
 
@@ -455,7 +460,8 @@ sps_p <- sps %>%
   select(-c(health_exp_1m, t2_health_exp_1m)) %>%
   mutate(change_in_expenses = t2_health_exp_3m - health_exp_3m) %>%
   group_by(treatment, education) %>%
-  summarize(mean_change_in_expenses = mean(change_in_expenses)) %>%
+  summarize(mean_change_in_expenses = mean(change_in_expenses),
+            .groups = "drop") %>%
   mutate(treatment = as.factor(treatment)) %>% 
   ggplot(mapping = aes(x = fct_reorder(education, mean_change_in_expenses), 
                        y = mean_change_in_expenses, fill = treatment)) +
@@ -549,7 +555,7 @@ Use the group_by() function.
 
 ### Exercise 6
 
-Using `summarize()`, calculate `mean_change_in_expenses`, the` mean()` of the `change_in_expenses` for each group. Set `.groups` = "drop".
+Using `summarize()`, calculate `mean_change_in_expenses`, the` mean()` of the `change_in_expenses` for each group. Set the argument `.groups` equal to "drop".
 
 ```{r sps6, exercise = TRUE}
   
@@ -647,7 +653,8 @@ shaming_p <- shaming %>%
                names_to = "year", 
                values_to = "voted") %>%
   group_by(treatment, year, voted) %>%
-  summarize(num_voters = n(), .groups = "drop") %>%
+  summarize(num_voters = n(), 
+            .groups = "drop") %>%
   mutate(voted = if_else(condition = voted == 1,
                          true = "did_vote",
                          false = "did_not_vote")) %>%
@@ -742,7 +749,8 @@ Use `summarize()` to create the variable `num_voters`, which is set to the funct
 
 ```{r shaming7-hint, eval = FALSE}
 ... %>% 
-  summarize(num_voters = n(), .groups = "...")
+  summarize(num_voters = n(), 
+            .groups = "...")
 ```
 
 ### Exercise 7
@@ -868,13 +876,15 @@ q_subset <- qscores %>%
   group_by(department) %>%
   summarize(num_classes = n(), 
             mean_hours = mean(hours), 
-            sd_hours = sd(hours)) %>%
+            sd_hours = sd(hours), 
+            .groups = "drop") %>%
   arrange(desc(num_classes)) %>%
   slice(1:3) %>%
   group_by(department) %>%
   summarize(rnorm_values = rnorm(n = num_classes, 
                                  mean = mean_hours, 
-                                 sd = sd_hours)) %>%
+                                 sd = sd_hours),
+            .groups = "drop") %>%
   arrange(department)
 
 q_join <- left_join(q_subset, q_subset_2, by = "department") %>%
@@ -1106,7 +1116,8 @@ q_subset <- qscores %>%
   group_by(department) %>%
   summarize(rnorm_values = rnorm(n = num_classes, 
                                  mean = mean_hours, 
-                                 sd = sd_hours)) %>%
+                                 sd = sd_hours),
+            .groups = "drop") %>%
   arrange(department)
 ```
 
@@ -1141,7 +1152,8 @@ q_subset <- qscores %>%
   group_by(department) %>%
   summarize(rnorm_values = rnorm(n = num_classes, 
                                  mean = mean_hours, 
-                                 sd = sd_hours)) %>%
+                                 sd = sd_hours),
+            .groups = "drop") %>%
   arrange(department)
 ```
 
@@ -1225,7 +1237,8 @@ q_subset <- qscores %>%
   group_by(department) %>%
   summarize(rnorm_values = rnorm(n = num_classes, 
                                  mean = mean_hours, 
-                                 sd = sd_hours)) %>%
+                                 sd = sd_hours),
+            .groups = "drop") %>%
   arrange(department)
 
 q_join <- left_join(q_subset, q_subset_2, by = "department") %>%
@@ -1254,13 +1267,15 @@ q_subset <- qscores %>%
   group_by(department) %>%
   summarize(num_classes = n(), 
             mean_hours = mean(hours), 
-            sd_hours = sd(hours)) %>%
+            sd_hours = sd(hours),
+            .groups = "drop") %>%
   arrange(desc(num_classes)) %>%
   slice(1:3) %>%
   group_by(department) %>%
   summarize(rnorm_values = rnorm(n = num_classes, 
                                  mean = mean_hours, 
-                                 sd = sd_hours)) %>%
+                                 sd = sd_hours),
+            .groups = "drop") %>%
   arrange(department)
 
 q_join <- left_join(q_subset, q_subset_2, by = "department") %>%
