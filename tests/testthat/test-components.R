@@ -25,7 +25,7 @@ information_lines <- readLines(
 
 for(i in files){
   if(! all(information_lines %in% readLines(i))){
-    stop("Information lines missing from file ", i, "\n")
+    stop("From test-components.R. Information lines missing from file ", i, "\n")
   }
 }
 
@@ -35,7 +35,7 @@ submission_lines <- readLines(
 
 for(i in files){
   if(! all(submission_lines %in% readLines(i))){
-    stop("Submission lines missing from file ", i, "\n")
+    stop("From test-components.R. Submission lines missing from file ", i, "\n")
   }
 }
 
