@@ -15,6 +15,7 @@ library(learnr)
 library(primer.tutorials)
 library(tidyverse)
 library(httr)
+library(WDI)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
@@ -29,9 +30,9 @@ meso_url <- "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py/"
 
 <!-- Do not even mention API keys in the initial Query section. Too confusing! Instead, have the second section, called "API Keys" walk through the concept. 
 
-This second section would show an example of using a key we provide in a call to a the API. First question, run GET without API key. Get back this failure. Sad! Then run this command with API key. Get back data. Cool! Then run `usethis::edit_r_environ()`
+This second section would show an example of using a key we provide in a call to a the API. First question, run GET without API key. Get back this failure. Sad! Then run this command with API key. Get back data. Cool! Then run `usethis::edit_r_environ()` -->
 
--->
+<!-- BM: unsure how to implement edit_r_environ in a useful way -->
 
 <!-- > denver <- GET(url = meso_url) -->
 <!-- > denver -->
@@ -91,9 +92,9 @@ We now have access to the `httr` package.
 
 Because the Iowa Environmental Mesonet doesn't require us to use a user-specific API key, we can use a base URL to send an HTTP request. 
 
-Create an object named `meso_url` that contains the URL listed in **Primer** chapter `3.6`. 
-
 ###
+
+Create an object named `meso_url` that contains the URL listed in **Primer** chapter `3.6`. 
 
 ```{r create_url, exercise = TRUE}
 
@@ -109,23 +110,25 @@ meso_url <- "your link here"
 
 ###
 
-In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. This is a simpler example of API use in which we don't need to protect a uniquely generated access key. 
+<!-- In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. This is a simpler example of API use in which we don't need to protect a uniquely generated access key.  -->
 
 You will now have access to this object throughout the rest of the tutorial. 
 
 
 ### Exercise 3
 
-`GET()` is the key command in the **httr** package. Use `GET()` with the `url` argument set to `meso_url`. Assign the resulting object to `my.response`. In the second line, run `class()` on `my.response`.
+`GET()` is the key command in the **httr** package. It takes in the URL to the API and optionally a query to define the limits of the data accessed. 
 
-From the `httr` package, run the GET() command that takes in `meso_url` to fill the `url` argument. Use the `class()` function to return the class of the `GET()` command. 
+###
+
+Use `GET()` with the `url` argument set to `meso_url`. Assign the resulting object to `my.response`. In the second line, run `class()` on `my.response`.
 
 ```{r query-0, exercise = TRUE}
 
 ```
 
 ```{r query-0-hint, eval = FALSE}
-my.respone <- GET(url = url_meso)
+my.response <- GET(url = ...)
 ```
 
 ```{r query-0-hint-2, eval = FALSE}
@@ -134,9 +137,26 @@ class(my.response)
 
 ###
 
-Note that even without a query specification, the GET command has a distinct return given only an API key. 
+Note that even without a query specification, the GET command appears to run but returns no data. 
 
 ### Exercise 4
+
+Print out `my.response`. 
+
+```{r query_01, exercise = TRUE}
+
+```
+
+```{r query_01-hint, eval = FALSE}
+my.response
+```
+
+###
+
+Note that the URL is the same as `meso_url`, which indicates that there was no further query. We can confirm that by looking at the size of the response - 23 Bytes. THe `Status: 500` indicates that the query encountered an error. 
+
+
+### Exercise 5
 
 Again, use `meso_url` to fill the `url` argument and then add the `query` argument set equal to a list of parameters which you wish to specify the parameters of your query. We want to know the temperature in Farenheight degrees in Denver, CO starting in 2017. Save the output as an object named `denver`. 
 
@@ -150,24 +170,28 @@ The abbreviation for temperature in F* is "tmpf".
 
 ```{r query-1-hint-2, eval = FALSE}
 ... <- GET(url = ...,
-                    query = list(station = ...,
-                                 data = "tmpf",
-                                 year1 = ...))
+           query = list(station = ...,
+                        data = "tmpf",
+                        year1 = ...))
 ```
 
 ### 
 
-There are several different types of data to be had from this API, including the temperature in degrees celsius, which come with different `data` query arguments. Notice that we can't quite use the output given from that query - though it does return various bits of information about the query itself.
+There are several different types of data to be had from this API, including the temperature in degrees celsius, which come with different `data` query arguments. Notice that we still don't get data from this query. 
 
-### Exercise 5
+### Exercise 6
+
+This API requires a start and end date (Year, Month, and Day) to be supplied in order to return a request successfully. 
+
+###
 
 You should extend `denver`to include the start and end point of your time frame - we are interested in the daily records between 2017 and 2019. You should also specify the appropriate time zone for the station listed. 
 
-```{r query-2, exercise = TRUE}
+```{r query2, exercise = TRUE}
 
 ```
 
-```{r query-2-hint-1, eval = FALSE}
+```{r query2-hint-1, eval = FALSE}
 
 The start and end args. follow the naming system year1, year2, month1, month2 etc. 
 
@@ -175,7 +199,7 @@ The time zone for the Denver station is "America/Denver".
 
 ```
 
-```{r query-2-hint-2, eval = FALSE}
+```{r query2-hint-2, eval = FALSE}
 
 denver <- GET(url = meso_url,
                     query = list(station = "DEN",
@@ -190,13 +214,40 @@ denver <- GET(url = meso_url,
 
 ```
 
+### Exercise 7
+
+Now we have data!
+Copy the code from the previous exercise without assigning it to an object. Note the size of the response - you should have ~7.98 MB of data. 
+
+```{r query_resp1, exercise = TRUE}
+
+```
+
+```{r query_resp1-hint, eval = FALSE}
+GET(url = meso_url,
+    query = list(station = "DEN",
+                 data = "tmpf",
+                 year1 = "2017",
+                 month1 = ...,
+                 day1 = ...,
+                 year2 = "2019",
+                 month2 = ...,
+                 day2 = ...,
+                 tz = ...))
+```
+
 ###
 
-The output has changed slightly, but we still don't have the proper tibble that we would like to work with. Note the size change of the object. 
+Now that we have data, we need to format it in a user-friendly way. 
+Note that a successful query will show a small amount of the data below the response in addition to the `Status: 200` completion code and an extended URL that reflects the items in the query. 
 
-### Exercise 6
+### Exercise 8
 
-Now, set the query format argument equal to 'comma' (as in Comma Separated Variables). Then, to convert this data to a more familiar format, add the `content()` and `read_csv()` functions immediately following the `GET()` query to convert the jibberish from the query response into a nicely formatted tibble. Save this output as an object named 'denver'. 
+This API allows us to download the data in CSV format. 
+
+###
+
+Set the query format argument equal to 'comma' (as in Comma Separated Variables). Then, to convert this data to a more familiar format, add the `content()` and `read_csv()` functions immediately following the `GET()` query to convert the jibberish from the query response into a nicely formatted tibble. Save this output as an object named 'denver'. 
 
 ```{r query-3, exercise = TRUE}
 
@@ -210,6 +261,22 @@ denver <- GET(url = ...,
 
 Make sure that you properly address NA values - see Primer for examples. 
 ```
+
+### 
+
+Recall that the `content()` call extracts the content from the response to the HTTP request sent by the `GET()` function and allows us to parse the content like a traditional CSV file. 
+
+### Exercise 9
+
+Print out the `denver` object. 
+
+```{r print_denver, exercise = TRUE}
+
+```
+
+###
+
+You should see a normally formatted tibble, like we have dealt with in the last few weeks.
 
 ## Weather
 
@@ -252,7 +319,6 @@ denver_p <- denver %>%
 
 denver_p
 ```
-
 
 Beginning with the `denver` object that you created in the previous section, you will need to reformat the date slightly in order to calculate the daily avg. temperature. Using the `separate()` function, remove the timestamp from the given date variable and rename the remaining column "date". Save this as an object named `d1`
 
@@ -338,6 +404,171 @@ d1 %>% ggplot(aes(y = ...,
        caption = ...)
 
 ```
+
+
+## API Keys
+
+In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. This is a simpler example of API use in which we don't need to protect a uniquely generated access key.
+
+## The World Bank
+
+```{r wb_setup}
+temp_ratio <- WDI(
+  country = "all",
+  indicator = "BI.WAG.PRVS.FM.SM",
+  start = 1990,
+  end = 2020,
+  extra = FALSE,
+  cache = NULL,
+  latest = NULL,
+  language = "en")
+
+temp_ratio %>%
+  mutate(spread = BI.WAG.PRVS.FM.SM -1) %>% 
+  drop_na(spread) %>% 
+  filter(spread >= -0.1 &
+         spread <= 0.1) %>%
+  filter(country %in% c("Colombia", "El Salvador", "Honduras",
+                        "Panama", "Philippines")) %>%
+  ggplot(aes(x = year, y = spread, color = country)) +
+  geom_point() +
+  geom_line(aes(group = iso2c)) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Female to Male Private Sector Wage Ratio",
+    subtitle = "Countries shown are limited to those with less than a 10% divergence \nfrom equal wage allocation between the genders over the period shown.",
+    y = "Spread: Wage Ratio Divergence from 1.0",
+    x = NULL,
+    color = NULL)
+
+```
+
+###
+
+World Bank Data: the **WDI** package. This API application benefits from having a package built around it. You can learn more about the package [here](http://vincentarelbundock.github.io/WDI/). 
+
+### Exercise 1
+
+The most complex part of this edition of an API call on the World Bank's data is the data indicator - the obscure name string that selects the type of information pulled. Thankfully - there are some handy functions from the **WDI** package we can use. 
+
+###
+
+On the first line, load the **WDI** package. On the subsequent line, use `WDIsearch()` to look for indicator descriptions for "investment", and take a look at the results. 
+
+```{r wdi-00, exercise = TRUE}
+
+```
+
+```{r wdi-00-hint, eval = FALSE}
+library(WDI)
+WDIsearch(...)[1:10,] 
+
+# or
+
+WDIsearch(...) %>% 
+  head(...)
+```
+
+###
+
+This works for an array of terms that the World Bank may have data about - feel free to explore! It is important to note the indicator of the data you wish to extract as it must be entered in your query. 
+
+### Exercise 2
+
+We are curious which countries had the most even private sector wage allocation between males and females, as measured by the average group wage across business sectors between 1990 and 2020. 
+
+###
+
+Create an object named `ratio` and use the `WDI()` function to query the appropriate data. Remember that unless we wish to know about a certain country, we should query "all" countries. 
+
+The "extra", "cache", and "latest" arguments should be negated, and language should be english. 
+
+```{r wdi-01, exercise = TRUE}
+
+```
+
+```{r wdi-01-hint, eval = FALSE}
+ratio <- WDI(
+  country = "all",
+  indicator = ...,
+  start = ...,
+  end = ...,
+  extra = ...,
+  cache = ...,
+  latest = NULL,
+  language = ...
+)
+```
+
+###
+
+Note that we also get the Country code along with the data and year as requested. 
+NA values are common as some metrics are more difficult to measure consistently over time for various reporting, cooperation, or development issues among others. 
+
+### Exercise 3
+
+Now that we have our data, copy the code used above and begin creating a plot that answers our question. If we are interested in those countries that have the most closely aligned female and male wage allocations - we would expect the ratio to be 1.0.
+
+###
+
+Create a new column named 'spread' that subtracts 1 from our indicator column in 'ratio', then drop NA values from the `spread` column. Be sure to reassign this change to `ratio`. 
+
+```{r wdi-02, exercise = TRUE}
+
+```
+
+```{r wdi-02-hint}
+ratio <- ratio %>% 
+  mutate(spread = ...) %>% 
+  drop_na(...)
+```
+
+###
+
+This allows us to analyze the data in terms of deviation from equal allocations across both sides - where $n > 1$ indicates skew toward females and $n < 0$ indicates skew toward males in terms of wage levels. 
+
+### Exercise 4
+
+With the ability to analyze the skew in a country over time, create a connected dot plot (points with lines through them) that tracks changes in the spread across countries over time given that the spread is between $\pm10\%$ inclusive.
+
+```{r wdi-03, exercise = TRUE}
+
+```
+
+```{r wdi-03-hint, eval = FALSE}
+ratio %>% 
+  filter(...) %>% 
+  ggplot(aes(...)) +
+  geom_point() +
+  geom_line(aes(group = ...))
+```
+
+###
+
+While this might be interesting, it is quite messy. A quick way to determine which countries are only reported for 1-3 years of the timeline is to use the `table()` function. `table(ratio$country)`, assuming that ratio has been filtered properly, shows the number of times that a given country shows up in the data being plotted. 
+
+
+### Exercise 5
+
+Finally, filter for only those countries that show for $\geq7$ years in the above plot. There should be 5 countries in total. 
+
+Be sure to add appropriate titles etc. 
+
+```{r wdi-04, exercise = TRUE}
+
+```
+
+```{r wdi-04-hint, eval = FALSE}
+ratio %>% 
+  filter(...) %>%
+  filter(...) %>% 
+  ggplot(aes(...)) +
+  geom_point() +
+  geom_line(aes(group = ...)) +
+  scale_y_continuous(...) +
+  labs(...)
+```
+
 
 ## Submit
 
