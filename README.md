@@ -1,7 +1,7 @@
 
 <!-- README is generated from README.Rmd, edit ONLY this file if needed. But, after you edit it, you NEED TO KNIT IT BY HAND in order to create the new README.md, which is the thing which is actually used. -->
 
-# Tutorials for *Preceptor’s Primer for <br/> Bayesian Data Science* <img src="man/figures/ulysses_hex_tutorials.png" align = "right"  width="160">
+# Tutorials for *Primer for Bayesian Data Science* <img src="man/figures/ulysses_hex_tutorials.png" align = "right"  width="160">
 
 <!-- badges: start -->
 
@@ -11,11 +11,8 @@ status](https://github.com/PPBDS/primer.tutorials/workflows/R-CMD-check/badge.sv
 
 ## About this package
 
-`primer.tutorials` provides the tutorials used in *[Preceptor’s Primer
-for Bayesian Data Science](https://ppbds.github.io/primer)*, the
-textbook used in [Gov 1005: Big
-Data](https://www.davidkane.info/files/gov_1005_spring_2021.html) at
-Harvard University.
+`primer.tutorials` provides the tutorials used in the *[Primer for
+Bayesian Data Science](https://ppbds.github.io/primer)*.
 
 ## Installation
 
