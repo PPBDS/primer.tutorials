@@ -12,7 +12,7 @@ description: "Chapter 1 Tutorial Part D"
 
 <!-- Things to Do -->
 
-<!-- Make a plot of one of them that shows this somehow? Plot histogram then put 6 vertical lines, two each for mean +/- 2 sd, median +/- 2 mad, 95% quantile. The mean + 2 x the sd should be about the 97.5th percentile. Won't be exact! But about. The median + 2 x the mad should be about the 97.5th percentile. Won't be exact! But about. Same with substraction. -->
+<!-- Make a plot of one of them that shows this somehow? Plot histogram then put 6 vertical lines, two each for mean +/- 2 sd, median +/- 2 mad, 95% quantile. The mean + 2 x the sd should be about the 97.5th percentile. Won't be exact! But about. The median + 2 x the mad should be about the 97.5th percentile. Won't be exact! But about. Same with subtraction. -->
 
 
 ```{r setup, include = FALSE}
@@ -20,7 +20,8 @@ library(learnr)
 library(primer.tutorials)
 library(tidyverse)
 library(primer.data)
-
+library(ggthemes)
+library(skimr)
 
 
 knitr::opts_chunk$set(echo = FALSE)
@@ -30,7 +31,19 @@ options(tutorial.exercise.timelimit = 60,
 # Key Data
 
 set.seed(9)
-results <- rnorm(10000)
+results <- rnorm(10000) 
+
+# For example plots
+results_p <- results %>% 
+  as_tibble() 
+
+nhanes_p <- nhanes %>% 
+  drop_na(pulse) %>% 
+  filter(age >= 18) 
+
+nom_p <- nominate %>% 
+  drop_na(nominate_dim1)
+
 
 ```
 
@@ -53,153 +66,650 @@ quiz(caption = "",
     incorrect = NULL))
 ```
 
-## Summary Statistics 
+## Summary Statistics with NHANES Pulse Data
 ###
 
+You will practice using summary statistics in R. We will illustrate the ability of the standard deviation and median average deviation to approximate a 95% interval. 
 
-### Exercise 1
+### Exercise 1 
 
-Start by using `set.seed()` to ensure we can reproduce our results later. Within `set.seed()` use the argument `9`.
+`skim()` the data set `nhanes`. 
 
 ```{r ss-1, exercise = TRUE}
 
 ```
 
+```{r ss-1-hint-1, eval = FALSE}
+c(min(...), median(...), max(...))
+```
+
+###
+
+Notice that pulse has 30 missing values. 
+
 ### Exercise 2
 
-Now use `rnorm()` to randomly generate a normal distribution of 10000. Save your work to an object named `results`.
+Filter `nhanes` so that it contains only rows whose `age` column has a value greater than 18. Save the result to a new object called `nhanes_a`
 
 ```{r ss-2, exercise = TRUE}
 
 ```
 
-```{r ss-2-hint, eval = FALSE}
-results <- rnorm(...)
+```{r ss-2-hint-1, eval = FALSE}
+nhanes_a <- nhanes %>% 
+  filter(nhanes >= 18)
 ```
 
 ### Exercise 3
 
-Now use the `c()` function to find the `min()`, `median()`, and `max()` of our normal distribution of `results`
+Copy/paste your code. Use `drop_na()` to drop all rows containing missing values in the `pulse` column.
 
 ```{r ss-3, exercise = TRUE}
 
 ```
 
 ```{r ss-3-hint-1, eval = FALSE}
-c(min(...), median(...), max(...))
-```
-
-```{r ss-3-hint-2, eval = FALSE}
-Inside min(), median(), max(), use the argument `results`.
+ ... %>% 
+  drop_na(pulse)
 ```
 
 ### Exercise 4
 
-Let's now find the 5th, 50th, and 100th percentiles using `quantile()`. Set the first argument to `quantile()` as `results`. The second argument should set `probs` to the function `c()` with arguments 0, .5, and 1.
+Use `c()` to make a vector that contains the `min()`, `median()`, and `max()` of the data in `pulse`. Remember that we use the dollar sign `$` to pull out a column of a tibble as a vector, which is what `min()`, `median()`, and `max()` take as arguments.
 
 ```{r ss-4, exercise = TRUE}
 
 ```
 
-```{r ss-4-hint, eval = FALSE}
-quantile(..., probs = c(..., ..., ...))
+```{r ss-4-hint-1, eval = FALSE}
+c(min(...), median(...), max(...))
 ```
 
-Notice that we get the same values as our min, median, and max, respectively. What does this mean? 
-* 0% of the data falls below -3.818 (the min)
-* The point .005 splits the data into two separate/equal parts (the median)
-* 95% of the data falls below 3.793 (the max)
+```{r ss-3-hint-2, eval = FALSE}
+c(min(nhanes$pulse), median(nhanes$pulse), max(nhanes$puslse))
+```
 
+### 
+
+When generating summary statistics with `c()`, do not start a pipe from the data set. The results are not good. 
 
 ### Exercise 5
 
-Let's now consider the `trains` data set. Extract the `age` column.
+Let's find the 0th, 50th, and 100th percentiles using `quantile()`. Set the first argument in `quantile()` to be the vector you want to evaluate, `nhanes$pulse`. Set the second argument `probs` equal to a vector of the probabilities in decimal form, 0, .5, and 1.
 
 ```{r ss-5, exercise = TRUE}
 
 ```
 
 ```{r ss-5-hint, eval = FALSE}
-Use the $ operator.
+quantile(..., probs = c(..., ..., ...))
 ```
+
+###
+
+Notice that we get the same values as our min, median, and max, respectively. What does this mean:  
+- 0% of the data falls below -3.818 (the min) \
+- The 50th percentile splits the data into two equal parts (the median) \
+- 100% of the data falls below 3.793 (the max) \
 
 ### Exercise 6
 
-Calculate the `mean()` and `median()` of the `trains$age`. 
+Use `quantile()` to calculate the 2.5th and 97.5th percentiles of the data in the `pulse` column. Remember that the probabilities should be in decimal form. 
 
 ```{r ss-6, exercise = TRUE}
 
 ```
 
-```{r ss-6-hint-1, eval = FALSE}
-You can use the `c()` function to do both functions at the same time and to return their output values as a vector.
+```{r ss-6-hint, eval = FALSE}
+quantile(..., probs = c(.025, .975))
 ```
 
-```{r ss-6-hint-2, eval = FALSE}
-c(mean(...), median(...))
+###
+
+These two percentiles form the 95% interval, within which 95% of the data are contained. In contexts of probability, this interval is often called the 95% confidence interval. The green lines on the plot below show the 95% interval. 
+
+```{r make-pulse-95}
+pulse_95 <- nhanes_p %>% 
+  ggplot(aes(x = pulse)) +
+  geom_histogram(bins = 40, alpha = 0.7) +
+  geom_vline(xintercept = 54, color = "green") +
+  geom_vline(xintercept = 98, color = "green") +
+  theme_clean() +
+  labs(title = "Pulse of American Adults", 
+       x = "Pulse", 
+       y = "Count")
+
+pulse_95
 ```
+
 
 ### Exercise 7
 
-Let's get a measure of variation around age. Calculate the `sd()` and `mad()` of `trains$age`.
-
-```{r ss-66, exercise = TRUE}
-
-```
-
-```{r ss-66-hint-1, eval = FALSE}
-You can use the `c()` function to return the values as a vector.
-```
-
-```{r ss-66-hint-2, eval = FALSE}
-c(sd(...), mad(...))
-```
-
-### Exercise 8
-
-Now use `quantile()` to find the 2.5th and 97.5th percentiles of `age`. Set the first argument to `quantile()` as `trains$age`. The second argument should set `probs` to the function `c()` with arguments.025, and .975.
+Make a vector that contains the `mean()`, `median()`, `sd()` and `mad()` of the column `pulse`.
 
 ```{r ss-7, exercise = TRUE}
 
 ```
 
 ```{r ss-7-hint, eval = FALSE}
-quantile(trains$age, probs = c(...,...))
+ c(mean(...), median(...), sd(...), mad(...))
+```
+
+### 
+
+The mean and median are both different ways to measure a central value of data. Their values are similar, but not exactly the same. In the plot below, the blue line represents the mean, and the red line represents the median. Both values are very close to the mode, the pulse value which occurs most often. 
+
+```{r make-pulse-centrals}
+pulse_centrals <- nhanes_p %>% 
+  ggplot(aes(x = pulse)) +
+  geom_histogram(bins = 40, alpha = 0.7) +
+  geom_vline(xintercept = 74, color = "red") +
+  geom_vline(xintercept = 74.57, color = "blue") +
+  geom_vline(xintercept = 54, color = "green") +
+  geom_vline(xintercept = 98, color = "green") +
+  theme_clean() +
+  labs(title = "Pulse of American Adults", 
+       x = "Pulse", 
+       y = "Count")
+
+pulse_centrals
+```
+
+
+
+### Exercise 8
+
+The standard deviation (sd) and median average deviation (mad) are both different ways to measure how spread out the data are from a central value. The `sd()` uses the mean as its central value, and the `mad()` uses the median. As these values increase, one should expect to see less data clustered around the central value and more at increasingly far extremes. Both values can be used together with their corresponding central values to approximate the 95% interval with the same method. 
+
+###
+
+Let's first approximate the 95% interval using the `sd()`. Make a vector contains two items: two times the value of `sd()` subtracted from  the `mean()` and two times the value of `sd()` added to the `mean()`. 
+
+```{r ss-8, exercise = TRUE}
+
+```
+
+```{r ss-8-hint-1, eval = FALSE}
+Inside mean() and sd() use the argument nhanes$pulse.
+Use + to add and * to multiply.
+```
+
+```{r ss-8-hint-2, eval = FALSE}
+c(mean(...) - 2 * sd(...), 
+  mean(...)  + 2 * sd(...))
+```
+
+###
+
+The two outer lines in blue show the approximation of the 95% confidence interval by the standard deviation. Observe how close the approximation for the 97.5th percentile is to the one estimated by the standard deviation. 
+
+```{r make-pulse-sd-int}
+nhanes_sd_ints <- nhanes_p %>% 
+  ggplot(aes(x = pulse)) +
+  geom_histogram(bins = 40, alpha = 0.7) +
+  geom_vline(xintercept = 74, color = "red") +
+  geom_vline(xintercept = 74.57, color = "blue") +
+  geom_vline(xintercept = 51.44, color = "blue") +
+  geom_vline(xintercept = 97.7, color = "blue") +
+  geom_vline(xintercept = 54, color = "green") +
+  geom_vline(xintercept = 98, color = "green") +
+  ggthemes::theme_clean() +
+  labs(title = "Pulse of American Adults", 
+       x = "Pulse", 
+       y = "Count")
+
+nhanes_sd_ints 
 ```
 
 ### Exercise 9
 
-Let's calculate the 95th confidence interval, the center of the distribution +/- two times the standard deviation. 
-
-To do so, use the `c()` function. The first argument to `c()` should take the `mean()` and add it to two times the value of `sd()`.  The second argument to `c()` should take the `mean()`of  and subtract the value of 2 times the `sd()`.
-
-```{r qscores22, exercise = TRUE}
-
-```
-
-```{r qscores22-hint-1, eval = FALSE}
-Inside mean() and sd() use the argument trains$age.
-Use + to add and * to multiply.
-```
-
-```{r qscores22-hint-2, eval = FALSE}
-c(mean(...) + 2 * sd(...), 
-  mean(...) - 2 * sd(...))
-```
-
-### Exercise 10
-
-Let's now calculate the 95th confidence interval using `mad()`. Copy and paste your code above and replace `sd()`with `mad()`.
+Let's now approximate the 95% interval using the `mad()`. Make a vector contains two items: two times the value of `mad()` subtracted from  the `mean()` and two times the value of `mad()` added to the `median()`. 
 
 ```{r ss-9, exercise = TRUE}
 
 ```
 
 ```{r ss-9-hint-1, eval = FALSE}
-Inside mean() and mad() use the argument trains$age
+Inside median() and mad() use the argument nhanes$pulse.
+Use + to add and * to multiply.
 ```
 
-Note that the 95th confidence interval we get using `sd()` and `mad()` do not match. However, they are more or less the same. 
+```{r ss-9-hint-2, eval = FALSE}
+c(median(...) - 2 * mad(...), 
+  median(...)  + 2 * mad(...))
+```
+
+###
+
+The two outer lines in red show the approximation of the 95% confidence interval by the median average deviation. The standard deviation appears to be a slightly better estimate of the 2.5th percentile for this data. The estimates for the 97.5th percentile are so close that the lines overlap into one purple line. 
+
+```{r make-nhanes-mad-ints}
+nhanes_mad_ints <- nhanes_p %>% 
+  ggplot(aes(x = pulse)) +
+  geom_histogram(bins = 40, alpha = 0.7) +
+  geom_vline(xintercept = 74, color = "red") +
+  geom_vline(xintercept = 74.57, color = "blue") +
+  geom_vline(xintercept = 50.28, color = "red") +
+  geom_vline(xintercept = 97.72, color = "red", alpha = .5) +
+  geom_vline(xintercept = 51.44, color = "blue") +
+  geom_vline(xintercept = 97.7, color = "blue", alpha = .5) +
+  geom_vline(xintercept = 54, color = "green") +
+  geom_vline(xintercept = 98, color = "green") +
+  ggthemes::theme_clean() +
+  labs(title = "Pulse of American Adults", 
+       x = "Pulse", 
+       y = "Count")
+
+nhanes_mad_ints
+```
+
+The standard deviation, and so the interval approximated by it, will always be larger than the median deviation because it is more sensitive to outliers. 
+
+###
+
+Good work.
+
+## Summary Statistics with Samples from Normal Distribution
+###
+
+The ability of the standard deviation and median average deviation to approximate intervals for many data sets comes from the fact that they do so perfectly for normal distributions, which many real-world data sets approximate. No data can ever be perfectly "normally distributed", i.e. perfectly match the mathematical equation for normal distributions. Using random samples from a normal distribution as an approximation of a normal distribution, we will illustrate the accuracy of SD and MAD estimates with true normal distributions. 
+
+### Exercise 1 
+
+Use `set.seed()` with `9` as its argument. Generation of any set of random numbers is done using a seed. When you set the seed, you make sure that any one set will remain the same across trials and computers.
+
+```{r ss2-1, exercise = TRUE}
+
+```
+
+```{r ss2-1-hint-1, eval = FALSE}
+set.seed(9)
+```
+
+###
+
+Notice that pulse has 30 missing values. 
+
+### Exercise 2
+
+Use `rnorm()` and set the argument to `10000` to generate 10000 random draws from a normal distribution.
+
+```{r ss2-2, exercise = TRUE}
+
+```
+
+```{r ss2-2-hint-1, eval = FALSE}
+rnorm(...)
+```
+
+###
+
+Normal distributions are a class of functions. Though they have a common bell-shape, they can have any mean and any standard deviation. Without further specification, `rnorm()` draws from "the standard normal distribution" with a mean of 0 and a SD of 1. 
+
+### Exercise 3
+
+Copy/paste your code. Save it to an object called `results`.
+
+```{r ss2-3, exercise = TRUE}
+
+```
+
+```{r ss2-3-hint-1, eval = FALSE}
+results <- rnorm(...)
+```
+
+###
+
+The output of `rnorm` is a large vector containing the 10000 numbers in our distribution, not a tibble. Because of this, we will use `results` as the argument in summary functions and will not need a `$` operator, as we did to extract a column from `nhanes`.
+
+### Exercise 4
+
+Use `quantile()` to calculate the 2.5th and 97.5th percentiles of the data in the `pulse` column. Remember that the probabilities should be in decimal form. 
+
+```{r ss2-4, exercise = TRUE}
+
+```
+
+```{r ss2-4-hint, eval = FALSE}
+quantile(..., probs = c(.025, .975))
+```
+
+###
+
+These two percentiles form the 95% interval, within which 95% of the data are contained. In contexts of probability, this interval is often called the 95% confidence interval. The green lines on the plot below show the 95% interval. 
+
+```{r make-results-95}
+results_95 <- results_p %>% 
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 100) +
+  geom_vline(xintercept = -1.9399, color = "green") +
+  geom_vline(xintercept = 1.9288, color = "green") +
+  ggthemes::theme_clean() +
+  labs(title = "Random Sampling of Standard Normal Distrubtion", 
+       x = "Value", 
+       y = "Count")
+
+results_95
+```
+
+This histogram has smaller bins than the histogram for pulse only because its values are continuous, and so can have an infinite number of bins. Pulse, being beats per minute, can only take on whole number values within a certain range, and so has a maximum number of possible bins. 
+
+### Exercise 5
+
+Make a vector that contains the `mean()`, `median()`, `sd()` and `mad()` of the column `pulse`.
+
+```{r ss2-5, exercise = TRUE}
+
+```
+
+```{r ss2-5-hint, eval = FALSE}
+ c(mean(...), median(...), sd(...), mad(...))
+```
+
+### 
+
+In the plot below, the blue line represents the mean, and the red line represents the median. The median and the mean for this approximation of a normal distribution are nearly indistinguishable and become one purple line in the plot. Both are also very close the mode of the distribution. In a true normal distribution, the median, mean, and mode are all identical. 
+
+
+```{r make-results-centrals}
+results_centrals <- results_p %>% 
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 100, alpha = 0.7) +
+  geom_vline(xintercept = .00504, color = "red", alpha =.5) +
+  geom_vline(xintercept = .00599, color = "blue", alpha = .5) +
+  geom_vline(xintercept = -1.9399, color = "green") +
+  geom_vline(xintercept = 1.9288, color = "green") +
+  ggthemes::theme_clean() +
+  labs(title = "Random Sampling of Standard Normal Distrubtion", 
+       x = "Value", 
+       y = "Count")
+
+results_centrals
+```
+
+### 
+
+### Exercise 6
+
+Approximate the 95% interval using the `sd()`. Make a vector contains two items: two times the value of `sd()` subtracted from  the `mean()` and two times the value of `sd()` added to the `mean()`. 
+
+```{r ss2-6, exercise = TRUE}
+
+```
+
+```{r ss2-6-hint-1, eval = FALSE}
+Use + to add and * to multiply.
+```
+
+```{r ss2-6-hint-2, eval = FALSE}
+c(mean(...) - 2 * sd(...), 
+  mean(...)  + 2 * sd(...))
+```
+
+###
+
+The two outer lines in blue show the approximation of the 95% confidence interval by the standard deviation. The lines are very close to the real 2.5th and 97.5th percentiles, and would be exactly the same if this were a true normal distribution instead of an approximation. 
+
+```{r make-results-ints}
+results_sd_ints <- results_p %>% 
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 100, alpha = 0.7) +
+  geom_vline(xintercept = .00504, color = "red", alpha =.5) +
+  geom_vline(xintercept = .00599, color = "blue", alpha = .5) +
+  geom_vline(xintercept = -1.978, color = "blue") +
+  geom_vline(xintercept = 1.99, color = "blue") +
+  geom_vline(xintercept = -1.9399, color = "green") +
+  geom_vline(xintercept = 1.9288, color = "green") +
+  ggthemes::theme_clean() +
+  labs(title = "Random Sampling of Standard Normal Distrubtion", 
+       x = "Value", 
+       y = "Count")
+
+results_sd_ints 
+```
+
+### Exercise 7
+
+Let's now approximate the 95% interval using the `mad()`. Make a vector contains two items: two times the value of `mad()` subtracted from  the `mean()` and two times the value of `mad()` added to the `median()`. 
+
+```{r ss2-7, exercise = TRUE}
+
+```
+
+```{r ss2-7-hint-1, eval = FALSE}
+Use + to add and * to multiply.
+```
+
+```{r ss2-7-hint-2, eval = FALSE}
+c(median(...) - 2 * mad(...), 
+  median(...)  + 2 * mad(...))
+```
+
+###
+
+The two outer lines in red show the approximation of the 95% confidence interval by the median average deviation. The lines are very close to those of the standard deviation. In a true normal distribution, these values would be identical to each other as well as to the real 2.5th and 95th percentiles. 
+
+```{r make-results-mad-ints}
+results_mad_ints <- results_p %>% 
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 100, alpha = 0.7) +
+  geom_vline(xintercept = .00504, color = "red", alpha =.5) +
+  geom_vline(xintercept = .00599, color = "blue", alpha = .5) +
+  geom_vline(xintercept = -1.9975, color = "red") +
+  geom_vline(xintercept = 2.0075, color = "red") +
+  geom_vline(xintercept = -1.978, color = "blue") +
+  geom_vline(xintercept = 1.99, color = "blue") +
+  geom_vline(xintercept = -1.9399, color = "green") +
+  geom_vline(xintercept = 1.9288, color = "green") +
+  ggthemes::theme_clean() +
+  labs(title = "Random Sampling of Standard Normal Distrubtion", 
+       x = "Value", 
+       y = "Count")
+
+results_mad_ints
+```
+
+###
+
+Good work. 
+
+## Summary Statistics with Nominate Data
+###
+
+You will practice using summary statistics in R. Above, we have illustrated the ability of the standard deviation and median average deviation to approximate a 95% interval for data resembling normal distributions. Now, we will illustrate the inability of these values to approximate a 95% FOR data not resembling normal distributions. 
+
+### Exercise 1 
+
+Run `?nominate` to read the help page for the `nominate` data set.  
+
+```{r ss3-1, exercise = TRUE}
+
+```
+
+
+### Exercise 2
+
+Let's use the `rename()` function to rename the column `nominate_dim_1` to the more convenient `nom1`. `rename()` uses the same syntax as `mutate()`, but the new column is simply set equal to the old column name. Save the pipe to a new object called `noms`
+
+```{r ss3-2, exercise = TRUE}
+
+```
+
+```{r ss3-2-hint-1, eval = FALSE}
+noms <- nominate %>% 
+  rename(nom1 = nominate_dim1)
+```
+
+### Exercise 3
+
+Copy/paste your code. Use `drop_na()` to drop all rows containing missing values in the `nom1` column.
+
+```{r ss3-3, exercise = TRUE}
+
+```
+
+```{r ss3-3-hint-1, eval = FALSE}
+ ... %>% 
+  drop_na(nom1)
+```
+
+### Exercise 4
+
+Use `quantile()` to calculate the 2.5th and 97.5th percentiles of the data in the `nom1` column. Remember to  use the dollar sign `$` to pull out the column from the tibble as a vector.
+
+```{r ss3-4, exercise = TRUE}
+
+```
+
+```{r ss3-4-hint, eval = FALSE}
+quantile(..., probs = c(.025, .975))
+```
+
+###
+
+These two percentiles form the 95% interval, within which 95% of the data are contained. In contexts of probability, this interval is often called the 95% confidence interval. The green lines on the plot below show the 95% interval. 
+
+```{r make-nom-95}
+nom_95 <- nom_p %>% 
+  ggplot(aes(nominate_dim1)) +
+  geom_histogram(bins = 100, alpha = 0.7) +
+  geom_vline(xintercept = -.578, color = "green") +
+  geom_vline(xintercept = .631, color = "green") +
+  theme_clean() +
+  labs(title = "Economic Ideology of Members of All U.S. Congresses", 
+       x = "Score", 
+       y = "Count")
+
+nom_95
+```
+
+
+### Exercise 5
+
+Make a vector that contains the `mean()`, `median()`, `sd()` and `mad()` of the column `nom1`.
+
+```{r ss3-5, exercise = TRUE}
+
+```
+
+```{r ss3-5-hint, eval = FALSE}
+ c(mean(...), median(...), sd(...), mad(...))
+```
+
+### 
+
+The mean and median are both different ways to measure a central value of data. Their values are similar, but not exactly the same. In the plot below, the blue line represents the mean, and the red line represents the median. Note that the values are not similar to the mode, one of the features of normally distributed data.
+
+```{r make-nominate-centrals}
+nom_p %>% 
+  ggplot(aes(nominate_dim1)) +
+  geom_histogram(bins = 100, alpha = 0.7) +
+  geom_vline(xintercept = -.04, color = "red") +
+  geom_vline(xintercept = .0052, color = "blue") +
+  geom_vline(xintercept = -.578, color = "green") +
+  geom_vline(xintercept = .631, color = "green") +
+  theme_clean() +
+  labs(title = "Economic Ideology of Members of All U.S. Congresses", 
+       x = "Score", 
+       y = "Count")
+```
+
+
+### Exercise 6
+
+Approximate the 95% interval using the `sd()`. Make a vector contains two items: two times the value of `sd()` subtracted from  the `mean()` and two times the value of `sd()` added to the `mean()`. 
+
+```{r ss3-6, exercise = TRUE}
+
+```
+
+```{r ss3-6-hint-1, eval = FALSE}
+Inside mean() and sd() use the argument nhanes$pulse.
+Use + to add and * to multiply.
+```
+
+```{r ss3-6-hint-2, eval = FALSE}
+c(mean(...) - 2 * sd(...), 
+  mean(...)  + 2 * sd(...))
+```
+
+###
+
+The two outer lines in blue show the approximation of the 95% confidence interval by the standard deviation. Neither approximation is very close to the real 2.5th and 97.5th percentiles.
+
+```{r make-nominate-sd-int}
+nom_sd_ints <- nom_p %>% 
+  ggplot(aes(nominate_dim1)) +
+  geom_histogram(bins = 100, alpha = 0.7) +
+  geom_vline(xintercept = -.04, color = "red") +
+  geom_vline(xintercept = .0052, color = "blue") +
+  geom_vline(xintercept = -0.742, color = "blue") +
+  geom_vline(xintercept = .752, color = "blue") +
+  geom_vline(xintercept = -.578, color = "green") +
+  geom_vline(xintercept = .631, color = "green") +
+  theme_clean() +
+  labs(title = "Economic Ideology of Members of All U.S. Congresses", 
+       x = "Score", 
+       y = "Count")
+
+nom_sd_ints 
+```
+
+### Exercise 7
+
+Now approximate the 95% interval using the `mad()`. Make a vector contains two items: two times the value of `mad()` subtracted from  the `mean()` and two times the value of `mad()` added to the `median()`. 
+
+```{r ss3-9, exercise = TRUE}
+
+```
+
+```{r ss3-9-hint-1, eval = FALSE}
+Inside median() and mad() use the argument noms$nom1.
+Use + to add and * to multiply.
+```
+
+```{r ss3-9-hint-2, eval = FALSE}
+c(median(...) - 2 * mad(...), 
+  median(...)  + 2 * mad(...))
+```
+
+###
+
+The two outer lines in red show the approximation of the 95% confidence interval by the median average deviation. The standard deviation yields an even worse approximation of the real intervals. 
+
+```{r make-nominate-mad-ints}
+nom_mad_ints <- nom_p %>% 
+  ggplot(aes(nominate_dim1)) +
+  geom_histogram(bins = 100, alpha = 0.7) +
+  geom_vline(xintercept = -.04, color = "red") +
+  geom_vline(xintercept = .0052, color = "blue") +
+  geom_vline(xintercept = -1.039, color = "red") +
+  geom_vline(xintercept = 0.959, color = "red") +
+  geom_vline(xintercept = -0.742, color = "blue") +
+  geom_vline(xintercept = .752, color = "blue") +
+  geom_vline(xintercept = -.578, color = "green") +
+  geom_vline(xintercept = .631, color = "green") +
+  theme_clean() +
+  labs(title = "Economic Ideology of Members of All U.S. Congresses", 
+       x = "Score", 
+       y = "Count")
+
+nom_mad_ints
+```
+
+Below are the two graphs we made earlier for comparison:
+
+```{r show-results-full}
+results_mad_ints
+```
+
+```{r show-nhanes-full}
+nhanes_mad_ints
+```
+
+###
+
+Good work. 
 
 ## Submit
 
