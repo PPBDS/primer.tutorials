@@ -160,7 +160,7 @@ submission_ui <- shiny::div(
   shiny::tags$ol(
     shiny::tags$li("Click the Download button below to download a file containing your answer. A window will pop up."),
     shiny::tags$li("Save the file onto your computer in a convenient location. It should have an 'rds' suffix. Do not open it."),
-    shiny::tags$li("Upload the file which you just downloaded to the appropriate Canvas assignment.")),
+    shiny::tags$li("Submit the file which you just downloaded as instructed.")),
   shiny::fluidPage(
     shiny::mainPanel(
       shiny::div(id = "form",
