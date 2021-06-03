@@ -57,4 +57,4 @@ the Jobs tab, and then press the red stop sign icon. Your work will be
 saved between RStudio sessions, meaning that you can complete a tutorial
 in multiple sittings. Once you have completed a tutorial, follow the
 instructions on the tutorial `Submit` page and (if you’re a student)
-upload the resulting file to Canvas.
+submit the downloaed `rds` file as instructed.
