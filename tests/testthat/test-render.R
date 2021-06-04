@@ -42,6 +42,7 @@ stopifnot(length(files) > 15)
 # test above. Maybe this is just an edge case we can ignore.
 
 for(i in files){
+  cat(paste0("Working on ", i, "\n"))
   test_that(paste("rendering", i), {
     expect_output(rmarkdown::render(i, output_file = "tutorial.html"),
                   "tutorial.html")
