@@ -16,6 +16,8 @@ library(primer.tutorials)
 library(tidyverse)
 library(httr)
 library(WDI)
+library(plotly)
+library()
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
@@ -24,7 +26,7 @@ options(tutorial.exercise.timelimit = 60,
 
 meso_url <- "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py/"
 
-
+my.response <- GET(url = meso_url) 
 ```
 
 
@@ -94,9 +96,10 @@ Because the Iowa Environmental Mesonet doesn't require us to use a user-specific
 
 ###
 
-Create an object named `meso_url` that contains the URL listed in **Primer** chapter `3.6`. 
+Assign the url in your code to an an object named `meso_url`. 
 
 ```{r create_url, exercise = TRUE}
+"https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py/"
 
 ```
 
@@ -105,14 +108,15 @@ The URL should be a text string when being assigned to an object.
 ```
 
 ```{r create_url-hint-2, eval = FALSE}
-meso_url <- "your link here" 
+meso_url <- "https://..." 
 ```
+
 
 ###
 
 <!-- In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. This is a simpler example of API use in which we don't need to protect a uniquely generated access key.  -->
 
-You will now have access to this object throughout the rest of the tutorial. 
+You will now have access to this object throughout the rest of the tutorial. The **base URL** allows you to send a request and specify the subset of data you want. 
 
 
 ### Exercise 3
@@ -137,7 +141,7 @@ class(my.response)
 
 ###
 
-Note that even without a query specification, the GET command appears to run but returns no data. 
+Note that even without a query specification, the GET command appears to run but returns no data. You get an object of `class()` "response" because you are still communicating with the base url. 
 
 ### Exercise 4
 
@@ -153,19 +157,19 @@ my.response
 
 ###
 
-Note that the URL is the same as `meso_url`, which indicates that there was no further query. We can confirm that by looking at the size of the response - 23 Bytes. THe `Status: 500` indicates that the query encountered an error. 
+Note that the URL is still the base url, which indicates that there was no further query. We can confirm that by looking at the size of the response - 23 Bytes. THe `Status: 500` indicates that the query encountered an error. 
 
 
 ### Exercise 5
 
-Again, use `meso_url` to fill the `url` argument and then add the `query` argument set equal to a list of parameters which you wish to specify the parameters of your query. We want to know the temperature in Farenheight degrees in Denver, CO starting in 2017. Save the output as an object named `denver`. 
+Within the function `GET()`, use `meso_url` to fill the `url` argument and then set the argument `query` equal to a `list()` of parameters: `station`, `data`, `year1`.  We want to know for station Denver (`"DEN"`) the temperature in degrees Fahrenheit (`"tpmf"`) starting in the year 2017. You still will not get data from this query. Assign this output to an object named `denver`. 
 
 ```{r query-1, exercise = TRUE}
 
 ```
 
 ```{r query-1-hint-1, eval = FALSE}
-The abbreviation for temperature in F* is "tmpf".
+The abbreviation for temperature in Fahrenheit is "tmpf".
 ```
 
 ```{r query-1-hint-2, eval = FALSE}
@@ -177,7 +181,7 @@ The abbreviation for temperature in F* is "tmpf".
 
 ### 
 
-There are several different types of data to be had from this API, including the temperature in degrees celsius, which come with different `data` query arguments. Notice that we still don't get data from this query. 
+There are several different types of data to be had from this API, including the temperature in degrees celsius, which come with different `data` query arguments. 
 
 ### Exercise 6
 
@@ -185,18 +189,15 @@ This API requires a start and end date (Year, Month, and Day) to be supplied in 
 
 ###
 
-You should extend `denver`to include the start and end point of your time frame - we are interested in the daily records between 2017 and 2019. You should also specify the appropriate time zone for the station listed. 
+Copy and paste the code for `denver` from the previous exercise. Within `GET()`, you should add parameters to include the start, `year1` `month1` `day1`, and end point of your time frame, `year2` etc. We are interested in the daily records from 01/01/2017 to 12/31/2019. You should also specify the appropriate time zone for the station listed. The time zone for the Denver station is "America/Denver". 
 
 ```{r query2, exercise = TRUE}
 
 ```
 
 ```{r query2-hint-1, eval = FALSE}
-
-The start and end args. follow the naming system year1, year2, month1, month2 etc. 
-
-The time zone for the Denver station is "America/Denver". 
-
+All date parameters should be quoted numbers
+i.e. "01" is January.
 ```
 
 ```{r query2-hint-2, eval = FALSE}
@@ -214,10 +215,11 @@ denver <- GET(url = meso_url,
 
 ```
 
+<!-- Here we should probably keep assignment and have them call a denver programmed in the set_up chunk?  -->
+
 ### Exercise 7
 
-Now we have data!
-Copy the code from the previous exercise without assigning it to an object. Note the size of the response - you should have ~7.98 MB of data. 
+Now we have data. Copy the code from the previous exercise. Remove thh assignment of the code's output to `denver` and run the code.  Note the size of the response - you should have ~7.98 MB of data. 
 
 ```{r query_resp1, exercise = TRUE}
 
@@ -228,12 +230,12 @@ GET(url = meso_url,
     query = list(station = "DEN",
                  data = "tmpf",
                  year1 = "2017",
-                 month1 = ...,
-                 day1 = ...,
+                 month1 = "01",
+                 day1 = "01",
                  year2 = "2019",
-                 month2 = ...,
-                 day2 = ...,
-                 tz = ...))
+                 month2 = "12",
+                 day2 = "31",
+                 tz = "America/Denver"))
 ```
 
 ###
@@ -247,16 +249,17 @@ This API allows us to download the data in CSV format.
 
 ###
 
-Set the query format argument equal to 'comma' (as in Comma Separated Variables). Then, to convert this data to a more familiar format, add the `content()` and `read_csv()` functions immediately following the `GET()` query to convert the jibberish from the query response into a nicely formatted tibble. Save this output as an object named 'denver'. 
+Within the `list()` for `query`, set `format`  equal to `comma` (as in Comma Separated Variables). Then, to convert this data to a more familiar format, add the `content()` and `read_csv()` functions immediately following the `GET()` query to convert the gibberish from the query response into a tibble. 
 
 ```{r query-3, exercise = TRUE}
 
 ```
 
 ```{r query-3-hint, eval = FALSE}
-denver <- GET(url = ...,
-              query = list(...)) %>% 
-  ... %>% 
+GET(url = ...,
+              query = list(...,
+                           format = "comma")) %>% 
+  content() %>% 
   read_csv(... , ...)
 
 Make sure that you properly address NA values - see Primer for examples. 
@@ -268,6 +271,24 @@ Recall that the `content()` call extracts the content from the response to the H
 
 ### Exercise 9
 
+The many Ms is this dataset's way of representing missing values. Within `read_csv()`, use the `na` argument to change all occurrences of the lone character `"M"` to `NA`.Save this output as an object named 'denver'. 
+
+```{r query-10, exercise = TRUE}
+GET(url = ...,
+              query = list(...,
+                           format = "comma")) %>% 
+  content() %>% 
+  read_csv(... , ...)
+
+Make sure that you properly address NA values - see Primer for examples. 
+```
+
+```{r query-10-hint, eval = FALSE}
+
+```
+
+### Exercise 10
+
 Print out the `denver` object. 
 
 ```{r print_denver, exercise = TRUE}
@@ -277,10 +298,6 @@ Print out the `denver` object.
 ###
 
 You should see a normally formatted tibble, like we have dealt with in the last few weeks.
-
-## Weather
-
-We will now create the following plot of daily average temperatures in Denver, CO from 2017 to 2019. 
 
 ```{r get_denver_data}
 denver <- GET(url = meso_url,
@@ -298,7 +315,9 @@ denver <- GET(url = meso_url,
   read_csv(skip = 5, na = "M")
 ```
 
-### Exercise 1
+### Exercise 11
+
+Let's use the data to make the following plot. 
 
 ```{r make_plot_1}
 denver_p <- denver %>% 
@@ -320,40 +339,46 @@ denver_p <- denver %>%
 denver_p
 ```
 
-Beginning with the `denver` object that you created in the previous section, you will need to reformat the date slightly in order to calculate the daily avg. temperature. Using the `separate()` function, remove the timestamp from the given date variable and rename the remaining column "date". Save this as an object named `d1`
+Let's remove the timestamp from the given date variable and rename the remaining column "date". Within the function `separate()`, use the argument `col` to select which column's content you are separating, use the argument `into` to create a vector of the new column names, `"date"` and `NA`, and use the third argument to show by what character you are separating the data `" "`.  Save this as an object named `d1`
 
-```{r plot-1, exercise = TRUE}
+```{r plot-11, exercise = TRUE}
 
 ```
 
-```{r plot-1-hint, eval = FALSE}
+```{r plot-11-hint, eval = FALSE}
 
 d1 <- denver %>% 
-  separate(col = ...,
+  separate(col = valid,
            into = c(..., NA),
-           sep = ...)
+           sep = " ")
 
 ```
 
 ###
 
-The NA operator drops the second column from the separation - removing the need to select(-X) the unwnated data later. 
+The NA operator drops the second column from the separation - removing the need to select(-X) the unwanted data later. 
 
-### Exercise 2
+### Exercise 12
 
-Now that we have a proper daily date column, extend the `d1` object's code to calculate the daily average temperature in a new column named "avg_temp". 
+The date column has multiple rows for the same day. Continue your pipe and use `group_by()` and `summarize()` to calculate the daily average temperature in a new column named "avg_temp". 
 
 ```{r plot-2, exercise = TRUE}
 
 ```
 
-```{r plot-2-hint, eval = FALSE}
+```{r plot-2-hint-1, eval = FALSE}
+Within the `mean()` function, set `na.rm` to TRUE to remove NA values from 
+calculation. 
+```
+
+```{r plot-2-hint-2, eval = FALSE}
 
 d1 <- denver %>% 
   separate(col = ...,
            into = c(..., NA),
            sep = ...) %>% 
   ... %>% 
+  group_by(...) 
   summarise(avg_temp = ...,
             .groups = "drop")
 
@@ -363,15 +388,13 @@ Be careful with NA values!
 ```
 
 
-### 
+###
 
-Note the need to use na.rm = TRUE. 
-This wrangling allows us to easily group by the daily timeseries rather than several times per hour. 
 Now, you will have access to the `d1` object. 
 
-### Exercise 3
+### Exercise 13
 
-Now that we have the desired calculations, create a scatterplot that maps average daily temperature to the y-axis and the date to the x-axis. 
+Now that we have the desired calculations, start a new pipe with `d1` and create a scatterplot that maps average daily temperature to the y-axis and the date to the x-axis. 
 
 ```{r plot-3, exercise = TRUE}
 
@@ -380,14 +403,13 @@ Now that we have the desired calculations, create a scatterplot that maps averag
 ```{r plot-3-hint, eval = FALSE}
 d1 %>% 
   ggplot(aes(x = ..., y = ...)) +
+  geom_point()
   ...
 ```
 
+### Exercise 14
 
-### Exercise 4
-
-Add Relevant titles and axis lablels as shown above - specifically be sure to use `scale_x_discrete()` to set the x axis labels to an inteligible state. 
-
+There are so many labels for x-axis breaks that they are indistiguishable. Use `scale_x_discrete()` to set only three x axis breaks, `06-01-2017`, `06-01-2018`, `06-01-2019`.
 ```{r plot-4, exercise = TRUE}
 
 ```
@@ -397,23 +419,188 @@ Add Relevant titles and axis lablels as shown above - specifically be sure to us
 d1 %>% ggplot(aes(y = ...,
                   x = ...)) +
   geom_point() + 
-  scale_x_discrete(breaks = c(...)) +
-  labs(x = ...,
-       y = ...,
-       title = ...,
-       caption = ...)
+  scale_x_discrete(breaks = c(...)) 
+```
 
+### Exercise 15
+
+Use `labs()` to set an appropriate title, subtitle, caption, axes labels, and captions.
+
+```{r denver-15, exercise = TRUE}
+
+```
+
+Reminder: The graph should look like this
+
+```{r show-denver-p}
+denver_p
 ```
 
 
 ## API Keys
 
-In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. This is a simpler example of API use in which we don't need to protect a uniquely generated access key.
+In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. The following are examples of examples of API use in which we don't need to protect a uniquely generated access key.
+
+## Wikipedia Page Access
+###
+
+The **pageviews** package provides helper functions for accesses the API for the World Bank. You can learn more about the package [here](https://cran.rstudio.com/web/packages/pageviews/pageviews.pdf). 
+
+
+```{r wb_setup}
+supreme_views <- old_pageviews(project = "en.wikipedia",
+                           article = "Supreme_Court_of_the_United_States",
+                           platform = "all",
+                           user_type = "all",
+                           start = "2008012000",
+                           end = "2016012000") 
+
+supreme_plot <- supreme_views %>% 
+  arrange(date) %>% 
+  ggplot(aes(date, views, 
+             text = paste("Date:", date, "\n"))) +
+  geom_col() +
+  labs(title = "Wikipedia Supreme Court Page During Pres. Obama's Tenure",
+       x = "Date", 
+       y = "Views", 
+       caption = "Wikimedia Traffic Data API")
+
+final <- ggplotly(supreme_plot, tooltip = "text")
+
+final
+```
+
+
+
+### Exercise 1
+
+On the first line, load the **pageviews** package. In this package, the functions `article_pageviews()` and `old_pageviews()` allow us to communicate with the Wikimedia API. 
+
+```{r supreme-01, exercise = TRUE}
+
+```
+
+```{r supreme-01-hint, eval = FALSE}
+library(pageviews)
+```
+
+###
+
+`old_pageviews()` is for counts before 2016. They are not accurate as they did not omit the activity of web-crawlers and bots.
+
+### Exercise 2
+
+We will be looking at the wikipedia page views for the Supreme Court of the United States countries during President Obama's tenure, from January 20th 2008 to January 20th 2016.
+
+###
+
+Start a call with `old_pageviews()`. Set the `project` argument equal to `wikipedia.en` and the article to `Supreme_Court_of_the_United_States`. Set the start time and end time in the format: YYYYMMDDHH. Set hours to 00, they do not matter as the granularity is by default daily. Assign this to an object called `supreme_views`.
+
+```{r supreme-02, exercise = TRUE}
+
+```
+
+```{r supreme-02-hint-1, eval = FALSE}
+Use the WDIsearch() tool from the previous question if you are having 
+difficulty locating the proper indicator. 
+```
+
+```{r supreme-02-hint-2, eval = FALSE}
+old_pageviews(project = "en.wikipedia",
+                           article = "Supreme_Court_of_the_United_States",
+                           start = "2008012000",
+                           end = "2016012000") 
+```
+
+###
+
+Because this is a package designed to work with this API, we do not need to use a base url. Also, the output of the function is made into a tibble by default.
+
+### Exercise 3
+
+Start a new pipe with `supreme_views`. Use `ggplot()` and `geom_col()` to make a bar graph with `date` on the x-axis and `views()` on the y axis. 
+
+```{r supreme-03, exercise = TRUE}
+
+```
+
+```{r supreme-03-hint, eval = FALSE}
+supreme_views %>% 
+  ggplot(aes(..., ,...)) +
+  geom_col()
+```
+
+### Exercise 4
+
+Use the `text` argument and the function `paste()` to create a label which you can use for plotly.
+
+```{r supreme-04, exercise = TRUE}
+
+```
+
+```{r supreme-04-hint-1, eval = FALSE}
+supreme_views %>% 
+  arrange(date) %>% 
+  ggplot(aes(date, views, 
+             text = paste("...", ..., "\n"))) +
+  geom_col()
+```
+
+```{r suoreme-04-hint-2, eval = FALSE}
+supreme_views %>% 
+  arrange(date) %>% 
+  ggplot(aes(date, views, 
+             text = paste("Date:", date, "\n"))) +
+  geom_col()
+```
+
+###
+
+### Exercise 5
+
+Use `labs()` to set an appropriate title, caption, and axes labels
+
+```{r supreme-05, exercise = TRUE}
+
+```
+
+### Exercise 6
+
+Copy/paste your code. Assign the output of the pipe to an object called `supreme_plot`.
+
+```{r supreme-06, exercise = TRUE}
+
+```
+
+### Exercise 7 
+
+Use the function `ggplotly()` to add interactive labels to supreme_plot.
+
+```{r supreme-07, exercise = TRUE}
+
+```
+
+```{r supreme-07-hint-1, eval = FALSE}
+ggplotly(..., tooltip = "text")
+```
+
+```{r suoreme-07-hint-2, eval = FALSE}
+ggplotly(..., tooltip = "text")
+```
+
+
+Reminder: you plot should look like this: 
+
+```{r show-supreme-plot}
+final
+```
+
+<!-- The remaining tasks to cover on this tutorial are to add more examples of API / API packages to reinforce the tools to find indicator codes and explore various open data offerings such that the tutorial takes 50-60 minutes. -->
 
 ## The World Bank
 ###
 
-The **WDI** package provides helper functions for accesses the API for the World Bank. You can learn more about the package [here](http://vincentarelbundock.github.io/WDI/). 
+The **WDI** package provides helper functions with access to the API for the World Bank. You can learn more about the package [here](http://vincentarelbundock.github.io/WDI/). 
 
 
 ```{r wb_setup}
@@ -422,9 +609,6 @@ ratio <- WDI(
   indicator = "BI.WAG.PRVS.FM.SM",
   start = 1990,
   end = 2020,
-  # extra = FALSE,
-  # cache = NULL,
-  # latest = NULL,
   language = "en")
 
 ratio_p <- ratio %>%
@@ -456,14 +640,13 @@ ratio_p
 ```
 
 
-
 ### Exercise 1
 
 The most complex part of this edition of an API call on the World Bank's data is the data indicator - the obscure name string that selects the type of information pulled. Thankfully - there are some handy functions from the **WDI** package we can use. 
 
 ###
 
-On the first line, load the **WDI** package. On the subsequent line, use `WDIsearch()` to look for indicator descriptions for "investment", and take a look at the results. 
+On the first line, load the **WDI** package. On the subsequent line, use `WDIsearch()` to search indicator descriptions for "investment", and take a look at the first ten results.
 
 ```{r wdi-00, exercise = TRUE}
 
@@ -485,13 +668,13 @@ This works for an array of terms that the World Bank may have data about - feel 
 
 ### Exercise 2
 
-Will be looking at various countries and their private sector wage allocation between males and females, *as measured by the average group wage across business sectors* between 1990 and 2020. 
+Will be looking at various countries and their private sector wage allocation between males and females, *as measured by the average group wage across business sectors* between 1990 and 2020. The indicator for this data is: 
 
 ###
 
-Create an object named `ratio` and use the `WDI()` function to query the appropriate data. 
+Create an object named `ratio` and use the `WDI()` function to query the appropriate data. The `indicator` for this data is "BI.WAG.PRVS.FM.SM".
 
-You should remember that unless we wish to know about a certain country, we should query "all" countries. 
+You should remember that unless we wish to know about a certain country, we should set `country` to "all"  You will need to specify a `start` and `end` year, as well as a language, `"en"` for English.
 
 ```{r wdi-01, exercise = TRUE}
 
@@ -514,16 +697,17 @@ ratio <- WDI(
 
 ###
 
-Note that we also get the Country code along with the data and year as requested. 
 NA values are common as some metrics are more difficult to measure consistently over time for various reporting, cooperation, or development issues among others. 
+
+The output of the package WDI is ready to be coverted to a tibble by default.
 
 ### Exercise 3
 
-Now that we have our data, copy the code used above and begin creating a plot that answers our question. If we are interested in those countries that have the most closely aligned female and male wage allocations - we would expect the ratio to be 1.0.
+Start a new pipe with `ratio` and begin creating a plot that answers our question. If we are interested in those countries that have the most closely aligned female and male wage allocations - we would expect the ratio to be 1.0.
 
 ###
 
-Rename the indicator column to be `wage_ratio` and then drop NA values from the `wage_ratio` column. Be sure to reassign this change to `ratio`. 
+Rename the indicator column to be `wage_ratio` and then drop NA values from the `wage_ratio` column. 
 
 ```{r wdi-02, exercise = TRUE}
 
@@ -551,14 +735,12 @@ Create a scatter plot that shows changes in the spread across countries over tim
 
 ###
 
-While this might be interesting, it is quite messy. If you look closely there are many countries that only report for 3 or fewer years in our sample. 
-
-A quick way to determine which countries are only reported for 1-3 years of the timeline is to use the `table()` function. `table(ratio$country)`, assuming that ratio has been filtered properly, shows the number of times that a given country shows up in the data being plotted. 
+While this might be interesting, it is quite messy. 
 
 
 ### Exercise 5
 
-Analyzing those countries that show for $\geq7$ years in the above plot leaves us with 5 countries: Colombia, El Salvador, Honduras, Panama, the Philippines. Filter the data for only these countries
+The graph is too clutered. Filter the data to keep rows only where `country` is equal to Colombia, El Salvador, Honduras, Panama, the Philippines. Filter the data for only these countries
 
 ```{r wdi-04, exercise = TRUE}
 
@@ -578,7 +760,7 @@ Now we can start to see time trends within these countries.
 
 ### Exercise 6
 
-To make these trends easier to follow, connect the scatter-plot points with geom_line(). 
+To make these trends easier to follow, connect the scatter-plot points with `geom_line()`. 
 
 Be sure to add appropriate titles, labels, etc. 
 
@@ -596,10 +778,17 @@ Be sure to add appropriate titles, labels, etc.
   labs(...)
 ```
 
+### Exercise 7 
+
+Use `labs()` to set an appropriate title, subtitle, axes labels, and captions.
+
+```{r denver-15, exercise = TRUE}
+
+```
+
 ###
 
-Your plot should look mostly like this: 
-
+Reminder: you plot should look like this: 
 
 ```{r final_plot_shown}
 ratio_p
@@ -617,3 +806,5 @@ submission_ui
 ```{r context = "server"}
 submission_server()
 ```
+
+
