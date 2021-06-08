@@ -1039,7 +1039,7 @@ qscores_p1
 
 ### Exercise 1
 
-Run `c(min(qscores$enrollment), mean(qscore$enrollment), max(qscores$enrollment))` to produce a vector with the minimum, mean and maximum enrollment value in this data. Run the equivalent command for `rating`.
+Run `c(min(qscores$enrollment), mean(qscores$enrollment), max(qscores$enrollment))` to produce a vector with the minimum, mean and maximum enrollment value in this data. Run the equivalent command for `rating`.
 
 ```{r qscores1, exercise = TRUE}
 
@@ -1135,7 +1135,7 @@ select(..., ..., ...)
 
 ### Exercise 6
 
-Continue your pipe with `ggplot()`. Map `rating`` to the x-axis, and `introduction` to `fill`. Add the layer `geom_histogram()`.
+Continue your pipe with `ggplot()`. Map `rating` to the x-axis, and `introduction` to `fill`. Add the layer `geom_histogram()`.
 
 ```{r qscores6, exercise = TRUE}
 
@@ -1452,7 +1452,7 @@ kenya_p1
 
 ### Exercise 1
 
-Run `c(min(qscores$poverty), mean(qscore$poverty), max(qscores$poverty))` to produce a vector with the minimum, mean, and maximum poverty rate in this data. Run the equivalent function for `mean_age`.
+Run `c(min(kenya$poverty), mean(kenya$poverty), max(kenya$poverty))` to produce a vector with the minimum, mean, and maximum poverty rate in this data. Run the equivalent function for `mean_age`.
 
 ```{r kenya1, exercise = TRUE}
 
@@ -1587,7 +1587,7 @@ For histogram and bar plots, `position` is by default "stacked" for `geom_histog
 
 ### Exercise 8
 
-Add the layer `facet_wrap()` to facet the histogram by `mean_age()`. 
+Add the layer `facet_wrap()` to facet the histogram by `poverty_groups`. 
 
 ```{r kenya8, exercise = TRUE}
 
@@ -1661,33 +1661,29 @@ kenya_p1
 Let's create the following plot, using density plots to visualize the same data. 
 
 ```{r make-kenya2}
-kenya_p2 <- kenya %>% 
-  mutate(poverty_groups = case_when(poverty >= .18 & poverty < .35 ~ "1",
-            poverty >= .35 &  poverty < .43  ~ "2",
-            poverty >= .43 & poverty < .49 ~ "3",
-            poverty >= .49 ~ "4")) %>% 
-  mutate(poverty_groups = factor(poverty_groups, 
-                                    levels = c("1", "2","3", "4"), 
-                                    labels = c("1st Quartile (Richest)", "2nd Quartile", 
-                                    "3rd Quartile", "4th Quartile (Poorest)"))) %>% 
-  mutate(age_groups = case_when(mean_age < 41.5  ~ "1",
-                                     mean_age >= 41.5  ~ "2")) %>% 
-  select(reg_byrv13, treatment, poverty_groups, age_groups) %>% 
-  drop_na() %>%
-  ggplot(aes(reg_byrv13, fill = age_groups)) +
-  geom_histogram(bins = 500, position = "stack") +
-  facet_wrap(~ poverty_groups) +
-  coord_cartesian(xlim = c(0, .15), ylim = c(0, 160)) +
-  scale_x_continuous(labels = scales::percent_format()) +
-  scale_fill_manual(values = c("#F8766D", "#00BFC4"), 
-                    labels = c("Below 50th Percentile", "Above 50th Percentile")) +
+kenya_p2 <- kenya %>% drop_na(mean_age) %>% 
+mutate(poverty_groups=case_when(poverty >= .18 & poverty < .35 ~ "1",
+poverty >= .35 & poverty < .43 ~ "2",
+poverty >= .43 & poverty < .49 ~ "3",
+poverty >= .49 & poverty < .90 ~ "4" )) %>% 
+mutate(poverty_groups=factor(poverty_groups, levels=c("1","2","3","4"),
+labels=c("1st Quartile (Least Poverty)", "2nd Quartile", "3 Quartile", "4th Quartile (Most Poverty)"))) %>% 
+mutate(age_groups=case_when(mean_age > 41.58 ~ "2",
+mean_age < 41.58 ~ "1"))  %>% 
+select(reg_byrv13, poverty_groups, age_groups) %>% 
+  ggplot(mapping=aes(x=reg_byrv13, fill=age_groups)) + 
+  geom_density(alpha=.5, color=NA) +
+  facet_wrap(~poverty_groups) +
+  coord_cartesian(xlim=c(0, .25)) +
+  scale_x_continuous(labels=scales::percent_format()) + 
+  scale_fill_manual(values=c("#F8766D", "#00BFC4"), labels=c("Below 50th Percentile", "Above 50th Percentile")) +
   theme_classic() +
-  labs(title = "Distribution of New Registered Voters by Poverty and Age Groups",
-       subtitle = "The poorest districts have fewer zero and near-zero percent \n increases and more districts of unusually high increase",
-       x = "Percent of New Registered Voters", 
-       y = "Count", 
-       fill = "Mean Age in District", 
-       caption = "Harris, Kamindo, Van der Windt (2020)") 
+  labs(title="Distribution of New Registered Voters by Age Group",
+  subtitle="Younger districts tend to have more zero and near-zero percent increases",
+  x="Percent of New Registered Voters",
+  y="Density",
+  fill="Mean Age",
+  caption="Harris, Kamindo, Van der Windt (2020)")
 
 kenya_p2
 ```
@@ -1724,7 +1720,7 @@ We have provided you with the beginning of code for the last plot. Continue your
 
 ### Exercise 14
 
-Add the layer `facet_wrap()` to facet the histogram by `mean_age()`. Add the layer `coord_cartesian` and use the argument `xlim` to limit the x-axis domain to a minimum of 0 and a maximum of .25. 
+Add the layer `facet_wrap()` to facet the histogram by `poverty_groups`. Add the layer `coord_cartesian` and use the argument `xlim` to limit the x-axis domain to a minimum of 0 and a maximum of .25. 
 
 ```{r kenya14, exercise = TRUE}
 
@@ -1828,7 +1824,7 @@ kenya %>%
 ```{r kenya17-hint, eval = FALSE}
 ... %>% 
   ggplot(aes(..., fill = ...)) +
-  geom_density(alpha = ..., color = NA) 
+  stat_slab(alpha = ..., color = NA) 
 ```
 
 ###
@@ -1842,10 +1838,6 @@ Add the layer `coord_cartesian` and use the argument `xlim` to limit the x-axis 
 ```
 
 ```{r kenya18-hint-1, eval = FALSE}
-Within facet_wrap(), remember to put a ~ before the variable you want to facet by.
-```
-
-```{r kenya18-hint-2, eval = FALSE}
 ... +
   coord_cartesian(xlim = c(0, .25))
 ```
