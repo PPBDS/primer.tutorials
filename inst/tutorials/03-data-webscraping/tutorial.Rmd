@@ -17,6 +17,7 @@ library(tidyverse)
 library(rvest)
 library(png)
 library(grid)
+library(countrycode)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
@@ -45,6 +46,38 @@ quiz(caption = "",
 
 ## HTML
 
+```{r setup-html-section, echo=FALSE}
+raw_html1 <- "<html>Hello World</html>"
+
+raw_html2 <- "<html>
+<table>
+  <tr>
+    <td>
+      Hello World
+    </td>
+  </tr>
+</table>
+</html>"
+
+raw_html3 <- "<html>
+<table>
+  <tr>
+    <td>
+      Hello World
+    </td>
+    <td>
+      foo
+    </td>
+    <td>
+      bar
+    </td>
+  </tr>
+</table>
+</html>"
+
+td_tags <- minimal_html(raw_html3) %>% html_elements("td")
+```
+
 HTML, or "HyperText Markup Language" is a markup language that is used to display webpages on browsers. You might have seen html files as a result of knitting Rmd files.
 
 ###
@@ -65,7 +98,7 @@ library(...)
 
 ###
 
-`rvest` is part of the `tidyverse` package. https://rvest.tidyverse.org/ is its official website.
+`rvest` is part of the `tidyverse`, a collection of packages, but it is not part of the core `tidyverse` package so you have to load it in separately. https://rvest.tidyverse.org/ is its official website.
 
 ### Exercise 2
 
@@ -76,85 +109,65 @@ For example:
 An html file like this:
 ```{.html}
 <html>
-<p>
 Hello World
-  <a>
-    link to somewhere
-  </a>
-</p>
-
 </html>
 ```
 
 creates the following:
-<br><br><br>
+<br>
 
-<p>
+<html style="background-color:gray">
 Hello World
-<a>
-  link to somewhere
-</a>
-</p>
+</html>
 
-<br><br><br>
+<br>
 
-Tags are represented like `<...></...>`, similar to parentheses. You will see different kinds of tags and what they can do. This example uses the anchor tag (`<a></a>`) which creates links and the paragraph tag (`<p></p>`).
+Tags are represented like `<...></...>`, similar to parentheses. You will see different kinds of tags and what they can do. This example uses the html tag `<html>`, which is the main tag that includes the entire webpage.
 
 ###
 
 You will be parsing the following html structure:
 ```{.html}
 <html>
-  <head>
-    <title>
-      Hello World!
-    </title>
-  </head>
-  <body>
-    <p id="p1">
-    This is a paragraph.
-    </p>
-  <br>
-    <a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">
-    This is an anchor, or hyperlink.
-    </a>
-    <br>Below is a table:
-    <table>
-      <tr>
-        <td class="coolData">row1data1</td>
-        <td class="coolData">row1data2</td>
-        <td class="uncoolData">row1data3</td>
-        <td>row1data4</td>
-      </tr>
-      <tr>
-        <td><p>row2data1</p></td>
-        <td class="uncoolData">row2data2</td>
-        <td>row2data3</td>
-        <td>row2data4</td>
-      </tr>
-    </table>
-  </body>
+<p>
+Hello World
+</p>
 </html>
 ```
 
-This piece of html code is provided in the variable `raw_html`.
-
-First, load in `raw_html` to understand the html structure using `minimal_html()`. This function takes the raw html text and creates an object to easily access information.
-
-Later, you will read html directly from websites.
-
+Assign the provided html code into the variable `raw_html1`.
 
 ```{r html2, exercise=TRUE}
-raw_html <- '<html><head><title>Hello World!</title></head><body><p id="p1">This is a paragraph.</p><br><a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">This is an anchor, or hyperlink.</a><br>Below is a table:<table><tr><td class="coolData">row1data1</td><td class="coolData">row1data2</td><td class="uncoolData">row1data3</td><td>row1data4</td></tr><tr><td><p>row2data1</p></td><td class="uncoolData">row2data2</td><td>row2data3</td><td>row2data4</td></tr></table></body></html>'
+"<html><p>Hello World</p></html>"
 
 ```
 
 ```{r html2-hint-1, eval=FALSE}
+raw_html1 <- "<html>Hello World</html>"
+
+```
+
+###
+
+You can now use the `raw_html1` variable
+
+### Exercise 3
+
+Using the function `minimal_html()`, load in `raw_html1`. This function takes the raw html text and creates an object to easily access information.
+
+Later, you will read html directly from websites.
+
+
+```{r html3, exercise=TRUE}
+
+```
+
+```{r html3-hint-1, eval=FALSE}
 minimal_html(...)
 ```
 
-```{r html2-hint-2, eval=FALSE}
-minimal_html(raw_html)
+```{r html3-hint-2, eval=FALSE}
+minimal_html(raw_html1)
 ```
 
 
@@ -162,222 +175,337 @@ minimal_html(raw_html)
 
 `rvest` reads html data and constructs a nested list-like object to represent the usual nested structure of html.
 
-### Exercise 3
-
-Copy/paste your code above and extend the pipe with `%>%`. You can view the pure text of an html object with `html_text()`.
-
-```{r html3, exercise=TRUE}
-
-```
-
-```{r html3-hint-1, eval=FALSE}
-... %>% html_text()
-```
-
-###
-
-You can see that the output is a mess. This is because html_text() simply took the inner text of all tags and strung them together. That results in a messy string, which is why you want to select specific parts of data.
+The output is similar to the output of a list.
 
 ### Exercise 4
 
-Copy/paste your code above and remove `html_text()`. Instead, select the paragraph tag `<p>` using `html_element()`. This finds the first tag in the document.
+Copy/paste your code from above and extend it using ` %>% `. Use the function `html_element()` to select the first `<p>` tag inside the structure.
 
-Then use `html_text()` to view the text inside the tag.
+`html_element()` takes a string that shows the type of a tag.
+For example, `<p>` can be found with `"p"`.
 
 ```{r html4, exercise=TRUE}
 
 ```
 
 ```{r html4-hint-1, eval=FALSE}
-minimal_html(...) %>% html_element("p") %>% ...
+minimal_html(...) %>% html_element(...)
 ```
 
 ```{r html4-hint-2, eval=FALSE}
-minimal_html(...) %>% html_element("p") %>% html_text()
+minimal_html(...) %>% html_element("p")
 ```
 
 ###
 
-You should see just "This is a paragraph." printed out. By selecting specific elements, you can find and extract what you need from html pages.
+You can see it returned an `{html_node}` object that is the tag `<p>`
 
 ### Exercise 5
 
-Usually, however, there are more than one of the same tag.
-
-Consider `raw_html`:
-```{.html}
-<html>
-  <head>
-    <title>
-      Hello World!
-    </title>
-  </head>
-  <body>
-    <p id="p1">
-    This is a paragraph.
-    </p>
-  <br>
-    <a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">
-    This is an anchor, or hyperlink.
-    </a>
-    <br>Below is a table:
-    <table>
-      <tr>
-        <td class="coolData">row1data1</td>
-        <td class="coolData">row1data2</td>
-        <td class="uncoolData">row1data3</td>
-        <td>row1data4</td>
-      </tr>
-      <tr>
-        <td><p>row2data1</p></td>
-        <td class="uncoolData">row2data2</td>
-        <td>row2data3</td>
-        <td>row2data4</td>
-      </tr>
-    </table>
-  </body>
-</html>
-```
-
-There are 2 `<p>` tags, one underneath the the `<body>` tag, another in the `<table>` tag with the text `row2data1`.
-
-You will walk through different ways to specify which tag to select.
-
-In the next few exercises, you will select `<p>row2data1</p>` from the html `<table>`.
-
-###
-
-`raw_html` is provided below.
-
-Start a new pipe with the same `minimal_html(raw_html)`. Extend the pipe and use the function `html_element()` to find the table tag `<table>`.
+Copy/paste your pipe from above and extend it. Use the function `html_text2()`, which prints the text inside a tag.
 
 ```{r html5, exercise=TRUE}
-raw_html <- '<html><head><title>Hello World!</title></head><body><p id="p1">This is a paragraph.</p><br><a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">This is an anchor, or hyperlink.</a><br>Below is a table:<table><tr><td class="coolData">row1data1</td><td class="coolData">row1data2</td><td class="uncoolData">row1data3</td><td>row1data4</td></tr><tr><td><p>row2data1</p></td><td class="uncoolData">row2data2</td><td>row2data3</td><td>row2data4</td></tr></table></body></html>'
 
 ```
 
 ```{r html5-hint-1, eval=FALSE}
-minimal_html(raw_html) %>% html_element(...)
-```
-
-```{r html5-hint-2, eval=FALSE}
-minimal_html(raw_html) %>% html_element("table")
+minimal_html(...) %>% html_element("p") %>% html_text2()
 ```
 
 ###
 
-Now you have selected the `<table>` tag. You can see from the output that the `<table>` tag contains other tags like `<tr>` (table row) and `<td>` (table data).
+The output should be "Hello World". Now you can access the inside of a tag.
 
 ### Exercise 6
 
-In order to access tags inside another tag, you can simply use the `html_element()` function again.
+Usually, html tag structures are nested like the following:
 
-By extending your pipe from the resulting `<table>` tag, you are limiting your searches and functions to only inside the `<table>` tag.
+```{.html}
+<html>
+<table>
+  <tr>
+    <td>
+      Hello World
+    </td>
+  </tr>
+</table>
+</html>
+```
 
-### 
+###
 
-Copy/paste your code from above and extend the pipe. Use `html_element()` and find the first `<p>` tag inside the `<table>` tag.
+You will parse the above html
 
-Then use `html_text()` to check if you selected the correct `<p>` tag
+Assign the provided html to a variable named `raw_html2`
 
 ```{r html6, exercise=TRUE}
-
+"<html>
+<table>
+  <tr>
+    <td>
+      Hello World
+    </td>
+  </tr>
+</table>
+</html>"
 ```
 
 ```{r html6-hint-1, eval=FALSE}
-minimal_html(...) %>% 
-  html_element(...) %>%
-  html_element(...) %>%
-  html_text()
+raw_html2 <- "..."
 ```
-
-```{r html6-hint-2, eval=FALSE}
-minimal_html(...) %>% 
-  html_element("table") %>%
-  html_element("p") %>% 
-  html_text()
-```
-
-The output should be `"row2data1"`
 
 ###
 
-This is one way to find specific tags, going in layer-by-layer through the tags.
+Now you have access to `raw_html2`
 
 ### Exercise 7
 
-Another way is to find all of a certain element and use list indexing to select your desired element.
-
-###
-
-`raw_html` has been provided below.
-
-Start a new pipe with `minimal_html()` and `raw_html`. Then extend the pipe with `html_elements()` and find all `<p>` tags. This function selects all elements that meet the provided description.
-
-Save the pipe into a variable called `p_tags` and just write `p_tags` on the next line to see what it is.
+Start a pipe using the function `minimal_html()` and `raw_html2` as its argument
 
 ```{r html7, exercise=TRUE}
-raw_html <- '<html><head><title>Hello World!</title></head><body><p id="p1">This is a paragraph.</p><br><a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">This is an anchor, or hyperlink.</a><br>Below is a table:<table><tr><td class="coolData">row1data1</td><td class="coolData">row1data2</td><td class="uncoolData">row1data3</td><td>row1data4</td></tr><tr><td><p>row2data1</p></td><td class="uncoolData">row2data2</td><td>row2data3</td><td>row2data4</td></tr></table></body></html>'
 
 ```
 
 ```{r html7-hint-1, eval=FALSE}
-p_tags <- ... %>% html_elements(...)
-p_tags
-```
-
-```{r html7-hint-2, eval=FALSE}
-p_tags <- ... %>% html_elements("p")
-p_tags
+minimal_html(...)
 ```
 
 ###
 
-The output should specify that it is a `{xml_nodeset (2)}` and then show the 2 `<p>` tags.
+Now you can search for elements inside the html.
 
 ### Exercise 8
 
-In `p_tags`, select the second object and apply the `html_text()` function to it.
+Copy/paste your code from above and extend it with ` %>% `. Using `html_element()`, find the first `<table>` tag.
 
-Remember that you select an object from a list using `[[index]]`
+Remember that `html_element()` takes the type of tag you want to search for as an argument.
 
-```{r setup-html8, echo=FALSE}
-raw_html <- '<html><head><title>Hello World!</title></head><body><p id="p1">This is a paragraph.</p><br><a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">This is an anchor, or hyperlink.</a><br>Below is a table:<table><tr><td class="coolData">row1data1</td><td class="coolData">row1data2</td><td class="uncoolData">row1data3</td><td>row1data4</td></tr><tr><td><p>row2data1</p></td><td class="uncoolData">row2data2</td><td>row2data3</td><td>row2data4</td></tr></table></body></html>'
-p_tags <- minimal_html(raw_html) %>% html_elements("p")
-```
+So to search for `<table>`, you can use `"table"` as an argument.
 
 ```{r html8, exercise=TRUE}
 
 ```
 
 ```{r html8-hint-1, eval=FALSE}
-html_text(p_tags[[...]])
-
-# or
-
-p_tags[[...]] %>% html_text()
+minimal_html(...) %>% html_element(...)
 ```
 
 ```{r html8-hint-2, eval=FALSE}
-html_text(p_tags[[2]])
-
-# or
-
-p_tags[[2]] %>% html_text()
+minimal_html(...) %>% html_element("table")
 ```
 
 ###
 
-Well done, this is the basic structure of HTML. It is really just tags inside tags inside tags, and now you can navigate through this structure with indexing.
+The output like last time returns an `{html_node}` object that has the `<table>` tag.
+
+The lines after the `<table>` show the elements inside `<table>`.
+
+### Exercise 9
+
+Copy/paste your pipe from above and extend it. Use the function `html_element()` again to search for `<td>` tag inside the `<table>` tag.
+
+```{r html9, exercise=TRUE}
+
+```
+
+```{r html9-hint-1, eval=FALSE}
+minimal_html(...) %>% html_element(...) %>% html_element(...)
+```
+
+```{r html9-hint-2, eval=FALSE}
+minimal_html(...) %>% html_element("table") %>% html_element("td")
+```
+
+###
+
+By extending your pipe from the resulting `<table>` tag, you are limiting your searches and functions to only inside the `<table>` tag. You can see from the results that you have selected the `<td>` tag that is inside the `<table>` tag.
+
+### Exercise 10
+
+Copy/paste your pipe from above and extend it. Use the `html_text2()` function to view the text inside the `<td>` tag.
+
+```{r html10, exercise=TRUE}
+
+```
+
+```{r html10-hint-1, eval=FALSE}
+minimal_html(...) %>% html_element(...) %>% html_element(...) %>% html_text2()
+```
+
+###
+
+Now you can navigate deep into the nested structure of html.
+
+### Exercise 11
+
+Usually there are many elements with the same tag on a webpage, which means selecting only the first element with a tag using `html_element()` will not work.
+
+###
+
+Consider the following html:
+```{.html}
+<html>
+<table>
+  <tr>
+    <td>
+      Hello World
+    </td>
+    <td>
+      foo
+    </td>
+    <td>
+      bar
+    </td>
+  </tr>
+</table>
+</html>
+```
+
+There are 3 separate `<td>` tags. If you want to select the middle `<td>` with `foo` as its text, it will be hard for you to use `html_element()`.
+
+###
+
+You will parse the above html
+
+Assign the provided html to a variable named `raw_html3`
+
+```{r html11, exercise=TRUE}
+"<html>
+<table>
+  <tr>
+    <td>
+      Hello World
+    </td>
+    <td>
+      foo
+    </td>
+    <td>
+      bar
+    </td>
+  </tr>
+</table>
+</html>"
+```
+
+```{r html11-hint-1, eval=FALSE}
+raw_html3 <- "..."
+```
+
+###
+
+You now have access to `raw_html3`
+
+### Exercise 12
+
+Start a pipe using `minimal_html()` and `raw_html3` as its argument.
+
+```{r html12, exercise=TRUE}
+
+```
+
+```{r html12-hint-1, eval=FALSE}
+minimal_html(...)
+```
+
+###
+
+You can now search through `raw_html3` for elements.
+
+### Exercise 13
+
+Copy/paste your code from above and extend it with ` %>% `. You will use the function `html_elements()` (Note that it is `elements`, not `element`) to find all `<td>` tags.
+
+`html_elements()` takes the same argument as `html_element()`. Use the tag type of `<td>`, which is `"td"`.
+
+```{r html13, exercise=TRUE}
+
+```
+
+```{r html13-hint-1, eval=FALSE}
+minimal_html(...) %>% html_elements("...")
+```
+
+```{r html13-hint-2, eval=FALSE}
+minimal_html(...) %>% html_elements("td")
+```
+
+###
+
+`html_elements()` is very similar to `html_element()`, only that it returns all results compared to `html_element()` first result.
+
+The output returns a `{xml_nodeset (3)}` object, which is basically a list, and then lists all the results.
+
+### Exercise 14
+
+Since the result is a list, you can navigate it exactly like how you would with a list.
+
+###
+
+Copy/paste your pipe from above and assign it to a variable called `td_tags`. You will use it in the next exercise.
+
+```{r html14, exercise=TRUE}
+
+```
+
+```{r html14-hint-1, eval=FALSE}
+td_tags <- minimal_html(...) %>% ...
+```
+
+###
+
+You now have `td_tags`, which is essentially a list object.
+
+### Exercise 15
+
+Index `td_tags` and extract the second object using brackets.
+
+```{r html15, exercise=TRUE}
+
+```
+
+```{r html15-hint-1, eval=FALSE}
+td_tags[[...]]
+```
+
+###
+
+Remember to use double brackets to extract an object from a list.
+
+You have selected the second object in `td_tags`, which should print out an `{html_node}` object like you've seen before in earlier exercises.
+
+### Exercise 16
+
+Copy/paste your indexing code and pass it into `html_text2()` as an argument. This will extract the text of the `<td>` tag that you have selected.
+
+```{r html16, exercise=TRUE}
+
+```
+
+```{r html16-hint-1, eval=FALSE}
+html_text(td_tags[[...]])
+```
+
+###
+
+Well done! This is the basic structure of HTML. It is tags inside tags inside tags.
+
+Now you can navigate the nested structure of html, select  tags based on position and tag type, and extract the inner text of tags.
 
 ## CSS Selectors
 
 CSS, or Cascading Style Sheets is a language that defines the style of webpages (colors, boxes, spacing, etc).
 
+```{r, eval=FALSE, echo=TRUE}
+p .class_name {
+color: red
+}
+```
+
 CSS uses different attributes of tags to find which tags should be formatted in which way.
 
 You can utilize this system to find the tags that you want.
 
+###
 ### Exercise 1
 
 A tag's attributes are shown like such:
@@ -400,7 +528,7 @@ The code for the anchor tag is provided below.
 
 Start a pipe with `minimal_html()` and extend it with the function `html_element()`. You have been using `html_element()` to find tags with the type of tag (a, p, table, etc), but you can also select an element with CSS attributes.
 
-Select the anchor tag using its `id` attribute, `"abcd1234"`, and then print the text with `html_text()`.
+Select the anchor tag using its `id` attribute, `"abcd1234"`, and then print the text with `html_text2()`.
 
 You specify that you are filtering by `id` in `html_element()` by using `"#id_name"`.
 
@@ -410,11 +538,11 @@ anchor <- '<a href="link/to/somewhere" id="abcd1234" class="hello hi">link to so
 ```
 
 ```{r css1-hint-1, eval=FALSE}
-... %>% html_element("#...") %>% html_text()
+... %>% html_element("#...") %>% html_text2()
 ```
 
 ```{r css1-hint-2, eval=FALSE}
-... %>% html_element("#abcd1234") %>% html_text()
+... %>% html_element("#abcd1234") %>% html_text2()
 ```
 
 ###
@@ -425,7 +553,7 @@ Since `id` is a unique identifier, every page should only have one tag that uses
 
 Copy/paste your pipe from above. You will edit the inside of the `html_element()` function.
 
-Select the `<a>` tag using its class attribute, `"hello"`, and then print the text with `html_text()`. You specify that you are filtering by `class` in `html_element()` by using `".class_name"`.
+Select the `<a>` tag using its class attribute, `"hello"`, and then print the text with `html_text2()`. You specify that you are filtering by `class` in `html_element()` by using `".class_name"`.
 
 Run the equivalent for `<a>` tag's other class attribute, `"hi"`.
 
@@ -434,15 +562,15 @@ Run the equivalent for `<a>` tag's other class attribute, `"hi"`.
 ```
 
 ```{r css2-hint-1, eval=FALSE}
-... %>% html_element(".class_name") %>% html_text()
+... %>% html_element(".class_name") %>% html_text2()
 ```
 
 ```{r css2-hint-2, eval=FALSE}
-... %>% html_element(".hello") %>% html_text()
+... %>% html_element(".hello") %>% html_text2()
 
 # or
 
-... %>% html_element(".hi") %>% html_text()
+... %>% html_element(".hi") %>% html_text2()
 ```
 
 ###
@@ -482,18 +610,18 @@ Copy/paste your pipe from above. You will edit the inside of `html_element()`.
 
 Select the anchor tag by specifying its tag type and `id`. Do the same except with tag type and one of its `class`. If you want, also try with both `id` and a `class`.
 
-Afterwards, use `html_text()` to print out the text.
+Afterwards, use `html_text2()` to print out the text.
 
 ```{r css3, exercise=TRUE}
 
 ```
 
 ```{r css3-hint-1, eval=FALSE}
-... %>% html_element("a#id_name") %>% html_text()
+... %>% html_element("a#id_name") %>% html_text2()
 
-... %>% html_element("a.class_name") %>% html_text()
+... %>% html_element("a.class_name") %>% html_text2()
 
-... %>% html_element("a#id_name.class_name") %>% html_text()
+... %>% html_element("a#id_name.class_name") %>% html_text2()
 ```
 
 ###
@@ -517,7 +645,7 @@ The `href` attribute can be helpful if you are collecting urls.
 
 ###
 
-Copy/paste your pipe from above and remove `html_text()` from the end.
+Copy/paste your pipe from above and remove `html_text2()` from the end.
 
 You will use the function `html_attr()` instead. This function takes as an argument the name of the attribute that you want to select in quotes.
 
