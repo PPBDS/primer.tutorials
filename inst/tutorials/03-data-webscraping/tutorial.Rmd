@@ -1,0 +1,656 @@
+---
+title: "Data Webscraping"
+tutorial:
+  id: "data-webscraping"
+output: 
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+runtime: shiny_prerendered
+description: "Chapter 3: Data -- Webscraping"
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(primer.tutorials)
+library(tidyverse)
+library(rvest)
+library(png)
+library(grid)
+
+knitr::opts_chunk$set(echo = FALSE)
+options(tutorial.exercise.timelimit = 600, 
+        tutorial.storage = "local") 
+```
+
+
+## Information
+###
+
+```{r information}
+quiz(caption = "",
+  question_text(
+    "Name:",
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL),
+  question_text(
+    "Email:",
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL))
+```
+
+## HTML
+
+HTML, or "HyperText Markup Language" is a markup language that is used to display webpages on browsers. You might have seen html files as a result of knitting Rmd files.
+
+###
+
+### Exercise 1
+
+In this tutorial, you will use the `rvest` package to read the HTML of websites and extract data. First, import the `rvest` package.
+
+You may need to install the `rvest` package in RStudio's console if the code box below outputs an error. If so, use `install.packages("rvest")` in console.
+
+```{r html1, exercise=TRUE}
+
+```
+
+``` {r html1-hint-1, eval=FALSE}
+library(...)
+```
+
+###
+
+`rvest` is part of the `tidyverse` package. https://rvest.tidyverse.org/ is its official website.
+
+### Exercise 2
+
+HTML uses many nested layers of different tags to organize structure.
+
+For example:
+
+An html file like this:
+```{.html}
+<html>
+<p>
+Hello World
+  <a>
+    link to somewhere
+  </a>
+</p>
+
+</html>
+```
+
+creates the following:
+<br><br><br>
+
+<p>
+Hello World
+<a>
+  link to somewhere
+</a>
+</p>
+
+<br><br><br>
+
+Tags are represented like `<...></...>`, similar to parentheses. You will see different kinds of tags and what they can do. This example uses the anchor tag (`<a></a>`) which creates links and the paragraph tag (`<p></p>`).
+
+###
+
+You will be parsing the following html structure:
+```{.html}
+<html>
+  <head>
+    <title>
+      Hello World!
+    </title>
+  </head>
+  <body>
+    <p id="p1">
+    This is a paragraph.
+    </p>
+  <br>
+    <a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">
+    This is an anchor, or hyperlink.
+    </a>
+    <br>Below is a table:
+    <table>
+      <tr>
+        <td class="coolData">row1data1</td>
+        <td class="coolData">row1data2</td>
+        <td class="uncoolData">row1data3</td>
+        <td>row1data4</td>
+      </tr>
+      <tr>
+        <td><p>row2data1</p></td>
+        <td class="uncoolData">row2data2</td>
+        <td>row2data3</td>
+        <td>row2data4</td>
+      </tr>
+    </table>
+  </body>
+</html>
+```
+
+This piece of html code is provided in the variable `raw_html`.
+
+First, load in `raw_html` to understand the html structure using `minimal_html()`. This function takes the raw html text and creates an object to easily access information.
+
+Later, you will read html directly from websites.
+
+
+```{r html2, exercise=TRUE}
+raw_html <- '<html><head><title>Hello World!</title></head><body><p id="p1">This is a paragraph.</p><br><a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">This is an anchor, or hyperlink.</a><br>Below is a table:<table><tr><td class="coolData">row1data1</td><td class="coolData">row1data2</td><td class="uncoolData">row1data3</td><td>row1data4</td></tr><tr><td><p>row2data1</p></td><td class="uncoolData">row2data2</td><td>row2data3</td><td>row2data4</td></tr></table></body></html>'
+
+```
+
+```{r html2-hint-1, eval=FALSE}
+minimal_html(...)
+```
+
+```{r html2-hint-2, eval=FALSE}
+minimal_html(raw_html)
+```
+
+
+###
+
+`rvest` reads html data and constructs a nested list-like object to represent the usual nested structure of html.
+
+### Exercise 3
+
+Copy/paste your code above and extend the pipe with `%>%`. You can view the pure text of an html object with `html_text()`.
+
+```{r html3, exercise=TRUE}
+
+```
+
+```{r html3-hint-1, eval=FALSE}
+... %>% html_text()
+```
+
+###
+
+You can see that the output is a mess. This is because html_text() simply took the inner text of all tags and strung them together. That results in a messy string, which is why you want to select specific parts of data.
+
+### Exercise 4
+
+Copy/paste your code above and remove `html_text()`. Instead, select the paragraph tag `<p>` using `html_element()`. This finds the first tag in the document.
+
+Then use `html_text()` to view the text inside the tag.
+
+```{r html4, exercise=TRUE}
+
+```
+
+```{r html4-hint-1, eval=FALSE}
+minimal_html(...) %>% html_element("p") %>% ...
+```
+
+```{r html4-hint-2, eval=FALSE}
+minimal_html(...) %>% html_element("p") %>% html_text()
+```
+
+###
+
+You should see just "This is a paragraph." printed out. By selecting specific elements, you can find and extract what you need from html pages.
+
+### Exercise 5
+
+Usually, however, there are more than one of the same tag.
+
+Consider `raw_html`:
+```{.html}
+<html>
+  <head>
+    <title>
+      Hello World!
+    </title>
+  </head>
+  <body>
+    <p id="p1">
+    This is a paragraph.
+    </p>
+  <br>
+    <a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">
+    This is an anchor, or hyperlink.
+    </a>
+    <br>Below is a table:
+    <table>
+      <tr>
+        <td class="coolData">row1data1</td>
+        <td class="coolData">row1data2</td>
+        <td class="uncoolData">row1data3</td>
+        <td>row1data4</td>
+      </tr>
+      <tr>
+        <td><p>row2data1</p></td>
+        <td class="uncoolData">row2data2</td>
+        <td>row2data3</td>
+        <td>row2data4</td>
+      </tr>
+    </table>
+  </body>
+</html>
+```
+
+There are 2 `<p>` tags, one underneath the the `<body>` tag, another in the `<table>` tag with the text `row2data1`.
+
+You will walk through different ways to specify which tag to select.
+
+In the next few exercises, you will select `<p>row2data1</p>` from the html `<table>`.
+
+###
+
+`raw_html` is provided below.
+
+Start a new pipe with the same `minimal_html(raw_html)`. Extend the pipe and use the function `html_element()` to find the table tag `<table>`.
+
+```{r html5, exercise=TRUE}
+raw_html <- '<html><head><title>Hello World!</title></head><body><p id="p1">This is a paragraph.</p><br><a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">This is an anchor, or hyperlink.</a><br>Below is a table:<table><tr><td class="coolData">row1data1</td><td class="coolData">row1data2</td><td class="uncoolData">row1data3</td><td>row1data4</td></tr><tr><td><p>row2data1</p></td><td class="uncoolData">row2data2</td><td>row2data3</td><td>row2data4</td></tr></table></body></html>'
+
+```
+
+```{r html5-hint-1, eval=FALSE}
+minimal_html(raw_html) %>% html_element(...)
+```
+
+```{r html5-hint-2, eval=FALSE}
+minimal_html(raw_html) %>% html_element("table")
+```
+
+###
+
+Now you have selected the `<table>` tag. You can see from the output that the `<table>` tag contains other tags like `<tr>` (table row) and `<td>` (table data).
+
+### Exercise 6
+
+In order to access tags inside another tag, you can simply use the `html_element()` function again.
+
+By extending your pipe from the resulting `<table>` tag, you are limiting your searches and functions to only inside the `<table>` tag.
+
+### 
+
+Copy/paste your code from above and extend the pipe. Use `html_element()` and find the first `<p>` tag inside the `<table>` tag.
+
+Then use `html_text()` to check if you selected the correct `<p>` tag
+
+```{r html6, exercise=TRUE}
+
+```
+
+```{r html6-hint-1, eval=FALSE}
+minimal_html(...) %>% 
+  html_element(...) %>%
+  html_element(...) %>%
+  html_text()
+```
+
+```{r html6-hint-2, eval=FALSE}
+minimal_html(...) %>% 
+  html_element("table") %>%
+  html_element("p") %>% 
+  html_text()
+```
+
+The output should be `"row2data1"`
+
+###
+
+This is one way to find specific tags, going in layer-by-layer through the tags.
+
+### Exercise 7
+
+Another way is to find all of a certain element and use list indexing to select your desired element.
+
+###
+
+`raw_html` has been provided below.
+
+Start a new pipe with `minimal_html()` and `raw_html`. Then extend the pipe with `html_elements()` and find all `<p>` tags. This function selects all elements that meet the provided description.
+
+Save the pipe into a variable called `p_tags` and just write `p_tags` on the next line to see what it is.
+
+```{r html7, exercise=TRUE}
+raw_html <- '<html><head><title>Hello World!</title></head><body><p id="p1">This is a paragraph.</p><br><a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">This is an anchor, or hyperlink.</a><br>Below is a table:<table><tr><td class="coolData">row1data1</td><td class="coolData">row1data2</td><td class="uncoolData">row1data3</td><td>row1data4</td></tr><tr><td><p>row2data1</p></td><td class="uncoolData">row2data2</td><td>row2data3</td><td>row2data4</td></tr></table></body></html>'
+
+```
+
+```{r html7-hint-1, eval=FALSE}
+p_tags <- ... %>% html_elements(...)
+p_tags
+```
+
+```{r html7-hint-2, eval=FALSE}
+p_tags <- ... %>% html_elements("p")
+p_tags
+```
+
+###
+
+The output should specify that it is a `{xml_nodeset (2)}` and then show the 2 `<p>` tags.
+
+### Exercise 8
+
+In `p_tags`, select the second object and apply the `html_text()` function to it.
+
+Remember that you select an object from a list using `[[index]]`
+
+```{r setup-html8, echo=FALSE}
+raw_html <- '<html><head><title>Hello World!</title></head><body><p id="p1">This is a paragraph.</p><br><a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">This is an anchor, or hyperlink.</a><br>Below is a table:<table><tr><td class="coolData">row1data1</td><td class="coolData">row1data2</td><td class="uncoolData">row1data3</td><td>row1data4</td></tr><tr><td><p>row2data1</p></td><td class="uncoolData">row2data2</td><td>row2data3</td><td>row2data4</td></tr></table></body></html>'
+p_tags <- minimal_html(raw_html) %>% html_elements("p")
+```
+
+```{r html8, exercise=TRUE}
+
+```
+
+```{r html8-hint-1, eval=FALSE}
+html_text(p_tags[[...]])
+
+# or
+
+p_tags[[...]] %>% html_text()
+```
+
+```{r html8-hint-2, eval=FALSE}
+html_text(p_tags[[2]])
+
+# or
+
+p_tags[[2]] %>% html_text()
+```
+
+###
+
+Well done, this is the basic structure of HTML. It is really just tags inside tags inside tags, and now you can navigate through this structure with indexing.
+
+## CSS Selectors
+
+CSS, or Cascading Style Sheets is a language that defines the style of webpages (colors, boxes, spacing, etc).
+
+CSS uses different attributes of tags to find which tags should be formatted in which way.
+
+You can utilize this system to find the tags that you want.
+
+### Exercise 1
+
+A tag's attributes are shown like such:
+``` {.html}
+
+<a href="link/to/somewhere" id="abcd1234" class="hello hi">
+link to somewhere
+</a>
+
+```
+
+In the above example, the `<a>` anchor tag has 3 different attributes:
+`href` which contains the destination link
+`id` which contains a unique id
+`class` which contains the classes that this tag is a part of.
+
+###
+
+The code for the anchor tag is provided below.
+
+Start a pipe with `minimal_html()` and extend it with the function `html_element()`. You have been using `html_element()` to find tags with the type of tag (a, p, table, etc), but you can also select an element with CSS attributes.
+
+Select the anchor tag using its `id` attribute, `"abcd1234"`, and then print the text with `html_text()`.
+
+You specify that you are filtering by `id` in `html_element()` by using `"#id_name"`.
+
+```{r css1, exercise=TRUE}
+anchor <- '<a href="link/to/somewhere" id="abcd1234" class="hello hi">link to somewhere</a>'
+
+```
+
+```{r css1-hint-1, eval=FALSE}
+... %>% html_element("#...") %>% html_text()
+```
+
+```{r css1-hint-2, eval=FALSE}
+... %>% html_element("#abcd1234") %>% html_text()
+```
+
+###
+
+Since `id` is a unique identifier, every page should only have one tag that uses that `id`, which is helpful to select specific elements.
+
+### Exercise 2
+
+Copy/paste your pipe from above. You will edit the inside of the `html_element()` function.
+
+Select the `<a>` tag using its class attribute, `"hello"`, and then print the text with `html_text()`. You specify that you are filtering by `class` in `html_element()` by using `".class_name"`.
+
+Run the equivalent for `<a>` tag's other class attribute, `"hi"`.
+
+```{r css2, exercise=TRUE}
+
+```
+
+```{r css2-hint-1, eval=FALSE}
+... %>% html_element(".class_name") %>% html_text()
+```
+
+```{r css2-hint-2, eval=FALSE}
+... %>% html_element(".hello") %>% html_text()
+
+# or
+
+... %>% html_element(".hi") %>% html_text()
+```
+
+###
+
+Classes are not unique to one tag, so usually there are multiple tags with the same class.
+
+Therefore, if you want to find an element by class, using `html_elements()` is better because it returns all results.
+
+### Exercise 3
+
+You can also filter by id, class, and type of tag at the same time by chaining them together.
+
+Consider the following lines:
+```{r, eval=FALSE, echo=TRUE}
+
+
+minimal_html(some_html) %>% html_element("p#id_name")
+
+minimal_html(some_html) %>% html_element("p.class_name")
+
+minimal_html(some_html) %>% html_element("p#id_name.class_name")
+
+
+```
+
+The codes achieve the following effects:
+
+Line 1: selects the first `<p>` tag with `"id_name"` as its `id`
+
+Line 2: selects the first `<p>` tag with `"class_name"` as one of its `class`
+
+Line 3: selects the first `<p>` tag with both `"id_name"` as its `id` AND `"class_name"` as one of its `class`
+
+###
+
+Copy/paste your pipe from above. You will edit the inside of `html_element()`.
+
+Select the anchor tag by specifying its tag type and `id`. Do the same except with tag type and one of its `class`. If you want, also try with both `id` and a `class`.
+
+Afterwards, use `html_text()` to print out the text.
+
+```{r css3, exercise=TRUE}
+
+```
+
+```{r css3-hint-1, eval=FALSE}
+... %>% html_element("a#id_name") %>% html_text()
+
+... %>% html_element("a.class_name") %>% html_text()
+
+... %>% html_element("a#id_name.class_name") %>% html_text()
+```
+
+###
+
+The more specific your query is, the more precise it is with selecting your desired element.
+
+### Exercise 4
+
+Up until now, you have been extracting only the inner text of tags. However, there are times when the data you want is in the tag's attribute.
+
+Consider again the following tag:
+``` {.html}
+
+<a href="link/to/somewhere" id="abcd1234" class="hello hi">
+link to somewhere
+</a>
+
+```
+
+The `href` attribute can be helpful if you are collecting urls.
+
+###
+
+Copy/paste your pipe from above and remove `html_text()` from the end.
+
+You will use the function `html_attr()` instead. This function takes as an argument the name of the attribute that you want to select in quotes.
+
+```{r css4, exercise=TRUE}
+
+```
+
+```{r css4-hint-1, eval=FALSE}
+... %>% ... %>% html_attr("...")
+```
+
+```{r css4-hint-2, eval=FALSE}
+... %>% ... %>% html_attr("href")
+```
+
+###
+
+Now you can also extract data from the attributes of tags. You can try `"class"` or `"id"` since both are also attributes.
+
+### Exercise 5
+
+Consider again `raw_html`:
+```{.html}
+<html>
+  <head>
+    <title>
+      Hello World!
+    </title>
+  </head>
+  <body>
+    <p id="p1">
+    This is a paragraph.
+    </p>
+  <br>
+    <a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">
+    This is an anchor, or hyperlink.
+    </a>
+    <br>Below is a table:
+    <table id="tableOfStuff">
+      <tr>
+        <td class="coolData">row1data1</td>
+        <td class="coolData">row1data2</td>
+        <td class="uncoolData">row1data3</td>
+        <td>row1data4</td>
+      </tr>
+      <tr>
+        <td><p>row2data1</p></td>
+        <td class="uncoolData">row2data2</td>
+        <td>row2data3</td>
+        <td>row2data4</td>
+      </tr>
+    </table>
+  </body>
+</html>
+```
+
+To practice, let's say you want to find the `href` of the `<a>` tag using its `id` attribute
+
+###
+
+`raw_html` is provided below.
+
+Start a new pipe using `minimal_html()`. Print out the `href` of the `<a>` tag using the functions we learned.
+
+```{r css5, exercise=TRUE}
+raw_html <- '<html><head><title>Hello World!</title></head><body><p id="p1">This is a paragraph.</p><br><a id="someKindOfLink" href="https://www.rdocumentation.org/packages/rvest/versions/0.3.6">This is an anchor, or hyperlink.</a><br>Below is a table:<table><tr><td class="coolData">row1data1</td><td class="coolData">row1data2</td><td class="uncoolData">row1data3</td><td>row1data4</td></tr><tr><td><p>row2data1</p></td><td class="uncoolData">row2data2</td><td>row2data3</td><td>row2data4</td></tr></table></body></html>'
+
+```
+
+```{r css5-hint-1, eval=FALSE}
+... %>% html_element("...") %>% html_attr("...")
+```
+
+###
+
+Though there is only one `<a>` tag in this case, it is best to specify with `class` and/or `id` attributes which tag you are selecting because the html of larger websites are very complicated and layered.
+
+### Exercise 6
+
+
+
+
+
+
+
+
+
+
+<!-- This should be a 60 to 90 minutes worth of exercises devoted to webscraping, with a big focus on the rvest package. Also need to teach some CSS and Selector Gadget. Resources: -->
+
+<!-- If students would just read this paper closely and try out the associated commands -->
+
+<!-- https://github.com/mdogucu/web-scrape -->
+
+<!-- then a tutorial would not be necessary. But they won't! And, even if most of them would, teachers still need a way of knowing that they did. Hence, tutorials. Can we write something that, in essence, forces students to type out everything in that article and understand what it is doing? That is the goal! -->
+
+<!-- https://github.com/rstudio-education/dsbox/tree/master/inst/tutorials/05-moneyinpolitics -->
+<!-- https://minecr.shinyapps.io/dsbox-05-moneyinpolitics/ -->
+
+
+<!-- There is no need to reinvest the wheel. All this code is CC0, so we can just copy/paste it, including the links to images which appear on the web. But how do we ensure that students do things? What questions do we ask? -->
+
+<!-- https://rvest.tidyverse.org/ -->
+<!-- https://github.com/tidyverse/rvest/blob/master/vignettes/rvest.Rmd -->
+<!-- https://github.com/tidyverse/rvest/blob/master/vignettes/articles/selectorgadget.Rmd -->
+
+<!-- Maybe the tutorial starts the same way as this chapter, with a concrete example of what we are trying to do. Note that we just used this prose in our chapter. Again, it is all CC0. -->
+
+<!-- https://rafalab.github.io/dsbook/web-scraping.html -->
+
+<!-- Reminders: -->
+
+<!-- 1) You can put a raw html (or any other kind of file) in inst/www and then be certain is available on Github. You may want to submit a PR which does that, and then, when I accept it, you can write code which accesses it directly. Example url: -->
+
+<!-- https://raw.githubusercontent.com/PPBDS/primer.tutorials/master/inst/www/delim_1.txt -->
+
+<!-- 2) This tutorial is just about raw webscraping, not about working with APIs or JSON. Other tutorials handle that. -->
+
+<!-- 3) Key structure is to, first, begin with sections which highlights the key issues and key commands. Then, have 5 or so concrete examples, each of which works with an html file which we have a permanent copy of. (But how do we show how that file looks in a browser? I am confused about that.) Nothing wrong with all the examples being from Wikipedia and referencing specific versions, even if they are old. -->
+
+<!-- 4) Plan is to write this tutorial and then, afterwards, update the Chapter to be consistent with it. -->
+
+<!-- 5) Use html_text2(). Background: https://www.tidyverse.org/blog/2021/03/rvest-1-0-0/ -->
+
+
+ 
+
+## Submit
+
+```{r context = "setup"}
+submission_ui
+```
+
+```{r context = "server"}
+submission_server()
+```
