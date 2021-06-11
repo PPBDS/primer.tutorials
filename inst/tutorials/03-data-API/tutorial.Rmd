@@ -17,6 +17,7 @@ library(tidyverse)
 library(httr)
 library(countrycode)
 library(imfr)
+library(jsonlite)
 library(rbison)
 library(WDI)
 library(plotly)
@@ -45,6 +46,15 @@ iso_codes <- codelist %>%
   select(iso2c, country.name.en)
 
 imf_data_named <- left_join(imf_data, iso_codes, by = "iso2c")
+
+### Bison objects
+
+output <- bison(species = "Accipiter", type = "scientific_name", count = 500)
+
+bison_plot <- bisonmap(input = output, geom = geom_jitter)
+
+base_response <- GET(url = "https://bison.usgs.gov/doc/api.jsp",
+    query = list(species = "Accipiter", type = "scientific_name", count = 500))
 ```
 
 
@@ -835,7 +845,7 @@ The **imfr** package provides helper functions for access to the API for the Int
 
 ### Exercise 1
 
-Load the `imfr` pacakge. 
+Load the `imfr` package. 
 
 ```{r imfr-1, exercise = TRUE}
 
@@ -854,8 +864,10 @@ Let's learn more about the `imfr` package. In your console, run `help(package = 
 ```
 
 ```{r imfr-2-hint, eval = FALSE}
-help(pacakge = "imfr")
+help(package = "imfr")
 ```
+
+###
 
 We see that `imf_data` requires two arguments. A `database_id` which can be found with the function `imf_ids` and a string or vector of indicator IDs which can be found in the function `imf_codes`. 
 
@@ -1136,6 +1148,229 @@ Reminder: Your graph should look like this
 imf_plot
 ```
 
+## Bison Data with Package
+###
+
+Let's make the following plot with data from the USGS Bison API and the `rbison` package.
+
+```{r show-bison-plot}
+bison_plot <- bisonmap(input = output, geom = geom_jitter)
+```
+
+###
+
+The **rbison** package provides helper functions for access to the API for the USGS Bison API You can learn more about the package [here](https://github.com/ropensci/rbison.)
+
+### Exercise 1
+
+Load the `rbison` package. 
+
+```{r rbison-1, exercise = TRUE}
+
+```
+
+```{r rbison-1-hint, eval = FALSE}
+library(rbsion)
+```
+
+### Exercise 2
+
+Let's learn more about the `rbison` package. In your console, run `help(package = "rbison")`. Click and read about the function `bison`, the function used to download data in this package. Also click and read about the function `bisonmap`
+
+```{r rbsion-2, exercise = TRUE}
+
+```
+
+```{r rbison-2-hint, eval = FALSE}
+help(pacakge = "rbison")
+```
+
+###
+
+`bison` has lots of arguments, but has examples in which it specifies very few. 
+
+### Exercise 3
+
+Run `rbison`. Set the argument `species` equal to "Accipiter" and set `type` to "scientific_name". Set count to `500`. Save the output to a file named 
+`output`.
+
+```{r rbison-3, exercise = TRUE}
+
+```
+
+```{r rbison-3-hint, eval = FALSE}
+output <- bison(species = "Accipiter", type = "...", count = ...)
+```
+
+###
+
+`output` seems to be a complex ob ject
+
+### Exercise 4
+
+An easier way to view the structure of a complex object like `output` is to use the function `str()`. 
+
+```{r rbison-4, exercise = TRUE}
+
+```
+
+```{r rbison-4-hint, eval = FALSE}
+str(output)
+```
+
+###
+
+`output` seems to be an object containing lists and data frames. 
+
+### Exercise 5
+
+Run `class(output)`. 
+
+```{r rbison-5, exercise = TRUE}
+
+
+```
+
+
+```{r rbison-5-hint, eval = FALSE}
+class(output)
+```
+
+###
+
+This object is of class "bison", which we can assume is an object class custom for the `rbison` package. 
+
+### Exercise 6
+
+Run `output$counties`, according to structure, this should return a data.frame with the columns `record_id`, `total`, `county_name`, and `state`.
+
+```{r rbison-6, exercise = TRUE}
+
+
+```
+
+```{r rbison-6-hint, eval = FALSE}
+output$counties
+```
+
+### Exercise 7
+
+The `rbison` package comes with a function that helps make a `ggplot()` map with bison data. Set the argument `input` to `output` and set the argument `geom` to `geom_jitter`. 
+
+```{r rbison-7, exercise = TRUE}
+
+```
+
+```{r rbison-7-hint, eval = FALSE}
+bisonmap(input = ..., geom = ...)
+```
+
+Reminder: This is what your plot should look like
+
+```{r}
+bison_plot <- bisonmap(input = output, geom = geom_jitter)
+```
+
+### Exercise 8
+
+Copy and paste your code. Try to use labs to add a title to this `ggplot()` object. 
+
+```{r rbison-8, exercise = TRUE}
+
+```
+
+```{r rbison-8-hint, eval = FALSE}
+bisonmap(input = output, geom = geom_jitter) +
+  labs(title = "...")
+```
+
+## Bison Data with GET()
+###
+
+Let's make the following plot. 
+
+```{r show-bison-plot-dirty}
+response <- GET(url = "https://bison.usgs.gov/api/search.json",
+    query = list(species = "Accipiter", type = "scientific_name", count = 500))
+
+output_text <- content(response, "text")
+
+new_output <- fromJSON(output_text)
+
+clean_bison <- new_output$states$data %>% 
+  as_tibble() %>% 
+  unnest(cols = c(Oregon, `North Carolina`, Vermont, Wyoming, Maine, Oklahoma, 
+    Tennessee, `British Columbia Canada`, Arkansas, Washington, 
+    Utah, `South Carolina`, Nebraska, `Ontario Canada`, Massachusetts, 
+    Colorado, Missouri, `Quebec Canada`, `Alberta Canada`, `North Dakota`, 
+    Arizona, Wisconsin, Nevada, `New York`, Montana, Kentucky, 
+    Hawaii, Minnesota, California, Kansas, Florida, Delaware, 
+    `New Jersey`, Pennsylvania, Michigan, `New Mexico`, Texas, 
+    Illinois, Connecticut, `New Hampshire`, Ohio, Georgia, Maryland, 
+    Virginia, Idaho)) %>% 
+  mutate(names = c("total", "fips")) %>% 
+  pivot_longer(cols = -names, 
+               names_to = "state", 
+               values_to = "values") %>% 
+  pivot_wider(names_from = names, 
+              values_from = values) %>% 
+  mutate(total = as.numeric(total)) %>% 
+  mutate(region = tolower(state)) %>% 
+  select(-fips)
+
+states <- map_data("state") %>% 
+  left_join(clean_bison, by = "region")
+
+states %>% 
+  ggplot(aes(long, lat, group = group, fill = total)) +
+  geom_polygon() +
+  scale_fill_gradient(low = "blue", high = "red", na.value = "grey50") +
+  labs(title = "Accipiter Bison in the Contiguous United States", 
+       subtitle = "Alaska has 1, Hawaii 0", 
+       x = "Latitude", 
+       y = "Longitude", 
+       caption = "USGS Bison API")
+```
+
+### Exercise 1
+
+Use `GET()` to make contact with the base url for the USGS Bison API: "https://bison.usgs.gov/doc/api.jsp. View this output and assign it to an object named `base_response`
+
+```{r bison-1, exercise = TRUE}
+
+```
+
+```{r bison-1-hint, eval = FALSE}
+GET(url = "https://bison.usgs.gov/doc/api.jsp")
+```
+
+### 
+
+We get back a response, of 69kB and of type html. 
+
+### Exercise 2 
+
+Use the function `class()` for the object `base_response`.
+
+```{r bison-2, exercise = TRUE}
+
+```
+
+```{r bison-2-hint, eval = FALSE}
+class(response)
+```
+
+### Exercise 3
+
+Use the function `content()` to view the content of `base_response`.
+
+```{r bison-3, exercise = TRUE}
+
+```
+
+```{r bison-3-hint, eval = FALSE}
+content(base_response)
+```
 
 ## Submit
 
