@@ -1085,12 +1085,28 @@ Now you saved the Wikipedia data into a variable, so you do not have to repeated
 
 Let's create the following plot:
 ```{r make-wiki_graph, echo=FALSE}
-wiki_graph <- raw_data %>% rename(population='Population (total inhabitants) (2015) [1]', total_deaths=`Murders and Nonnegligent\nManslaughter(total deaths) (2015) [2]`,death_rate=`Murder and Nonnegligent\nManslaughter Rate(per 100,000 inhabitants) (2015)`) %>% mutate(population=as.integer(gsub(",", "", population))) %>% select(population, death_rate) %>% mutate(tile_num=ntile(population, 20)) %>% group_by(tile_num) %>% summarize(sum_rate=sum(death_rate), total_states=n()) %>% mutate(avg_rate=sum_rate/total_states) %>% mutate(percent_rate=avg_rate/sum(avg_rate)) %>% ggplot(aes(x=tile_num, y=percent_rate)) + geom_col() + geom_smooth(method="loess", formula=y~x, se=FALSE) + scale_x_continuous(breaks=1:20) + scale_y_continuous(labels=scales::percent_format(accuracy=1)) +
+wiki_graph <- raw_data %>% rename(
+  population='Population (total inhabitants) (2015) [1]',
+  total_deaths=`Murders and Nonnegligent\nManslaughter(total deaths) (2015) [2]`,
+  death_rate=`Murder and Nonnegligent\nManslaughter Rate(per 100,000 inhabitants) (2015)`) %>%
+  select(population, death_rate) %>%
+  mutate(population=as.integer(gsub(",", "", population))) %>%
+  mutate(tile_num=ntile(population, 20)) %>%
+  group_by(tile_num) %>%
+  summarize(sum_rate=sum(death_rate), total_states=n()) %>%
+  mutate(avg_rate=sum_rate/total_states) %>%
+  mutate(percent_rate=avg_rate/sum(avg_rate)) %>%
+  ggplot(aes(x=tile_num, y=percent_rate)) + 
+  geom_col() + 
+  geom_smooth(method="loess", formula=y~x, se=FALSE) +
+  scale_x_continuous(breaks=1:20) +
+  scale_y_continuous(
+    labels=scales::percent_format(accuracy=1)) +
   theme_classic() + 
-  labs(title="Distribution of US Death Rate by Quantile of Population in 2015",
-       subtitle="Death Rate of less populated states fluctuate more than states with a denser population",
+  labs(title="Distribution of US Death Rate\nbyQuantile of Population in 2015",
+       subtitle="Death rate of less populated states fluctuate more than states with a denser population",
        x="Quantile by Population (least to most)",
-       y="Percent of Death Rate",
+       y="Percent of Average Death Rate in Quantile",
        caption="Wikipedia: Gun Violence in the Uniter States (2017)")
 
 wiki_graph
@@ -1141,6 +1157,145 @@ raw_data %>% rename(population=`Population (total inhabitants) (2015) [1]`, tota
 ```
 
 ###
+
+Now it is easier for you to refer to the columns.
+
+### Exercise 9
+
+Copy/paste your pipe and extend it. Use the function `select()` to select only the columns you need, which are `population` and `death_rate`.
+
+```{r wiki9, exercise=TRUE}
+
+```
+
+```{r wiki9-hint-1, eval=FALSE}
+... %>% select(...)
+```
+
+###
+
+The only column that is unclean now is `population`.
+
+### Exercise 10
+
+Copy/paste your pipe and extend it.
+
+Remove all the commas in `population` using `gsub()`, which is just `sub()` except it replaces all matches instead of the first.
+
+Then use `mutate()` to store the results in the same column.
+
+`gsub()` takes a `pattern` to match, string to `replace` the patterns with, and the values to be changed.
+
+```{r wiki10, exercise=TRUE}
+
+```
+
+```{r wiki10-hint-1, eval=FALSE}
+... %>% mutate(population=gsub(...))
+```
+
+```{r wiki10-hint-2, eval=FALSE}
+... %>% mutate(population=gsub(",", "", population))
+```
+
+###
+
+As you can see from the result, the population column no longer has commas in it.
+
+### Exercise 11
+
+Now you can change the `population` column's type from character to integer.
+
+###
+
+Copy/paste your pipe from above and extend it. Use the `as.integer()` function to change `population` to an integer column.
+
+Then use `mutate()` to store the results in the same column.
+
+```{r wiki11, exercise=TRUE}
+
+```
+
+```{r wiki11-hint-1, eval=FALSE}
+... %>% mutate(population=as.integer(...))
+```
+
+```{r wiki11-hint-2, eval=FALSE}
+... %>% mutate(population=as.integer(population))
+```
+
+###
+
+As you can see from the output, right below the column name, `population` is now a `<int>`, or integer column.
+
+### Exercise 12
+
+Now you can begin dividing the data into quantiles.
+
+###
+
+Copy/paste your pipe from above and extend it. Use the `ntile()` function to split `population` into 20 quantiles.
+
+Then use `mutate()` to store the results in a new column called `pop_tile`.
+
+Remember that `ntile()` takes as arguments the data that it is splitting and the number of groups to split into.
+
+```{r wiki12, exercise=TRUE}
+
+```
+
+```{r wiki12-hint-1, eval=FALSE}
+... %>% mutate(pop_tile=ntile(...))
+```
+
+```{r wiki12-hint-2, eval=FALSE}
+... %>% mutate(pop_tile=ntile(population, 20))
+```
+
+###
+
+You can see the new column in the output, `pop_tile`, which has values between 1 and 20. This refers to which quantile that row is in.
+
+### Exercise 13
+
+Copy/paste your pipe from above and extend it. Group your data by `pop_tile`.
+
+```{r wiki13, exercise=TRUE}
+
+```
+
+```{r wiki13-hint-1, eval=FALSE}
+.. %>% group_by(...)
+```
+
+###
+
+The output may look like a normal table, but the grouping has already been done.
+
+### Exercise 14
+
+Copy/paste your pipe from above and extend it. Summarize your data with 2 columns:
+Number of States in quantile as `num_states`
+Sum of death rate in quantile as `sum_rate`
+
+```{r wiki14, exercise=TRUE}
+
+```
+
+```{r wiki14-hint-1, eval=FALSE}
+... %>% summarize(...)
+```
+
+```{r wiki14-hint-2, eval=FALSE}
+... %>% summarize(num_states=n(), sum_rate=sum(...))
+```
+
+###
+
+The resulting tibble is your summarized data.
+
+### Exercise 15
+
 
 
 1. rename columns to state, population, total_deaths, death_rate
