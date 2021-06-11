@@ -1083,15 +1083,390 @@ Now you saved the Wikipedia data into a variable, so you do not have to repeated
 
 ### Exercise 7
 
-Note to self: Add the below materials into optional section.
+Let's create the following plot:
+```{r make-wiki_graph, echo=FALSE}
+clean_data <- raw_data %>% rename(
+  population='Population (total inhabitants) (2015) [1]',
+  total_deaths=`Murders and Nonnegligent\nManslaughter(total deaths) (2015) [2]`,
+  death_rate=`Murder and Nonnegligent\nManslaughter Rate(per 100,000 inhabitants) (2015)`) %>%
+  select(population, death_rate) %>%
+  mutate(population=as.integer(gsub(",", "", population))) %>%
+  mutate(pop_tile=ntile(population, 20)) %>%
+  group_by(pop_tile) %>%
+  summarize(sum_rate=sum(death_rate), num_states=n()) %>%
+  mutate(avg_rate=sum_rate/num_states) %>%
+  mutate(percent_rate=avg_rate/sum(avg_rate))
+wiki_graph <- clean_data %>%
+  ggplot(aes(x=pop_tile, y=percent_rate)) + 
+  geom_col() + 
+  geom_smooth(method="loess", formula=y~x, se=FALSE) +
+  scale_x_continuous(breaks=1:20) +
+  scale_y_continuous(
+    labels=scales::percent_format(accuracy=1)) +
+  theme_classic() + 
+  labs(title="Distribution of US Death Rate by Guns in Quantile of Population in 2015",
+       subtitle="Death rate of less populated states fluctuate more than states with a denser population",
+       x="Quantile by Population (least to most)",
+       y="Percent of Average Death Rate",
+       caption="Wikipedia: Gun Violence in the United States (2017)")
 
-<!-- Chrome: https://developer.chrome.com/docs/devtools/open/ -->
-
-<!-- Firefox: https://developer.mozilla.org/en-US/docs/Tools/Page_Inspector/How_to/Open_the_Inspector -->
-
-<!-- Safari:https://stackoverflow.com/questions/40234993/how-to-inspect-element-using-safari-browser -->
+wiki_graph
+```
 
 ###
+
+Run `glimpse()` on `raw_data` to understand the structure of the data.
+
+```{r wiki7, exercise=TRUE}
+
+```
+
+```{r wiki7-hint-1, eval=FALSE}
+glimpse(...)
+```
+
+###
+
+`Population (total inhabitants) (2015) [1]` and `Murders and Nonnegligent\nManslaughter(total deaths) (2015) [2]` should be integer columns but are character columns because of the commas in the numbers.
+
+More often than not, data that's web-scraped are unclean. Therefore, before doing any plotting, you must clean the data.
+
+### Exercise 8
+
+Start a pipe with `raw_data`.
+
+First, let's rename the columns to make referencing them easier.
+
+Using the `rename()` function, rename all the columns as such: <br><br>
+`"Population (total inhabitants) (2015) [1]"` to `population`<br><br>
+`"Murders and Nonnegligent\nManslaughter(total deaths) (2015) [2]"` to `total_deaths`<br><br>
+`"Murder and Nonnegligent\nManslaughter Rate(per 100,000 inhabitants) (2015)"` to `death_rate`<br><br>
+
+Remember that `rename()` is similar to `mutate()` in the way it is used:<br>
+`rename(new_column_name=old_column_name, new_col2=old_col2, ...)`
+
+```{r wiki8, exercise=TRUE}
+
+```
+
+```{r wiki8-hint-1, eval=FALSE}
+raw_data %>% rename(...=..., ...=...)
+```
+
+```{r wiki8-hint-2, eval=FALSE}
+raw_data %>% rename(population=`Population (total inhabitants) (2015) [1]`, total_deaths=...)
+```
+
+###
+
+Now it is easier for you to refer to the columns.
+
+### Exercise 9
+
+Copy/paste your pipe and extend it. Use the function `select()` to select only the columns you need, which are `population` and `death_rate`.
+
+```{r wiki9, exercise=TRUE}
+
+```
+
+```{r wiki9-hint-1, eval=FALSE}
+... %>% select(...)
+```
+
+###
+
+The only column that is unclean now is `population`.
+
+### Exercise 10
+
+Copy/paste your pipe and extend it.
+
+Remove all the commas in `population` using `gsub()`, which is just `sub()` except it replaces all matches instead of the first.
+
+Then use `mutate()` to store the results in the same column.
+
+`gsub()` takes a `pattern` to match, string to `replace` the patterns with, and the values to be changed.
+
+```{r wiki10, exercise=TRUE}
+
+```
+
+```{r wiki10-hint-1, eval=FALSE}
+... %>% mutate(population=gsub(...))
+```
+
+```{r wiki10-hint-2, eval=FALSE}
+... %>% mutate(population=gsub(",", "", population))
+```
+
+###
+
+As you can see from the result, the population column no longer has commas in it.
+
+### Exercise 11
+
+Now you can change the `population` column's type from character to integer.
+
+###
+
+Copy/paste your pipe from above and extend it. Use the `as.integer()` function to change `population` to an integer column.
+
+Then use `mutate()` to store the results in the same column.
+
+```{r wiki11, exercise=TRUE}
+
+```
+
+```{r wiki11-hint-1, eval=FALSE}
+... %>% mutate(population=as.integer(...))
+```
+
+```{r wiki11-hint-2, eval=FALSE}
+... %>% mutate(population=as.integer(population))
+```
+
+###
+
+As you can see from the output, right below the column name, `population` is now a `<int>`, or integer column.
+
+### Exercise 12
+
+Now you can begin dividing the data into quantiles.
+
+###
+
+Copy/paste your pipe from above and extend it. Use the `ntile()` function to split `population` into 20 quantiles.
+
+Then use `mutate()` to store the results in a new column called `pop_tile`.
+
+Remember that `ntile()` takes as arguments the data that it is splitting and the number of groups to split into.
+
+```{r wiki12, exercise=TRUE}
+
+```
+
+```{r wiki12-hint-1, eval=FALSE}
+... %>% mutate(pop_tile=ntile(...))
+```
+
+```{r wiki12-hint-2, eval=FALSE}
+... %>% mutate(pop_tile=ntile(population, 20))
+```
+
+###
+
+You can see the new column in the output, `pop_tile`, which has values between 1 and 20. This refers to which quantile that row is in.
+
+### Exercise 13
+
+Copy/paste your pipe from above and extend it. Group your data by `pop_tile`.
+
+```{r wiki13, exercise=TRUE}
+
+```
+
+```{r wiki13-hint-1, eval=FALSE}
+.. %>% group_by(...)
+```
+
+###
+
+The output may look like a normal table, but the grouping has already been done.
+
+### Exercise 14
+
+Copy/paste your pipe from above and extend it. Summarize your data with 2 columns:
+Number of States in quantile as `num_states`
+Sum of death rate in quantile as `sum_rate`
+
+```{r wiki14, exercise=TRUE}
+
+```
+
+```{r wiki14-hint-1, eval=FALSE}
+... %>% summarize(...)
+```
+
+```{r wiki14-hint-2, eval=FALSE}
+... %>% summarize(num_states=n(), sum_rate=sum(...))
+```
+
+###
+
+The resulting tibble is your summarized data. You can see from the `num_states` column that some of the quantiles have more states than others.
+
+### Exercise 15
+
+In order to counter the imbalanced number of states, you will average the `sum_rate` of each quantile.
+
+###
+
+Copy/paste your pipe from above and extend it. Create a new column using `mutate()` called `avg_rate`, which is the average rate in quantile per state.
+
+```{r wiki15, exercise=TRUE}
+
+```
+
+```{r wiki15-hint-1, eval=FALSE}
+... %>% mutate(avg_rate=...)
+```
+
+```{r wiki15-hint-2, eval=FALSE}
+... %>% mutate(avg_rate=sum_rate/num_states)
+```
+
+###
+
+Now you can see the new column called `avg_rate`.
+
+### Exercise 16
+
+Now let's calculate the percentage of each quantile's average rate over all quantiles' average rates. 
+
+###
+
+Copy/paste your pipe from above and extend it. Create a new column using `mutate()` called `percent_rate`, which is the percentage of each quantile's average rate over the sum of all quantiles'.
+
+```{r wiki16, exercise=TRUE}
+
+```
+
+```{r wiki16-hint-1, eval=FALSE}
+... %>% mutate(percent_rate=.../sum(...))
+```
+
+```{r wiki16-hint-2, eval=FALSE}
+... %>% mutate(percent_rate=avg_rate/sum(avg_rate))
+```
+
+###
+
+Now you finally have everything you need for plotting!
+
+### Exercise 17
+
+Copy/paste your pipe from above and assign it to a variabled named `clean_data`.
+
+```{r wiki17, exercise=TRUE}
+
+```
+
+###
+
+Now you have access to `clean_data`.
+
+### Exercise 18
+
+Start a plot with `ggplot()`. Use `clean_data` as data and map `pop_tile` to the x-axis and `percent_rate` to the y-axis. Add a `geom_col()` to create a bar graph.
+
+```{r wiki18, exercise=TRUE}
+
+```
+
+```{r wiki18-hint-1, eval=FALSE}
+ggplot(data=..., mapping=aes(...)) + geom_col()
+```
+
+###
+
+You can now see the distribution.
+
+### Exercise 19
+
+Copy/paste you code from above and add another layer with `geom_smooth()`. Use `"loess"` as its method, `y~x` as its formula, and set `se` to `FALSE`. This adds a kind of trend line that visualizes the data better.
+
+```{r wiki19, exercise=TRUE}
+
+```
+
+```{r wiki19-hint-1, eval=FALSE}
+... + geom_smooth(method=..., formula=..., se=...)
+```
+
+###
+
+The data visualization itself is basically done, but you'll notice that the x-axis isn't chunked properly and the y-axis should be in percentage.
+
+### Exercise 20
+
+Copy/paste your code from above and add another layer using the function `scale_x_continuous()`. Assign to its `breaks` argument `1:20` to break the x-axis into 1 through 20.
+
+```{r wiki20, exercise=TRUE}
+
+```
+
+```{r wiki20-hint-1, eval=FALSE}
+... %>% scale_x_continuous(breaks=...)
+```
+
+```{r wiki20-hint-2, eval=FALSE}
+... %>% scale_x_continuous(breaks=1:20)
+```
+
+###
+
+Now the x-axis makes sense.
+
+### Exercise 21
+
+Next let's format the y-axis into percentages.
+
+###
+
+Copy/paste your code from above and add another layer with `scale_y_continuous()`. Assign to its `labels` argument `scales::percent_format(accuracy=1)`, which changes the y-axis into percentage format.
+
+```{r wiki21, exercise=TRUE}
+
+```
+
+```{r wiki21-hint-1, eval=FALSE}
+... %>% scale_y_continuous(labels=...)
+```
+
+```{r wiki21-hint-2, eval=FALSE}
+... %>% scale_y_continuous(labels=scales::percent_format(accuracy=1))
+```
+
+###
+
+Now both the axes are labeled accordingly.
+
+### Exercise 22
+
+Copy/paste your code from above and add a `theme_classic()` layer to the plot. Then add the appropriate labels with `labs()`.
+
+```{r wiki22, exercise=TRUE}
+
+```
+
+```{r wiki22-hint-1, eval=FALSE}
+... %>% labs(title="...",
+             subtitle="...",
+             x="...",
+             y="...",
+             caption="...")
+```
+
+Reminder: this is how your plot should look like.
+```{r show-wiki_graph, echo=FALSE}
+wiki_graph
+```
+
+###
+
+Well done!
+
+### (Optional) Exercise 23
+
+A part of web-scraping that is not covered here is actually finding the element you want to scrape from the website's html.
+
+If you'd like to, you can read how to access a website's html and identify the location of elements below:
+
+<a href="https://developer.chrome.com/docs/devtools/open/">Chrome</a>
+
+<a href="https://developer.mozilla.org/en-US/docs/Tools/Page_Inspector/How_to/Open_the_Inspector">Firefox</a>
+
+<a href="https://stackoverflow.com/questions/40234993/how-to-inspect-element-using-safari-browser">Safari</a>
 
 
 
