@@ -1468,13 +1468,318 @@ If you'd like to, you can read how to access a website's html and identify the l
 
 <a href="https://stackoverflow.com/questions/40234993/how-to-inspect-element-using-safari-browser">Safari</a>
 
+## Open Secrets Table
+
+###
+
+```{r setup-open-section, echo=FALSE}
+web_url <- "https://www.opensecrets.org/political-action-committees-pacs/foreign-connected-pacs/2020"
+
+raw_data <- read_html(web_url) %>% 
+  html_element("table.DataTable-Partial") %>% 
+  html_table()
 
 
+```
 
-<!-- use: https://en.wikipedia.org/w/index.php?title=%22,%22Gun_violence_in_the_United_States_by_state%22,%22&direction=prev&oldid=810166167 -->
+For more practice, you will be scraping data from opensecrets.org. The data is about the amount and sources of money donated to Democratic and Republican parties in 2020.
+
+<a href="https://www.opensecrets.org/political-action-committees-pacs/foreign-connected-pacs/2020">Link to page</a>
+
+Check out the page. You will be reading the table underneath the map.
+
+### Exercise 1
+
+Assign the url provided below to a variable named `web_url`.
+
+```{r open1, exercise=TRUE}
+"https://www.opensecrets.org/political-action-committees-pacs/foreign-connected-pacs/2020"
+
+```
+
+```{r open1-hint-1, eval=FALSE}
+web_url <- "..."
+```
+
+###
+
+Now you have access to the variable `web_url`.
+
+### Exercise 2
+
+Use the function `read_html()` and `web_url` as argument to read the html of the webpage.
+
+```{r open2, exercise=TRUE}
+
+```
+
+```{r open2-hint-1, eval=FALSE}
+read_html(...)
+```
+
+###
+
+You now loaded the html of the webpage into R, similar to how you did with `minimal_html()` in earlier sections.
+
+You can begin to select elements in the page.
+
+### Exercise 3
+
+The following html shows the `table` tag's attributes:
+```{.html}
+<table class="DataTable-Partial dataTable no-footer" data-title="Foreign Connected PACs, 2019-2020" data-paging="true" data-page-length="25">...</table>
+```
+
+###
+
+Copy/paste your pipe from above and extend it with ` %>% `. Select the table using the function `html_element()` with both the tag type and its first `class` attribute.
+
+```{r open3, exercise=TRUE}
+
+```
+
+```{r open3-hint-1, eval=FALSE}
+read_html(...) %>% html_element("tag.class_name")
+```
+
+```{r open3-hint-2, eval=FALSE}
+read_html(...) %>% html_element("table.DataTable-Partial")
+```
+
+###
+
+You have selected the desired table.
 
 
+### Exercise 4
 
+The `rvest` package provides a great table-parsing function, `html_table()`, that allows you to load in web-scraped tables easily.
+
+###
+
+Copy/paste your pipe from above and extend it with the function `html_table()`. This allows you to load in data in the table in the form of a dataframe.
+
+```{r open4, exercise=TRUE}
+
+```
+
+```{r open4-hint-1, eval=FALSE}
+... %>% html_table()
+```
+
+###
+
+Nice work!
+
+Now you have a dataframe web-scraped directly from OpenSecrets.
+
+### Exercise 5
+
+Copy/paste your pipe from above and assign it to a variable named `raw_data`.
+
+```{r open5, exercise=TRUE}
+
+```
+
+###
+
+Now you saved the table data into `raw_data`, so you do not have to repeatedly web-scrape the page everytime you re-run the pipe.
+
+### Exercise 6
+
+Let's make the following graph:
+
+```{r make-open_graph, echo=FALSE}
+open_graph <- raw_data %>% rename(pac_name="PAC Name (Affiliate)", country_and_parent="Country of Origin/Parent Company") %>% select(country_and_parent, Dems, Repubs, Total) %>% mutate(Dems=gsub("[^0-9]", "", Dems)) %>% mutate(Dems=as.integer(Dems)) %>% mutate(Repubs=gsub("[^0-9]", "", Repubs)) %>% mutate(Repubs=as.integer(Repubs)) %>% mutate(Total=gsub("[^0-9]", "", Total)) %>% mutate(Total=as.integer(Total)) %>% mutate(country_and_parent=gsub("/(.*)", "", country_and_parent)) %>% rename(country=country_and_parent) %>% group_by(country) %>% summarize(dem_sum=sum(Dems), repub_sum=sum(Repubs), total=sum(Total), .groups="drop") %>% arrange(desc(total)) %>% mutate(country=as.factor(country)) %>% slice(1:10)  %>% pivot_longer(cols=c(dem_sum, repub_sum), names_to="party", values_to="amount") %>% ggplot(mapping=aes(x=reorder(country, amount, sum), y=amount/100000, fill=party)) + geom_col(position="dodge") + theme_classic() + theme(axis.text.x=element_text(angle = -90, hjust=0)) + scale_fill_manual(values=c("blue", "red"), labels=c("Democrat", "Republican")) + labs(title="Top 10 Countries with the Highest Total Company Donations\nto US Political Parties in 2020", subtitle="There seems to be more donations towards\nthe republican party than to the democratic party", x="Country", y="Donations (in $100,000)", fill="Party")
+open_graph
+```
+
+###
+
+Use `glimpse()` to check `raw_data`.
+
+```{r open6, exercise=TRUE}
+
+```
+
+```{r open6-hint-1, eval=FALSE}
+glimpse(...)
+```
+
+###
+
+Somethings to take note: <br>
+the columns `Total`, `Dems`, `Repubs` are character columns instead of integer. <br>
+the names of the first 2 columns are quite long.
+
+### Exercise 7
+
+Let's first rename the 2 columns.
+
+###
+
+Start a pipe with `raw_data` and extend it with ` %>% `. Use the `rename()` function, which takes arguments similar to `mutate()`, and rename:
+`"PAC Name (Affiliate)"` to `pac_name`
+`"Country of Origin/Parent Company"` to `country_and_parent`.
+
+```{r open7, exercise=TRUE}
+
+```
+
+```{r open7-hint-1, eval=FALSE}
+raw_data %>% rename(col1=old_col1, col2=old_col2, ...)
+```
+
+###
+
+Now `pac_name` and `country_and_parent` are more easily accessible.
+
+### Exercise 8
+
+Copy/paste your pipe from above and extend it with the function `select()`. You will use that function to select the columns you need, which are `country_and_parent`, `Dems`, `Repubs`, and `Total`.
+
+```{r open8, exercise=TRUE}
+
+```
+
+```{r open8-hint-1, eval=FALSE}
+... %>% select(...)
+```
+
+```{r open8-hint-2, eval=FALSE}
+... %>% select(country_and_parent, ...)
+```
+
+###
+
+Now you only have the columns you need left.
+
+### Exercise 9
+
+Now let's remove the `$` and `,` from `Repubs`, `Dems`, and `Total`.
+
+###
+
+Copy/paste your pipe from above and extend it with the function `mutate()`. You will use `gsub()` to delete all the `$` and `,` in all 3 columns.
+
+Use the pattern `"[^0-9]"`, which selects everything in a string that is NOT a digit, and replace these selections with an empty string, essentially deleting them.
+
+Remember that `gsub()` takes as arguments a `pattern` to detect with, a string to `replace` with, and the column to act on.
+
+Assign the new column to the same column name for all 3 columns.
+
+```{r open9, exercise=TRUE}
+
+```
+
+```{r open9-hint-1, eval=FALSE}
+... %>% mutate(col1=gsub(...), col2=gsub(...), ...)
+```
+
+```{r open9-hint-2, eval=FALSE}
+... %>% mutate(Dems=gsub("[^0-9]", "", Dems), Repubs=gsub(...), Total=gsub(...))
+```
+
+###
+
+Now you can see that `Dems`, `Repubs`, and `Total` are all purely digits.
+
+### Exercise 10
+
+Let's change the `Dems`, `Repubs`, and `Total` columns into integer columns.
+
+###
+
+Copy/paste your pipe from above and extend it using the function `mutate()`. Change the columns with `as.integer()` and assign the new columns to the same name.
+
+```{r open10, exercise=TRUE}
+
+```
+
+```{r open10-hint-1, eval=FALSE}
+... %>% mutate(col1=as.integer(col1), col2=as.integer(col2), ...)
+```
+
+###
+
+Now if you look below the column names for `Dems`, `Repubs`, and `Total`, they are registered as `<int>` which means integer columns.
+
+### Exercise 11
+
+Since you are plotting by country, there is no need to keep the parent company in the `country_and_parent` column, so let's change that.
+
+###
+
+Copy/paste your pipe from above and extend it with `mutate()`. Use the `gsub()` function to delete everything after the `/` and then assign the new column to the column name, `country`.
+
+You can use the pattern `"/(.*)"`, which selects everything after the `/`, and then replace it with `""` to delete it.
+
+```{r open11, exercise=TRUE}
+
+```
+
+```{r open11-hint-1, eval=FALSE}
+... %>% mutate(country=gsub(...))
+```
+
+```{r open11-hint-2, eval=FALSE}
+... %>% mutate(country=gsub("/(.*)", "", country_and_parent))
+```
+
+###
+
+Now you have a new column called `country` that is only the country source of donation.
+
+### Exercise 12
+
+In order to find out more about each country's statistics, you need to group the data by `country`.
+
+###
+
+Copy/paste your pipe from above and extend it with `group_by()`. Group the data by `country`.
+
+```{r open12, exercise=TRUE}
+
+```
+
+```{r open12-hint-1, eval=FALSE}
+... %>% group_by(...)
+```
+
+###
+
+It might not seem like there's a change but, if there is no error, the data has already been grouped by `country`.
+
+### Exercise 13
+
+After grouping, you should `summarize` the data
+
+###
+
+Copy/paste your pipe from above and extend it with `summarize()`. You will create 3 separate values:<br>
+`dem_sum` as the `sum()` of donations for democrats<br>
+`repub_sum` as the `sum()` of donations for republicans <br>
+`total` as the `sum()` of total donations<br><br>
+
+Remember to `"drop"` the groups after summarizing.
+
+```{r open13, exercise=TRUE}
+
+```
+
+```{r open13-hint-1, eval=FALSE}
+... %>% summarize(..., .groups="drop")
+```
+
+```{r open13-hint-2, eval=FALSE}
+... %>% summarize(dem_sum=sum(...), repub_sum=sum(...), total=sum(...), .groups="drop")
+```
+
+###
+
+Now you have a small table showing each country's total donation to each party as well as the total donations.
+
+### Exercise 14
 
 
 
