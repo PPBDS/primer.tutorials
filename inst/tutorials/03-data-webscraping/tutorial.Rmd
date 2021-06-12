@@ -1479,6 +1479,8 @@ raw_data <- read_html(web_url) %>%
   html_element("table.DataTable-Partial") %>% 
   html_table()
 
+clean_data <- raw_data %>% rename(pac_name="PAC Name (Affiliate)", country_and_parent="Country of Origin/Parent Company") %>% select(country_and_parent, Dems, Repubs, Total) %>% mutate(Dems=gsub("[^0-9]", "", Dems)) %>% mutate(Dems=as.integer(Dems)) %>% mutate(Repubs=gsub("[^0-9]", "", Repubs)) %>% mutate(Repubs=as.integer(Repubs)) %>% mutate(Total=gsub("[^0-9]", "", Total)) %>% mutate(Total=as.integer(Total)) %>% mutate(country_and_parent=gsub("/(.*)", "", country_and_parent)) %>% rename(country=country_and_parent) %>% group_by(country) %>% summarize(dem_sum=sum(Dems), repub_sum=sum(Repubs), total=sum(Total), .groups="drop") %>% arrange(desc(total)) %>% mutate(country=as.factor(country)) %>% slice(1:10)  %>% pivot_longer(cols=c(dem_sum, repub_sum), names_to="party", values_to="amount")
+
 
 ```
 
@@ -1590,7 +1592,7 @@ Now you saved the table data into `raw_data`, so you do not have to repeatedly w
 Let's make the following graph:
 
 ```{r make-open_graph, echo=FALSE}
-open_graph <- raw_data %>% rename(pac_name="PAC Name (Affiliate)", country_and_parent="Country of Origin/Parent Company") %>% select(country_and_parent, Dems, Repubs, Total) %>% mutate(Dems=gsub("[^0-9]", "", Dems)) %>% mutate(Dems=as.integer(Dems)) %>% mutate(Repubs=gsub("[^0-9]", "", Repubs)) %>% mutate(Repubs=as.integer(Repubs)) %>% mutate(Total=gsub("[^0-9]", "", Total)) %>% mutate(Total=as.integer(Total)) %>% mutate(country_and_parent=gsub("/(.*)", "", country_and_parent)) %>% rename(country=country_and_parent) %>% group_by(country) %>% summarize(dem_sum=sum(Dems), repub_sum=sum(Repubs), total=sum(Total), .groups="drop") %>% arrange(desc(total)) %>% mutate(country=as.factor(country)) %>% slice(1:10)  %>% pivot_longer(cols=c(dem_sum, repub_sum), names_to="party", values_to="amount") %>% ggplot(mapping=aes(x=reorder(country, amount, sum), y=amount/100000, fill=party)) + geom_col(position="dodge") + theme_classic() + theme(axis.text.x=element_text(angle = -90, hjust=0)) + scale_fill_manual(values=c("blue", "red"), labels=c("Democrat", "Republican")) + labs(title="Top 10 Countries with the Highest Total Company Donations\nto US Political Parties in 2020", subtitle="There seems to be more donations towards\nthe republican party than to the democratic party", x="Country", y="Donations (in $100,000)", fill="Party")
+open_graph <- clean_data %>% ggplot(mapping=aes(x=fct_reorder(country, -amount), y=amount/100000, fill=party)) + geom_col(position="dodge") + theme_classic() + theme(axis.text.x=element_text(angle = -90, hjust=0)) + scale_fill_manual(values=c("blue", "red"), labels=c("Democrat", "Republican")) + labs(title="Top 10 Countries with the Highest Total Company Donations\nto US Political Parties in 2020", subtitle="There seems to be more donations towards\nthe republican party than to the democratic party", x="Country", y="Donations (in $100,000)", fill="Party", caption="OpenSecrets.org: Foreign-Connected PACs (2020)")
 open_graph
 ```
 
@@ -1663,8 +1665,6 @@ Now let's remove the `$` and `,` from `Repubs`, `Dems`, and `Total`.
 Copy/paste your pipe from above and extend it with the function `mutate()`. You will use `gsub()` to delete all the `$` and `,` in all 3 columns.
 
 Use the pattern `"[^0-9]"`, which selects everything in a string that is NOT a digit, and replace these selections with an empty string, essentially deleting them.
-
-Remember that `gsub()` takes as arguments a `pattern` to detect with, a string to `replace` with, and the column to act on.
 
 Assign the new column to the same column name for all 3 columns.
 
@@ -1777,11 +1777,230 @@ Remember to `"drop"` the groups after summarizing.
 
 ###
 
-Now you have a small table showing each country's total donation to each party as well as the total donations.
+Now you have a small table showing each country's total donation to each party as well as the total donations overall.
 
 ### Exercise 14
 
+Since you are only plotting the top 10 countries, you need to sort the table by total donations.
 
+###
+
+Copy/paste your pipe from above and extend it with `arrange()`. Arrange the table by `total` descending.
+
+```{r open14, exercise=TRUE}
+
+```
+
+```{r open14-hint-1, eval=FALSE}
+... %>% arrange(desc(...))
+```
+
+###
+
+Now it's arranged the column, `total`.
+
+### Exercise 15
+
+Copy/paste your pipe from above and extend it. Keep only the top 10 countries in the tibble
+
+```{r open15, exercise=TRUE}
+
+```
+
+```{r open15-hint-1, eval=FALSE}
+... %>% slice(...)
+```
+
+```{r open15-hint-2, eval=FALSE}
+... %>% slice(1:10)
+```
+
+###
+
+All that's left is the 10 rows indicating the top 10 countries.
+
+### Exercise 16
+
+In order that the bar graph does not mess with the x-axis, change the type of the `country` column to factor.
+
+###
+
+Copy/paste your pipe from above and extend it using `mutate()`. Use the function `as.factor()` to change the type of the column and store it in the same column name.
+
+```{r open16, exercise=TRUE}
+
+```
+
+```{r open16-hint-1, eval=FALSE}
+... %>% mutate(col1=as.factor(col1))
+```
+
+###
+
+You can see now under the header of the `country` column that it is type `<fct>`.
+
+### Exercise 17
+
+Since you are creating a bar graph, let's reformat the tibble with `pivot_longer()`.
+
+###
+
+Copy/paste your pipe from above and extend it with the function `pivot_longer()`. Remember that this function takes 3 arguments:
+`cols`: columns to pivot, <br>
+`names_to`: name of column where the previous column names are going to, <br>
+`values_to`: name of column where the previous column values are going to <br>
+
+
+Pivot only the sum donations of the parties and assign `"party"` to `names_to` and `"amount"` to `values_to`.
+
+```{r open17, exercise=TRUE}
+
+```
+
+```{r open17-hint-1, eval=FALSE}
+... %>% pivot_longer(cols=c(...), names_to="...", values_to="...")
+```
+
+```{r open17-hint-2, eval=FALSE}
+... %>% pivot_longer(cols=c(...), names_to="party", values_to="amount")
+```
+
+###
+
+Now you are ready to plot!
+
+### Exercise 18
+
+Copy/paste your pipe from above. Assign your pipe to a variable named `clean_data`.
+
+```{r open18, exercise=TRUE}
+
+```
+
+```{r open18-hint-1, eval=FALSE}
+clean_data <- ...
+```
+
+###
+
+Now you have access to `clean_data`.
+
+### Exercise 19
+
+Start a plot with `ggplot()` and `clean_data` as data. Use the function `fct_reorder()` to order `country` in the x-axis descending by `amount`.
+
+The function `fct_reorder()` takes as arguments the column to reorder, `country`, and the column of values to reorder by `amount`.
+
+Remember to add a `-` before `amount` to rearrange in descending order.
+
+This SHOULD return an error as you are not done filling out `aes()` yet.
+
+```{r open19, exercise=TRUE}
+
+```
+
+```{r open19-hint-1, eval=FALSE}
+ggplot(data=..., mapping=aes(fct_reorder(...)))
+```
+
+```{r open19-hint-2, eval=FALSE}
+ggplot(data=..., mapping=aes(fct_reorder(country, -amount)))
+```
+
+### Exercise 20
+
+Copy/paste your code from above and continue mapping `aes()`. Map `amount/100000` to the y-axis for easier comprehension and `party` to `fill`.
+
+Add a `geom_col()` layer and set its `position` to `"dodge"`.
+
+After, add a `theme_classic()` layer for the style.
+
+```{r open20, exercise=TRUE}
+
+```
+
+```{r open20-hint-1, eval=FALSE}
+ggplot(data=..., mapping=aes(x=fct_reorder(...),
+                             y=...,
+                             fill=...)) + geom_col(position=...) + theme_classic()
+```
+
+###
+
+Now you have most of bar graph, but you'll notice that the x-axis is a mess with text layered over each other. Let's change that.
+
+### Exercise 21
+
+To change the format of the text, you are essentially defining your own graph theme.
+
+###
+
+Copy/paste your plot from above and add another layer using the `theme()` function.
+
+Inside `theme()`, set `axis.text.x` equal to `element_text(angle=-90, hjust=0)`.
+
+This simply turns the text on the x-axis by -90 degrees and adjusts the spacing.
+
+```{r open21, exercise=TRUE}
+
+```
+
+```{r open21-hint-1, eval=FALSE}
+... + theme(axis.text.x=element_text(angle=-90, hjust=0))
+```
+
+###
+
+You can play around with the arguments more and see how the text changes.
+
+### Exercise 22
+
+Let's change the colors of the bars to better represent the respective parties.
+
+###
+
+Copy/paste your plot from above and add another layer. Use the function `scale_fill_manual()` to change the `values` of the colors to `c("blue", "red")` and change the `labels` to `c("Democrat", "Republican")`.
+
+```{r open22, exercise=TRUE}
+
+```
+
+```{r open22-hint-1, eval=FALSE}
+... + scale_fill_manual(values=c(...), labels=c(...))
+```
+
+###
+
+All that's left are the graph labels.
+
+### Exercise 23
+
+Copy/paste your plot from above and add a layer of `labs()`. Add the appropriate labels to the graph.
+
+```{r open23, exercise=TRUE}
+
+```
+
+```{r open23-hint-1, eval=FALSE}
+... + labs(
+  title="...",
+  subtitle="...",
+  x="...",
+  y="...",
+  fill="...",
+  caption="..."
+)
+```
+
+Reminder: this is how the plot should look like.
+
+```{r show-open_graph, echo=FALSE}
+open_graph
+```
+
+###
+
+Well done!
 
 
 <!-- This should be a 60 to 90 minutes worth of exercises devoted to webscraping, with a big focus on the rvest package. Also need to teach some CSS and Selector Gadget. Resources: -->
@@ -1819,7 +2038,6 @@ Now you have a small table showing each country's total donation to each party a
 <!-- 4) Plan is to write this tutorial and then, afterwards, update the Chapter to be consistent with it. -->
 
 <!-- 5) Use html_text2(). Background: https://www.tidyverse.org/blog/2021/03/rvest-1-0-0/ -->
-
 
  
 
