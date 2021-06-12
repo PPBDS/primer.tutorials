@@ -26,15 +26,38 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
 
-# Makes URL use simpler throughout the exercises. 
+# 
+response1 <- GET("https://bison.usgs.gov/")
+response1.bin  <- content(response1, "raw")
+
+response2 <- GET("https://bison.usgs.gov/doc/api.jsp")
+response2.bin <- content(response2, "raw")
+
+bison_base <- "https://bison.usgs.gov/api/search.json"
+
+response3 <- GET(bison_base, 
+    query = list(species = "Bison bison", 
+                 type = "scientific_name", 
+                 count = "1"))
+    
+# Meso
 
 meso_url <- "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py/"
 
-my.response <- GET(url = meso_url) 
+meso1 <- GET(url = meso_url) 
+
+denver_response <- GET(url = meso_url,
+    query = list(station = "DEN",
+                 data = "tmpf",
+                 year1 = "2017",
+                 month1 = "01",
+                 day1 = "01",
+                 year2 = "2019",
+                 month2 = "12",
+                 day2 = "31",
+                 tz = "America/Denver"))
 
 ### IMF Objects
-
-codes <- c("0", "GGXWDG_GDP", "P1Y")
 
 imf_raw <- imf_data(database_id = "HPDD", indicator = "GGXWDG_GDP", 
                      start = 2014)
@@ -47,14 +70,53 @@ iso_codes <- codelist %>%
 
 imf_data_named <- left_join(imf_data, iso_codes, by = "iso2c")
 
-### Bison objects
+### Wikipedia Objects
+
+supreme_views <- old_pageviews(project = "en.wikipedia",
+                           article = "Supreme_Court_of_the_United_States",
+                           platform = "all",
+                           user_type = "all",
+                           start = "2008012000",
+                           end = "2016012000") 
+
+supreme_plot <- supreme_views %>% 
+  arrange(date) %>% 
+  ggplot(aes(date, views, 
+             text = paste("Date:", date, "\n"))) +
+  geom_col() +
+  labs(title = "Wikipedia Supreme Court Page During Pres. Obama's Tenure",
+       x = "Date", 
+       y = "Views", 
+       caption = "Wikimedia Traffic Data API")
+
+### RBison objects
 
 output <- bison(species = "Accipiter", type = "scientific_name", count = 500)
 
 bison_plot <- bisonmap(input = output, geom = geom_jitter)
 
-base_response <- GET(url = "https://bison.usgs.gov/doc/api.jsp",
-    query = list(species = "Accipiter", type = "scientific_name", count = 500))
+### Bison objects
+
+bison_response <- GET(url = "https://bison.usgs.gov/api/search.json",
+    query = list(species = "Accipiter",
+                 type = "scientific_name", 
+                 count = 500))
+
+output_api <- content(bison_response, "text") %>% 
+  fromJSON() 
+
+clean_data_api <- output_api$states$data %>% 
+  as_tibble() %>% 
+  mutate(across(everything(), as.character)) %>% 
+  mutate(names = c("total", "fips")) %>% 
+  pivot_longer(cols = -names, 
+               names_to = "state", 
+               values_to = "values") %>% 
+  pivot_wider(names_from = names, 
+              values_from = values) %>% 
+  mutate(total = as.numeric(total)) %>% 
+  mutate(region = tolower(state)) %>% 
+  select(-fips, -state)
 ```
 
 
@@ -95,21 +157,21 @@ quiz(caption = "",
     incorrect = NULL))
 ```
 
-## Iowa Mesonet
+## Interacting with Sites with `GET()`
 ###
 
-In order to get data from an API, we use the **httr** package.
+In order to get data from an API, we use the **httr** package. The package is designed to imitate standard HTTP in R. Read more about HTTP [here](https://www.jmarshall.com/easy/http/).
 
 
 ### Exercise 1
 
 Load the `httr` package.  
 
-```{r library, exercise = T}
+```{r httr-1, exercise = TRUE}
 
 ```
 
-```{r library-hint, eval = FALSE}
+```{r httr-1-hint, eval = FALSE}
 Use the library(...) command. 
 ```
 
@@ -117,233 +179,263 @@ Use the library(...) command.
 
 We now have access to the `httr` package. 
 
-
 ### Exercise 2
 
-Because the Iowa Environmental Mesonet doesn't require us to use a user-specific API key, we can use a base URL to send an HTTP request. 
+`GET()` is the key command in the **httr** package and is used to get information from sites. It takes the URL to the API and optionally a query to define the limits of the data accessed for its arguments. 
 
 ###
 
-Assign the url in your code to an an object named `meso_url`. 
+Use `GET()` with the `url` argument set to the homepage for USGS BISON, "https://bison.usgs.gov/". Assign the resulting object to `my.response`. 
 
-```{r create_url, exercise = TRUE}
-"https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py/"
-
-```
-
-```{r create_url-hint-1, eval = FALSE}
-The URL should be a text string when being assigned to an object. 
-```
-
-```{r create_url-hint-2, eval = FALSE}
-meso_url <- "https://..." 
-```
-
-
-###
-
-<!-- In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. This is a simpler example of API use in which we don't need to protect a uniquely generated access key.  -->
-
-You will now have access to this object throughout the rest of the tutorial. The **base URL** allows you to send a request and specify the subset of data you want. 
-
-
-### Exercise 3
-
-`GET()` is the key command in the **httr** package. It takes in the URL to the API and optionally a query to define the limits of the data accessed. 
-
-###
-
-Use `GET()` with the `url` argument set to `meso_url`. Assign the resulting object to `my.response`. In the second line, run `class()` on `my.response`.
-
-```{r query-0, exercise = TRUE}
+```{r httr-2, exercise = TRUE}
 
 ```
 
-```{r query-0-hint, eval = FALSE}
-my.response <- GET(url = ...)
+```{r httr-2-hint, eval = FALSE}
+response <- GET(url = "https://...")
 ```
 
-```{r query-0-hint-2, eval = FALSE}
+```{r httr-2-hint-2, eval = FALSE}
 class(my.response)
 ```
 
-###
+### Exercise 3
 
-Note that even without a query specification, the GET command appears to run but returns no data. You get an object of `class()` "response" because you are still communicating with the base url. 
+Print out and read `response1`. 
 
-### Exercise 4
-
-Print out `my.response`. 
-
-```{r query_01, exercise = TRUE}
+```{r httr-3, exercise = TRUE}
 
 ```
 
-```{r query_01-hint, eval = FALSE}
+```{r httr-3-hint, eval = FALSE}
 my.response
 ```
 
-###
+### 
 
-Note that the URL is still the base url, which indicates that there was no further query. We can confirm that by looking at the size of the response - 23 Bytes. THe `Status: 500` indicates that the query encountered an error. 
+The URL which returns the response is the same one that we contacted. Status 200 mean success. The response is a html file of size 38kB  We can see a preview of the html file we recieved below.
 
+### Exercise 4
+
+Use the function `class()` with the argument `response1`.
+
+
+```{r httr-4, exercise = TRUE}
+
+```
+
+```{r httr-4-hint, eval = FALSE}
+class(response)
+```
+
+### 
+
+Output from GET() is always of class "response".
 
 ### Exercise 5
 
-Within the function `GET()`, use `meso_url` to fill the `url` argument and then set the argument `query` equal to a `list()` of parameters: `station`, `data`, `year1`.  We want to know for station Denver (`"DEN"`) the temperature in degrees Fahrenheit (`"tpmf"`) starting in the year 2017. 
+Use the function `content()` to view the content of `response1`.
 
-```{r query-1, exercise = TRUE}
+```{r httr-5, exercise = TRUE}
 
 ```
 
-```{r query-1-hint-1, eval = FALSE}
-The abbreviation for temperature in Fahrenheit is "tmpf".
-```
-
-```{r query-1-hint-2, eval = FALSE}
-GET(url = ...,
-           query = list(station = ...,
-                        data = "tmpf",
-                        year1 = ...))
+```{r httr-5-hint, eval = FALSE}
+content(my.response)
 ```
 
 ### 
 
-There are several different types of data to be had from this API, including the temperature in degrees celsius, which come with different `data` query arguments. 
+You should see the beginnings of html content.
 
 ### Exercise 6
 
-This API requires a start and end date (Year, Month, and Day) to be supplied in order to return a request successfully. 
+Let's save a copy of `response1` in our working directory. First run `content()` with the argument `response1` with the second argument `"raw"`. View this output and then assign it to an object called `response1.bin`. 
+
+```{r httr-6, exercise = TRUE}
+
+```
+
+```{r httr-6-hint, eval = FALSE}
+content(base_response, "...")
+```
 
 ###
 
-Copy and paste the code from the previous exercise. Within `GET()`, you should add parameters to include the start, `year1` `month1` `day1`, and end point of your time frame, `year2` etc. We are interested in the daily records from 01/01/2017 to 12/31/2019. You should also specify the appropriate time zone for the station listed. The time zone for the Denver station is "America/Denver". 
-
-```{r query2, exercise = TRUE}
-
-```
-
-```{r query2-hint-1, eval = FALSE}
-All date parameters should be quoted numbers
-i.e. "01" is January.
-```
-
-```{r query2-hint-2, eval = FALSE}
-GET(url = meso_url,
-    query = list(station = "DEN",
-                 data = "tmpf",
-                 year1 = "2017",
-                 month1 = ...,
-                 day1 = ...,
-                 year2 = "2019",
-                 month2 = ...,
-                 day2 = ...,
-                 tz = ...))
-```
-
-<!-- Here we should probably keep assignment and have them call a denver programmed in the set_up chunk?  -->
+The `"raw"` argument saves the file to binary. This is the highest fidelity way to save files. 
 
 ### Exercise 7
 
-Copy the code from the previous exercise and assign the output to `denver`.   
+Use the function `writeBin()` to save the binary object to a file in your present working directory called "response.html". The first argument is the name of the R object, `response1.bin`, and  the second object is the name of the new file. 
 
-```{r query_resp1, exercise = TRUE}
+```{r httr-7, exercise = TRUE}
 
 ```
 
-```{r query_resp1-hint, eval = FALSE}
-denver <- GET(url = meso_url,
-              query = list(station = "DEN",
-                           data = "tmpf",
-                           year1 = "2017",
-                           month1 = "01",
-                           day1 = "01",
-                           year2 = "2019",
-                           month2 = "12",
-                           day2 = "31",
-                           tz = "America/Denver"))
+```{r httr-7-hint, eval = FALSE}
+writeBin(..., "my.response.html")
 ```
 
 ###
 
-Now that we have data, we need to format it in a user-friendly way.  Note that a successful query will show a small amount of the data below the response in addition to the `Status: 200` completion code and an extended URL that reflects the items in the query. 
+The `html` suffix here tells our computer to treat this as an HTML file and open it with a compatible application. 
 
 ### Exercise 8
 
-This API allows us to download the data in CSV format. 
+In the Terminal, run `open response.html`. If this does not work, try to open the file in the file pane in RStudio or in your computer's file viewer. Copy and paste the terminal the line of the terminal command for your answer.
 
-###
-
-Within the `list()` for `query`, set `format`  equal to `comma` (as in Comma Separated Variables). Then, to convert this data to a more familiar format, add the `content()` and `read_csv()` functions immediately following the `GET()` query to convert the gibberish from the query response into a tibble. 
-
-```{r query-3, exercise = TRUE}
+```{r httr-8, exercise = TRUE}
 
 ```
 
-```{r query-3-hint, eval = FALSE}
-GET(url = ...,
-              query = list(...,
-                           format = "comma")) %>% 
-  content() %>% 
-  read_csv(... , ...)
+###
 
-Make sure that you properly address NA values - see Primer for examples. 
+This command opens the file in the default html viewer on your computer, likely your default browser. Scroll past the many links at the top of the page, which are the navigation tabs for the website's UI. Read about USGS BISON.
+
+### Exercise 9
+
+On this page, we see a hyperlink named "API". We cannot click on links because we are not connected to the website on the web, but only to this page on our computer. We can make a new request to communicate with this page. 
+
+###
+
+If you left click to  copy the link address, it may return something like this "file:///Users/username/home-directory-subfolder/r-project-folder/r-project/doc/api.jsp". We should add this path at the end, `/doc/api.jsp` to get to the API page. If we were looking at the html as a text file, this link would simply be: `./doc/api.jsp`. 
+
+###
+
+Use `GET()` to contact the link "https://bison.usgs.gov/doc/api.jsp". Save this to output to an object called `response2``.
+
+```{r httr-9, exercise = TRUE}
+
+```
+
+```{r httr-9-hint, eval = FALSE}
+GET(url = "https://...")
 ```
 
 ### 
 
-Recall that the `content()` call extracts the content from the response to the HTTP request sent by the `GET()` function and allows us to parse the content like a traditional CSV file. 
-
-### Exercise 9
-
-The many Ms is this dataset's way of representing missing values. Within `read_csv()`, use the `na` argument to change all occurrences of the lone character `"M"` to `NA`.Save this output as an object named 'denver'. 
-
-```{r query-10, exercise = TRUE}
-
-```
-
-```{r query-10-hint-1, eval = FALSE}
-GET(url = ...,
-              query = list(...,
-                           format = "comma")) %>% 
-  content() %>% 
-  read_csv(... , ...)
-```
+This response is also of type html and 69.3kB. 
 
 ### Exercise 10
 
-Print out the `denver` object. 
-
-```{r print_denver, exercise = TRUE}
-
-```
+When navigating an API page for the first time we have two goals. First, to figure out what the URL is at which we can make our queries and get data. Two, to figure out what parameters we should use to make a query for this API. Ideally, there is a page where all of this information is conveniently documented. 
 
 ###
 
-You should see a normally formatted tibble, like we have dealt with in the last few weeks.
+Assign the "raw" version of the `content()` of the response to an object called `response2.bin`` 
 
-```{r get_denver_data}
-denver <- GET(url = meso_url,
-                    query = list(station = c("DEN"),
-                                 data = "tmpf",
-                                 year1 = "2017",
-                                 month1 = "1",
-                                 day1 = "1",
-                                 year2 = "2019",
-                                 month2 = "12",
-                                 day2 = "31",
-                                 tz = "America/Denver",
-                                 format = "comma")) %>%
-  content() %>% 
-  read_csv(skip = 5, na = "M")
+```{r httr-10, exercise = TRUE}
+
+```
+
+```{r httr-10-hint, eval = FALSE}
+my.response.bin <- content(my.response, "raw")
 ```
 
 ### Exercise 11
 
-Let's use the data to make the following plot. 
+Use `writeBin` to save `response2.bin` to a file on your computer called `response.html`.
 
-```{r make_plot_1}
-denver_p <- denver %>% 
+```{r httr-11, exercise = TRUE}
+
+```
+
+```{r httr-11-hint, eval = FALSE}
+my.response.bin <- content(my.response, "raw")
+```
+
+###
+
+This  overwrites the last thing we saved as `response.html`
+
+### Exercise 12
+
+Use the up arrow in the Terminal to access your last command, `open response.html`, and run it. Copy and paste the line of the command for this answer. Read the first section, BISON Search. Look specifically for a URL which we contact to make data and parameters which we use to specify our request. 
+
+```{r httr-12, exercise = TRUE}
+
+```
+
+### Exercise 13
+
+On this page, we see a new url that allows us to make queries for JSON responses: "https://bison.usgs.gov/api/search.json". Because this URL to make queries is one you will use often, assign it to an R object called `bison_base`.
+
+```{r httr-13, exercise = TRUE}
+
+```
+
+```{r httr-13-hint, eval = FALSE}
+bison_base <- "https://..."
+```
+
+### Exercise 14
+
+In the BISON Search section there are also several parameter options for requesting json files at the url, including species, type, and state.
+
+###
+
+If you studied the example in detail, you should have noticed that in the url all the parameters came after a question mark that follows the base url. The argument `query` in `GET()`, essentially, creates this question mark.  
+
+###
+
+Use `GET()` with `bison_base` as its first argument. The second argument will be `query`. Set `query` equal to a `list()` in which we will place our parameter requests. Within `list()`, set `species` equal to "Bison bison", set `type` equal to "scientific_name", and set `count` equal to "1". Run this function and assign the output to an object called `response3``.
+
+```{r httr-14, exercise = TRUE}
+
+```
+
+```{r httr-14-hint, eval = FALSE}
+GET(bison_base, 
+    query = list(species = "Bison bison", 
+                 type = "scientific_name", 
+                 count = "1"))
+```
+
+### Exercise 15
+
+Print and read response3 
+
+```{r httr-15, exercise = TRUE}
+
+```
+
+###
+
+Notice that unlike our last two responses, this response comes from a different URL than the one we started from. Notice also that everything our query has added follows  a question mark. This URL matches the parameters we chose and is also a very close match to the example URL on the website. 
+
+###
+
+The application type is also different. It is no longer an HTML file as before, but a JSON file of 15kB. JSON is a file which stores data. 
+
+### Exercise 16 
+
+Use `content()` on `response3` with the argument "text" to view the JSON as a text file. 
+
+```{r httr-16, exercise = TRUE}
+
+```
+
+###
+
+You should see lots of brackets, slahses and colons, the syntax of a JSON file. You should also see state and county names and numbers. This is data, and we will work on how to handle this type of data later in the tutorials. 
+
+### Exercise 17
+
+Go to Terminal and use the `rm` command to remove "response.html". Copy and paste the line of the command for this answer. 
+
+```{r httr-17, exercise = TRUE}
+
+```
+
+## Iowa Environmental Mesonet
+###
+
+Let's make the following plot. We will use ASOS data from the Iowa Environmental Mesonet. 
+
+```{r}
+denver_p <- denver_response %>%
+  content() %>% 
+  read_csv(na = "M") %>% 
   separate(col = valid,
            into = c("date", NA),
            sep = " ") %>%
@@ -362,26 +454,186 @@ denver_p <- denver %>%
 denver_p
 ```
 
-Let's remove the timestamp from the given date variable and rename the remaining column "date". Within the function `separate()`, use the argument `col` to select which column's content you are separating, use the argument `into` to create a vector of the new column names, `"date"` and `NA`, and use the third argument to show by what character you are separating the data `" "`.  Save this as an object named `d1`
+### Exercise 1
+
+In the last exercise, you started from the homepage and had to find out how the link at which to access the API. In this exercise, we will give you the link at which to access the API from the start. 
+
+###
+
+If you were to naviagte from the home page looking for the ASOS API, you would eventually be redirected to this link, https://mesonet.agron.iastate.edu/request/download.phtml. While this site has some useful documentation such as the variable list at the bottom, it is designed for interactive use (hence phtml instead of plain html) in a browser and so is missing some important information, such as the access URL and the format for time parameters. One option would be to view the html file as a text file, where you can find the request link and variable names which undergird the UI. 
+
+###
+
+Though this cannot be done using `GET()`, another way to find information on an interactive site is to make a request on your browser and then observe the resulting link. Doing so, you will see both the link and the names for as many parameters as you selected. 
+
+###
+
+Assign this url, "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py/"  to an an object named `meso_url`. 
+
+```{r meso-1, exercise = TRUE}
+
+
+```
+
+```{r meso-1-hint-1, eval = FALSE}
+The URL should be a text string when being assigned to an object. 
+```
+
+```{r meso-1-hint-2, eval = FALSE}
+meso_url <- "https://..." 
+```
+
+
+<!-- In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. This is a simpler example of API use in which we don't need to protect a uniquely generated access key.  -->
+
+You will now have access to this object throughout the rest of this exercise. 
+
+
+### Exercise 2
+
+Use `GET()` with the `url` argument set to `meso_url`. Assign the resulting object to `meso1`. In the second line, run `class()` on `meso1`.
+
+```{r meso-2, exercise = TRUE}
+
+```
+
+```{r meso-2-hint, eval = FALSE}
+my.response <- GET(url = ...)
+```
+
+```{r meso-2-hint-2, eval = FALSE}
+class(my.response)
+```
+
+###
+
+Note that even without a query specification, the GET command appears to run but returns no data. You get an object of `class()` "response" because you are still communicating with the url. 
+
+### Exercise 3
+
+Print out `my.response`. 
+
+```{r meso-3, exercise = TRUE}
+
+```
+
+```{r meso-3-hint, eval = FALSE}
+my.response
+```
+
+###
+
+Note that the URL is still the base url, which indicates that there was no further query. We can confirm that by looking at the size of the response - 23 Bytes (our previous responses were in **kilo**bytes. `Status: 500` indicates that the query encountered an error. 
+
+
+### Exercise 4
+
+Within the function `GET()`, use `meso_url` to fill the `url` argument and then set the argument `query` equal to a `list()` of parameters: `station`, `data`, `year1`.  We want to know for station Denver (`"DEN"`) the temperature in degrees Fahrenheit (`"tpmf"`) starting in the year 2017. 
+
+```{r meso-4, exercise = TRUE}
+
+```
+
+```{r meso-4-hint-1, eval = FALSE}
+The abbreviation for temperature in Fahrenheit is "tmpf".
+```
+
+```{r meso-4-hint-2, eval = FALSE}
+GET(url = meso_url,
+           query = list(station = "DEN",
+                        data = "tmpf",
+                        year1 = 2017))
+```
+
+This response is still of `Status: 500`, which means something is wrong. 
+
+### 
+
+There are several different types of data to be had from this API, including the temperature in degrees celsius, which come with different `data` query arguments. See the discussion at the beginning of this section for where we would find this information on this site and others like it. 
+
+### Exercise 5
+
+This API requires a start and end date (Year, Month, and Day) to be supplied in order to return a request successfully. 
+
+###
+
+Copy and paste the code from the previous exercise. Within `GET()`, you should add parameters to include the start, `year1` `month1` `day1`, and end point of your time frame, `year2` etc. We are interested in the daily records from 01/01/2017 to 12/31/2019. You should also specify the appropriate time zone for the station listed. The time zone for the Denver station is "America/Denver". View this output and then assign it to an object named `denver_response`.
+
+```{r query2, exercise = TRUE}
+
+```
+
+```{r query2-hint-1, eval = FALSE}
+All date parameters should be quoted numbers
+i.e. "01" is January.
+```
+
+```{r query2-hint-2, eval = FALSE}
+GET(url = meso_url,
+    query = list(station = "DEN",
+                 data = "tmpf",
+                 year1 = "2017",
+                 month1 = "01",
+                 day1 = "01",
+                 year2 = "2019",
+                 month2 = "12",
+                 day2 = "31",
+                 tz = "America/Denver"))
+```
+
+### 
+
+Now our response is of `Status: 200`, and much larger (7.98MB) file.  We can see a preview of the data below the header. The response is a text file and we can see that each column is separated by commas. 
+
+### Exercise 6
+
+Start a pipe with `denver_response`.  Pipe the `content()` function immediately after the `GET()` function. Then, pipe `read_csv()` to convert the comma separated value in our response into a tibble. 
+
+```{r query-3, exercise = TRUE}
+
+```
+
+```{r query-3-hint, eval = FALSE}
+GET(...) %>% 
+  content() %>% 
+  read_csv()
+```
+
+### Exercise 7
+
+Notice all the Ms in the data. These represent missing values. Copy and paste your code from above.  Within `read_csv()`, use the `na` argument to change all occurrences of the lone character `"M"` to `NA`. 
+
+```{r query-10, exercise = TRUE}
+
+```
+
+```{r query-10-hint-1, eval = FALSE}
+GET(url = ...,
+              query = list(...,
+                           format = "comma")) %>% 
+  content() %>% 
+  read_csv(na = "M")
+```
+
+### Exercise 8
+
+Let's remove the timestamp from the given date variable and rename the remaining column "date". Copy and paste your code and continue your pipe with the `separate()` function. Within the function `separate()`, use the argument `col` to select which column's content you are separating, use the argument `into` to create a vector of the new column names, `"date"` and `NA`, and use the third argument to show by what character you are separating the data `" "` (i.e. a space).  
 
 ```{r plot-11, exercise = TRUE}
 
 ```
 
 ```{r plot-11-hint, eval = FALSE}
-
-d1 <- denver %>% 
   separate(col = valid,
            into = c(..., NA),
            sep = " ")
-
 ```
 
 ###
 
-The NA operator drops the second column from the separation - removing the need to select(-X) the unwanted data later. 
+The NA operator drops the second column from the separation, removing the need to `select(-)` the unwanted data later. 
 
-### Exercise 12
+### Exercise 9
 
 The date column has multiple rows for the same day. Continue your pipe and use `group_by()` and `summarize()` to calculate the daily average temperature in a new column named "avg_temp". 
 
@@ -395,29 +647,18 @@ to remove NA values from calculation.
 ```
 
 ```{r plot-2-hint-2, eval = FALSE}
-
-d1 <- denver %>% 
   separate(col = ...,
            into = c(..., NA),
            sep = ...) %>% 
   ... %>% 
-  group_by(...) 
-  summarise(avg_temp = ...,
+  group_by(date) 
+  summarise(avg_temp = mean(..., na.rm = TRUE),
             .groups = "drop")
-
-
-Be careful with NA values!
-
 ```
 
+### Exercise 10
 
-###
-
-Now, you will have access to the `d1` object. 
-
-### Exercise 13
-
-Now that we have the desired calculations, start a new pipe with `d1` and create a scatterplot that maps average daily temperature to the y-axis and the date to the x-axis. 
+Continue your pipe with `ggplot()` and `geom_point()`. Create a scatterplot that maps average daily temperature to the y-axis and the date to the x-axis. 
 
 ```{r plot-3, exercise = TRUE}
 
@@ -432,7 +673,7 @@ d1 %>%
 
 ### Exercise 14
 
-There are so many labels for x-axis breaks that they are indistiguishable. Use `scale_x_discrete()` to set only three x axis breaks, `06-01-2017`, `06-01-2018`, `06-01-2019`.
+There are so many labels for x-axis breaks that they are indistinguishable. Use `scale_x_discrete()` to set only three x axis breaks, `06-01-2017`, `06-01-2018`, `06-01-2019`.
 
 ```{r plot-4, exercise = TRUE}
 
@@ -463,367 +704,17 @@ denver_p
 
 ## API Keys
 
-In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. The following are examples of examples of API use in which we don't need to protect a uniquely generated access key.
-
-## Wikipedia Page Access
-###
-
-The **pageviews** package provides helper functions for accesses the API for the World Bank. You can learn more about the package [here](https://cran.rstudio.com/web/packages/pageviews/pageviews.pdf). 
-
-
-```{r supreme_setup}
-supreme_views <- old_pageviews(project = "en.wikipedia",
-                           article = "Supreme_Court_of_the_United_States",
-                           platform = "all",
-                           user_type = "all",
-                           start = "2008012000",
-                           end = "2016012000") 
-
-supreme_plot <- supreme_views %>% 
-  arrange(date) %>% 
-  ggplot(aes(date, views, 
-             text = paste("Date:", date, "\n"))) +
-  geom_col() +
-  labs(title = "Wikipedia Supreme Court Page During Pres. Obama's Tenure",
-       x = "Date", 
-       y = "Views", 
-       caption = "Wikimedia Traffic Data API")
-
-final <- ggplotly(supreme_plot, tooltip = "text")
-
-final
-```
-
-
-
-### Exercise 1
-
-On the first line, load the **pageviews** package. In this package, the functions `article_pageviews()` and `old_pageviews()` allow us to communicate with the Wikimedia API. 
-
-```{r supreme-01, exercise = TRUE}
-
-```
-
-```{r supreme-01-hint, eval = FALSE}
-library(pageviews)
-```
-
-###
-
-`old_pageviews()` is for counts before 2016. They are not accurate as they did not omit the activity of web-crawlers and bots.
-
-### Exercise 2
-
-We will be looking at the wikipedia page views for the Supreme Court of the United States countries during President Obama's tenure, from January 20th 2008 to January 20th 2016.
-
-###
-
-Start a call with `old_pageviews()`. Set the `project` argument equal to `wikipedia.en` and the article to `Supreme_Court_of_the_United_States`. Set the start time and end time in the format: YYYYMMDDHH. Set hours to 00, they do not matter as the granularity is by default daily. Assign this to an object called `supreme_views`.
-
-```{r supreme-02, exercise = TRUE}
-
-```
-
-```{r supreme-02-hint-1, eval = FALSE}
-Use the WDIsearch() tool from the previous question 
-if you are having difficulty locating the proper 
-indicator. 
-```
-
-```{r supreme-02-hint-2, eval = FALSE}
-old_pageviews(project = "en.wikipedia",
-                           article = "Supreme_Court_of_the_United_States",
-                           start = "2008012000",
-                           end = "2016012000") 
-```
-
-###
-
-Because this is a package designed to work with this API, we do not need to use a base url. Also, the output of the function is made into a tibble by default.
-
-### Exercise 3
-
-Start a new pipe with `supreme_views`. Use `ggplot()` and `geom_col()` to make a bar graph with `date` on the x-axis and `views()` on the y axis. 
-
-```{r supreme-03, exercise = TRUE}
-
-```
-
-```{r supreme-03-hint, eval = FALSE}
-supreme_views %>% 
-  ggplot(aes(..., ,...)) +
-  geom_col()
-```
-
-### Exercise 4
-
-Use the `text` argument and the function `paste()` to create a label which you can use for plotly.
-
-```{r supreme-04, exercise = TRUE}
-
-```
-
-```{r supreme-04-hint-1, eval = FALSE}
-supreme_views %>% 
-  arrange(date) %>% 
-  ggplot(aes(date, views, 
-             text = paste("...", ..., "\n"))) +
-  geom_col()
-```
-
-```{r suoreme-04-hint-2, eval = FALSE}
-supreme_views %>% 
-  arrange(date) %>% 
-  ggplot(aes(date, views, 
-             text = paste("Date:", date, "\n"))) +
-  geom_col()
-```
-
-###
-
-### Exercise 5
-
-Use `labs()` to set an appropriate title, caption, and axes labels
-
-```{r supreme-05, exercise = TRUE}
-
-```
-
-### Exercise 6
-
-Copy/paste your code. Assign the output of the pipe to an object called `supreme_plot`.
-
-```{r supreme-06, exercise = TRUE}
-
-```
-
-### Exercise 7 
-
-Use the function `ggplotly()` to add interactive labels to supreme_plot.
-
-```{r supreme-07, exercise = TRUE}
-
-```
-
-```{r supreme-07-hint-1, eval = FALSE}
-ggplotly(..., tooltip = "text")
-```
-
-```{r suoreme-07-hint-2, eval = FALSE}
-ggplotly(..., tooltip = "text")
-```
-
-
-Reminder: you plot should look like this: 
-
-```{r show-supreme-plot}
-final
-```
+In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. The previous and all the following  are examples of API use in which we don't need to use a uniquely generated access key.
 
 <!-- The remaining tasks to cover on this tutorial are to add more examples of API / API packages to reinforce the tools to find indicator codes and explore various open data offerings such that the tutorial takes 50-60 minutes. -->
 
-## The World Bank
-###
-
-The **WDI** package provides helper functions for access to the API for the World Bank. You can learn more about the package [here](http://vincentarelbundock.github.io/WDI/). 
-
-
-```{r wb_setup}
-ratio <- WDI(
-  country = "all",
-  indicator = "BI.WAG.PRVS.FM.SM",
-  start = 1990,
-  end = 2020,
-  language = "en")
-
-ratio_p <- ratio %>%
-  rename(ratio = BI.WAG.PRVS.FM.SM) %>%
-  drop_na(ratio) %>%
-  filter(country %in% c("Colombia", "El Salvador", "Honduras",
-                        "Panama", "Philippines")) %>%
-  ggplot(aes(x = year, y = ratio, color = country)) +
-  geom_point() +
-  geom_line(aes(group = iso2c)) +
-  
-  # debating the best way to show the y-axis - 100% is an even distribution, but
-  # I don't want to mislead the unattentive reader
-  
-  scale_y_continuous(labels = scales::percent_format()) +
-  labs(
-    title = "Female to Male Private Sector Wage Ratio",
-    subtitle = "Women tend to earn more than men in Honduras",
-    y = "Female-to-Male Wage Ratio",
-    caption = "Source: The World Bank via the WDI API package",
-    x = NULL,
-    
-    # Dropping the legend title
-    
-    color = NULL)
-
-ratio_p
-
-```
-
-
-### Exercise 1
-
-The most complex part of this edition of an API call on the World Bank's data is the data indicator - the obscure name string that selects the type of information pulled. Thankfully - there are some handy functions from the **WDI** package we can use. 
-
-###
-
-On the first line, load the **WDI** package. On the subsequent line, use `WDIsearch()` to search indicator descriptions for "investment", and take a look at the first ten results.
-
-```{r wdi-00, exercise = TRUE}
-
-```
-
-```{r wdi-00-hint, eval = FALSE}
-library(WDI)
-WDIsearch(...)[1:10,] 
-
-# or
-
-WDIsearch(...) %>% 
-  head(...)
-```
-
-###
-
-This works for an array of terms that the World Bank may have data about - feel free to explore! It is important to note the indicator of the data you wish to extract as it must be entered in your query. 
-
-### Exercise 2
-
-Will be looking at various countries and their private sector wage allocation between males and females, *as measured by the average group wage across business sectors* between 1990 and 2020. The indicator for this data is: 
-
-###
-
-Create an object named `ratio` and use the `WDI()` function to query the appropriate data. The `indicator` for this data is "BI.WAG.PRVS.FM.SM".
-
-You should remember that unless we wish to know about a certain country, we should set `country` to "all"  You will need to specify a `start` and `end` year, as well as a language, `"en"` for English.
-
-```{r wdi-01, exercise = TRUE}
-
-```
-
-```{r wdi-01-hint-1, eval = FALSE}
-Use the WDIsearch() tool from the previous question if you are having 
-difficulty locating the proper indicator. 
-```
-
-```{r wdi-01-hint-2, eval = FALSE}
-ratio <- WDI(
-  country = "all",
-  indicator = ...,
-  start = ...,
-  end = ...,
-  language = ...
-)
-```
-
-###
-
-NA values are common as some metrics are more difficult to measure consistently over time for various reporting, cooperation, or development issues among others. 
-
-The output of the package WDI is ready to be coverted to a tibble by default.
-
-### Exercise 3
-
-Start a new pipe with `ratio` and begin creating a plot that answers our question. If we are interested in those countries that have the most closely aligned female and male wage allocations - we would expect the ratio to be 1.0.
-
-###
-
-Rename the indicator column to be `wage_ratio` and then drop NA values from the `wage_ratio` column. 
-
-```{r wdi-02, exercise = TRUE}
-
-```
-
-```{r wdi-02-hint, eval = FALSE}
-ratio %>% 
-  mutate(wage_ratio = ...) %>% 
-  drop_na(...)
-```
-
-### Exercise 4
-
-Create a scatter plot that shows changes in the spread across countries over time.
-
-```{r wdi-03, exercise = TRUE}
-
-```
-
-```{r wdi-03-hint, eval = FALSE}
-... %>% 
-  ggplot(aes(...)) +
-  geom_point()
-```
-
-###
-
-While this might be interesting, it is quite messy. 
-
-
-### Exercise 5
-
-The graph is too clutered. Filter the data to keep rows only where `country` is equal to Colombia, El Salvador, Honduras, Panama, the Philippines. Filter the data for only these countries
-
-```{r wdi-04, exercise = TRUE}
-
-```
-
-```{r wdi-04-hint, eval = FALSE}
-... %>% 
-  filter(...) %>%
-  ggplot(aes(...)) +
-  geom_point()
-```
-
-###
-
-Now we can start to see time trends within these countries. 
-
-### Exercise 6
-
-To make these trends easier to follow, connect the scatter-plot points with `geom_line()`. 
-
-Be sure to add appropriate titles, labels, etc. 
-
-```{r WDI-final, exercise = TRUE}
-
-```
-
-```{r WDI-final-hint, eval = FALSE}
-... %>% 
-  filter(...) %>%
-  ggplot(aes(...)) +
-  geom_point() +
-  geom_line(aes(group = ...)) +
-  scale_y_continuous(...) +
-  labs(...)
-```
-
-### Exercise 7 
-
-Use `labs()` to set an appropriate title, subtitle, axes labels, and captions.
-
-```{r denver-7, exercise = TRUE}
-
-```
-
-###
-
-Reminder: you plot should look like this: 
-
-```{r final_plot_shown}
-ratio_p
-```
 
 ## The International Monetary Fund
 ###
 
 Let's make the following plot with data from the Internation Monetary Fund API. 
 
-```{r show-plot}
+```{r make-imf-plot}
 imf_plot <- imf_data_named %>% 
   rename(dtg = `GGXWDG_GDP`) %>% 
   arrange(desc(dtg)) %>% 
@@ -857,7 +748,7 @@ library(imfr)
 
 ### Exercise 2
 
-Let's learn more about the `imfr` package. In your console, run `help(package = "imfr")`. Click and read about the function `imf_data`, the function used to download data in this package.
+Let's learn more about the `imfr` package. In your console, run `help(package = "imfr")`. Click and read about the function `imf_data`, the function used to download data in this package. You can also read about the function in the Tutorial window using the `?`. Write "done" when you are finished. 
 
 ```{r imfr-2, exercise = TRUE}
 
@@ -889,7 +780,7 @@ Both functions return a data frame. `imf_ids` requires no arguments, but `imf_co
 
 ###
 
-If a help page function has an argument with nothing equal to it, that means there is no default for that argument and that the user must specify the value.
+If a function in a help page  has an argument that is not set equal to anything, that means there is no default for that argument and that the user must specify the value.
 
 ### Exercise 4
 
@@ -927,6 +818,10 @@ Run the function `imf_codelist()` with the argument "HPDD". One item has the des
 imf_ids("HPDD")
 ```
 
+### 
+
+On the example page we saw a function with only one code, so it is safe to assume that it is not necessary to specify codes for every item in  `imf_codelists`.
+
 ### Exercise 7 
 
 Run the function `imf_codes()` with the argument being the indicator codelist, "CL_INDICATOR_HPDD". 
@@ -963,8 +858,8 @@ Start a new pipe with `imf_raw`. Let's see how many years were included in this 
 ```
 
 ```{r imfr-9-hint, eval = FALSE}
-imf_data(database_id = "HPDD", indicator = "GGXWDG_GDP", start = 2014) %>% 
-  arrange(desc(year))
+imf_raw %>% 
+  arrange(desc(...))
 ```
 
 ###
@@ -981,20 +876,20 @@ Copy and filter the data to keep rows only where year is equal to "2015". Assign
 
 ```{r imfr-10-hint, eval = FALSE}
 imf_data %>% 
-  arrange(desc(year))
+  filter(year == "2015")
 ```
 
 ### Exercise 11
 
-There is a package called `countrycode`. In the console, run `help(package == "countrycode")` to bring up the help page for this package. Click on the function `codelist`.
+There is a package called `countrycode`. In the console, run `help(package == "countrycode")` to bring up the help page for this package. Click on the function `codelist`. Write "done" for your answer when you are finished. 
 
 ```{r imfr-11, exercise = TRUE}
 
 ```
 
 ```{r imfr-11-hint, eval = FALSE}
-imf_data %>% 
-  filter(year == "2015")
+This can akso be done, though with a more difficult to read view, in the 
+Tutorials window. 
 ```
 
 ###
@@ -1028,7 +923,7 @@ iso_codes <- codelist %>%
 
 ### Exercise 14
 
-Use `left_join()` to join `iso_codes` to `imf_data` by the shared column `iso2c`. Save this to an object named imf_data_named.   
+Use `left_join()` to join `iso_codes` to `imf_data` by the shared column "iso2c". Save this to an object named `imf_data_named`.   
 
 ```{r imfr-14, exercise = TRUE}
 
@@ -1056,7 +951,7 @@ is.na(imf_data_named$country.name.en)
 
 ### Exercise 16 
 
-It is hard to see whether there are any values of `TRUE` in so large a vector. Copy and paste the previous code. Pipe the function `table()` to it. 
+It is hard to see whether there are any values of `TRUE` in so large a vector. Copy and paste the previous code. Pipe the function `table()` into it. 
 
 ```{r imfr-16, exercise = TRUE}
 
@@ -1073,7 +968,7 @@ Every country was able to be matched to a value in `country.name.en` through the
 
 ### Exercise 17
 
-Start a new pipe with imf_data_named. Rename the column `GGXWDG_GDP` to `dtg`. When referring to columns that begin with capital letters, numbers, or special characters in code, you must surround them with bacticks, e.g. "`GGXWDG_GDP`".
+Start a new pipe with imf_data_named. Rename the column `GGXWDG_GDP` to `dtg`. When referring to columns that begin with capital letters, numbers, or special characters in code, you must surround them with backticks, e.g. "`GGXWDG_GDP`".
 
 ```{r imfr-17, exercise = TRUE}
 
@@ -1148,12 +1043,152 @@ Reminder: Your graph should look like this
 imf_plot
 ```
 
-## Bison Data with Package
+## Wikipedia Page Access
 ###
 
-Let's make the following plot with data from the USGS Bison API and the `rbison` package.
+The **pageviews** package provides helper functions for accesses the API for the World Bank. You can learn more about the package [here](https://cran.rstudio.com/web/packages/pageviews/pageviews.pdf). 
 
-```{r show-bison-plot}
+
+```{r supreme_setup}
+final <- ggplotly(supreme_plot, tooltip = "text")
+
+final
+```
+
+###
+
+Note that this graph is interactive and you will use the package `plotly` to add this feature.
+
+### Exercise 1
+
+On the first line, load the **pageviews** package. In this package, the functions `article_pageviews()` and `old_pageviews()` allow us to communicate with the Wikimedia API. 
+
+```{r supreme-1, exercise = TRUE}
+
+```
+
+```{r supreme-1-hint, eval = FALSE}
+library(pageviews)
+```
+
+###
+
+`old_pageviews()` is for counts before 2016. They are not accurate as they did not omit the activity of web-crawlers and bots.
+
+### Exercise 2
+
+We will be looking at the wikipedia page views for the Supreme Court of the United States countries during President Obama's tenure, from January 20th 2008 to January 20th 2016.
+
+###
+
+Start a call with `old_pageviews()`. Set the `project` argument equal to `wikipedia.en` and the article to `Supreme_Court_of_the_United_States`. Set the start time and end time in the format: YYYYMMDDHH. Set hours to 00, they do not matter as the granularity is by default daily. Assign this to an object called `supreme_views`.
+
+```{r supreme-2, exercise = TRUE}
+
+```
+
+```{r supreme-2-hint-1, eval = FALSE}
+Use the WDIsearch() tool from the previous question 
+if you are having difficulty locating the proper 
+indicator. 
+```
+
+```{r supreme-2-hint-2, eval = FALSE}
+old_pageviews(project = "en.wikipedia",
+                           article = "...",
+                           start = "2008012000",
+                           end = "2016012000") 
+```
+
+###
+
+Because this is a package designed to work with this API, we do not need to use a base url. Also, the output of the function is made into a tibble by default.
+
+### Exercise 3
+
+Start a new pipe with `supreme_views`. Use `ggplot()` and `geom_col()` to make a bar graph with `date` on the x-axis and `views()` on the y axis. 
+
+```{r supreme-3, exercise = TRUE}
+
+```
+
+```{r supreme-3-hint, eval = FALSE}
+supreme_views %>% 
+  ggplot(aes(..., ,...)) +
+  geom_col()
+```
+
+### Exercise 4
+
+Use the `text` argument and the function `paste()` to create a label which you can use for plotly.
+
+```{r supreme-4, exercise = TRUE}
+
+```
+
+```{r supreme-4-hint-1, eval = FALSE}
+supreme_views %>% 
+  arrange(date) %>% 
+  ggplot(aes(date, views, 
+             text = paste("...", ..., "\n"))) +
+  geom_col()
+```
+
+```{r suoreme-4-hint-2, eval = FALSE}
+supreme_views %>% 
+  arrange(date) %>% 
+  ggplot(aes(date, views, 
+             text = paste("Date:", date, "\n"))) +
+  geom_col()
+```
+
+###
+
+### Exercise 5
+
+Use `labs()` to set an appropriate title, caption, and axes labels
+
+```{r supreme-5, exercise = TRUE}
+
+```
+
+### Exercise 6
+
+Copy/paste your code. Assign the output of the pipe to an object called `supreme_plot`.
+
+```{r supreme-6, exercise = TRUE}
+
+```
+
+### Exercise 7 
+
+Use the function `ggplotly()` to add interactive labels to supreme_plot.
+
+```{r supreme-7, exercise = TRUE}
+
+```
+
+```{r supreme-7-hint-1, eval = FALSE}
+ggplotly(..., tooltip = "text")
+```
+
+```{r suoreme-07-hint-2, eval = FALSE}
+ggplotly(..., tooltip = "text")
+```
+
+
+Reminder: you plot should look like this: 
+
+```{r show-supreme-plot}
+final
+```
+
+## BISON with Package
+###
+
+Let's make the following plot with data from the USGS Bison API and the `rbison` package. This package is designed to make work with the BISON API, the site which we first accessed with HTTP, easier. 
+
+```{r make-bison-plot}
 bison_plot <- bisonmap(input = output, geom = geom_jitter)
 ```
 
@@ -1175,7 +1210,7 @@ library(rbsion)
 
 ### Exercise 2
 
-Let's learn more about the `rbison` package. In your console, run `help(package = "rbison")`. Click and read about the function `bison`, the function used to download data in this package. Also click and read about the function `bisonmap`
+Let's learn more about the `rbison` package. In your console, run `help(package = "rbison")`. Click and read about the function `bison`, the function used to download data in this package. Also click and read about the function `bisonmap`.
 
 ```{r rbsion-2, exercise = TRUE}
 
@@ -1187,7 +1222,7 @@ help(pacakge = "rbison")
 
 ###
 
-`bison` has lots of arguments, but has examples in which it specifies very few. 
+`bison` has lots of possible arguments, but the help page has examples in which it specifies very few. 
 
 ### Exercise 3
 
@@ -1204,7 +1239,7 @@ output <- bison(species = "Accipiter", type = "...", count = ...)
 
 ###
 
-`output` seems to be a complex ob ject
+`output` seems to be a complex object
 
 ### Exercise 4
 
@@ -1220,7 +1255,7 @@ str(output)
 
 ###
 
-`output` seems to be an object containing lists and data frames. 
+`output` is a list of four main objects
 
 ### Exercise 5
 
@@ -1230,7 +1265,6 @@ Run `class(output)`.
 
 
 ```
-
 
 ```{r rbison-5-hint, eval = FALSE}
 class(output)
@@ -1289,88 +1323,537 @@ bisonmap(input = output, geom = geom_jitter) +
 
 Let's make the following plot. 
 
-```{r show-bison-plot-dirty}
-response <- GET(url = "https://bison.usgs.gov/api/search.json",
-    query = list(species = "Accipiter", type = "scientific_name", count = 500))
-
-output_text <- content(response, "text")
-
-new_output <- fromJSON(output_text)
-
-clean_bison <- new_output$states$data %>% 
-  as_tibble() %>% 
-  unnest(cols = c(Oregon, `North Carolina`, Vermont, Wyoming, Maine, Oklahoma, 
-    Tennessee, `British Columbia Canada`, Arkansas, Washington, 
-    Utah, `South Carolina`, Nebraska, `Ontario Canada`, Massachusetts, 
-    Colorado, Missouri, `Quebec Canada`, `Alberta Canada`, `North Dakota`, 
-    Arizona, Wisconsin, Nevada, `New York`, Montana, Kentucky, 
-    Hawaii, Minnesota, California, Kansas, Florida, Delaware, 
-    `New Jersey`, Pennsylvania, Michigan, `New Mexico`, Texas, 
-    Illinois, Connecticut, `New Hampshire`, Ohio, Georgia, Maryland, 
-    Virginia, Idaho)) %>% 
-  mutate(names = c("total", "fips")) %>% 
-  pivot_longer(cols = -names, 
-               names_to = "state", 
-               values_to = "values") %>% 
-  pivot_wider(names_from = names, 
-              values_from = values) %>% 
-  mutate(total = as.numeric(total)) %>% 
-  mutate(region = tolower(state)) %>% 
-  select(-fips)
-
-states <- map_data("state") %>% 
-  left_join(clean_bison, by = "region")
-
-states %>% 
+```{r make-bison-plot-api}
+ bison_plot_api <- map_data("state") %>% 
+  left_join(clean_data_api, by = "region") %>% 
   ggplot(aes(long, lat, group = group, fill = total)) +
   geom_polygon() +
   scale_fill_gradient(low = "blue", high = "red", na.value = "grey50") +
-  labs(title = "Accipiter Bison in the Contiguous United States", 
-       subtitle = "Alaska has 1, Hawaii 0", 
-       x = "Latitude", 
-       y = "Longitude", 
-       caption = "USGS Bison API")
+  labs(title = "Accipiter in the Contiguous United States", 
+       subtitle = "Hawaii has 1, Alaska has 0", 
+       x = "Longitude", 
+       y = "Latitude", 
+       caption = "USGS BISON API")
+
+bison_plot_api
 ```
 
 ### Exercise 1
 
-Use `GET()` to make contact with the base url for the USGS Bison API: "https://bison.usgs.gov/doc/api.jsp. View this output and assign it to an object named `base_response`
+Run `GET()` with the URL we assigned to the object `bison_base`.
 
 ```{r bison-1, exercise = TRUE}
 
 ```
 
 ```{r bison-1-hint, eval = FALSE}
-GET(url = "https://bison.usgs.gov/doc/api.jsp")
+GET(url = "https://bison.usgs.gov/api/search.json")
 ```
 
 ### 
 
-We get back a response, of 69kB and of type html. 
+This request takes more time to load, you can stop it. If you wait the whole time, you will get the error message: "Empty reply from server". This url does not return a response. 
 
-### Exercise 2 
+### Exercise 2
 
-Use the function `class()` for the object `base_response`.
+Run `GET()` with the same url and with the second argument `query`. Set `query` equal to a `list()` which contains the parameters you want to use in your search, `species = "Accipiter"`, `type = "scientific_name"`, and `count = 500`. View this output and save it to an output called `bison_response`. 
 
 ```{r bison-2, exercise = TRUE}
 
 ```
 
 ```{r bison-2-hint, eval = FALSE}
-class(response)
+response <- GET(url = "https://bison.usgs.gov/api/search.json",
+    query = list(species = "...",
+                 type = "...", 
+                 count = 500))
 ```
+
+###
+
+This response is a JSON file and 119kB in size. Notice how the addition of the question mark and our query list to the url. 
 
 ### Exercise 3
 
-Use the function `content()` to view the content of `base_response`.
+Run `content()` on `bison_response`, set the second argument to "text".
 
 ```{r bison-3, exercise = TRUE}
 
 ```
 
 ```{r bison-3-hint, eval = FALSE}
-content(base_response)
+content(response, "text")
 ```
+
+### 
+
+This file matches what we expect of JSON files: lots of curly brackets.
+
+### Exercise 4
+
+Because the content of `bison_response` is a JSON file we need to convert it before we can use it in R. Start a pipe with `content(bison_response)` and then pipe the function `fromJSON()` into it. 
+
+```{r bison-4, exercise = TRUE}
+
+```
+
+```{r bison-4-hint, eval = FALSE}
+content(response) %>% 
+  fromJSON()
+```
+
+###
+
+This returns an error. Content by default tries to read the response into its most usable form in RStudio. `fromJSON()` expects a text file. 
+
+### Exercise 5
+
+Start a pipe with `content(bison_response, "text")` and then pipe the function `fromJSON()` into it. View this and assign it to an output named `output_api`.
+
+```{r bison-5, exercise = TRUE}
+
+```
+
+```{r bison-5-hint, eval = FALSE}
+output_api <- content(response, "...") %>% 
+  fromJSON()
+```
+
+###
+
+`output_api` seems to be an even more complex R object than the `output` we got from the `rbison` package. 
+ 
+### Exercise 6
+
+Run `str()` on `output_api`. 
+
+```{r bison-6, exercise = TRUE}
+
+```
+
+```{r bison-6-hint, eval = FALSE}
+str(output_api)
+```
+
+###
+
+`output_api` is a list of 12 main objects. Peruse these objects and their sub-organizations
+
+### Exercise 7
+
+Run `output_api$states$data$Oregon`. 
+
+```{r bison-7, exercise = TRUE}
+
+```
+
+```{r bison-7-hint, eval = FALSE}
+str(output_api)
+```
+
+###
+
+This is a list of two values, the state's total (number of bison) and its county FIPS. We could observe all these details in the output of `str()`. 
+
+### Exercise 8
+
+Start a pipe with `output$states$data`. Add the function `as_tibble()`. 
+
+```{r bison-8, exercise = TRUE}
+
+```
+
+```{r bison-8-hint, eval = FALSE}
+str(output_api)
+```
+
+###
+
+`output$states$data` is a list of containing 45 two-item lists of the type we just saw for Oregon for every state. When we make this into a tibble, each list becomes a `list` column which contains its two character items. 
+
+### Exercise 9
+
+Copy/paste your code. Because the columns are list columns, they do not display well in our tibble. We can convert these to character columns, with the functions `mutate()` and `as.character()`. 
+
+###
+
+To avoid having to do a mutation for each column, we can nest the `across()` function within `mutate()`. The first argument in `across` specifies the columns you want,`everything()`. The second argument specifies the function we want to use, `as.character`, in this case without arguments or parentheses.  
+
+```{r bison-9, exercise = TRUE}
+
+```
+
+```{r bison-9-hint, eval = FALSE}
+... %>% 
+mutate(across(everything(), as.character))
+```
+
+### Exercise 10
+
+Use `mutate()` to create a new column called names whose first row contains the string "total" and whose second row contains the string "fips". 
+
+```{r bison-10, exercise = TRUE}
+
+```
+
+```{r bison-10-hint, eval = FALSE}
+... %>% 
+mutate(across(everything(), as.character))
+```
+
+###
+
+We use character since the Candian FIPS values are letters. 
+
+### Exercise 11
+
+Continue your pipe. Use `pivot_longer()` to transform the data so that states are contained in rows and not columns. Set `cols` equal to `-names`. Set `names_to()` equal to "states" and set `values_to` equal to "values". 
+
+```{r bison-11, exercise = TRUE}
+
+```
+
+```{r bison-11-hint, eval = FALSE}
+... %>% 
+pivot_longer(cols = -name, 
+             names_to = "...", 
+             values_to = "...")
+```
+
+### 
+
+Tidyselect functions can generally be conveniently used for  `pivot_longer()` column selection.
+
+### Exercuse 12
+
+Continue your pipe. Use `pivot_wider()` to transform the data so that values for `total` and `fips` are in separate rows. Set `names_from` equal to `names` and `values_from` equal to `values`. View this tibble and save it to an object called clean_data_api.
+
+```{r bison-12, exercise = TRUE}
+
+```
+
+```{r bison-12-hint, eval = FALSE}
+... %>% 
+pivot_longer(cols = -name, 
+             names_from = "...", 
+             values_from = "values")
+```
+
+### Exercise 13
+
+Use `mutate()` to change the column `total` into a column of the same name whose values are integers. 
+
+```{r bison-13, exercise = TRUE}
+
+```
+
+```{r bison-13-hint, eval = FALSE}
+... %>% 
+  mutate(total = as.integer(total))
+```
+
+### Exercise 14
+
+Use `mutate()` and the function `tolower()` to make a new column named `region` which contains lowercase versions of the strings in the column `states`. 
+
+```{r bison-14, exercise = TRUE}
+
+```
+
+```{r bison-14-hint, eval = FALSE}
+... %>% 
+  mutate(region = tolower(...))
+```
+
+### 
+
+We are making the region column in preparation to join this data to the tibble that makes the map of the United States in ggplot. 
+
+### Exercise 15
+
+Select the columns `region` and `total`. Assign this to an object called `clean_data_api`. 
+
+```{r bison-15, exercise = TRUE}
+
+```
+
+```{r bison-15-hint, eval = FALSE}
+clean_data api <- output$states$data %>% 
+... %>% 
+  select(..., ...)
+```
+
+### Exercise 16
+
+The ggplot function `map_data()` is used to download data to make maps which can be used in `ggplot()`. Run `map_data("states")` which returns a tibble to make a map of the contiguous 48 states. 
+
+```{r bison-16, exercise = TRUE}
+
+```
+
+```{r bison-16-hint, eval = FALSE}
+... %>% 
+  map_data("states")
+```
+
+### Exercise 17
+
+Start a pipe with this tibble. Use `left_join()` with the appropriate column for the `by` argument to join `clean_data_api` to this tibble. 
+
+```{r bison-17, exercise = TRUE}
+
+```
+
+```{r bison-17-hint, eval = FALSE}
+... %>% 
+  left_join("...", by = "region")
+```
+
+### Exercise 18
+
+Continue this pipe with `ggplot()`. Map `long` to the x-axis, `lat` to the y-axis, `group` to the group argument, and `total` to fill. Add the layer `geom_polygon()`.
+
+```{r bison-18, exercise = TRUE}
+
+```
+
+```{r bison-18-hint, eval = FALSE}
+... %>% 
+  ggplot(aes(long, lat, group = group, fill = total)) +
+  geom_polygon() 
+```
+
+### Exercise 19
+
+Add the layer `scale_fill_gradient()`. Set the argument `low` to "blue" and `high` to "red".
+
+```{r bison-19, exercise = TRUE}
+
+```
+
+```{r bison-19-hint, eval = FALSE}
+...
+  ggplot(aes(long, lat, group = group, fill = total)) +
+  geom_polygon() 
+```
+
+### Exercise 20
+
+Use `labs()` to add a title, subtitle, axes labels, and a caption to your plot.  
+
+```{r bison-20, exercise = TRUE}
+
+```
+
+```{r bison-20-hint, eval = FALSE}
+... + 
+  labs(title = "...", 
+       ...)
+```
+
+Reminder: Your graph should look like this. 
+
+```{r show-bison-plot-api}
+bison_plot_api
+```
+
+<!-- I did not spend the time to convert this into the style of the rest of the tutorial. I think the tutorial is long enough. The example is similar to imf but differs because it has an actual search function rather than pre-loaded tibbles. This contributes to the difficulty in adapting it.  -->
+
+<!-- ## The World Bank -->
+<!-- ### -->
+
+<!-- The **WDI** package provides helper functions for access to the API for the World Bank. You can learn more about the package [here](http://vincentarelbundock.github.io/WDI/).  -->
+
+
+<!-- ```{r wb_setup} -->
+<!-- ratio <- WDI( -->
+<!--   country = "all", -->
+<!--   indicator = "BI.WAG.PRVS.FM.SM", -->
+<!--   start = 1990, -->
+<!--   end = 2020, -->
+<!--   language = "en") -->
+
+<!-- ratio_p <- ratio %>% -->
+<!--   rename(ratio = BI.WAG.PRVS.FM.SM) %>% -->
+<!--   drop_na(ratio) %>% -->
+<!--   filter(country %in% c("Colombia", "El Salvador", "Honduras", -->
+<!--                         "Panama", "Philippines")) %>% -->
+<!--   ggplot(aes(x = year, y = ratio, color = country)) + -->
+<!--   geom_point() + -->
+<!--   geom_line(aes(group = iso2c)) + -->
+
+<!--   # debating the best way to show the y-axis - 100% is an even distribution, but -->
+<!--   # I don't want to mislead the unattentive reader -->
+
+<!--   scale_y_continuous(labels = scales::percent_format()) + -->
+<!--   labs( -->
+<!--     title = "Female to Male Private Sector Wage Ratio", -->
+<!--     subtitle = "Women tend to earn more than men in Honduras", -->
+<!--     y = "Female-to-Male Wage Ratio", -->
+<!--     caption = "Source: The World Bank via the WDI API package", -->
+<!--     x = NULL, -->
+
+<!--     # Dropping the legend title -->
+
+<!--     color = NULL) -->
+
+<!-- ratio_p -->
+
+<!-- ``` -->
+
+
+<!-- ### Exercise 1 -->
+
+<!-- The most complex part of this edition of an API call on the World Bank's data is the data indicator - the obscure name string that selects the type of information pulled. Thankfully - there are some handy functions from the **WDI** package we can use.  -->
+
+<!-- ### -->
+
+<!-- On the first line, load the **WDI** package. On the subsequent line, use `WDIsearch()` to search indicator descriptions for "investment", and take a look at the first ten results. -->
+
+<!-- ```{r wdi-00, exercise = TRUE} -->
+
+<!-- ``` -->
+
+<!-- ```{r wdi-00-hint, eval = FALSE} -->
+<!-- library(WDI) -->
+<!-- WDIsearch(...)[1:10,]  -->
+
+<!-- # or -->
+
+<!-- WDIsearch(...) %>%  -->
+<!--   head(...) -->
+<!-- ``` -->
+
+<!-- ### -->
+
+<!-- This works for an array of terms that the World Bank may have data about - feel free to explore! It is important to note the indicator of the data you wish to extract as it must be entered in your query.  -->
+
+<!-- ### Exercise 2 -->
+
+<!-- Will be looking at various countries and their private sector wage allocation between males and females, *as measured by the average group wage across business sectors* between 1990 and 2020. The indicator for this data is:  -->
+
+<!-- ### -->
+
+<!-- Create an object named `ratio` and use the `WDI()` function to query the appropriate data. The `indicator` for this data is "BI.WAG.PRVS.FM.SM". -->
+
+<!-- You should remember that unless we wish to know about a certain country, we should set `country` to "all"  You will need to specify a `start` and `end` year, as well as a language, `"en"` for English. -->
+
+<!-- ```{r wdi-01, exercise = TRUE} -->
+
+<!-- ``` -->
+
+<!-- ```{r wdi-01-hint-1, eval = FALSE} -->
+<!-- Use the WDIsearch() tool from the previous question if you are having  -->
+<!-- difficulty locating the proper indicator.  -->
+<!-- ``` -->
+
+<!-- ```{r wdi-01-hint-2, eval = FALSE} -->
+<!-- ratio <- WDI( -->
+<!--   country = "all", -->
+<!--   indicator = ..., -->
+<!--   start = ..., -->
+<!--   end = ..., -->
+<!--   language = ... -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- ### -->
+
+<!-- NA values are common as some metrics are more difficult to measure consistently over time for various reporting, cooperation, or development issues among others.  -->
+
+<!-- The output of the package WDI is ready to be coverted to a tibble by default. -->
+
+<!-- ### Exercise 3 -->
+
+<!-- Start a new pipe with `ratio` and begin creating a plot that answers our question. If we are interested in those countries that have the most closely aligned female and male wage allocations - we would expect the ratio to be 1.0. -->
+
+<!-- ### -->
+
+<!-- Rename the indicator column to be `wage_ratio` and then drop NA values from the `wage_ratio` column.  -->
+
+<!-- ```{r wdi-02, exercise = TRUE} -->
+
+<!-- ``` -->
+
+<!-- ```{r wdi-02-hint, eval = FALSE} -->
+<!-- ratio %>%  -->
+<!--   mutate(wage_ratio = ...) %>%  -->
+<!--   drop_na(...) -->
+<!-- ``` -->
+
+<!-- ### Exercise 4 -->
+
+<!-- Create a scatter plot that shows changes in the spread across countries over time. -->
+
+<!-- ```{r wdi-03, exercise = TRUE} -->
+
+<!-- ``` -->
+
+<!-- ```{r wdi-03-hint, eval = FALSE} -->
+<!-- ... %>%  -->
+<!--   ggplot(aes(...)) + -->
+<!--   geom_point() -->
+<!-- ``` -->
+
+<!-- ### -->
+
+<!-- While this might be interesting, it is quite messy.  -->
+
+
+<!-- ### Exercise 5 -->
+
+<!-- The graph is too clutered. Filter the data to keep rows only where `country` is equal to Colombia, El Salvador, Honduras, Panama, the Philippines. Filter the data for only these countries -->
+
+<!-- ```{r wdi-04, exercise = TRUE} -->
+
+<!-- ``` -->
+
+<!-- ```{r wdi-04-hint, eval = FALSE} -->
+<!-- ... %>%  -->
+<!--   filter(...) %>% -->
+<!--   ggplot(aes(...)) + -->
+<!--   geom_point() -->
+<!-- ``` -->
+
+<!-- ### -->
+
+<!-- Now we can start to see time trends within these countries.  -->
+
+<!-- ### Exercise 6 -->
+
+<!-- To make these trends easier to follow, connect the scatter-plot points with `geom_line()`.  -->
+
+<!-- Be sure to add appropriate titles, labels, etc.  -->
+
+<!-- ```{r WDI-final, exercise = TRUE} -->
+
+<!-- ``` -->
+
+<!-- ```{r WDI-final-hint, eval = FALSE} -->
+<!-- ... %>%  -->
+<!--   filter(...) %>% -->
+<!--   ggplot(aes(...)) + -->
+<!--   geom_point() + -->
+<!--   geom_line(aes(group = ...)) + -->
+<!--   scale_y_continuous(...) + -->
+<!--   labs(...) -->
+<!-- ``` -->
+
+<!-- ### Exercise 7  -->
+
+<!-- Use `labs()` to set an appropriate title, subtitle, axes labels, and captions. -->
+
+<!-- ```{r denver-7, exercise = TRUE} -->
+
+<!-- ``` -->
+
+<!-- ### -->
+
+<!-- Reminder: you plot should look like this:  -->
+
+<!-- ```{r final_plot_shown} -->
+<!-- ratio_p -->
+<!-- ``` -->
 
 ## Submit
 
