@@ -929,7 +929,117 @@ Now you can also extract data from the attributes of tags. You can try `"class"`
 
 Nice work!
 
-## Wikipedia Tables
+## Open Secrets table
+
+```{r setup-open-section, echo=FALSE}
+web_url <- "https://www.opensecrets.org/political-action-committees-pacs/foreign-connected-pacs/2020"
+
+local_url <- system.file("www/opensecrets_backup.html", package = "primer.tutorials")
+
+raw_data <- read_html(web_url) %>% 
+  html_element("table.DataTable-Partial") %>% 
+  html_table()
+
+
+```
+
+<a href="https://www.opensecrets.org">Open Secrets</a> contains <a href="https://www.opensecrets.org/political-action-committees-pacs/foreign-connected-pacs/2020">data</a> associated with the amount and sources of money donated to Democratic and Republican parties in 2020. <a href="https://www.opensecrets.org/political-action-committees-pacs/foreign-connected-pacs/2020">Check out the page</a>. You will be reading the table underneath the map.
+
+###
+
+### Exercise 1
+
+Assign the url provided below to a variable named `web_url`.
+
+```{r open1, exercise=TRUE}
+"https://www.opensecrets.org/political-action-committees-pacs/foreign-connected-pacs/2020"
+
+```
+
+```{r open1-hint-1, eval=FALSE}
+web_url <- "..."
+```
+
+
+### Exercise 2
+
+Use the function `read_html()` and `web_url` as argument to read the html of the webpage.
+
+If you tried the hint for this exercise and it is giving you an error like: `Error in open.connection(x, "rb") : HTTP error 403.`, use the variable `local_url` instead for all exercises in the Open Secrets section.
+
+```{r open2, exercise=TRUE}
+
+```
+
+```{r open2-hint-1, eval=FALSE}
+read_html(web_url)
+```
+
+###
+
+You now loaded the html of the webpage into R, similar to how you did with `minimal_html()` in earlier sections.
+
+You can begin to select elements in the page.
+
+### Exercise 3
+
+The following html shows the `table` tag's attributes:
+```{.html}
+<table class="DataTable-Partial dataTable no-footer" data-title="Foreign Connected PACs, 2019-2020" data-paging="true" data-page-length="25">...</table>
+```
+
+###
+
+Copy/paste your pipe from above and extend it with ` %>% `. Select the table using the function `html_element()` with both the tag type and its first `class` attribute.
+
+```{r open3, exercise=TRUE}
+
+```
+
+```{r open3-hint-1, eval=FALSE}
+read_html(...) %>% html_element("tag.class_name")
+```
+
+```{r open3-hint-2, eval=FALSE}
+read_html(...) %>% html_element("table.DataTable-Partial")
+```
+
+###
+
+You have selected the desired table.
+
+You can see that it has a lot of different attributes and items inside the tag. It can be overwhelming at times but if you focus on the parts you know like `id` or `class`, you will be fine.
+
+
+### Exercise 4
+
+The `rvest` package provides a great table-parsing function, `html_table()`, that allows you to load in web-scraped tables easily.
+
+###
+
+Copy/paste your pipe from above and extend it with the function `html_table()`. This allows you to load in data in the table in the form of a tibble.
+
+```{r open4, exercise=TRUE}
+
+```
+
+```{r open4-hint-1, eval=FALSE}
+... %>% html_table()
+```
+
+Your resulting tibble should look something like this:
+
+```{r open_example, echo=FALSE}
+raw_data
+```
+
+###
+
+Nice work!
+
+Now you have a tibble web-scraped directly from OpenSecrets.
+
+## Wikipedia table
 
 ```{r setup-wiki-section, echo=FALSE}
 wiki_url <- "https://en.wikipedia.org/w/index.php?title=%22,%22Gun_violence_in_the_United_States_by_state%22,%22&direction=prev&oldid=810166167"
@@ -940,13 +1050,37 @@ raw_data <- read_html(wiki_url) %>%
   html_table()
 ```
 
-Now you will try your hand in scraping data from a Wikipedia page about gun violence in the United States by state and plotting it.
+Now you will try your hand in scraping data from a Wikipedia page about <a href="https://en.wikipedia.org/w/index.php?title=%22,%22Gun_violence_in_the_United_States_by_state%22,%22&direction=prev&oldid=810166167">gun violence in the United States by state</a> and plotting it.
 
-###
+Let's create the following plot:
+```{r make-wiki_graph, echo=FALSE}
+clean_data <- raw_data %>% rename(
+  population='Population (total inhabitants) (2015) [1]',
+  total_deaths=`Murders and Nonnegligent\nManslaughter(total deaths) (2015) [2]`,
+  death_rate=`Murder and Nonnegligent\nManslaughter Rate(per 100,000 inhabitants) (2015)`) %>%
+  select(population, death_rate) %>%
+  mutate(population=parse_number(population)) %>%
+  mutate(pop_tile=ntile(population, 20)) %>%
+  group_by(pop_tile) %>%
+  summarize(sum_rate=sum(death_rate), num_states=n()) %>%
+  mutate(avg_rate=sum_rate/num_states) %>%
+  mutate(percent_rate=avg_rate/sum(avg_rate))
+wiki_graph <- clean_data %>%
+  ggplot(aes(x=pop_tile, y=percent_rate)) + 
+  geom_col() + 
+  geom_smooth(method="loess", formula=y~x, se=FALSE) +
+  scale_x_continuous(breaks=1:20) +
+  scale_y_continuous(
+    labels=scales::percent_format(accuracy=1)) +
+  theme_classic() + 
+  labs(title="Distribution of US Death Rate by Guns in Quantile of Population in 2015",
+       subtitle="Death rate of less populated states fluctuate more than states with a denser population",
+       x="Quantile by Population (least to most)",
+       y="Percent of Average Death Rate",
+       caption="Wikipedia: Gun Violence in the United States (2017)")
 
-<a href="https://en.wikipedia.org/w/index.php?title=%22,%22Gun_violence_in_the_United_States_by_state%22,%22&direction=prev&oldid=810166167">Link to webpage</a>
-
-Check out the page. You will be scraping the table data.
+wiki_graph
+```
 
 ### Exercise 1
 
@@ -963,7 +1097,7 @@ wiki_url <- "..."
 
 ###
 
-Now you have access to the variable `wiki_url`.
+To make sure that updates to the Wikipedia page does not affect this tutorial, the url used is specifically for how the page looked in 2017.
 
 ### Exercise 2
 
@@ -1016,8 +1150,6 @@ read_html(...) %>% html_element("#mw-content-text")
 
 You have selected the main content section of the page.
 
-You can see that it has a lot of different attributes and items inside the tag. It can be overwhelming at times but if you focus on the parts you know like `id` or `class`, you will be fine.
-
 ### Exercise 4
 
 The following is the tag for the table inside the section selected in the previous exercise:
@@ -1043,7 +1175,7 @@ read_html(...) %>% html_element("#mw-content-text") %>% html_element("table.wiki
 
 ###
 
-Now you have access to the data table.
+Now you have access to the data table. You can see some of the elements inside listed.
 
 ### Exercise 5
 
@@ -1080,38 +1212,6 @@ Copy/paste your pipe from above and assign it to a variable named `raw_data`.
 Now you saved the Wikipedia data into a variable, so you do not have to repeatedly web-scrape the page everytime you re-run the pipe.
 
 ### Exercise 7
-
-Let's create the following plot:
-```{r make-wiki_graph, echo=FALSE}
-clean_data <- raw_data %>% rename(
-  population='Population (total inhabitants) (2015) [1]',
-  total_deaths=`Murders and Nonnegligent\nManslaughter(total deaths) (2015) [2]`,
-  death_rate=`Murder and Nonnegligent\nManslaughter Rate(per 100,000 inhabitants) (2015)`) %>%
-  select(population, death_rate) %>%
-  mutate(population=as.integer(gsub(",", "", population))) %>%
-  mutate(pop_tile=ntile(population, 20)) %>%
-  group_by(pop_tile) %>%
-  summarize(sum_rate=sum(death_rate), num_states=n()) %>%
-  mutate(avg_rate=sum_rate/num_states) %>%
-  mutate(percent_rate=avg_rate/sum(avg_rate))
-wiki_graph <- clean_data %>%
-  ggplot(aes(x=pop_tile, y=percent_rate)) + 
-  geom_col() + 
-  geom_smooth(method="loess", formula=y~x, se=FALSE) +
-  scale_x_continuous(breaks=1:20) +
-  scale_y_continuous(
-    labels=scales::percent_format(accuracy=1)) +
-  theme_classic() + 
-  labs(title="Distribution of US Death Rate by Guns in Quantile of Population in 2015",
-       subtitle="Death rate of less populated states fluctuate more than states with a denser population",
-       x="Quantile by Population (least to most)",
-       y="Percent of Average Death Rate",
-       caption="Wikipedia: Gun Violence in the United States (2017)")
-
-wiki_graph
-```
-
-###
 
 Run `glimpse()` on `raw_data` to understand the structure of the data.
 
@@ -1179,55 +1279,23 @@ The only column that is unclean now is `population`.
 
 Copy/paste your pipe and extend it.
 
-Remove all the commas in `population` using `gsub()`, which is just `sub()` except it replaces all matches instead of the first.
+Remove all the commas in `population` and change the column into a numeric column using `parse_number()`.
 
 Then use `mutate()` to store the results in the same column.
-
-`gsub()` takes a `pattern` to match, string to `replace` the patterns with, and the values to be changed.
 
 ```{r wiki10, exercise=TRUE}
 
 ```
 
 ```{r wiki10-hint-1, eval=FALSE}
-... %>% mutate(population=gsub(...))
-```
-
-```{r wiki10-hint-2, eval=FALSE}
-... %>% mutate(population=gsub(",", "", population))
+... %>% mutate(population=parse_number(population))
 ```
 
 ###
 
-As you can see from the result, the population column no longer has commas in it.
+As you can see from the output, right below the column name, `population` is now a `<dbl>`, or double column, which is numeric.
 
 ### Exercise 11
-
-Now you can change the `population` column's type from character to integer.
-
-###
-
-Copy/paste your pipe from above and extend it. Use the `as.integer()` function to change `population` to an integer column.
-
-Then use `mutate()` to store the results in the same column.
-
-```{r wiki11, exercise=TRUE}
-
-```
-
-```{r wiki11-hint-1, eval=FALSE}
-... %>% mutate(population=as.integer(...))
-```
-
-```{r wiki11-hint-2, eval=FALSE}
-... %>% mutate(population=as.integer(population))
-```
-
-###
-
-As you can see from the output, right below the column name, `population` is now a `<int>`, or integer column.
-
-### Exercise 12
 
 Now you can begin dividing the data into quantiles.
 
@@ -1239,15 +1307,15 @@ Then use `mutate()` to store the results in a new column called `pop_tile`.
 
 Remember that `ntile()` takes as arguments the data that it is splitting and the number of groups to split into.
 
-```{r wiki12, exercise=TRUE}
+```{r wiki11, exercise=TRUE}
 
 ```
 
-```{r wiki12-hint-1, eval=FALSE}
+```{r wiki11-hint-1, eval=FALSE}
 ... %>% mutate(pop_tile=ntile(...))
 ```
 
-```{r wiki12-hint-2, eval=FALSE}
+```{r wiki11-hint-2, eval=FALSE}
 ... %>% mutate(pop_tile=ntile(population, 20))
 ```
 
@@ -1255,15 +1323,15 @@ Remember that `ntile()` takes as arguments the data that it is splitting and the
 
 You can see the new column in the output, `pop_tile`, which has values between 1 and 20. This refers to which quantile that row is in.
 
-### Exercise 13
+### Exercise 12
 
 Copy/paste your pipe from above and extend it. Group your data by `pop_tile`.
 
-```{r wiki13, exercise=TRUE}
+```{r wiki12, exercise=TRUE}
 
 ```
 
-```{r wiki13-hint-1, eval=FALSE}
+```{r wiki12-hint-1, eval=FALSE}
 .. %>% group_by(...)
 ```
 
@@ -1271,21 +1339,21 @@ Copy/paste your pipe from above and extend it. Group your data by `pop_tile`.
 
 The output may look like a normal table, but the grouping has already been done.
 
-### Exercise 14
+### Exercise 13
 
 Copy/paste your pipe from above and extend it. Summarize your data with 2 columns:
 Number of States in quantile as `num_states`
 Sum of death rate in quantile as `sum_rate`
 
-```{r wiki14, exercise=TRUE}
+```{r wiki13, exercise=TRUE}
 
 ```
 
-```{r wiki14-hint-1, eval=FALSE}
+```{r wiki13-hint-1, eval=FALSE}
 ... %>% summarize(...)
 ```
 
-```{r wiki14-hint-2, eval=FALSE}
+```{r wiki13-hint-2, eval=FALSE}
 ... %>% summarize(num_states=n(), sum_rate=sum(...))
 ```
 
@@ -1293,7 +1361,7 @@ Sum of death rate in quantile as `sum_rate`
 
 The resulting tibble is your summarized data. You can see from the `num_states` column that some of the quantiles have more states than others.
 
-### Exercise 15
+### Exercise 14
 
 In order to counter the imbalanced number of states, you will average the `sum_rate` of each quantile.
 
@@ -1301,15 +1369,15 @@ In order to counter the imbalanced number of states, you will average the `sum_r
 
 Copy/paste your pipe from above and extend it. Create a new column using `mutate()` called `avg_rate`, which is the average rate in quantile per state.
 
-```{r wiki15, exercise=TRUE}
+```{r wiki14, exercise=TRUE}
 
 ```
 
-```{r wiki15-hint-1, eval=FALSE}
+```{r wiki14-hint-1, eval=FALSE}
 ... %>% mutate(avg_rate=...)
 ```
 
-```{r wiki15-hint-2, eval=FALSE}
+```{r wiki14-hint-2, eval=FALSE}
 ... %>% mutate(avg_rate=sum_rate/num_states)
 ```
 
@@ -1317,7 +1385,7 @@ Copy/paste your pipe from above and extend it. Create a new column using `mutate
 
 Now you can see the new column called `avg_rate`.
 
-### Exercise 16
+### Exercise 15
 
 Now let's calculate the percentage of each quantile's average rate over all quantiles' average rates. 
 
@@ -1325,15 +1393,15 @@ Now let's calculate the percentage of each quantile's average rate over all quan
 
 Copy/paste your pipe from above and extend it. Create a new column using `mutate()` called `percent_rate`, which is the percentage of each quantile's average rate over the sum of all quantiles'.
 
-```{r wiki16, exercise=TRUE}
+```{r wiki15, exercise=TRUE}
 
 ```
 
-```{r wiki16-hint-1, eval=FALSE}
+```{r wiki15-hint-1, eval=FALSE}
 ... %>% mutate(percent_rate=.../sum(...))
 ```
 
-```{r wiki16-hint-2, eval=FALSE}
+```{r wiki15-hint-2, eval=FALSE}
 ... %>% mutate(percent_rate=avg_rate/sum(avg_rate))
 ```
 
@@ -1341,11 +1409,11 @@ Copy/paste your pipe from above and extend it. Create a new column using `mutate
 
 Now you finally have everything you need for plotting!
 
-### Exercise 17
+### Exercise 16
 
 Copy/paste your pipe from above and assign it to a variabled named `clean_data`.
 
-```{r wiki17, exercise=TRUE}
+```{r wiki16, exercise=TRUE}
 
 ```
 
@@ -1353,15 +1421,15 @@ Copy/paste your pipe from above and assign it to a variabled named `clean_data`.
 
 Now you have access to `clean_data`.
 
-### Exercise 18
+### Exercise 17
 
 Start a plot with `ggplot()`. Use `clean_data` as data and map `pop_tile` to the x-axis and `percent_rate` to the y-axis. Add a `geom_col()` to create a bar graph.
 
-```{r wiki18, exercise=TRUE}
+```{r wiki17, exercise=TRUE}
 
 ```
 
-```{r wiki18-hint-1, eval=FALSE}
+```{r wiki17-hint-1, eval=FALSE}
 ggplot(data=..., mapping=aes(...)) + geom_col()
 ```
 
@@ -1369,15 +1437,15 @@ ggplot(data=..., mapping=aes(...)) + geom_col()
 
 You can now see the distribution.
 
-### Exercise 19
+### Exercise 18
 
 Copy/paste you code from above and add another layer with `geom_smooth()`. Use `"loess"` as its method, `y~x` as its formula, and set `se` to `FALSE`. This adds a kind of trend line that visualizes the data better.
 
-```{r wiki19, exercise=TRUE}
+```{r wiki18, exercise=TRUE}
 
 ```
 
-```{r wiki19-hint-1, eval=FALSE}
+```{r wiki18-hint-1, eval=FALSE}
 ... + geom_smooth(method=..., formula=..., se=...)
 ```
 
@@ -1385,19 +1453,19 @@ Copy/paste you code from above and add another layer with `geom_smooth()`. Use `
 
 The data visualization itself is basically done, but you'll notice that the x-axis isn't chunked properly and the y-axis should be in percentage.
 
-### Exercise 20
+### Exercise 19
 
 Copy/paste your code from above and add another layer using the function `scale_x_continuous()`. Assign to its `breaks` argument `1:20` to break the x-axis into 1 through 20.
 
-```{r wiki20, exercise=TRUE}
+```{r wiki19, exercise=TRUE}
 
 ```
 
-```{r wiki20-hint-1, eval=FALSE}
+```{r wiki19-hint-1, eval=FALSE}
 ... %>% scale_x_continuous(breaks=...)
 ```
 
-```{r wiki20-hint-2, eval=FALSE}
+```{r wiki19-hint-2, eval=FALSE}
 ... %>% scale_x_continuous(breaks=1:20)
 ```
 
@@ -1405,7 +1473,7 @@ Copy/paste your code from above and add another layer using the function `scale_
 
 Now the x-axis makes sense.
 
-### Exercise 21
+### Exercise 20
 
 Next let's format the y-axis into percentages.
 
@@ -1413,15 +1481,15 @@ Next let's format the y-axis into percentages.
 
 Copy/paste your code from above and add another layer with `scale_y_continuous()`. Assign to its `labels` argument `scales::percent_format(accuracy=1)`, which changes the y-axis into percentage format.
 
-```{r wiki21, exercise=TRUE}
+```{r wiki20, exercise=TRUE}
 
 ```
 
-```{r wiki21-hint-1, eval=FALSE}
+```{r wiki20-hint-1, eval=FALSE}
 ... %>% scale_y_continuous(labels=...)
 ```
 
-```{r wiki21-hint-2, eval=FALSE}
+```{r wiki20-hint-2, eval=FALSE}
 ... %>% scale_y_continuous(labels=scales::percent_format(accuracy=1))
 ```
 
@@ -1429,15 +1497,15 @@ Copy/paste your code from above and add another layer with `scale_y_continuous()
 
 Now both the axes are labeled accordingly.
 
-### Exercise 22
+### Exercise 21
 
 Copy/paste your code from above and add a `theme_classic()` layer to the plot. Then add the appropriate labels with `labs()`.
 
-```{r wiki22, exercise=TRUE}
+```{r wiki21, exercise=TRUE}
 
 ```
 
-```{r wiki22-hint-1, eval=FALSE}
+```{r wiki21-hint-1, eval=FALSE}
 ... %>% labs(title="...",
              subtitle="...",
              x="...",
@@ -1454,7 +1522,7 @@ wiki_graph
 
 Well done!
 
-### (Optional) Exercise 23
+### (Optional) Exercise 22
 
 A part of web-scraping that is not covered here is actually finding the element you want to scrape from the website's html.
 
@@ -1462,537 +1530,6 @@ Below is a page explaining how to install and use SelectorGadget, which helps yo
 
 <a href="https://rvest.tidyverse.org/articles/selectorgadget.html">Link to SelectorGadget page</a>
 
-
-
-## Open Secrets table
-
-```{r setup-open-section, echo=FALSE}
-web_url <- "https://www.opensecrets.org/political-action-committees-pacs/foreign-connected-pacs/2020"
-
-raw_data <- read_html(web_url) %>% 
-  html_element("table.DataTable-Partial") %>% 
-  html_table()
-
-clean_data <- raw_data %>% rename(pac_name="PAC Name (Affiliate)", country_and_parent="Country of Origin/Parent Company") %>% select(country_and_parent, Dems, Repubs, Total) %>% mutate(Dems=gsub("[^0-9]", "", Dems)) %>% mutate(Dems=as.integer(Dems)) %>% mutate(Repubs=gsub("[^0-9]", "", Repubs)) %>% mutate(Repubs=as.integer(Repubs)) %>% mutate(Total=gsub("[^0-9]", "", Total)) %>% mutate(Total=as.integer(Total)) %>% mutate(country_and_parent=gsub("/(.*)", "", country_and_parent)) %>% rename(country=country_and_parent) %>% group_by(country) %>% summarize(dem_sum=sum(Dems), repub_sum=sum(Repubs), total=sum(Total), .groups="drop") %>% arrange(desc(total)) %>% mutate(country=as.factor(country)) %>% slice(1:10)  %>% pivot_longer(cols=c(dem_sum, repub_sum), names_to="party", values_to="amount")
-
-
-```
-
-<a href="https://www.opensecrets.org">Open Secrets</a> contains <a href="https://www.opensecrets.org/political-action-committees-pacs/foreign-connected-pacs/2020">data</a> associated with the amount and sources of money donated to Democratic and Republican parties in 2020. <a href="https://www.opensecrets.org/political-action-committees-pacs/foreign-connected-pacs/2020">Check out the page</a>. You will be reading the table underneath the map.
-
-###
-
-### Exercise 1
-
-Assign the url provided below to a variable named `web_url`.
-
-```{r open1, exercise=TRUE}
-"https://www.opensecrets.org/political-action-committees-pacs/foreign-connected-pacs/2020"
-
-```
-
-```{r open1-hint-1, eval=FALSE}
-web_url <- "..."
-```
-
-###
-
-Now you have access to the variable `web_url`.
-
-### Exercise 2
-
-Use the function `read_html()` and `web_url` as argument to read the html of the webpage.
-
-```{r open2, exercise=TRUE}
-
-```
-
-```{r open2-hint-1, eval=FALSE}
-read_html(...)
-```
-
-###
-
-You now loaded the html of the webpage into R, similar to how you did with `minimal_html()` in earlier sections.
-
-You can begin to select elements in the page.
-
-### Exercise 3
-
-The following html shows the `table` tag's attributes:
-```{.html}
-<table class="DataTable-Partial dataTable no-footer" data-title="Foreign Connected PACs, 2019-2020" data-paging="true" data-page-length="25">...</table>
-```
-
-###
-
-Copy/paste your pipe from above and extend it with ` %>% `. Select the table using the function `html_element()` with both the tag type and its first `class` attribute.
-
-```{r open3, exercise=TRUE}
-
-```
-
-```{r open3-hint-1, eval=FALSE}
-read_html(...) %>% html_element("tag.class_name")
-```
-
-```{r open3-hint-2, eval=FALSE}
-read_html(...) %>% html_element("table.DataTable-Partial")
-```
-
-###
-
-You have selected the desired table.
-
-
-### Exercise 4
-
-The `rvest` package provides a great table-parsing function, `html_table()`, that allows you to load in web-scraped tables easily.
-
-###
-
-Copy/paste your pipe from above and extend it with the function `html_table()`. This allows you to load in data in the table in the form of a dataframe.
-
-```{r open4, exercise=TRUE}
-
-```
-
-```{r open4-hint-1, eval=FALSE}
-... %>% html_table()
-```
-
-###
-
-Nice work!
-
-Now you have a dataframe web-scraped directly from OpenSecrets.
-
-### Exercise 5
-
-Copy/paste your pipe from above and assign it to a variable named `raw_data`.
-
-```{r open5, exercise=TRUE}
-
-```
-
-###
-
-Now you saved the table data into `raw_data`, so you do not have to repeatedly web-scrape the page everytime you re-run the pipe.
-
-### Exercise 6
-
-Let's make the following graph:
-
-```{r make-open_graph, echo=FALSE}
-open_graph <- clean_data %>% ggplot(mapping=aes(x=fct_reorder(country, -amount), y=amount/100000, fill=party)) + geom_col(position="dodge") + theme_classic() + theme(axis.text.x=element_text(angle = -90, hjust=0)) + scale_fill_manual(values=c("blue", "red"), labels=c("Democrat", "Republican")) + labs(title="Top 10 Countries with the Highest Total Company Donations\nto US Political Parties in 2020", subtitle="There seems to be more donations towards\nthe republican party than to the democratic party", x="Country", y="Donations (in $100,000)", fill="Party", caption="OpenSecrets.org: Foreign-Connected PACs (2020)")
-open_graph
-```
-
-###
-
-Use `glimpse()` to check `raw_data`.
-
-```{r open6, exercise=TRUE}
-
-```
-
-```{r open6-hint-1, eval=FALSE}
-glimpse(...)
-```
-
-###
-
-Somethings to take note: <br>
-the columns `Total`, `Dems`, `Repubs` are character columns instead of integer. <br>
-the names of the first 2 columns are quite long.
-
-### Exercise 7
-
-Let's first rename the 2 columns.
-
-###
-
-Start a pipe with `raw_data` and extend it with ` %>% `. Use the `rename()` function, which takes arguments similar to `mutate()`, and rename:
-`"PAC Name (Affiliate)"` to `pac_name`
-`"Country of Origin/Parent Company"` to `country_and_parent`.
-
-```{r open7, exercise=TRUE}
-
-```
-
-```{r open7-hint-1, eval=FALSE}
-raw_data %>% rename(col1=old_col1, col2=old_col2, ...)
-```
-
-###
-
-Now `pac_name` and `country_and_parent` are more easily accessible.
-
-### Exercise 8
-
-Copy/paste your pipe from above and extend it with the function `select()`. You will use that function to select the columns you need, which are `country_and_parent`, `Dems`, `Repubs`, and `Total`.
-
-```{r open8, exercise=TRUE}
-
-```
-
-```{r open8-hint-1, eval=FALSE}
-... %>% select(...)
-```
-
-```{r open8-hint-2, eval=FALSE}
-... %>% select(country_and_parent, ...)
-```
-
-###
-
-Now you only have the columns you need left.
-
-### Exercise 9
-
-Now let's remove the `$` and `,` from `Repubs`, `Dems`, and `Total`.
-
-###
-
-Copy/paste your pipe from above and extend it with the function `mutate()`. You will use `gsub()` to delete all the `$` and `,` in all 3 columns.
-
-Use the pattern `"[^0-9]"`, which selects everything in a string that is NOT a digit, and replace these selections with an empty string, essentially deleting them.
-
-Assign the new column to the same column name for all 3 columns.
-
-```{r open9, exercise=TRUE}
-
-```
-
-```{r open9-hint-1, eval=FALSE}
-... %>% mutate(col1=gsub(...), col2=gsub(...), ...)
-```
-
-```{r open9-hint-2, eval=FALSE}
-... %>% mutate(Dems=gsub("[^0-9]", "", Dems), Repubs=gsub(...), Total=gsub(...))
-```
-
-###
-
-Now you can see that `Dems`, `Repubs`, and `Total` are all purely digits.
-
-### Exercise 10
-
-Let's change the `Dems`, `Repubs`, and `Total` columns into integer columns.
-
-###
-
-Copy/paste your pipe from above and extend it using the function `mutate()`. Change the columns with `as.integer()` and assign the new columns to the same name.
-
-```{r open10, exercise=TRUE}
-
-```
-
-```{r open10-hint-1, eval=FALSE}
-... %>% mutate(col1=as.integer(col1), col2=as.integer(col2), ...)
-```
-
-###
-
-Now if you look below the column names for `Dems`, `Repubs`, and `Total`, they are registered as `<int>` which means integer columns.
-
-### Exercise 11
-
-Since you are plotting by country, there is no need to keep the parent company in the `country_and_parent` column, so let's change that.
-
-###
-
-Copy/paste your pipe from above and extend it with `mutate()`. Use the `gsub()` function to delete everything after the `/` and then assign the new column to the column name, `country`.
-
-You can use the pattern `"/(.*)"`, which selects everything after the `/`, and then replace it with `""` to delete it.
-
-```{r open11, exercise=TRUE}
-
-```
-
-```{r open11-hint-1, eval=FALSE}
-... %>% mutate(country=gsub(...))
-```
-
-```{r open11-hint-2, eval=FALSE}
-... %>% mutate(country=gsub("/(.*)", "", country_and_parent))
-```
-
-###
-
-Now you have a new column called `country` that is only the country source of donation.
-
-### Exercise 12
-
-In order to find out more about each country's statistics, you need to group the data by `country`.
-
-###
-
-Copy/paste your pipe from above and extend it with `group_by()`. Group the data by `country`.
-
-```{r open12, exercise=TRUE}
-
-```
-
-```{r open12-hint-1, eval=FALSE}
-... %>% group_by(...)
-```
-
-###
-
-It might not seem like there's a change but, if there is no error, the data has already been grouped by `country`.
-
-### Exercise 13
-
-After grouping, you should `summarize` the data
-
-###
-
-Copy/paste your pipe from above and extend it with `summarize()`. You will create 3 separate values:<br>
-`dem_sum` as the `sum()` of donations for democrats<br>
-`repub_sum` as the `sum()` of donations for republicans <br>
-`total` as the `sum()` of total donations<br><br>
-
-Remember to `"drop"` the groups after summarizing.
-
-```{r open13, exercise=TRUE}
-
-```
-
-```{r open13-hint-1, eval=FALSE}
-... %>% summarize(..., .groups="drop")
-```
-
-```{r open13-hint-2, eval=FALSE}
-... %>% summarize(dem_sum=sum(...), repub_sum=sum(...), total=sum(...), .groups="drop")
-```
-
-###
-
-Now you have a small table showing each country's total donation to each party as well as the total donations overall.
-
-### Exercise 14
-
-Since you are only plotting the top 10 countries, you need to sort the table by total donations.
-
-###
-
-Copy/paste your pipe from above and extend it with `arrange()`. Arrange the table by `total` descending.
-
-```{r open14, exercise=TRUE}
-
-```
-
-```{r open14-hint-1, eval=FALSE}
-... %>% arrange(desc(...))
-```
-
-###
-
-Now it's arranged the column, `total`.
-
-### Exercise 15
-
-Copy/paste your pipe from above and extend it. Keep only the top 10 countries in the tibble
-
-```{r open15, exercise=TRUE}
-
-```
-
-```{r open15-hint-1, eval=FALSE}
-... %>% slice(...)
-```
-
-```{r open15-hint-2, eval=FALSE}
-... %>% slice(1:10)
-```
-
-###
-
-All that's left is the 10 rows indicating the top 10 countries.
-
-### Exercise 16
-
-In order that the bar graph does not mess with the x-axis, change the type of the `country` column to factor.
-
-###
-
-Copy/paste your pipe from above and extend it using `mutate()`. Use the function `as.factor()` to change the type of the column and store it in the same column name.
-
-```{r open16, exercise=TRUE}
-
-```
-
-```{r open16-hint-1, eval=FALSE}
-... %>% mutate(col1=as.factor(col1))
-```
-
-###
-
-You can see now under the header of the `country` column that it is type `<fct>`.
-
-### Exercise 17
-
-Since you are creating a bar graph, let's reformat the tibble with `pivot_longer()`.
-
-###
-
-Copy/paste your pipe from above and extend it with the function `pivot_longer()`. Remember that this function takes 3 arguments:
-`cols`: columns to pivot, <br>
-`names_to`: name of column where the previous column names are going to, <br>
-`values_to`: name of column where the previous column values are going to <br>
-
-
-Pivot only the sum donations of the parties and assign `"party"` to `names_to` and `"amount"` to `values_to`.
-
-```{r open17, exercise=TRUE}
-
-```
-
-```{r open17-hint-1, eval=FALSE}
-... %>% pivot_longer(cols=c(...), names_to="...", values_to="...")
-```
-
-```{r open17-hint-2, eval=FALSE}
-... %>% pivot_longer(cols=c(...), names_to="party", values_to="amount")
-```
-
-###
-
-Now you are ready to plot!
-
-### Exercise 18
-
-Copy/paste your pipe from above. Assign your pipe to a variable named `clean_data`.
-
-```{r open18, exercise=TRUE}
-
-```
-
-```{r open18-hint-1, eval=FALSE}
-clean_data <- ...
-```
-
-###
-
-Now you have access to `clean_data`.
-
-### Exercise 19
-
-Start a plot with `ggplot()` and `clean_data` as data. Use the function `fct_reorder()` to order `country` in the x-axis descending by `amount`.
-
-The function `fct_reorder()` takes as arguments the column to reorder, `country`, and the column of values to reorder by `amount`.
-
-Remember to add a `-` before `amount` to rearrange in descending order.
-
-This SHOULD return an error as you are not done filling out `aes()` yet.
-
-```{r open19, exercise=TRUE}
-
-```
-
-```{r open19-hint-1, eval=FALSE}
-ggplot(data=..., mapping=aes(fct_reorder(...)))
-```
-
-```{r open19-hint-2, eval=FALSE}
-ggplot(data=..., mapping=aes(fct_reorder(country, -amount)))
-```
-
-### Exercise 20
-
-Copy/paste your code from above and continue mapping `aes()`. Map `amount/100000` to the y-axis for easier comprehension and `party` to `fill`.
-
-Add a `geom_col()` layer and set its `position` to `"dodge"`.
-
-After, add a `theme_classic()` layer for the style.
-
-```{r open20, exercise=TRUE}
-
-```
-
-```{r open20-hint-1, eval=FALSE}
-ggplot(data=..., mapping=aes(x=fct_reorder(...),
-                             y=...,
-                             fill=...)) + geom_col(position=...) + theme_classic()
-```
-
-###
-
-Now you have most of bar graph, but you'll notice that the x-axis is a mess with text layered over each other. Let's change that.
-
-### Exercise 21
-
-To change the format of the text, you are essentially defining your own graph theme.
-
-###
-
-Copy/paste your plot from above and add another layer using the `theme()` function.
-
-Inside `theme()`, set `axis.text.x` equal to `element_text(angle=-90, hjust=0)`.
-
-This simply turns the text on the x-axis by -90 degrees and adjusts the spacing.
-
-```{r open21, exercise=TRUE}
-
-```
-
-```{r open21-hint-1, eval=FALSE}
-... + theme(axis.text.x=element_text(angle=-90, hjust=0))
-```
-
-###
-
-You can play around with the arguments more and see how the text changes.
-
-### Exercise 22
-
-Let's change the colors of the bars to better represent the respective parties.
-
-###
-
-Copy/paste your plot from above and add another layer. Use the function `scale_fill_manual()` to change the `values` of the colors to `c("blue", "red")` and change the `labels` to `c("Democrat", "Republican")`.
-
-```{r open22, exercise=TRUE}
-
-```
-
-```{r open22-hint-1, eval=FALSE}
-... + scale_fill_manual(values=c(...), labels=c(...))
-```
-
-###
-
-All that's left are the graph labels.
-
-### Exercise 23
-
-Copy/paste your plot from above and add a layer of `labs()`. Add the appropriate labels to the graph.
-
-```{r open23, exercise=TRUE}
-
-```
-
-```{r open23-hint-1, eval=FALSE}
-... + labs(
-  title="...",
-  subtitle="...",
-  x="...",
-  y="...",
-  fill="...",
-  caption="..."
-)
-```
-
-Reminder: this is how the plot should look like.
-
-```{r show-open_graph, echo=FALSE}
-open_graph
-```
-
-###
-
-Well done!
 
 
 <!-- This should be a 60 to 90 minutes worth of exercises devoted to webscraping, with a big focus on the rvest package. Also need to teach some CSS and Selector Gadget. Resources: -->
