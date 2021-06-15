@@ -23,11 +23,13 @@ library(WDI)
 library(plotly)
 library(pageviews)
 library(stringr)
+library(png)
+library(grid)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
 
-# 
+
 response1 <- GET("https://bison.usgs.gov/")
 response1.bin  <- content(response1, "raw")
 
@@ -36,10 +38,16 @@ response2.bin <- content(response2, "raw")
 
 bison_base <- "https://bison.usgs.gov/api/search.json"
 
-response3 <- GET(bison_base, 
-    query = list(species = "Bison bison", 
-                 type = "scientific_name", 
-                 count = "1"))
+# response3 <- GET(bison_base,
+#     query = list(species = "Bison bison",
+#                  type = "scientific_name",
+#                  count = "1"))
+# 
+# write_rds(response3, "inst/www/03-data-response3.rds")
+
+read_rds(
+  systemt.file("www/03-data-response3.rds",
+               package = "primer.tutorials"))
     
 # Meso
 
@@ -47,16 +55,22 @@ meso_url <- "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py/"
 
 meso1 <- GET(url = meso_url) 
 
-denver_response <- GET(url = meso_url,
-    query = list(station = "DEN",
-                 data = "tmpf",
-                 year1 = "2017",
-                 month1 = "01",
-                 day1 = "01",
-                 year2 = "2019",
-                 month2 = "12",
-                 day2 = "31",
-                 tz = "America/Denver"))
+# denver_response <- GET(url = meso_url,
+#     query = list(station = "DEN",
+#                  data = "tmpf",
+#                  year1 = "2017",
+#                  month1 = "01",
+#                  day1 = "01",
+#                  year2 = "2019",
+#                  month2 = "12",
+#                  day2 = "31",
+#                  tz = "America/Denver"))
+
+# write_rds(denver_response, "inst/www/03-data-denver-response.rds")
+
+read_rds(
+  system.file("www/03-data-denver-response.rds",
+              package = "primer.tutorials"))
 
 ### IMF Objects
 
@@ -70,22 +84,25 @@ imf_raw <- read_rds(
   system.file("www/03-data-imf.rds", 
               package = "primer.tutorials"))
 
-imf_data <- imf_raw %>% 
-  filter(year == "2015")
-
 iso_codes <- codelist %>% 
   select(iso2c, country.name.en)
 
-imf_data_named <- left_join(imf_data, iso_codes, by = "iso2c")
+imf_data <- left_join(imf_raw, iso_codes, by = "iso2c")
 
 ### Wikipedia Objects
 
-supreme_views <- old_pageviews(project = "en.wikipedia",
-                           article = "Supreme_Court_of_the_United_States",
-                           platform = "all",
-                           user_type = "all",
-                           start = "2008012000",
-                           end = "2016012000") 
+# supreme_views <- old_pageviews(project = "en.wikipedia",
+#                            article = "Supreme_Court_of_the_United_States",
+#                            platform = "all",
+#                            user_type = "all",
+#                            start = "2008012000",
+#                            end = "2016012000") 
+# 
+# write_rds(supreme_views, file = "inst/www/03-data-supreme-views.rds")
+
+supreme_views <- read_rds(
+  system.file("www/03-data-supreme-views.rds",
+              package = "primer.tutorials"))
 
 supreme_plot <- supreme_views %>% 
   arrange(date) %>% 
@@ -100,16 +117,28 @@ supreme_plot <- supreme_views %>%
 
 ### RBison objects
 
-output <- bison(species = "Accipiter", type = "scientific_name", count = 500)
+# output <- bison(species = "Accipiter", type = "scientific_name", count = 500)
+
+# write_rds(output, "inst/www/03-data-output.rds")
+
+output <- read_rds(
+  system.file("www/03-data-output.rds",
+              pacakge = "primer.tutorials"))
 
 bison_plot <- bisonmap(input = output, geom = geom_jitter)
 
 ### Bison objects
 
-bison_response <- GET(url = "https://bison.usgs.gov/api/search.json",
-    query = list(species = "Accipiter",
-                 type = "scientific_name", 
-                 count = 500))
+# bison_response <- GET(url = "https://bison.usgs.gov/api/search.json",
+#     query = list(species = "Accipiter",
+#                  type = "scientific_name", 
+#                  count = 500))
+
+# write_rds(bison_response, "inst/www/03-data-bison-response.rds")
+
+bison_response <- read_rds(
+  system.file("www/03-data-bison-response.rds",
+              package = "primer.tutorials"))
 
 output_api <- content(bison_response, "text") %>% 
   fromJSON() 
@@ -291,7 +320,7 @@ The `html` suffix here tells our computer to treat this as an HTML file and open
 
 ### Exercise 8
 
-In the Tutorial interface, `writeBin()` does not actually write a file on your computer. If you want to be able to perform the following command, repeat the instructions above on your console. If not you can access a copy of the HTML file which we have already saved [here]()
+In the Tutorial interface, `writeBin()` does not actually write a file on your computer. If you want to be able to perform the following command, repeat the instructions above on your console. If not, we will provide a picture below.
 
 ###
 
@@ -303,7 +332,18 @@ In the Terminal, run `open response.html`. If this does not work, try to open th
 
 ###
 
-This command opens the file in the default html viewer on your computer, likely your default browser. Scroll past the many links at the top of the page, which are the navigation tabs for the website's UI. Read about USGS BISON.
+This command opens the file in the default html viewer on your computer, likely your default browser. Read about USGS BISON.
+
+Here is a picture of the site:
+
+```{r}
+file <- system.file("images/bison1.png", 
+                           package = "primer.tutorials")
+img <- readPNG(file)
+grid.raster(img)
+```
+
+Notice that in place of a URL beginning with "www", there is a file to a local path on a computer. This is the response which has been download.
 
 ### Exercise 9
 
@@ -311,7 +351,7 @@ On this page, we see a hyperlink named "API". We cannot click on links because w
 
 ###
 
-If you left click to  copy the link address, it may return something like this "file:///Users/username/home-directory-subfolder/r-project-folder/r-project/doc/api.jsp". We should add this path at the end, `/doc/api.jsp` to the site's domain name to get to the API page. If we were looking at the html as a text file, this path would simply be: `./doc/api.jsp`. 
+If you were to copy the link address, it would return something like this "file:///Users/username/home-directory-subfolder/r-project-folder/r-project/doc/api.jsp". We should add this path at the end, `/doc/api.jsp` to the site's domain name to get to the API page. If we were looking at the html as a text file, this path would simply be: `./doc/api.jsp`. 
 
 ###
 
@@ -331,11 +371,11 @@ This response is also of type html and 69.3kB.
 
 ### Exercise 10
 
-When navigating an API page for the first time we have two goals. First, to figure find the URL at which we can make our queries and get data. Two, to figure out what parameters we should use to make a query for the particular API. Ideally, there is a page where all of this information is conveniently documented. 
+When navigating an API page for the first time we have two goals. First, to figure find the URL at which we can make our queries and get data. Second, to figure out what parameters we should use to make a query for the particular API. Ideally, there is a page where all of this information is conveniently documented. 
 
 ###
 
-Assign the "raw" version of the `content()` of `response2` to an object called `response2.bin`` 
+Assign the "raw" version of the `content()` of `response2` to an object called `response2.bin`
 
 ```{r httr-10, exercise = TRUE}
 
@@ -363,14 +403,30 @@ This overwrites the last thing we saved as `response.html`
 
 ### Exercise 12
 
-In the Tutorial interface, `writeBin()` does not actually write a file on your computer. If you want to be able to perform the following command, repeat the instructions above on your console. If not you can access a copy of the HTML file which we have already saved [here]()
+In the Tutorial interface, `writeBin()` does not actually write a file on your computer. If you want to be able to perform the following command, repeat the instructions above on your console. If not, we will provide a picture of the page below. 
 
 ###
 
-Use the up arrow in the Terminal to access your last command, `open response.html`, and run it. Copy and paste the line of the command for this answer. If you are using the file we have provided, write "done" for your answer. Read the first section, BISON Search. Look for both a URL at which we can request data and parameters with which we can specify our request. 
+Use the up arrow in the Terminal to access your last command, `open response.html`, and run it. Copy and paste the line of the command for this answer. If you are using the picture we have provided, write "done" for your answer. Read the first section, BISON Search. Look for both a URL at which we can request data and parameters with which we can specify our request. 
 
 ```{r httr-12, exercise = TRUE}
 
+```
+
+Here are pictures of the page:
+
+```{r}
+file <- system.file("images/bison2.png",
+                     package = "primer.tutorials")
+img <- readPNG(file)
+grid.raster(img)
+```
+
+```{r}
+file <- system.file("images/bison3.png",
+                     package = "primer.tutorials")
+img <- readPNG(file)
+grid.raster(img)
 ```
 
 ### Exercise 13
@@ -729,9 +785,115 @@ denver_p
 
 
 ## API Keys
+###
 
 In traditional cases, you would store your API key in the .Renviron file and use that reference to access the desired data. The previous and all the following  are examples of API use in which we don't need to use a uniquely generated access key.
 
+### Exercise 1
+
+If you have not already, request a US Census API Key here. You must include both your name and an organization. Write "done" when you are finished. 
+
+```{r api-1}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+### Exercise 2
+
+In the Terminal, run `cat $HOME/.Renviron`. the .Renviron file makes environmental variables which are run every time R starts up and is where you store sensitive information like API Keys. Copy and paste the command and its result into the box below. 
+
+```{r api-2}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+###
+
+Most likely, you do not have one yet. In this case the Terminal will return the message "No such file or directory". If you do have one, the Terminal will print the contents of your .Renviron file. 
+
+### Exercise 3 
+
+In your console, run the command `usethis::edit_r_environ`. This is a command that opens the .Renviron file so that we can edit it. If you do not already have a .Renviron file, it will create one for you.  Copy and paste the command into the box below. 
+
+```{r api-3}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+### Exercise 4
+
+In the Terminal run `cat $HOME/.Renviron` again. Now that you have created the file, Terminal should return nothing, since the file contains nothing. Copy and paste the command and its result into the box below. 
+
+```{r api-3}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+If you had content in the .Renviron before, Terminal should return the same content as before since you have not changed it.
+
+### Exercise 5
+
+Let's add your Census API Key to `.Renviron`. Type `CENSUS_API_KEY`. This will be the name of the environmental variable. On the same line use an `=` to set the variable to a string that contains your Census API Key. If you have not received a Census API Key, leave a code comment about how you plan to instead. When you are finished, save the file and type "done" in the  box below.
+
+```{r api-5}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+Your completed .Renviron file should look like this:
+
+```{r}
+file <- system.file("images/apikey.png", 
+                           package = "primer.tutorials")
+img <- readPNG(file)
+grid.raster(img)
+```
+
+
+### Exercise 6
+
+Now run `cat $HOME/.Renviron`. Terminal should return the line with your API Key and any other content you may have already had in your .Renviron file. Copy and paste the command and its result into the box below. 
+
+```{r api-6}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 3))
+```
+
+###
+
+You must restart R for the new environental variable to be able to be used. 
+
+###
+
+`tidycensus` functions automatically look for this environmental variable. When using API Keys in less developed packages or with `GET()`, use the following command `sys.getenv("CENSUS_API_KEY")`. getenv = **get** **env**ironmental variable. 
+
+###
+
+The primary reason why we do not include API Keys in our code is security. We don't want people who look at our GitHub projects to be able to see our API Key. API Keys are unique for us and can be used for paid services in some cases. Other sensitive information, like GITHUB_PAT or a client's account number is also stored in the .Renviron. 
 
 ## The International Monetary Fund
 ###
@@ -900,96 +1062,78 @@ The data has a max year of 2015, even though the argument `end` is set by defaul
 
 ### Exercise 10
 
-Copy and paste the code above. Filter the data to keep rows only where year is equal to "2015". Assign this to an object named `imf_data`. 
+There is a package called `countrycode`. In the console, run `help(package = "countrycode")` to bring up the help page for this package. Click on the function `codelist`. Write "done" for your answer when you are finished. 
 
 ```{r imfr-10, exercise = TRUE}
 
-```
-
-```{r imfr-10-hint, eval = FALSE}
-imf_data %>% 
-  filter(year == "2015")
-```
-
-### Exercise 11
-
-There is a package called `countrycode`. In the console, run `help(package = "countrycode")` to bring up the help page for this package. Click on the function `codelist`. Write "done" for your answer when you are finished. 
-
-```{r imfr-11, exercise = TRUE}
-
-```
-
-```{r imfr-11-hint, eval = FALSE}
-This can akso be done, though with a more difficult to read view, in the 
-Tutorials window. 
 ```
 
 ###
 
 We found out about the package `countrycode` by reading the help page for the function `all_iso2c` in `imfr`. 
 
+### Exercise 11
+
+Run `codelist`. Check to see if there is an `iso2c` column in this tibble. 
+
+```{r imfr-11, exercise = TRUE}
+
+```
+
+```{r imfr-11-hint, eval = FALSE}
+codelist
+```
+
 ### Exercise 12
 
-Run `codelist`. Check to see if there is an iso2c column in this tibble. 
+Select the columns `iso2c` and `country.name.en`. Save this to an object called `iso_codes`. 
 
 ```{r imfr-12, exercise = TRUE}
 
 ```
 
 ```{r imfr-12-hint, eval = FALSE}
-codelist
+iso_codes <- codelist %>% 
+  select(..., ...)
 ```
 
 ### Exercise 13
 
-Select the columns `iso2c` and `country.name.en`. Save this to an object called `iso_codes`. 
+Use `left_join()` to join `iso_codes` to `imf_raw` by the shared column "iso2c". Save this to an object named `imf_data`.   
 
 ```{r imfr-13, exercise = TRUE}
 
 ```
 
 ```{r imfr-13-hint, eval = FALSE}
-iso_codes <- codelist %>% 
-  select(..., ...)
+imf_data <- left_join(imf_data, iso_codes, by = "...")
 ```
 
 ### Exercise 14
 
-Use `left_join()` to join `iso_codes` to `imf_data` by the shared column "iso2c". Save this to an object named `imf_data_named`.   
+Let's check if any countries have not been matched to a `country.name.en`. Run the command `is.na()` with the argument being the column `iso2c` as a vector.
 
 ```{r imfr-14, exercise = TRUE}
 
 ```
 
-```{r imfr-14-hint, eval = FALSE}
-left_join(imf_data, iso_codes, by = "...")
+```{r imfr-14-hint-1, eval = FALSE}
+Remember that we use the $ operator to extract a column as a vector.
+```
+
+```{r imfr-14-hint-2, eval = FALSE}
+is.na(imf_data_named$country.name.en)
 ```
 
 ### Exercise 15
 
-Let's check if any countries have not been matched to a `country.name.en`. Run the command `is.na()` with the argument being the column `iso2c` as a vector.
+It is hard to see whether there are any values of `TRUE` in so large a vector. Copy and paste the previous code. Pipe the function `table()` into it. 
 
 ```{r imfr-15, exercise = TRUE}
 
 ```
 
-```{r imfr-15-hint-1, eval = FALSE}
-Remember that we use the $ operator to extract a column as a vector.
-```
-
-```{r imfr-15-hint-2, eval = FALSE}
-is.na(imf_data_named$country.name.en)
-```
-
-### Exercise 16 
-
-It is hard to see whether there are any values of `TRUE` in so large a vector. Copy and paste the previous code. Pipe the function `table()` into it. 
-
-```{r imfr-16, exercise = TRUE}
-
-```
-
-```{r imfr-16-hint, eval = FALSE}
+```{r imfr-15-hint, eval = FALSE}
 is.na(imf_data_named$iso2c) %>% 
   table()
 ```
@@ -998,16 +1142,30 @@ is.na(imf_data_named$iso2c) %>%
 
 Every country was able to be matched to a value in `country.name.en` through the column `iso2c`. 
 
+### Exercise 16
+
+Start a new pipe with `imf_data`. Rename the column `GGXWDG_GDP` to `dtg`.
+
+```{r imfr-16, exercise = TRUE}
+
+```
+
+```{r imfr-16-hint, eval = FALSE}
+... %>% 
+rename(... = `GGXWDG_GDP`)
+```
+
 ### Exercise 17
 
-Start a new pipe with `imf_data_named`. Rename the column `GGXWDG_GDP` to `dtg`.
+Copy and paste the code above. Filter the data to keep rows only where year is equal to "2015". Assign this to an object named `imf_data`. 
 
 ```{r imfr-17, exercise = TRUE}
 
 ```
 
 ```{r imfr-17-hint, eval = FALSE}
-rename(... =  = `GGXWDG_GDP`)
+... %>% 
+  filter(year == "2015")
 ```
 
 ### Exercise 18
@@ -1903,6 +2061,11 @@ bison_plot_api
 <!-- ```{r final_plot_shown} -->
 <!-- ratio_p -->
 <!-- ``` -->
+
+```{r remove-rplots}
+file.remove(system.file("tutorials/03-data-API/Rplots.pdf"))
+```
+
 
 ## Submit
 
