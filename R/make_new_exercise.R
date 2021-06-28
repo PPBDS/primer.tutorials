@@ -21,7 +21,7 @@ make_new_exercise <- function(){
       break
     }
   }
-  new_exercise = sprintf("### Exercise %s\n\nInstructions Here\n\n\n```{r %s-%s, exercise = TRUE}\n\n```\n\n<button onclick = \"transfer_code(this)\">Copy to use previous code</button>\n\n```{r %s-%s-hint, eval = FALSE}\n\n###\n\nSome Preceptor Wisdom\n\n```",
+  new_exercise = sprintf("### Exercise %s\n\nInstructions Here\n\n\n```{r %s-%s, exercise = TRUE}\n\n```\n\n<button onclick = \"transfer_code(this)\">Copy previous code</button>\n\n```{r %s-%s-hint, eval = FALSE}\n\n###\n\nSome Preceptor Wisdom\n\n```",
                          exercise_number,
                          section_id,
                          exercise_number,
