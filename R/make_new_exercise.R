@@ -1,8 +1,6 @@
 #' Make New Exercise
 #'
 #' @return exercise skeleton with appropriate labels and numbers
-library(stringr)
-library(rstudioapi)
 make_new_exercise <- function(){
   ctx = rstudioapi::getActiveDocumentContext()
   row = ctx$selection[[1]]$range$end[["row"]]
