@@ -1424,7 +1424,6 @@ Reminder: This is what your plot should look like.
 qscores_p3
 ```
 
-
 ## Kenya Voter Registration Experiment
 ###
 
@@ -1937,6 +1936,244 @@ Reminder: This is what your plot should look like.
 
 ```{r kenya22-answer}
 kenya_p3
+```
+
+<!-- NL: Addition to show some of the difficulties in manipulating `geom_col()`.  -->
+
+## `geom_col()`: Michigan Voter Experiment
+###
+
+We will show you techniques helpful for making plots with `geom_col()` including the use of `group_by()` and `mutate()`. 
+
+###
+
+In the Visulization C Tutorial, we use `geom_bar()` to make this graph. 
+
+```{r vis-c-plot}
+ggplot(data = trains, 
+                aes(x = race, fill = line)) +
+  geom_bar(aes(y = after_stat(count/sum(count)))) +
+  facet_wrap(~treatment) + 
+  theme_classic() +
+  labs(title = "Starting Attitudes Toward Immigration Issue",
+       subtitle = "Higher proportion of minorities among treated participants",
+       x = "Race",
+       y = "Percentage of Participants",
+       fill = "Line",
+       caption = "Source: Enos (2014)")
+```
+
+###
+
+Let's use `geom_col()` to make this plot, in which the y-axis value is the percent of a race in one treatment group, not among all participants. 
+
+```{r make-col-plot}
+col_p  <- trains  %>% 
+  select(race, line, treatment) %>% 
+  group_by(treatment) %>% 
+  mutate(treatment_total = n()) %>% 
+  ungroup() %>% 
+  mutate(individual_perc = 1 / treatment_total) %>% 
+  ggplot(aes(x = race, y = individual_perc, fill = line)) +
+  geom_col() +
+  facet_wrap(~ treatment) +
+  theme_classic() +
+  scale_y_continuous(limits = c(0, 1), labels = scales::percent_format()) +
+  labs(title = "Starting Attitudes Toward Immigration Issue",
+       subtitle = "Higher proportion of minorities among treated participants",
+       x = "Race",
+       y = "Percentage of Participants",
+       fill = "Line",
+       caption = "Source: Enos (2014)") 
+
+col_p
+```
+
+### Exercise 1
+
+`skim()` the `trains` data set.
+
+```{r col-1, exercise = TRUE}
+
+```
+
+```{r col-1-hint, eval = FALSE}
+skim(...)
+```
+
+###
+
+Note that there are four unique race variables. 
+
+### Exercise 2
+
+Now `select()` the `race`, `line`, and `treatment` columns. 
+
+```{r col-2, exercise = TRUE}
+
+```
+
+```{r col-2-hint, eval = FALSE}
+... %>%
+  select(..., ..., ...)
+```
+
+### Exercise 3
+
+Let's create a column whose value is the total number of members in the treatment group of the unit, i.e. the person described by the row. First, group the data by the variable `treatment`.
+
+```{r col-3, exercise = TRUE}
+
+```
+
+```{r col-3-hint, eval = FALSE}
+... %>%
+  group(treatment)
+```
+
+### 
+
+In the box towards the upper left hand corner, we can see that this created two groups. 
+
+### Exercise 4
+
+Now use `mutate()` to make a new column called `treatment_total()` which is equal to the number of units in each group. 
+
+```{r col-4, exercise = TRUE}
+
+```
+
+```{r col-4-hint, eval = FALSE}
+... %>%
+  mutate(treatment_total = n())
+```
+
+###
+
+This column should have two unique values, corresponding to the two different treatment groups. 
+
+### Exercise 5
+
+Use `ungroup()` to remove the grouping. 
+
+```{r col-5, exercise = TRUE}
+
+```
+
+```{r col-5-hint, eval = FALSE}
+... %>%
+  ungroup()
+```
+
+###
+
+Note that `group_by()` affects `mutate()` operations just as it affects `summarize()` operations. 
+
+### Exercise 6
+
+Let's create a column which records the percentage of the treatment group a single indivual represents. Use `mutate()` to create a new column named `individual_perc` which is equal to `1 / treatment_total`.
+
+```{r col-6, exercise = TRUE}
+
+```
+
+```{r col-6-hint, eval = FALSE}
+... %>%
+  ungroup()
+```
+
+### Exercise 7
+
+Continue your pipe with `ggplot()`. Map `race` to the x-axis, `individual_perc` to the y-axis, and `line` to `fill`. Add the layer `geom_col()`.
+
+```{r col-7, exercise = TRUE}
+
+```
+
+```{r col-7-hint, eval = FALSE}
+... %>% 
+  ggplot(data = ..., aes(x = ..., 
+                        fill = ...)) +
+  geom_histogram()
+```
+
+### 
+
+<!-- NL: This would be good to add to the textbook. A tutorial exercise which demonstrates this (and uses alpha to understand position = identity overlap) would be good.  -->
+
+`geom_col()` adds up the individual percentages in each column which creates the total percentage for each race. This is because the `position` argument in `geom_col()` defaults to "stack". A `position` of `"identity"` would plot each unit starting from the y = 0 such that they overlap one another. 
+
+###
+
+Note that these added percentages are not correct as graphed because we calculated the individual percentage based on the treatment group, not the total. 
+
+### Exercise 8
+
+Add the layer `facet_wrap()` to facet the histogram by `treatment`. 
+
+```{r col-8, exercise = TRUE}
+
+```
+
+```{r col-8-hint-1, eval = FALSE}
+Within facet_wrap(), remember to put a ~ before the variable you want to facet by.
+```
+
+```{r col-8-hint-2, eval = FALSE}
+... + 
+  facet_wrap(...) 
+```
+
+### 
+
+Facet wrapping keeps the same y axis scale, which allows us to compare the sizes of data we have for each level.
+
+### Exercise 9
+
+Add the layer `scale_y_continuous`. Set the argument `limits` equal to the vector `c(0, 1)` and set the argument `labels` equal to `scales::percent_format()`.
+
+
+```{r col-9, exercise = TRUE}
+
+```
+
+```{r col-9-hint-1, eval = FALSE}
+... +
+    scale_y_continuous(limits = c(..., ...), labels = scales::percent_format())
+```
+
+### Exercise 10
+
+Adjust the feel of the graph by adding the theme `theme_classic() `.
+
+```{r col-10, exercise = TRUE}
+
+```
+
+```{r col-10-hint, eval = FALSE}
+... +
+  theme_classic() 
+```
+
+### Exercise 11
+
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, legend heading, and caption. To change the legend heading from the name of the tibble column, use the argument `fill`. 
+
+```{r col-11, exercise = TRUE}
+
+```
+
+```{r col-11-hint-1, eval = FALSE}
+... +
+  labs(... ,
+     fill = "...",
+     ...)
+```
+
+Reminder: This is what your plot should look like.
+
+```{r show-col-plot}
+col_p
 ```
 
 ## Submit
