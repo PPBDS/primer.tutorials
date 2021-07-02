@@ -24,6 +24,12 @@ You can install the the development version from
 remotes::install_github("PPBDS/primer.tutorials")
 ```
 
+For suggested updates during installation, though you do not have to
+have the latest versions of packages, it is recommended you update them.
+For packages that need compilation, feel free to answer “no”.
+
+Then **restart your R session** or **restart RStudio**.
+
 ## Accessing tutorials
 
 In order to access the tutorials, start by loading the package.
@@ -35,9 +41,24 @@ library(primer.tutorials)
  
 
 You can access the tutorials via the Tutorial pane in the top right tab
-in RStudio. Click “Start tutorial”. If you don’t see any tutorials, try
-clicking the “Home” button – the little house symbol with the thin red
-roof in the upper right.
+in RStudio.
+
+If any of the following is happening to you
+<ul>
+<li>
+Cannot find the Tutorial pane
+</li>
+<li>
+Cannot find a tutorial called “Getting Started”
+</li>
+</ul>
+
+Then **remember to restart your R session** after installing the
+package.
+
+Click “Start tutorial”. If you don’t see any tutorials, try clicking the
+“Home” button – the little house symbol with the thin red roof in the
+upper right.
 
  
 
@@ -57,4 +78,24 @@ the Jobs tab, and then press the red stop sign icon. Your work will be
 saved between RStudio sessions, meaning that you can complete a tutorial
 in multiple sittings. Once you have completed a tutorial, follow the
 instructions on the tutorial `Submit` page and (if you’re a student)
-submit the downloaed `rds` file as instructed.
+submit the downloaded `rds` file as instructed.
+
+## Re-installation
+
+Since these tutorials are constantly being updated, it is likely that
+updates will come out as you use these tutorials.
+
+If you wish to stay up-to-date with the latest version, it is
+recommended that you regularly re-install this tutorial package by
+running the following 2 lines of code in your **R console**:
+
+``` r
+remove.packages("primer.tutorials")
+remotes::install_github("PPBDS/primer.tutorials")
+```
+
+For version updates for dependency packages please follow the same
+considerations as discussed above in the Installation section.
+
+And remember to **RESTART YOUR R SESSION** after you re-installed the
+package.
