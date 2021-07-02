@@ -20,6 +20,8 @@ Take a look at R constant issue in instructions.Rmd.
 
 Is there a way to not have to add that hackery to every tutorial.Rmd? Equivalent to #include in C. Good question for R Studio Community.
 
+Show only our own tutorials in the Tutorial pane? Or at least show ours at the top? The more tutorials we create, the more we need to make it easier for students to find them. 
+
 #### Nosa
 
 * Confirm that new tests work by adding an error to Getting Started tutorial.
@@ -141,4 +143,28 @@ https://minecr.shinyapps.io/dsbox-05-moneyinpolitics/
 
 * https://github.com/karthik/holepunch is interesting. But it also hasn't been updated in more than 7 months.
 
+## .Rbuildignore
 
+.Rbuildignore gives me a bunch of problems. I think that the core issue is that `#` as comment character does not work. But it also does not always break nicely! For unknown reasons, adding some comments caused all the files in `inst/www` to not be  included in the build. Since `inst/www` was empty, the `www` folder was not included in the tarball. This, of course, caused all sorts of other failures. I think the key issue is that using `*` (or maybe a parenthesis) in a line which begins with `#` causes trouble.
+
+Anyway, we would like to ensure that all the junk files which end up in the `tutorials/*` directories are not included in the build. Such files are often large. They also run the risk of messing things up in that they might cause certain tests to pass for us but which would fail for anyone who downloads from Github. (The .gitignore does a reasonable ensuring that such files do not end up on Github.)
+
+The two tutorial* lines currently in .Rbuildignore do some good, I think. But what I really want to specify is that only files named tutorial.Rmd are allowed into the build. (Or maybe just those files plus some specified ones which are used to store rds objects used by the tutorials.) I don't know how to do this.
+
+If you are using a new library, there are several things you need to check. First, most obviously, you should install the package within the primer.tutorials directory. Second, you must use library(X) in the setup chunk within the tutorial.Rmd itself. Third, you need to run renv::status(). This should report that there is a new package which is not part of renv.lock. You will need to run, renv::snapshot() so that renv.lock is updated. Fourth, you need to add the package to the DESCRIPTION file, in the Imports: section. (And don't forget the comma when you do so.) If you don't do this, then R CMD check might work on your computer, where library X is already installed, but won't work in the cloud since R relies on the DESCRIPTION file to know what packages to install.
+
+### Allison Horst
+
+The main question was: How do we incorporate tutorial questions directly into the chapter itself? Allison is the world expert on this topic. 
+
+* She is concerned about user loads for published Shiny apps - would recommend that we use the basic or higher plan.
+
+* She thinks using Desiree's method of embedding one exercise at a time might get unreasonable for a book of our size, but suggested that we could host 12 different ShinyApps corresponding to each chapter, and then link to each chapter in one central location. (Kind of like the combined tutorials app Evelyn created via HMDC.)
+
+* How did you decide which exercises were going to be "tutorials" and which would be "exercises"? She wanted the exercises to be incremental, so a lot of the code was already pre-populated. The exercises that were blank built directly off of code that was already shown before, so that students could have an "easy win" by just copying the previous code and tweaking a variable name. Allison thinks that this incremental process is important for beginner R students.
+
+* How much memory does the ShinyApp consume? Do you know of any tricks to make learnr tutorials smaller? She recommends that we contact the team at RStudio Education - this is not her area of expertise. Allison says that the RStudio Education team is super eager to hear about learnr use cases, would be happy to talk to us, and would even ask us to write a blog post. She also mentioned that the team would know the most about cutting-edge learnr stuff, including things like a "completion rate" bar that shows students how far they are through a tutorial.
+
+* Any tips for remote teaching or learning? Using learnr at all is a big step. Allison also pre-records short versions of her lectures for her students to stream at a later time,  and holds smaller discussion sections in class where they do activities.
+
+* Allison's #1 Recommendation to remote teachers of R: Having students start out with RStudio Cloud and then transitioning to Desktop. You can set up workspaces so the necessary packages are already loaded and installed, any script is already pre-loaded, and all students need to do is log in. It looks exactly the same as RStudio Desktop except folks don't have to worry about installing R or RStudio. You can push/pull from git in RStudio Cloud as well (link to a Rstudio cloud tutorial/article: https://rstudio.com/resources/webinars/teaching-r-online-with-rstudio-cloud/)
