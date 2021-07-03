@@ -1,70 +1,16 @@
 Testing tutorials is tricky.
 
-New comment: Maybe the fact that this works:
-
-> learnr::run_tutorial("lesson1", "tutorialpackage")
-
-provides a better path toward testing?
-
-There must be code (or a function) within run_tutorial() which finds all the tutorials in a package. Here it is:
-
-> available_tutorials("primer.tutorials")
-
-Maybe this is all you need:
-
-library(primer.tutorials)
-library(learnr)
-
-x <- available_tutorials("primer.tutorials")
-
-
-for(i in x$name){
-  learnr::run_tutorial(i, "primer.tutorials")
-}
-
 There are several different places that the tutorial.Rmd files live on the computer. Most importantly, they live in the cloned repo, the location for the files that we are actually editing. These are the only ones we really want to test. But they also live installed in the renv/library within that directory. These files are ignored by Git but they still exist. Third, the files live in any installed version of the package in the main home library, outside of the renv. Fourth, during the check process, the files are copied from the repo into the tar ball which is to be checked. Fifth, the tar ball is trickier then it appears! Within the check directory which is created from the tar ball, the tutorial.Rmd files show up in two places. Example:
 
 /Users/davidkane/Desktop/projects/primer.tutorials.Rcheck/primer.tutorials/tutorials/00-git-and-github/tutorial.Rmd
 /Users/davidkane/Desktop/projects/primer.tutorials.Rcheck/00_pkg_src/primer.tutorials/inst/tutorials/00-git-and-github/tutorial.Rmd
 
-Theoretically, none of this should matter! We only want to check the "true" files from the cloned repo. Just render those! The main problem with this is that there are two ways to test files in R. We can use Build -> Test Package. This does not build a new tar ball. Instead, it simply sources test/testthat.R. In this scenario, the "inst" directory still exists and must be accounted for. The second way to test is Build -> Check Package. This does testing the "right way," by building the tar ball. But the tar ball does not include the "inst" directory. This means the paths to find the tutorial.Rmd files differ in the two scenarios.   
+Theoretically, none of this should matter! We only want to check the "true" files from the cloned repo. Just render those! The main problem with this is that there are two ways to test files in R. We can use Build -> Test Package. This does not build a new tar ball. Instead, it simply sources test/testthat.R. I am unsure exactly how this functions. I *think* that a new R instance is started, but one with a new .Rprofile, one which does not know about the renv library. Instead, it only knows about your default R library. In that case, the primer.tutorials which is loaded is the one which is there. But you have not updated it! In fact, within the project which uses renv, doing so is annoying. (In fact, I am not sure how to do it.) I *think* we should just rarely/never use Test Package.
 
-What should we do? Split the problem into three parts. First, we need to create the main path which starts off the paths to the tutorial.Rmd files. This will be something like:
-
-/Users/davidkane/Desktop/projects
-
-Second, we need the next part of the path, which has at least two main forms. (And perhaps these are the only two forms we care about.)
-
-primer.tutorials.Rcheck/primer.tutorials/tutorials 
-primer.tutorials/inst/tutorials 
-
-The first of these is what the path looks ike during checking, i.e., during R CMD check. The second is what the path looks like during Test Package (I think).
-
-The third part of the path is the directory and file name:
-
-00-git-and-github/tutorial.Rmd
-
-So, we should use the rprojroot package to build these paths. But I am too lazy to do that today! Instead, we use this:
-
-files <- fs::dir_ls("../../",
-                    recurse = TRUE,
-                    regexp = "tutorial.Rmd") %>%
-  fs::path_abs()
-
-The "trick" here is that we assume (correctly?) that the test scripts (test-render.R and test-components.R) are run from the tests/testthat directory which is where they live. (I am honestly confused about how we can know this.) Two levels up from this location is the main primer.tutorials directory. From there, we look for all tutorial.Rmd files recursively. This will find them in both cases which we care about: if not tar-balled (so within the inst directory) or tar-balled. The problem is that it also finds the tutorial.Rmd files in the renv directories and the src/ files in the tar ball! So, we end up testing stuff twice or even three times, including stuff which might be old, if we have not re-installed the package locally after whatever changes we made. 
+The second way to test is Build -> Check Package. This does testing the "right way," by building the tar ball. From that tarball, I new primer.tutorials is installed, and that is the one that is used, which is what we want.  As long as we do it this way, then the `learnr:available_tutorials()` trick will work correctly, and then we build the path by hand.
   
 
-# Other Notes
-
-There may be other differences between running Test Package and Check Package, but I am not sure.
-
-I think that, in order to simulate the test that is run with R CMD check, you need, from the R Console, to type:
-
-rmarkdown::render("inst/tutorials/03-functions-A/tutorial.Rmd")
-
-Note that R CMD check does not seem to catch cases in which you library() a package in a tutorial but that package is not in DESCRIPTION. But such a discrepancy will cause an error on Github Actions because, there, you only have access to packages that have been installed as part of that test.
-
-# Version consistency
+# Open issue
 
 How do we ensure that the primer.tutorials version that we are "using" is the correct one? primer.tutorials does not appear in the renv.lock file even when I "install" it in the project. Is that always true for a package in the renv.lock for that package? Is that a sign that I should not include it in the renv.lock? Is that a sign that it is a mistake to have functions in the package that the package uses? That seems a crazy conclusion! Maybe it is that, whenever R CMD check'ing a package, you always get the current version installed for its own use. So it makes no sense to include it in the renv.lock file. But, even if that is the case, it does not solve the Test Package problem. In that case, you are definitely not using the latest version. Maybe the lesson is to never use Test Package without first Install and Restart'ing things.
 
