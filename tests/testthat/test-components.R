@@ -1,13 +1,6 @@
+library(learnr)
 library(primer.tutorials)
 library(tidyverse)
-library(fs)
-
-files <- fs::dir_ls("../../",
-                    recurse = TRUE,
-                    regexp = "tutorial.Rmd") %>%
-  fs::path_abs()
-
-stopifnot(length(files) > 15)
 
 # Goal is to make sure that each tutorial includes the required Information and
 # Submission sections. Unfortunately, I could not figure out how to check that a
@@ -23,7 +16,7 @@ information_lines <- readLines(
   paste0(system.file("www/", package = "primer.tutorials"),
          "information_check.txt"))
 
-for(i in files){
+for(i in tutorial_paths()){
   if(! all(information_lines %in% readLines(i))){
     stop("From test-components.R. Information lines missing from file ", i, "\n")
   }
@@ -33,7 +26,7 @@ submission_lines <- readLines(
   paste0(system.file("www/", package = "primer.tutorials"),
          "submission_check.txt"))
 
-for(i in files){
+for(i in tutorial_paths()){
   if(! all(submission_lines %in% readLines(i))){
     stop("From test-components.R. Submission lines missing from file ", i, "\n")
   }
