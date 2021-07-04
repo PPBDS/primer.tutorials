@@ -68,7 +68,87 @@ submission_server <- function(input, output) {
 
   local({
 
-    output$downloadData <- shiny::downloadHandler(
+    output$downloadPdf <- shiny::downloadHandler(
+      filename = paste0(learnr:::read_request(session, "tutorial.tutorial_id"),
+                        "_answers.pdf"),
+      content = function(file){
+
+        objs <- learnr:::get_all_state_objects(session)
+        objs <- learnr:::submissions_from_state_objects(objs)
+
+        # Initialize empty dataframe outside of for-loop
+        pdf_df <- data.frame(
+          type_ = character(),
+          id_ = character(),
+          user_input = character(),
+          page_num = integer(),
+          stringsAsFactors=FALSE
+        )
+
+        # Threshold of number of text rows in one page
+        page_threshold = 20
+
+        # Current number of text rows
+        curr_rows = 0
+
+        # Current page number
+        curr_page = 0
+
+
+        for (obj in objs){
+
+          # If we are at or past 30, we have enough data for one page
+          # so we append the current df to df_list and reset the df
+          if (curr_rows >= page_threshold){
+            curr_page = curr_page + 1
+            curr_rows = 0
+          }
+
+          # Store question type
+          obj_type = obj$type[[1]]
+
+          # Store answer based on question type
+          obj_answer = ""
+
+          if (obj_type == "exercise_submission"){
+            obj_answer = obj$data$code[[1]] %>% trimws()
+          } else{
+            obj_answer = obj$data$answer[[1]] %>% trimws()
+          }
+
+          # Increment curr_rows by number of newlines
+          curr_rows = curr_rows + stringr::str_count(obj_answer, "\n")
+
+          # Store question id
+          obj_id = obj$id[[1]]
+
+          # Add row to dataframe
+          pdf_df = rbind(pdf_df, c(type_ = obj_type, id_ = obj_id, user_input = obj_answer, page_num = curr_page))
+        }
+
+        # Add column names to dataframe
+        colnames(pdf_df) = c("type_", "id_", "user_input", "page_num")
+
+        # Create PDF
+        pdf(file, height = 11, width = 20)
+
+        # Write dataframe to corresponding page on PDF
+        for (seg_df in split(pdf_df, pdf_df$page_num)){
+
+          gridExtra::grid.table(seg_df %>% select(-page_num))
+
+          if (curr_page != seg_df$page_num[[1]]){
+            grid::grid.newpage()
+          }
+
+        }
+
+        # Close PDF
+        dev.off()
+      }
+    )
+
+    output$downloadRds <- shiny::downloadHandler(
 
       # Next code chunk is key. downloadHandler is a function, one of the
       # arguments for which is filename. We want to have the file name be
@@ -94,6 +174,7 @@ submission_server <- function(input, output) {
 
         objs <- learnr:::get_all_state_objects(session)
         objs <- learnr:::submissions_from_state_objects(objs)
+
         responses <- encode_obj(objs)
         readr::write_rds(responses, file)
       }
@@ -164,7 +245,8 @@ submission_ui <- shiny::div(
   shiny::fluidPage(
     shiny::mainPanel(
       shiny::div(id = "form",
-                 shiny::downloadButton(outputId = "downloadData", label = "Download"))
+                 shiny::downloadButton(outputId = "downloadRds", label = "Download RDS"),
+                 shiny::downloadButton(outputId = "downloadPdf", label = "Download PDF"))
     )
   )
 )
