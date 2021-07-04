@@ -3,12 +3,12 @@ library(tidyverse)
 library(learnr)
 library(primer.tutorials)
 
-
 # This is where we put function definitions for functions that are used in the
 # tests. Or does this belong elsewhere? 
 
 # For now, we only have one function. It returns a character vector with the
-# paths to all the tutorials in primer.tutorials.
+# paths to all the tutorials in primer.tutorials. Maybe easier to just create
+# the vector here and then reference that object in other scripts.
 
 tutorial_paths <- function(){
   package_location <- system.file("tutorials", package = "primer.tutorials")
