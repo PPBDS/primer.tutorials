@@ -16,7 +16,7 @@ information_lines <- readLines(
   paste0(system.file("www/", package = "primer.tutorials"),
          "information_check.txt"))
 
-for(i in tutorial_paths()){
+for(i in tutorial_paths){
   if(! all(information_lines %in% readLines(i))){
     stop("From test-components.R. Information lines missing from file ", i, "\n")
   }
@@ -26,7 +26,7 @@ submission_lines <- readLines(
   paste0(system.file("www/", package = "primer.tutorials"),
          "submission_check.txt"))
 
-for(i in tutorial_paths()){
+for(i in tutorial_paths){
   if(! all(submission_lines %in% readLines(i))){
     stop("From test-components.R. Submission lines missing from file ", i, "\n")
   }

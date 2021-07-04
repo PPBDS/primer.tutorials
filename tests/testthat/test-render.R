@@ -15,7 +15,7 @@ library(tidyverse)
 # we might improve it.
 
 
-for(i in tutorial_paths()){
+for(i in tutorial_paths){
   cat(paste("Testing tutorial:", i, "\n"))
   test_that(paste("rendering", i), {
     expect_output(rmarkdown::render(i, output_file = "tutorial.html"),
