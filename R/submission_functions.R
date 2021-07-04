@@ -72,7 +72,6 @@ submission_server <- function(input, output) {
       filename = paste0(learnr:::read_request(session, "tutorial.tutorial_id"),
                         "_answers.pdf"),
       content = function(file){
-
         objs <- learnr:::get_all_state_objects(session)
         objs <- learnr:::submissions_from_state_objects(objs)
 
@@ -111,9 +110,9 @@ submission_server <- function(input, output) {
           obj_answer = ""
 
           if (obj_type == "exercise_submission"){
-            obj_answer = obj$data$code[[1]] %>% trimws()
+            obj_answer = trimws(obj$data$code[[1]])
           } else{
-            obj_answer = obj$data$answer[[1]] %>% trimws()
+            obj_answer =  trimws(obj$data$answer[[1]])
           }
 
           # Increment curr_rows by number of newlines
@@ -130,12 +129,12 @@ submission_server <- function(input, output) {
         colnames(pdf_df) = c("type_", "id_", "user_input", "page_num")
 
         # Create PDF
-        pdf(file, height = 11, width = 20)
+        grDevices::pdf(file, height = 11, width = 20)
 
         # Write dataframe to corresponding page on PDF
         for (seg_df in split(pdf_df, pdf_df$page_num)){
 
-          gridExtra::grid.table(seg_df %>% select(-page_num))
+          gridExtra::grid.table(dplyr::select(seg_df, -page_num))
 
           if (curr_page != seg_df$page_num[[1]]){
             grid::grid.newpage()
@@ -144,7 +143,7 @@ submission_server <- function(input, output) {
         }
 
         # Close PDF
-        dev.off()
+        grDevices::dev.off()
       }
     )
 
