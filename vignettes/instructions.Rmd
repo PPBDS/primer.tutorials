@@ -218,29 +218,8 @@ After a tripple hash, you should provide an excellent answer to any text questio
 
 ### Process questions
 
-We want to give students plenty of practice with tasks like forking/cloning repos, committing files, editing Rmd files and so on. It can be difficult, however, to confirm that students have actually followed our instructions. The easiest way to confirm that they have done so is to issue commands which look at the filesystem and the files which live there. Examples:
+We want to give students plenty of practice with tasks like forking/cloning repos, committing files, editing Rmd files and so on. It can be difficult, however, to confirm that students have actually followed our instructions. The easiest way to confirm that they have done so is to issue commands which look at the filesystem and the files which live there. `list.files()` and `readLines()` are the key tools.
 
-```{r}
-list.files()
-```
-
-```{r}
-list.files(".git")
-```
-
-```{r}
-readLines("../LICENSE")
-```
-
-```{r}
-readLines("../DESCRIPTION") %>% head(n = 4)
-```
-
-```{r}
-readLines("../DESCRIPTION") %>% str_subset("T")
-```
-
-This should cover most use cases. We are either checking that a file exists or we are checking the content of a file. `list.files()` and `readLines()` are the key tools.
 
 
 ### Tips
@@ -374,100 +353,6 @@ To create a hint based on custom markdown content simply add a `<div>` tag with 
 
 Maybe this is how we should do all hints, so as to avoid the compile error issue.
 
-### Details behind the Copy Code button
-
-## Technical details
-
-This section reviews some of the technical details behind the special modifications we have made to the basic tutorial technology. It is only of interest to those thinking of modifying the current approach.
-
-### YAML and setup code chunk
-
-The top of your file should look like the text below.
-
-````markdown
----
-title: "Data API"
-tutorial:
-  id: "data-api"
-output:
-  learnr::tutorial:
-      progressive: true
-      allow_skip: true
-runtime: shiny_prerendered
-description: "Working with APIs (application programming interfaces) to download data."
----
-
-`r ''````{r setup, include = FALSE}
-library(learnr)
-library(primer.tutorials)
-library(tidyverse)
-knitr::opts_chunk$set(echo = FALSE)
-options(tutorial.exercise.timelimit = 60, 
-        tutorial.storage = "local") 
-```
-
-`r ''````{js change-code, echo = FALSE}
-
-function transfer_code(elem){
-  Shiny.setInputValue("js_to_server", elem.previousElementSibling.dataset.label);
-  
-}
-
-Shiny.addCustomMessageHandler('set-exercise-code', function(x) {
-  var el = $(`.tutorial-exercise[data-label="${x.label}"] .tutorial-exercise-code-editor`)
-  var exerciseInput = Shiny.inputBindings.bindingNames["tutorial.exerciseInput"].binding
-  exerciseInput.setValue(el, {code: x.code});
-  Shiny.setInputValue("js_to_server", null);
-})
-```
-
-`r ''````{r observe-transfers, context = "server"}
-
-observeEvent(input$js_to_server, {
-  ex_next = input$js_to_server
-  str_num = parse_integer(gsub("[^0-9]", "", ex_next)) - 1
-  str_head = gsub("[0-9]", "", ex_next)
-  ex_prev = paste0(str_head, str_num)
-  code <- learnr:::get_exercise_submission(session, ex_prev)$data$code %>% trimws()
-  session$sendCustomMessage("set-exercise-code", list(label = ex_next, code = code))
-})
-```
-````
-
-Every tutorial must load the **learnr** package in order to function. `library(primer.tutorials)` is always included because it contains the file, `submissions_functions.R`, which enables answer downloading. All our tutorials need the **tidyverse**. You may need to add other packages which are used in your tutorial. Any such packages also need to be included in the DESCRIPTION file.
-
-`echo = FALSE` is a handy default because, most of the time, we don't show users the code. Setting the `tutorial.exercise.timelimit` to 60 seconds is safe, but probably not necessary. `tutorial.storage` must be set to `local` to ensure that user work is saved between sessions.
-
-
-For the setup code chunks, the first chunk is written in javascript and the second is written in R.
-
-The pipeline works as such:
-
-1. When a button to transfer code is clicked, it triggers the `"onclick"` event, which calls the function `transfer_code()`, passing the button element itself as an argument.
-
-2. `transfer_code()` is a javascript function defined in the first code chunk that retrieves the current exercise label from an html element after it is compiled. This works by selecting the desired html element relative to the button element passed from the `"onclick"` event. The function then sets a Shiny server input variable called `js_to_server` to the current exercise label.
-
-3. The action of setting `js_to_server` to a new variable triggers a Shiny server event defined in the second code chunk. This event gets the previous exercise's submission and sends that code as well as the current exercise label back to javascript through a custom Shiny message called `"set-exercise-code"`.
-
-4. The message is received in javascript in the first code chunk. Javascript then finds the current code chunk and then **overwrites** the text in the current code chunk with the text from the previous code chunk.
-
-**Process to Current Stage:**
-This function was suggested by Preceptor for simpler user experience in long tutorials that require pipe-building across multiple exercises. There were 2 main options in achieving this.
-
-First was to have the code of the current exercise automatically copied to user clipboards when clicking the `"Run Code"` button.
-
-Second was to have the code of the current exercise automatically copied and pasted to the next exercise chunk after some simplified action.
-
-After a swift response from user grrrck on this [RStudio Community Thread](https://community.rstudio.com/t/learnr-clipboard-extension/107812), a clearer direction was laid out. I implemented the answer suggested but Preceptor pointed out that a lot of copy/pasting from the tutorial-maker's side was required. The problem then was how to minimize the amount of code needed to be repeatedly copied/pasted. Since the answer suggested used actionButtons from Shiny which had little room for customization, we thought there wasn't a way to know which exercise was locally close to the button.
-
-Therefore, I created a second version that was a bit "brute-force" by having arguments for the code chunks that had the actionButtons, then reading the file itself to find those arguments and extract the labels of the exercise. But that was still a lot of code to copy/paste and God forbid someone wants to insert a new exercise at the beginning because you'll have to manually change so many exercise names that come after.
-
-Here I realized that I don't have to use Shiny's actionButtons and can just use normal html buttons with trigger events that call a javascript function, which can directly communicate with the Shiny server, thus finally reaching the current version. Now no more exercise-specific information needs to be specified, only the exact same button for each exercise.
-
-**Possible Improvements:**
-Personally, I think the current solution is very close to the ideal solution. The only downsides being that 1) tutorial makers still have to include something in the exercises and 2) the button would look much better on the toolbar section of the exercise, next to `"Start Over"` and where the "hint" would be.
-
-However, the possibility of automatically copying code to clipboard when clicking the `"Run Code"` button has yet been explored and could offer a better solution.
 
 ### Other Topics
 
