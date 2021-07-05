@@ -15,9 +15,17 @@ make_new_exercise <- function(){
 
     }
 
-    if (stringr::str_detect(l, "## ") & stringr::str_detect(l, "\\{#") & !stringr::str_detect(l, "str_detect")){
-      to_clean = gsub(".*(\\{#)", "", l)
-      section_id = substr(to_clean, 1, nchar(to_clean)-1)
+    if (stringr::str_detect(l, "## ")){
+
+      if (stringr::str_detect(l, "\\{#") & !stringr::str_detect(l, "str_detect")){
+        to_clean = gsub(".*(\\{#)", "", l)
+        section_id = substr(to_clean, 1, nchar(to_clean)-1)
+
+      } else {
+        possible_id_removed = gsub("\\{#(.*)\\}", "", "## hello world {#stuff}")
+        lowercase_id = tolower(trimws(substr(possible_id_removed, 3, nchar(possible_id_removed))))
+        section_id = gsub(" ", "-", lowercase_id)
+      }
       break
     }
   }
