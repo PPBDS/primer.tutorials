@@ -24,7 +24,7 @@ make_new_exercise <- function(){
       } else {
         possible_id_removed_prev = gsub("\\{#(.*)\\}", "", l)
         possible_id_removed = gsub("[^a-zA-Z ]", "", possible_id_removed_prev)
-        lowercase_id = tolower(trimws(substr(possible_id_removed, 3, nchar(possible_id_removed))))
+        lowercase_id = tolower(trimws(possible_id_removed))
         section_id = gsub(" ", "-", lowercase_id)
       }
       break
