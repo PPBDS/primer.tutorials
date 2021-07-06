@@ -32,3 +32,13 @@ for(i in tutorial_paths){
   }
 }
 
+copy_button_lines <- readlines(
+  paste0(system.file("www/", package = "primer.tutorials"),
+         "copy_button_check.txt"))
+
+for(i in tutorial_paths){
+  if(! all(copy_button_lines %in% readLines(i))){
+    stop("From test-components.R. Copy button lines missing from file ", i, "\n")
+  }
+}
+
