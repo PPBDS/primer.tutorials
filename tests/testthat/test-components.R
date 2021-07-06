@@ -32,7 +32,7 @@ for(i in tutorial_paths){
   }
 }
 
-copy_button_lines <- readlines(
+copy_button_lines <- readLines(
   paste0(system.file("www/", package = "primer.tutorials"),
          "copy_button_check.txt"))
 
