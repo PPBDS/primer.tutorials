@@ -26,17 +26,17 @@ make_new_exercise <- function(){
 
   # Get current active document and position
 
-  ctx = rstudioapi::getActiveDocumentContext()
-  row = ctx$selection[[1]]$range$end[["row"]]
+  ctx <- rstudioapi::getActiveDocumentContext()
+  row <- ctx$selection[[1]]$range$end[["row"]]
 
   # Get everything until the current row as a list of lines
   # and reverse that list
 
-  cut_content = rev(ctx$contents[1:row])
+  cut_content <- rev(ctx$contents[1:row])
 
-  exercise_number = "1"
+  exercise_number <- "1"
 
-  section_id = "NONE_SET"
+  section_id <- "NONE_SET"
 
   # Cycle through the reversed lines (essentially going from down up)
   # and find the latest exercise as well as section.
@@ -47,7 +47,7 @@ make_new_exercise <- function(){
   # If an exercise is found first, continue the loop until finding a section,
   # so we can get both the section label and the latest exercise number.
 
-  exercise_set = FALSE
+  exercise_set <- FALSE
 
   for (l in cut_content){
 
@@ -57,12 +57,12 @@ make_new_exercise <- function(){
 
       # Set the exercise number to 1 + the latest exercise number
 
-      exercise_number = readr::parse_integer(gsub("[^0-9]", "", l)) + 1
+      exercise_number <- readr::parse_integer(gsub("[^0-9]", "", l)) + 1
 
       # Set exercise_set to TRUE
       # so we don't set the exercise number more than once
 
-      exercise_set = TRUE
+      exercise_set <- TRUE
 
     }
 
@@ -74,8 +74,8 @@ make_new_exercise <- function(){
 
       if (stringr::str_detect(l, "\\{#") & !stringr::str_detect(l, "str_detect")){
 
-        to_clean = gsub(".*(\\{#)", "", l)
-        section_id = substr(to_clean, 1, nchar(to_clean)-1)
+        to_clean <- gsub(".*(\\{#)", "", l)
+        section_id <- substr(to_clean, 1, nchar(to_clean)-1)
 
 
       } else {
@@ -84,13 +84,13 @@ make_new_exercise <- function(){
 
         # clean up id
 
-        possible_id_removed_prev = gsub("\\{#(.*)\\}", "", l)
+        possible_id_removed_prev <- gsub("\\{#(.*)\\}", "", l)
 
-        possible_id_removed = gsub("[^a-zA-Z ]", "", possible_id_removed_prev)
+        possible_id_removed <- gsub("[^a-zA-Z ]", "", possible_id_removed_prev)
 
-        lowercase_id = tolower(trimws(possible_id_removed))
+        lowercase_id <- tolower(trimws(possible_id_removed))
 
-        section_id = gsub(" ", "-", lowercase_id)
+        section_id <- gsub(" ", "-", lowercase_id)
       }
 
       # After finding a section, stop looping immediately
@@ -103,7 +103,7 @@ make_new_exercise <- function(){
   # inserting the appropriate label
   # and exercise number at the right places
 
-  new_exercise = sprintf("### Exercise %s\n\n\n```{r %s-%s, exercise = TRUE}\n\n```\n\n<button onclick = \"transfer_code(this)\">Copy previous code</button>\n\n```{r %s-%s-hint, eval = FALSE}\n\n```\n\n###\n\n",
+  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-%s, exercise = TRUE}\n\n```\n\n<button onclick = \"transfer_code(this)\">Copy previous code</button>\n\n```{r %s-%s-hint, eval = FALSE}\n\n```\n\n###\n\n",
                          exercise_number,
                          section_id,
                          exercise_number,

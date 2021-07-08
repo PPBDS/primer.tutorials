@@ -90,11 +90,11 @@ submission_server <- function(input, output) {
 
         # Threshold of number of text rows in one page
 
-        page_threshold = 20
+        page_threshold <- 20
 
-        curr_rows = 0
+        curr_rows <- 0
 
-        curr_page = 0
+        curr_page <- 0
 
 
         for (obj in objs){
@@ -103,30 +103,30 @@ submission_server <- function(input, output) {
           # so we append the current df to df_list and reset the df
 
           if (curr_rows >= page_threshold){
-            curr_page = curr_page + 1
-            curr_rows = 0
+            curr_page <- curr_page + 1
+            curr_rows <- 0
           }
 
-          obj_type = obj$type[[1]]
+          obj_type <- obj$type[[1]]
 
-          obj_answer = ""
+          obj_answer <- ""
 
           if (obj_type == "exercise_submission"){
-            obj_answer = stringr::str_wrap(trimws(obj$data$code[[1]]), 45)
+            obj_answer <- stringr::str_wrap(trimws(obj$data$code[[1]]), 45)
           } else{
-            obj_answer =  stringr::str_wrap(trimws(obj$data$answer[[1]]), 45)
+            obj_answer <-  stringr::str_wrap(trimws(obj$data$answer[[1]]), 45)
           }
 
           # Increment curr_rows by number of newlines
 
-          curr_rows = curr_rows + stringr::str_count(obj_answer, "\n")
+          curr_rows <- curr_rows + stringr::str_count(obj_answer, "\n")
 
-          obj_id = obj$id[[1]]
+          obj_id <- obj$id[[1]]
 
-          pdf_df = rbind(pdf_df, c(type_ = obj_type, id_ = obj_id, user_input = obj_answer, page_num = curr_page))
+          pdf_df <- rbind(pdf_df, c(type_ = obj_type, id_ = obj_id, user_input = obj_answer, page_num = curr_page))
         }
 
-        colnames(pdf_df) = c("type_", "id_", "user_input", "page_num")
+        colnames(pdf_df) <- c("type_", "id_", "user_input", "page_num")
 
         # Create PDF
 
