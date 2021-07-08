@@ -15,6 +15,7 @@ library(learnr)
 library(primer.tutorials)
 library(tidyverse)
 library(primer.data)
+library(forcats)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
@@ -31,7 +32,7 @@ options(tutorial.exercise.timelimit = 60,
 
 <!-- First examples show how as sample size increases, you get a distribution which is more and more similar to the mathematical. Do this with rolling two dice. Final plot is 3 x 2 matrix of plots, each an empirical distribution, but with increase N.  Use map functions and list-columns, maybe. -->
 
-<!-- Do tutorial for chapter 6 first! -->
+<!-- Do tutorial for chapter 6 first! done.-->
 
 <!-- tibble with one column N which is number of samples, one column result,  -->
 
@@ -66,32 +67,44 @@ This is the plot we will replicate.
 # want it to be. Maybe use forcats. Consider having the plot by 6 x 1. Or maybe
 # stacked but with only 4 N values.
 
+
 set.seed(2)
 dice_p <- tibble(N = c(rep("10", 10), 
-                          rep("20", 20),
-                          rep("50", 50),
-                          rep("100", 100),
-                          rep("1000", 1000),
-                          rep("10000", 10000)))%>%
+                       rep("20", 20),
+                       rep("50", 50),
+                       rep("100", 100),
+                       rep("1000", 1000),
+                       rep("10000", 10000))) %>%
   mutate(die_1 = map_dbl(N, ~ sample(c(1:6), size = 1))) %>% 
   mutate(die_2 = map_dbl(N, ~ sample(c(1:6), size = 1))) %>% 
   mutate(result = die_1 + die_2) %>%
+  mutate(N = as.factor(N)) %>%
+  mutate(N = fct_inseq(N)) %>%
   summarise(N, result) %>%
-  ggplot(aes(x=result))+
-    geom_histogram(aes(y = stat(density)),
-                   binwidth = 1, 
-                   color = "white") +
-      labs(title = "Empirical Probability Distribution",
-           subtitle = "Sum from rolling two dice, Sample size changes",
-           x = "Outcome\nSum of Two Die",
-           y = "Probability") +
-      facet_wrap(~ N, scales = "free") +
-      scale_x_continuous(breaks = seq(2, 12, 1), labels = 2:12) +
-      scale_y_continuous(labels= scales::percent_format(accuracy = 1))
+  ggplot(aes(x = result)) +
+  geom_histogram(aes(y = stat(density)),
+                 binwidth = 1, 
+                 color = "white") +
+    labs(title = "Empirical Probability Distribution",
+         subtitle = "Sum from rolling two dice, Sample size changes",
+         x = "Outcome\nSum of Two Die",
+         y = "Probability") +
+    facet_wrap(~ N, scales = "free") +
+    scale_x_continuous(breaks = seq(2, 12, 1), labels = 2:12) +
+    scale_y_continuous(labels= scales::percent_format(accuracy = 1))
 
 dice_p
 
+#dice_p use to show the distribution
+
 ```
+
+###
+
+The larger the sample size, the more closely your empirical distribution will match the mathematical distribution **if** your mathematical assumptions are correct.
+
+###
+
 
 ### Exercise 1
 
@@ -107,18 +120,129 @@ question_text(NULL,
     options = list(nrows = 3))
 ```
 
+###
+
+*Empirical Probability Distribution* is a type of distribution that is completely based on data.
+
+###
+
+
 ### Exercise 2
 
-<!-- DK: Split this into 3 or 4 separate questions. And then, ask this question. Firts, question has answer of rep(10, 3). Second question has answer of tibble(N = rep(10, 3)). Third question has answer of tibble(N = c(rep(10, 3), rep(500, 2))). Fourth question has answer  tibble(N = c(rep(10, 3), rep(500, 2))) %>%  mutate(result = ...) -->
-
-Create a `tibble()` with variable `N`, and set N to a list of value representing our sample size, then use `rep()` to repeat the function same numbers of times as the sample size. We want 6 different sample size: 10, 20, 50, 100, 1000, 100000.
+Use the `rep()` to repeat the value "10" three times.
 
 ```{r sz-2, exercise = TRUE}
 
 ```
 
 
-```{r sz-2-hint-1, eval = FALSE}
+```{r sz-2-hint, eval = FALSE}
+rep(10 ,... = )
+```
+
+### Exercise 3
+
+Copy and paste your code from above, now assign the `rep()` to an new column name "C", within the function `tibble()`.
+```{r sz-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r sz-3-hint, eval = FALSE}
+tibble(C = rep(10, 3))
+```
+
+### Exercise 4
+
+Good, now we want to include more values in C, use `c()` to include both `rep(10, 3)` and `rep(500,2)`
+```{r sz-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r sz-4-hint, eval = FALSE}
+tibble(C = c(rep(10, 3), rep(500, 2)))
+```
+
+Your tibble should have 5 rows.
+
+### Exercise 5
+
+Pipe down your result, use `mutate()` to add a new variable "dice" and have "dice" equal to an random values from 1 : 6 using `sample()`, 
+```{r sz-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r sz-5-hint, eval = FALSE}
+... %>% 
+  mutate(dice = sample(1:6))
+```
+
+###
+
+This should return an error saying dice` must be size 5 or 1, not 6.
+
+###
+
+### Exercise 6
+
+We only want one value from 1 to 6, so add in another argument `size` and set it equal to 1.
+```{r sz-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r sz-6-hint, eval = FALSE}
+... %>% 
+  mutate(dice = sample(1:6, size = 1))
+```
+
+###
+
+Notice the column dice will always return the same number, this is what we don't want. In order to fix this we need to use the map_* function.
+
+###
+
+
+### Exercise 7
+
+Use `map_dbl()` and set the first argument to C and formula to the `sample()` function we create in the last exercise. 
+```{r sz-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r sz-7-hint, eval = FALSE}
+mutate(dice = map_dbl(C, ~sample(1:6, size = 1)))
+```
+
+###
+
+Now let's move in to the real game.
+
+###
+
+
+
+### Exercise 8
+
+
+<!-- DK: Split this into 3 or 4 separate questions. And then, ask this question. Firts, question has answer of rep(10, 3). Second question has answer of tibble(N = rep(10, 3)). Third question has answer of tibble(N = c(rep(10, 3), rep(500, 2))). Fourth question has answer  tibble(N = c(rep(10, 3), rep(500, 2))) %>%  mutate(result = ...) -->
+
+Create a `tibble()` with variable `N`, and set N to a list of value representing our sample size, then use `rep()` to repeat the function same numbers of times as the sample size. We want 6 different sample size: 10, 20, 50, 100, 1000, 100000.
+
+```{r sz-8, exercise = TRUE}
+
+```
+
+
+```{r sz-8-hint-1, eval = FALSE}
 tibble(N = c(rep("...", ...), 
              rep("...", ...),
              rep("...", ...),
@@ -127,7 +251,7 @@ tibble(N = c(rep("...", ...),
              rep("...", ...)))
 ```
 
-```{r sz-2-hint-2, eval = FALSE}
+```{r sz-8-hint-2, eval = FALSE}
 tibble(N = c(rep("10", 10), 
              rep("20", 20),
              rep("...", ...),
@@ -136,132 +260,29 @@ tibble(N = c(rep("10", 10),
              rep("...", ...)))
 ```
 
-
-
-### Exercise 3
-
-let's pipe down the tibble we create in the last exercise, let's use th `map_dbl` function to create the results for an random dice rolling experiment. recalled the` map() and map_*()` functions, within it it will includes two argument one is the data source, which in this case is `ID`. and the formula we want to use to create the dice result is the `sample()` function, and use the argument `size` within the `sample()` function to only pick one out of the six faces of a standard dice.(Should looks familiar)
-
-
-```{r sz-3, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r sz-3-hint-1, eval = FALSE}
-...%>%
-map_dbl(..., ~...)
-```
-
-
-```{r sz-3-hint-2, eval = FALSE}
-...%>%
-map_dbl(N, ~sample(c(...:...), size = 1))
-```
-
-### Exercise 4
-Now let's pipe down the above and use the `mutate()` function to assign the `map_dbl` functions we above to an value called "die_1".
-
-```{r sz-4, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r sz-4-hint-1, eval = FALSE}
-...%>%
-mutate(... =map_dbl(N, ~sample(c(...:...), size = 1)))
-```
-
-### Exercise 5
-Copy and paste the results from above, and do the exact same thing again but instead now named to value to `die_2`, because we need the results for two dices.
-
-```{r sz-5, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r sz-5-hint, eval = FALSE}
-...%>%
-mutate(... =map_dbl(N, ~sample(c(...:...), size = 1)))
-```
-
-### Exercise 6
-Copy and paste the results from above, use the `mutate()` function once again, name the value of the sum of `die_1` and `die_2` to "result"
-
-```{r sz-6, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r sz-6-hint, eval = FALSE}
-...%>%
-mutate(result = die_1 + die_2)
-```
-
-### Exercise 7
-
-Copy and paste the above, then use `summarise()` to include the column "N" and "result" only
-
-```{r sz-7, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r sz-7-hint, eval = FALSE}
-summarise(N,...)
-```
-
-### Exercise 8
-
-Copy and paste the above, assign everything we have above include an new pipe called "dice-tibble", then run it.
-
-```{r sz-8, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r sz-8-hint, eval = FALSE}
-dice-tibble <- tibble(N = c(rep("10", 10), 
-                        rep("20", 20),
-                        rep("...", ...),
-                        rep("...", ... ),
-                        rep("...", ... ),
-                        rep("...", ...))) %>%
-  mutate(...) %>%
-  mutate(...) %>%
-  mutate(...) %>%
-  summarise(...) %>%
-  
-dice-tibble
-```
-
-
-
 ### Exercise 9
 
-Now start a new pipe with "dice_tibble" , use `ggplot()` to graph the Empirical Distribution, set `x = result` within `aes()`, and then add a layer of `geom_histogram()`
 
+Recall exercise 7, let's create another dice,set it equal to one of the 6 value from (1,2,3,4,5,6) for each rows of N using both map_dbl() and `sample()`, lastly assign it to the name "die_1" using `mutate().`
 ```{r sz-9, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{sz-9-hint, eval = FALSE}
-...%>%
-ggplot(aes(x=...))+
-  geom_histogram()
+```{r sz-9-hint-1, eval = FALSE}
+... %>%
+mutate(...= map_dbl(..., ~ ...))
+```
+
+
+```{r sz-9-hint-2, eval = FALSE}
+... %>%
+mutate(... = map_dbl(N, ~sample(c(...:...), size = 1)))
 ```
 
 ### Exercise 10
-
-Copy and paste your code from above, recalled `facet_wrap()`, use `facet_wrap()` to seperate the graph into six small distribution, don't forget the `~` within `facet_wrap()`.
+Copy and paste the results from above, and do the exact same thing again but instead now named to value to `die_2`, because we need the results for two dices.
 
 ```{r sz-10, exercise = TRUE}
 
@@ -269,21 +290,14 @@ Copy and paste your code from above, recalled `facet_wrap()`, use `facet_wrap()`
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r sz-10-hint-1, eval = FALSE}
-...+
-  facet_wrap(...)
+```{r sz-10-hint, eval = FALSE}
+... %>%
+mutate(... = map_dbl(N, ~sample(c(...:...), size = 1)))
 ```
-
-
-```{r sz-10-hint-2, eval = FALSE}
-...+
-  facet_wrap(~ N)
-```
-
 
 ### Exercise 11
+Copy and paste the results from above, use the `mutate()` function once again, name the value of the sum of `die_1` and `die_2` to "result"
 
-Now we have a graph, but it's not looking very good, it seems like we only have the 10000 strip fills up with bars. This is because the 10000 scales is so big, that the bars in other strip is blocked. In order for them to shows, within `facet_wrap()`, add another argument `scales`, and set it equal to "free". 
 ```{r sz-11, exercise = TRUE}
 
 ```
@@ -291,16 +305,19 @@ Now we have a graph, but it's not looking very good, it seems like we only have 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r sz-11-hint, eval = FALSE}
-...+
-  facet_wrap(~ ..., scales = "...")
+... %>%
+mutate(result = die_1 + die_2)
 ```
 
-This allows the graph to use it's own scale, instead an universal scales that covered all plots.
+
+
+
 
 
 ### Exercise 12
 
-Copy and paste your results from above. Note that you see the red `stat_bin()` using `bins = 30`. Pick better value with `binwidth`. Let's get rid of this by adjusting binwidth for our plots, within `geom_histogram()` set "binwidth" equal to 1, and "color" between bins equal to "white".
+Copy and paste the above, then use `summarise()` to include the column "N" and "result" only
+
 ```{r sz-12, exercise = TRUE}
 
 ```
@@ -308,30 +325,28 @@ Copy and paste your results from above. Note that you see the red `stat_bin()` u
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r sz-12-hint, eval = FALSE}
-... +
-  geom_histogram(binwidth = ..., color = "...") 
+summarise(N,...)
 ```
 
 
 ### Exercise 13
 
-Copy and paste your code from above. Now look at the values on the y-axis, for each one of the sixth plot the value is different, this is because we have different sample size, and it makes sense for each to have different *count*. In order to create an *Empirical Probability distribution*. In order to *normalized* the plot, Within `geom_histogram()`, use `aes()` . Inside `aes()`, we use the argument `y = stat(density)` to set it to put percent on y-axis.
+Copy and paste the code above, use `ggplot()` to graph the Empirical Distribution, set `x = result` within `aes()`, and then add a layer of `geom_histogram()`
 ```{r sz-13, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r sz-13-hint, eval = FALSE}
-... +
-    geom_histogram(aes(y = stat(...)))+
-  ...
+```{sz-13-hint, eval = FALSE}
+... %>%
+ggplot(aes(x = ...)) +
+  geom_histogram()
 ```
-
 
 ### Exercise 14
 
-Now use `scale_x_continuous()` so the x-axis has `breaks` to the sequence between 2 and 12 common difference is 1 using `seq()`. Set the `labels` for the breaks as from 2 to 12.
+Copy and paste your code from above, recalled `facet_wrap()`, use `facet_wrap()` to separate the graph into six small distribution, don't forget the `~` within `facet_wrap()`.
 
 ```{r sz-14, exercise = TRUE}
 
@@ -340,21 +355,35 @@ Now use `scale_x_continuous()` so the x-axis has `breaks` to the sequence betwee
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r sz-14-hint-1, eval = FALSE}
-...+
-scale_x_continuous(breaks = seq(...,..., ...), labels = ...:...) 
+... +
+  facet_wrap(...)
 ```
 
 
 ```{r sz-14-hint-2, eval = FALSE}
-... + 
-  scale_x_continuous(breaks = seq(2, 12, 1), labels = 2:12) 
+... +
+  facet_wrap(~ N)
 ```
 
+Your graph should looks similar to this.
+```{r}
+tibble(N = c(rep("10", 10), 
+             rep("20", 20),
+             rep("50", 50),
+             rep("100", 100),
+             rep("1000", 1000),
+             rep("10000", 10000))) %>%
+  mutate(die_1 = map_dbl(N, ~ sample(c(1:6), size = 1))) %>% 
+  mutate(die_2 = map_dbl(N, ~ sample(c(1:6), size = 1))) %>% 
+  mutate(result = die_1 + die_2) %>%
+  ggplot(aes(x = result)) +
+  geom_histogram() +
+  facet_wrap(~ N)
+```
 
 ### Exercise 15
 
-Now use `scale_y_continuous()` to put the x-axis in percent format. Within `scale_y_continuous()`, set `labels` to `scales::percent_format()`. Within `percent_format()` set `accuracy` to 1.
-
+Now we have a graph, but it's not looking very good, it seems like we only have the 10000 strip fills up with bars. This is because the 10000 scales is so big, that the bars in other strip is blocked. In order for them to shows, within `facet_wrap()`, add another argument `scales`, and set it equal to "free". 
 ```{r sz-15, exercise = TRUE}
 
 ```
@@ -362,26 +391,167 @@ Now use `scale_y_continuous()` to put the x-axis in percent format. Within `scal
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r sz-15-hint, eval = FALSE}
-... + 
-  scale_y_continuous(labels = scales::percent_format(...))
+... +
+facet_wrap(~ ..., scales = "...")
+```
+This allows the graph to use it's own scale, instead an universal scales that covered all plots.
+
+Your graph should looks like this
+```{r}
+set.seed(2)
+tibble(N = c(rep("10", 10), 
+             rep("20", 20),
+             rep("50", 50),
+             rep("100", 100),
+             rep("1000", 1000),
+             rep("10000", 10000))) %>%
+  mutate(die_1 = map_dbl(N, ~ sample(c(1:6), size = 1))) %>% 
+  mutate(die_2 = map_dbl(N, ~ sample(c(1:6), size = 1))) %>% 
+  mutate(result = die_1 + die_2) %>%
+  ggplot(aes(x = result)) +
+  geom_histogram() +
+  facet_wrap(~ N,scales = "free")
 ```
 
 ### Exercise 16
 
-Finally, use `labs()` to add the appropriate title, subtitle, and axis labels.
-
+Copy and paste your results from above. Note that you see the red `stat_bin()` using `bins = 30`. Pick better value with `binwidth`. Let's get rid of this by adjusting binwidth for our plots, within `geom_histogram()` set "binwidth" equal to 1, and "color" between bins equal to "white".
 ```{r sz-16, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-
 ```{r sz-16-hint, eval = FALSE}
+... +
+geom_histogram(binwidth = ..., color = "...") +
+  ...
+```
+
+
+```{r include = FALSE}
+... %>%
+  ggplot(aes(x = result)) +
+  geom_histogram(binwidth = 1, color = "white") +
+  facet_wrap(~ N,scales = "free")
+```
+
+###
+Notice the panal(gray bar) above each of the sixth distributions, they are out of order, we want to place them like this (10,20,50,100,1000,10000) so that we can see the evolution of the shape of the graph as the sample size increase.
+
+###
+
+
+### Exercise 17
+
+Go back to your previous code, right after the `summarize()` and before your `ggplot()`, use `mutate()` and `as.factor()` to reformat N into factor.
+
+```{r sz-17, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r sz-17-hint, eval = FALSE}
+mutate(N = as.factor(N))
+```
+
+### Exercise 18
+
+Pipe down your results, now do the exact same thing again for N, use `mutate()`, but this time we use th new function `fct_inseq()` to replace `as.factor()`, this allow us to ordered the in sequnce from small to large.
+```{r sz-18, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r sz-18-hint, eval = FALSE}
+mutate(N = fct_inseq(N))
+```
+
+### Exercise 19
+
+Copy and paste your code from above. Now look at the values on the y-axis, for each one of the sixth plot the value is different, this is because we have different sample size, and it makes sense for each to have different *count*. In order to create an *Empirical Probability distribution*. In order to *normalized* the plot, Within `geom_histogram()`, use `aes()` . Inside `aes()`, we use the argument `y = stat(density)` to set it to put percent on y-axis.
+```{r sz-19, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r sz-19-hint, eval = FALSE}
+... +
+    geom_histogram(aes(y = stat(...))) +
+  ...
+```
+
+```{r include = FALSE}
+set.seed(2)
+tibble(N = c(rep("10", 10), 
+             rep("20", 20),
+             rep("50", 50),
+             rep("100", 100),
+             rep("1000", 1000),
+             rep("10000", 10000))) %>%
+  mutate(die_1 = map_dbl(N, ~ sample(c(1:6), size = 1))) %>% 
+  mutate(die_2 = map_dbl(N, ~ sample(c(1:6), size = 1))) %>% 
+  mutate(result = die_1 + die_2) %>%
+  mutate(N = as.factor(N)) %>%
+  mutate(N = fct_inseq(N)) %>%
+  ggplot(aes(x = result)) +
+  geom_histogram(aes(y = stat(density)),binwidth = 1, color = "white") +
+  facet_wrap(~ N,scales = "free")
+```
+
+### Exercise 20
+Now use `scale_x_continuous()` so the x-axis has `breaks` to the sequence between 2 and 12 common difference is 1 using `seq()`. Set the `labels` for the breaks as from 2 to 12.
+
+```{r sz-20, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r sz-20-hint-1, eval = FALSE}
+... +
+scale_x_continuous(breaks = seq(...,..., ...), labels = ...:...) 
+```
+
+
+```{r sz-20-hint-2, eval = FALSE}
 ... + 
-  labs(title = "", 
-       subtitle = "", 
-       ...)
+  scale_x_continuous(breaks = seq(2, 12, 1), labels = 2:12) 
+```
+
+
+### Exercise 21
+
+Now use `scale_y_continuous()` to put the x-axis in percent format. Within `scale_y_continuous()`, set `labels` to `scales::percent_format()`. Within `percent_format()` set `accuracy` to 1.
+
+```{r sz-21, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r sz-21-hint, eval = FALSE}
+... + 
+  scale_y_continuous(labels = scales::percent_format(...))
+```
+
+### Exercise 22
+
+Finally, use `labs()` to add the appropriate title, subtitle, and axis labels.
+
+```{r sz-22, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+
+```{r sz-22-hint, eval = FALSE}
+... + 
+  labs(title = "",subtitle = "",...)
 ```
 
 
@@ -391,5 +561,10 @@ Reminder: Your plot should look similar to the the one below.
 dice_p
 ```
 
+
+
 ```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
 ```
+
+
+
