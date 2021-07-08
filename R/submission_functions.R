@@ -256,4 +256,4 @@ submission_ui <- shiny::div(
 
 # Never understand what this hack does or why it is necessary.
 
-utils::globalVariables(c("session"))
+utils::globalVariables(c("session", "page_num"))
