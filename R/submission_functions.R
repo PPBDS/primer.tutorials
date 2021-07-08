@@ -75,7 +75,11 @@ submission_server <- function(input, output) {
         objs <- learnr:::get_all_state_objects(session)
         objs <- learnr:::submissions_from_state_objects(objs)
 
+        # Following code formats all the answers into a dataframe
+        # and then writes that dataframe to a PDF
+
         # Initialize empty dataframe outside of for-loop
+
         pdf_df <- data.frame(
           type_ = character(),
           id_ = character(),
@@ -85,53 +89,51 @@ submission_server <- function(input, output) {
         )
 
         # Threshold of number of text rows in one page
-        page_threshold = 20
 
-        # Current number of text rows
-        curr_rows = 0
+        page_threshold <- 20
 
-        # Current page number
-        curr_page = 0
+        curr_rows <- 0
+
+        curr_page <- 0
 
 
         for (obj in objs){
 
           # If we are at or past 30, we have enough data for one page
           # so we append the current df to df_list and reset the df
+
           if (curr_rows >= page_threshold){
-            curr_page = curr_page + 1
-            curr_rows = 0
+            curr_page <- curr_page + 1
+            curr_rows <- 0
           }
 
-          # Store question type
-          obj_type = obj$type[[1]]
+          obj_type <- obj$type[[1]]
 
-          # Store answer based on question type
-          obj_answer = ""
+          obj_answer <- ""
 
           if (obj_type == "exercise_submission"){
-            obj_answer = gsub('(.{1,45})(\\s|$)', '\\1\n', trimws(obj$data$code[[1]]))
+            obj_answer <- stringr::str_wrap(trimws(obj$data$code[[1]]), 45)
           } else{
-            obj_answer =  gsub('(.{1,45})(\\s|$)', '\\1\n', trimws(obj$data$answer[[1]]))
+            obj_answer <-  stringr::str_wrap(trimws(obj$data$answer[[1]]), 45)
           }
 
           # Increment curr_rows by number of newlines
-          curr_rows = curr_rows + stringr::str_count(obj_answer, "\n")
 
-          # Store question id
-          obj_id = obj$id[[1]]
+          curr_rows <- curr_rows + stringr::str_count(obj_answer, "\n")
 
-          # Add row to dataframe
-          pdf_df = rbind(pdf_df, c(type_ = obj_type, id_ = obj_id, user_input = obj_answer, page_num = curr_page))
+          obj_id <- obj$id[[1]]
+
+          pdf_df <- rbind(pdf_df, c(type_ = obj_type, id_ = obj_id, user_input = obj_answer, page_num = curr_page))
         }
 
-        # Add column names to dataframe
-        colnames(pdf_df) = c("type_", "id_", "user_input", "page_num")
+        colnames(pdf_df) <- c("type_", "id_", "user_input", "page_num")
 
         # Create PDF
+
         grDevices::pdf(file, height = 11, width = 20)
 
         # Write dataframe to corresponding page on PDF
+
         for (seg_df in split(pdf_df, pdf_df$page_num)){
 
           gridExtra::grid.table(dplyr::select(seg_df, -page_num))
@@ -143,6 +145,7 @@ submission_server <- function(input, output) {
         }
 
         # Close PDF
+
         grDevices::dev.off()
       }
     )
@@ -253,4 +256,4 @@ submission_ui <- shiny::div(
 
 # Never understand what this hack does or why it is necessary.
 
-utils::globalVariables(c("session"))
+utils::globalVariables(c("session", "page_num"))
