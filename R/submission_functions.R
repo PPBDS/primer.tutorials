@@ -112,9 +112,9 @@ submission_server <- function(input, output) {
           obj_answer = ""
 
           if (obj_type == "exercise_submission"){
-            obj_answer = stringr::str_wrap(trimws(obj$data$code[[1]]))
+            obj_answer = stringr::str_wrap(trimws(obj$data$code[[1]]), 45)
           } else{
-            obj_answer =  stringr::str_wrap(trimws(obj$data$answer[[1]]))
+            obj_answer =  stringr::str_wrap(trimws(obj$data$answer[[1]]), 45)
           }
 
           # Increment curr_rows by number of newlines
