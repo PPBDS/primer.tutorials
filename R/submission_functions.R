@@ -110,9 +110,9 @@ submission_server <- function(input, output) {
           obj_answer = ""
 
           if (obj_type == "exercise_submission"){
-            obj_answer = trimws(obj$data$code[[1]])
+            obj_answer = gsub('(.{1,45})(\\s|$)', '\\1\n', trimws(obj$data$code[[1]]))
           } else{
-            obj_answer =  trimws(obj$data$answer[[1]])
+            obj_answer =  gsub('(.{1,45})(\\s|$)', '\\1\n', trimws(obj$data$answer[[1]]))
           }
 
           # Increment curr_rows by number of newlines
