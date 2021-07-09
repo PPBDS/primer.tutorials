@@ -1,11 +1,11 @@
-#' Tutorial Code Exercise
+#' Tutorial Written Exercise (With Answer)
 #'
 #' @description
 #'
 #' An add-in for writing primer.tutorials.
 #'
 #' It reads the latest exercise and section name
-#' and then adds an exercise skeleton.
+#' and then adds a question skeleton (with answers and no retries).
 #'
 #' This should make things easier for tutorial-writers
 #' because now a fast click can create most of the exercise for you.
@@ -15,13 +15,13 @@
 #'
 #' Keyboard shortcut should be Cmd + SHIFT + E (MAC)
 #'
-#' @return exercise skeleton with appropriate labels and numbers
-make_new_exercise <- function(){
+#' @return question skeleton with appropriate labels and numbers
+make_new_q_with_answer <- function(){
 
   # Steps:
   # 1. get destination of add-in
   # 2. find the correct label and exercise number
-  # 3. format exercise skeleton with the found labels and numbers
+  # 3. format question skeleton with the found labels and numbers
   # 4. insert skeleton into active document
 
   # Get current active document and position
@@ -99,16 +99,14 @@ make_new_exercise <- function(){
     }
   }
 
-  # Make new exercise skeleton by
+  # Make new question skeleton by
   # inserting the appropriate label
   # and exercise number at the right places
 
-  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-%s, exercise = TRUE}\n\n```\n\n<button onclick = \"transfer_code(this)\">Copy previous code</button>\n\n```{r %s-%s-hint, eval = FALSE}\n\n```\n\n###\n\n",
-                         exercise_number,
-                         section_id,
-                         exercise_number,
-                         section_id,
-                         exercise_number)
+  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-%s}\nquestion_text(NULL,\n\tmessage = \"answer here\",\n\tanswer(NULL,\n\tcorrect = TRUE),\n\tallow_retry = FALSE,\n\tincorrect = NULL,\n\toptions = list(nrows = 6))\n```\n\n###\n\n",
+                          exercise_number,
+                          section_id,
+                          exercise_number)
 
   # Insert the skeleton into the current active document
 
