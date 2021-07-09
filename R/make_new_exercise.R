@@ -103,7 +103,7 @@ make_new_exercise <- function(){
   # inserting the appropriate label
   # and exercise number at the right places
 
-  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-%s, exercise = TRUE}\n\n```\n\n<button onclick = \"transfer_code(this)\">Copy previous code</button>\n\n```{r %s-%s-hint, eval = FALSE}\n\n```\n\n###\n\n",
+  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-ex-%s, exercise = TRUE}\n\n```\n\n<button onclick = \"transfer_code(this)\">Copy previous code</button>\n\n```{r %s-ex-%s-hint, eval = FALSE}\n\n```\n\n###\n\n",
                          exercise_number,
                          section_id,
                          exercise_number,
