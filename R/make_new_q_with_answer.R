@@ -103,7 +103,7 @@ make_new_q_with_answer <- function(){
   # inserting the appropriate label
   # and exercise number at the right places
 
-  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-%s}\nquestion_text(NULL,\n\tmessage = \"answer here\",\n\tanswer(NULL,\n\tcorrect = TRUE),\n\tallow_retry = FALSE,\n\tincorrect = NULL,\n\toptions = list(nrows = 6))\n```\n\n###\n\n",
+  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-ex-%s}\nquestion_text(NULL,\n\tmessage = \"answer here\",\n\tanswer(NULL,\n\tcorrect = TRUE),\n\tallow_retry = FALSE,\n\tincorrect = NULL,\n\toptions = list(nrows = 6))\n```\n\n###\n\n",
                           exercise_number,
                           section_id,
                           exercise_number)
