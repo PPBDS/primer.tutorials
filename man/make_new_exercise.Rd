@@ -10,5 +10,16 @@ make_new_exercise()
 exercise skeleton with appropriate labels and numbers
 }
 \description{
-Make New Exercise
+An add-in for writing primer.tutorials.
+
+It reads the latest exercise and section name
+and then adds an exercise skeleton.
+
+This should make things easier for tutorial-writers
+because now a fast click can create most of the exercise for you.
+
+There is also no need to keep track of the exercise numbers
+because it is done for you in the add-in.
+
+Keyboard shortcut should be Cmd + SHIFT + E (MAC)
 }
