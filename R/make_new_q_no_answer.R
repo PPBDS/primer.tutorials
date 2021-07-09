@@ -68,7 +68,7 @@ make_new_q_no_answer <- function(){
 
     # Find the latest section
 
-    if (stringr::str_detect(l, "## ")){
+    if (stringr::str_detect(l, "^## ")){
 
       # Check if there is a manually set section id
 
@@ -103,7 +103,7 @@ make_new_q_no_answer <- function(){
   # inserting the appropriate label
   # and exercise number at the right places
 
-  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-ex-%s}\nquestion_text(\n\t\"prompt here\",\n\tanswer(NULL, correct = TRUE),\n\tallow_retry = TRUE,\n\ttry_again_button = \"Text for button\",\n\tincorrect = NULL))\n```\n\n###\n\n",
+  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-ex-%s}\nquestion_text(\n\t\"prompt here\",\n\tanswer(NULL, correct = TRUE),\n\tallow_retry = TRUE,\n\ttry_again_button = \"Text for button\",\n\tincorrect = NULL)\n```\n\n###\n\n",
                           exercise_number,
                           section_id,
                           exercise_number)
