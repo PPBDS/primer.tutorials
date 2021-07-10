@@ -32,7 +32,7 @@ A tutorial should take about 1 to 2 hours. Depending on the topic difficulty, th
 
 To make additions to **primer.tutorials**, follow the [set up guide](https://ppbds.github.io/primer/set-up-for-working-on-the-primer.html) to fork/download a copy of [PPBDS/primer.tutorials](https://github.com/PPBDS/primer.tutorials). Press "Install and Restart" from the "Build" tab to ensure that you have the latest copy installed. (You should not do `remotes::install_github("PPBDS/primer.tutorials")` since that gets the version from Github. You want the version from your computer so that you get any changes you make.) 
 
-Tutorials themselves live in `inst/tutorials`. Each directory name is a combination of a prefix number (which indicate the week/chapter which a tutorial is associated with) and a name, which corresponds to the `id'` of the tutorial. Within each directory is a `tutorial.Rmd` file and, sometimes, other material like an `images` directory. The prefix number determines the order in which tutorials appear in the Tutorial pane.
+Tutorials themselves live in `inst/tutorials`. Each directory name is a combination of a prefix number (which indicate the week/chapter which a tutorial is associated with and the order in which to do it) and a name, which corresponds to the `id'` of the tutorial. Within each directory is a `tutorial.Rmd` file and, sometimes, other material like an `images` directory. The prefix number determines the order in which tutorials appear in the Tutorial pane. For example, the number `052` indicates the tutorial is from week 5 and is the second tutorial to be completed that week, after `051`.
 
 To create a new tutorial, use File -> New File -> R Markdown. Choose the "From Template" option and then select "Primer Tutorial." The "[Technical Details](details.html)" vignette provides an overview of the default material in the template. Change the `title`, `id`, and `description` parts of the YAML header. The title may include spaces. The `id` should be exactly the same as the `title`, but all in lower case and with spaces and other special characters replaced with dashes. One sentence is enough for the description.
 
@@ -68,11 +68,11 @@ Each Section is composed of a series of numbered Exercises.
 
 ### Flow
 
-Each Exercise should have a "flow" which requires that students hit the "Continue" button at least twice. 
+Each Exercise should have a *flow* which requires that students hit the "Continue" button at least twice. 
 
-* Begin with an *Introduction* which is a sentence or two of knowledge and/or the question itself. If the length of the introductory text is longer than one or two lines on the knitted Rmd, then do not place the question code chunk in the same part. Instead, the Introduction is followed by the triple hashes, thereby creating the Continue button. If the length of the text is short enough that students are willing to read it (at most 2 lines), you can include the answer code chunk in the same part.
+* Begin with an *Introduction* which is a sentence or two of knowledge and/or the question itself. If the length of the introductory text is longer than one or two lines, then do not place the question code chunk in the same part. Instead, the Introduction is followed by the triple hashes, thereby creating the Continue button. If the length of the text is short enough that students are willing to read it (at most 2 lines), you can include the answer code chunk in the same part.
 
-* Then follows the answer code chunk(s). See below for more discussion. This grouping is also followed by the triple hash. We want students to pause after they have submitted their answers and then considered the results of their submission.
+* Then comes the answer code chunk(s). See below for more discussion. This grouping is also followed by the triple hash. We want students to pause after they have submitted their answers so that they are more likely to consider the results of their submission.
 
 * The last part of the Exercise is the *Conclusion*, another knowledge drop. Again, this can't be more than a sentence or two. But it should be more substantive than a simple "Good job."  Of the 1,000 items which we want to mention, which one belongs here because it connects to the question/answer which students have just completed.
 
@@ -121,6 +121,8 @@ Third, any Exercise which requires the copying of code from the prior Exercise s
 
 Fourth, tutorials should be so easy that 95% of the students can answer 95% of the questions easily, given that they have the *Primer* open as they work. One way to ensure that is to add a *Hint* to almost every coding question.
 
+Fifth, you must include at least one empty line in the code chunk, otherwise you will get a hard-to-diagnose error.
+
 Hints must always have the same code chunk name as the exercise chunk for which they are the hint, with a "-hint" added at the end. So, if an exercise code chunk is named "ex-1", then the hint associated with that exercise is named "ex-1-hint". A second hint for that same question would be named "ex-1-hint-2", and so on. Note, however, that if you have a second (or third) hint, you must change the code chunk name for the first hint to end with `hint-1`. If you only have one hint, no number is necessary.
 
 When you create a hint, always use `eval = FALSE` within the parentheses in the code chunk. This is because hints will often include "..." and other symbols which do not run as correct R code. So, we need to tell R not to run it or an error will occur during R CMD check. Example:
@@ -157,12 +159,24 @@ Fifth, we separate the code chunks from the conclusion by using `###` again.
 
 Perhaps the best approach is to write "You should see that the value of height in row 1 is 23." This allows the students know that they are on the right track. Never hard-code a number. Use R to inline calculate it, even though this can be a bother.
 
+Any Exercise which requires the copying of code from the prior Exercise should place the Copy Code button below the Exercise code chunk by using:
+
+````markdown
+<button onclick = "transfer_code(this)">Copy previous code</button>
+````
+
+This will only work if all the special Javascript code is at the top of the Rmd.
+
 #### Text questions
 
 There are two types of text questions: 1) those that provide the students with the correct answer, after they have submitted their own answer, and, 2) those that do not provide an answer.  Examples:
 
 ````markdown
-`r ''````{r ex-answer, eval = FALSE}
+### Exercise 6
+
+Explain potential outcomes in about two sentences.
+
+`r ''````{r definitions-ex-6, eval = FALSE}
 question_text(NULL,
     message = "This is where we place the correct answer. It will appear only after 
     students have submitted their own answers. Note that we do not need to wrap the 
@@ -178,10 +192,12 @@ question_text(NULL,
 
 For the `message` argument, you should provide an excellent answer. We want to allow students to check for themselves that they got, more or less, the correct answer. Note how we set `allow_retry` to FALSE. This means that, after they see our answer, students can't modify their answer.
 
+Always specify (approximately) how much you want students to write. Reasonable units are: one sentence, two sentences and a paragraph. Pick one of these three unless you have a good reason not to.
+
 However, for many written questions, we don't provide an answer, so we don't mind if students resubmit. In that case, we use 
 
 ````markdown
-`r ''````{r ex-no-answer, eval = FALSE}
+`r ''````{r definitions-ex-6, eval = FALSE}
   question_text(NULL,
     answer(NULL, correct = TRUE),
     allow_retry = TRUE,
@@ -191,24 +207,45 @@ However, for many written questions, we don't provide an answer, so we don't min
 ```
 ````
 
-The code chunk name should begin with the name of the section followed by the appropriate Exercise number. (Note that we are working on a way to automatically create/update code chunk names for the entire tutorial.) You must set `exercise = TRUE`. You must include at least one empty line in the code chunk, otherwise you will get a hard-to-diagnose error.
+This format is most commonly used for "process" questions in which we have told students to do something and then confirm that they have done it by copying/pasting the result from a command like `list.files()`.
 
-Any Exercise which requires the copying of code from the prior Exercise should place the Copy Code button below the Exercise code chunk by using:
+The code chunk name should begin with the name of the section followed by `-ex-` and by the appropriate Exercise number. (Note that we are working on a way to automatically create/update code chunk names for the entire tutorial.) You must set `exercise = TRUE`. 
 
-````markdown
-<button onclick = "transfer_code(this)">Copy previous code</button>
-````
+### Tips
 
-This will only work if all the special Javascript code is at the top of the Rmd.
+Each coding exercise should always spit out something. Interactivity is good! Students should always look at what their code is spitting out. There are some situations in which students need to make assignments and which, because of this, will result in no output when the Run Code button is pressed. But:
 
+* Do this as little as possible. Why not just make a pipe?
 
+* When you do this, you will need to create the permanent object yourself because student work in an Exercise chunk has no lasting effects. Doing so is annoying and error prone.
 
-
-### Process questions
-
-We want to give students plenty of practice with tasks like forking/cloning repos, committing files, editing Rmd files and so on. It can be difficult, however, to confirm that students have actually followed our instructions. The easiest way to confirm that they have done so is to issue commands which look at the filesystem and the files which live there. `list.files()` and `readLines()` are the key tools.
+* You can have the student not only do the assignment but also, as part of this same exercise, print out the object. This works well.
 
 
+Prevent quotes from turning into curly quotes by writing `"nnet"` (with backticks around it) instead of "nnet". You never want curly quotes in something which might be copy/pasted to the prompt.  
+
+Follow our Code Style Guide, especially spaces around operators like " = ". Use only one command per line in pipes and graphics, with proper indentation. Indent plotting commands after ggplot().
+
+
+Do not create an object in one question and then assume that it will be available in subsequent questions. It won't be! Each question is independent of every other question. They live in separate R instances. The two exceptions to this is, first, code in the "setup" chunk for a question will be run and anything created will be available, but just in that question. Second (and this seems buggy and unreliable!) objects created in the initial setup chunk for the entire tutorial are available in all later questions, just the way that library() commands executed there do not need to be executed again. 
+
+**Just putting code in a random R code chunk does not guarantee that that object will be available elsewhere, although it sometimes is!** Lesson is that, if you have an object you need just once, then create it in a setup chunk for that question. If you have an object you will need in multiple questions, create it in the setup chunk at the top of the lesson. TW thinks that you can use random R code chunks to do things, **but you must give those code chunks a name**.
+
+Code chunks for Exercises must be named. 
+
+#### Pipes
+
+The most common type of code questions involve the step-by-step process of building a pipe, the final output of which is a nice looking graphic.
+
+You want to first show the graphic that you will create by the end. You show it once at the start of the group and once before the last exercise, as a reminder of what the graphic should look like so users do not need to scroll all the way back up. 
+
+You should put the code for the graph in the code chunk at the start of the section. Save the code to an object. The name of the object should have a _p suffix, where the "p" stands for "plot." This way, you only have to put the object name in the code chunk at the end of the section rather than copying the code.
+
+You then build up the graphic, line by line, over the series of exercises, providing hints along the way. Along the way, it is fine to have a hint which reports: "This is what your code should look like now." That allows a student who is confused to catch. But don't do that too often since it will cause students to just look ahead to get the right answer.
+
+#### Addins
+
+We have provided three additions to the Addins menu: "Tutorial Code Exercise", "Tutorial Written Exercise (with Answer)", and  "Tutorial Written Exercise (no Answer)." Give them a try! They each insert the skeleton for the next Exercise, featuring all the key component parts. It even takes a guess at the correct Exercise number.  Highly recommended.
 
 ### Later tutorials in later chapters 
 
@@ -246,56 +283,11 @@ Again, this requires a different answer for each new tibble.
 
 
 
-### Tips
-
-
-Each coding exercise should always spit out something. Interactivity is good! Students should always look at what their code is spitting out. There are some situations in which students need to make assignments and which, because of this, will result in no output when the Run Code button is pressed. But:
-
-* Do this as little as possible. Why not just make a pipe?
-
-* When you do this, you will need to create the permanent object yourself because student work in an Exercise chunk has no lasting effects. Doing so is annoying and error prone.
-
-* You can have the student not only do the assignment but also, as part of this same exercise, print out the object. This works well.
-
-
-Prevent quotes from turning into curly quotes by writing `"nnet"` (with backticks around it) instead of "nnet". You never want curly quotes in something which might be copy/pasted to the prompt.  
-
-Follow our Code Style Guide, especially spaces around operators like " = ". Use only one command per line in pipes and graphics, with proper indentation. Indent plotting commands after ggplot().
-
-
-Do not create an object in one question and then assume that it will be available in subsequent questions. It won't be! Each question is independent of every other question. They live in separate R instances. The two exceptions to this is, first, code in the "setup" chunk for a question will be run and anything created will be available, but just in that question. Second (and this seems buggy and unreliable!) objects created in the initial setup chunk for the entire tutorial are available in all later questions, just the way that library() commands executed there do not need to be executed again. 
-
-**Just putting code in a random R code chunk does not guarantee that that object will be available elsewhere, although it sometimes is!** Lesson is that, if you have an object you need just once, then create it in a setup chunk for that question. If you have an object you will need in multiple questions, create it in the setup chunk at the top of the lesson. TW thinks that you can use random R code chunks to do things, **but you must give those code chunks a name**.
-
-
-The exercise code chunk should not have zero lines. It can be blank, but it must have at least one empty line.
-
-Code chunks for questions must be named. Don't worry about the naming/numbering, as long as the code chunks don't have duplicate names.
-
-Do not provide official **learnr** answers. There is no need to grade what the students submit. You may sometimes provide answers in a comment outside the code chunk, as a service to others authors working on the tutorial. Use your best judgment.
-
-#### Pipes
-
-The most common type of code questions involve the step-by-step process of building a pipe, the final output of which is a nice looking graphic.
-
-You want to first show the graphic that you will create by the end. You show it once at the start of the group and once before the last exercise, as a reminder of what the graphic should look like so users do not need to scroll all the way back up. 
-
-You should put the code for the graph in the code chunk at the start of the section. Save the code to an object. The name of the object should have a _p suffix, where the "p" stands for "plot." This way, you only have to put the object name in the code chunk at the end of the section rather than copying the code.
-
-You then build up the graphic, line by line, over the series of exercises, providing hints along the way. Along the way, it is fine to have a hint which reports: "This is what your code should look like now." That allows a student who is confused to catch. But don't do that too often since it will cause students to just look ahead to get the right answer.
-
-#### Addins
-
-We have provided three additions to the Addins menu: "Tutorial Code Exercise", "Tutorial Written Exercise (with Answer)", and  "Tutorial Written Exercise (no Answer)." Give them a try! They each insert the skeleton for the next Exercise, featuring all the key component parts. It even takes a guess at the correct Exercise number.  Highly recommended.
-
-
 ## Inputs
 
 ### Tibbles
 
 Use built-in data sets in constructing tutorial questions, or use data sets which you create yourself in the tutorial. Note that several packages from the **tidyverse** have built in data, although it is worth making sure that they are tibbles rather than data frames. To see all the data sets in the Tidyverse, type `library(tidyverse)` first.  Then, you can use `data()` to look at data sets associated with **tidyverse** packages. You can also use data sets from **primer.data**.
-
-
 
 ### Using images
 
@@ -309,9 +301,7 @@ include_graphics("images/example.png")
 ```
 ````
 
-`include_graphics()` is part of the `knitr` package, so you need `library(knitr)` in the setup code chunk.
-
-
+`include_graphics()` is part of the `knitr` package, so you need `library(knitr)` in the setup code chunk. Note that you do not need to name these code chunks.
 
 ### Using files
 
@@ -319,24 +309,31 @@ There are two ways we can use files which we are certain are under our control. 
 
 The first approach is to write code which uses the url to the file in our Github repo. The second approach is to copy the file from the installed package to the workspace for a specific Exercise. (There is no way to make the file available for all Exercises in a tutorial.)
 
-Consider this code from the Data A Tutorial for an example of the second approach.
+Consider this code from the Data: Files tutorial for an example of the second approach.
 
 ````markdown
+## CSV files
+###
+
+"CSV" stands for **c**omma-**s**eparated **v**alues, meaning that the variable names and data values are separated by commas in the file.
+
 ### Exercise 1
 
-`r ''````{r ex-1-setup}
+`r ''````{r csv-files-ex-1-setup}
 file.copy(system.file("www/test_1.csv", 
                       package = "primer.tutorials"), ".")
 ```
 ````
 
-This ensures that the `test_1.csv` file will be available in the ex-1 exercise. (Note that the use of setup requires that the code chunk name have the same name as the exercise code chunk but with the "setup" suffix.)
+This ensures that the `test_1.csv` file will be available in the `csv-files-ex-1` Exercise. (Note that the use of setup requires that the code chunk name have the same name as the exercise code chunk but with the "setup" suffix.)
+
+Again, this hackery is only necessary if you want the student to be able to work directly with the file, in an Exercise code chunk. If you don't need to do this, then you can just create a `www` directory in the current folder, just like you have done with `images`, and any files there will be available when you knit the Rmd. One example might be a plot which takes a while to make. You could make that plot ahead of time, store it in `www/my_plot.rds`, and then `my_p <- read_rds("www/my_plot.rds")` it in the rmd. The `my_p` object will behave just as if you had created it in the rmd.
 
 ### Permanent objects
 
-Permanent objects should be avoided, if possible. The problem is that each Exercise code chunk is its own "world." It knows nothing of any actions taken in previous code chunks, except for any setup code chunk you create just for that Exercise or for the initial setup code chunk for the whole tutorial. 
+Permanent objects should be avoided, if possible. The problem is that each Exercise code chunk is its own "world." It knows nothing of any actions taken in previous code chunks, except for two places: first, any setup code chunk you create just for that Exercise or, second, for the initial setup code chunk for the whole tutorial. 
 
-But what about regular code chunks which are neither Exercise code chunks nor setup chunks. Do objects created there persist? Maybe! Sometimes!
+But what about regular code chunks which are neither Exercise code chunks nor setup chunks. Do objects created there persist? Maybe! Sometimes!?
 
 No aspect of the tutorials has given us more trouble than permanent objects. In particular, it sometimes seems like things will work with Run Document but not with Run Tutorial. Since students always do the latter, we need to test that way as well.
 
@@ -377,12 +374,14 @@ The most common source of errors is something wrong with the hint code chunks, w
 
 * Be careful of the way that Github is sloppy in how it deals with capitalization changes, especially when you change the name of a file. For example, you might first commit a file named `Rproj.png`. Later, you decide to change all file names for images to all lower case. So, you change the name of the file to `rproj.png`. Commit and push. Everything is great, right? No! Even if Github shows you the new file name it might still have that file as `Rproj.png` internally. This will cause errors when your run your checks on Github: 
 
-> Error: Cannot find the file(s): "images/rproj.png"
+```{bash, eval = FALSE}
+Error: Cannot find the file(s): "images/rproj.png"
+```
 
 But the file is there! You can see it! The tests work on your local machine. The easiest solution is to delete the file (and commit that change). Only after it is gone can you then put it back. 
 
 
-<!-- R CMD check will test that all tutorials have these sections exactly as they are in the Primer Tutorial template. So, use the template. If either the "Introduction" or "Download answers" sections are missing, R CMD check will return something like "From test-components.R. Submission (or Information) lines missing from file". -->
+* R CMD check will test that all tutorials have the defauls sections exactly as they are in the Primer Tutorial template. So, use the template. If either the "Introduction" or "Download answers" sections are missing, R CMD check will return something like "From test-components.R. Submission (or Information) lines missing from file".
 
 
 
