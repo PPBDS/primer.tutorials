@@ -68,7 +68,7 @@ make_new_exercise <- function(){
 
     # Find the latest section
 
-    if (stringr::str_detect(l, "## ")){
+    if (stringr::str_detect(l, "^## ")){
 
       # Check if there is a manually set section id
 
