@@ -70,28 +70,15 @@ make_new_exercise <- function(){
 
     if (stringr::str_detect(l, "^## ")){
 
-      # Check if there is a manually set section id
+      # clean up id
 
-      if (stringr::str_detect(l, "\\{#") & !stringr::str_detect(l, "str_detect")){
+      possible_id_removed_prev <- gsub("\\{#(.*)\\}", "", l)
 
-        to_clean <- gsub(".*(\\{#)", "", l)
-        section_id <- substr(to_clean, 1, nchar(to_clean)-1)
+      possible_id_removed <- gsub("[^a-zA-Z ]", "", possible_id_removed_prev)
 
+      lowercase_id <- tolower(trimws(possible_id_removed))
 
-      } else {
-        # If there is no manually set section id, then make its own id
-        # by stringing together section name with dashes
-
-        # clean up id
-
-        possible_id_removed_prev <- gsub("\\{#(.*)\\}", "", l)
-
-        possible_id_removed <- gsub("[^a-zA-Z ]", "", possible_id_removed_prev)
-
-        lowercase_id <- tolower(trimws(possible_id_removed))
-
-        section_id <- gsub(" ", "-", lowercase_id)
-      }
+      section_id <- substr(gsub(" ", "-", lowercase_id), 0, 20)
 
       # After finding a section, stop looping immediately
 
