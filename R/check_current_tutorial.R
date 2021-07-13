@@ -35,8 +35,6 @@ check_current_tutorial <- function(){
 
   curr_exercise <- ""
 
-  last_is_exercise <- FALSE
-
   for (i in seq_along(tbl$sec_h2)){
 
     l <- tbl$sec_h2[i]
@@ -70,27 +68,24 @@ check_current_tutorial <- function(){
     filt_options <- parsermd::rmd_get_options(tbl$ast[i])[[1]]
 
 
-    if (names(filt_options) == "exercise" && filt_options == "TRUE"){
-      new_label <- paste0(section_id, "-", exercise_number)
-      new_ast <- purrr::map(tbl$ast[i], change_label_function, new_label)
-      tbl$ast[i] <- new_ast
-      last_is_exercise <- TRUE
-      next
+    if (length(filt_options) > 0){
+      if (names(filt_options) == "eval" && filt_options == "FALSE"){
+        hint_count <- hint_count + 1
+
+        new_label <- paste0(section_id, "-", exercise_number, "-hint-", hint_count)
+
+        new_ast <- purrr::map(tbl$ast[i], change_label_function, new_label)
+
+        tbl$ast[i] <- new_ast
+
+        next
+      }
     }
+    new_label <- paste0(section_id, "-", exercise_number)
 
-    if (names(filt_options) == "eval" && filt_options == "FALSE"){
-      hint_count <- hint_count + 1
-      new_label <- paste0(section_id, "-", exercise_number, "-hint-", hint_count)
-      new_ast <- purrr::map(tbl$ast[i], change_label_function, new_label)
-      tbl$ast[i] <- new_ast
-      next
-    }
+    new_ast <- purrr::map(tbl$ast[i], change_label_function, new_label)
 
-    if (last_is_exercise){
-      last_is_exercise <- FALSE
-    }
-
-
+    tbl$ast[i] <- new_ast
   }
 
   new_doc <- ""
