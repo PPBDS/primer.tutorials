@@ -50,7 +50,7 @@ check_current_tutorial <- function(){
     if (e != curr_exercise && nchar(trimws(e)) != 0){
       curr_exercise <- e
 
-      exercise_number <- parse_integer(gsub(pattern = "[^0-9]", replacement = "", trimws(e)) )
+      exercise_number <- readr::parse_integer(gsub(pattern = "[^0-9]", replacement = "", trimws(e)) )
 
       hint_count <- 0
     }
