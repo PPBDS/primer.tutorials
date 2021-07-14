@@ -20,15 +20,6 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
 
-fit_1 <- stan_glm(age ~ party - 1, 
-                    data = trains, 
-                    seed = 17,
-                    refresh = 0)
-
-pp <- posterior_predict(..., newdata = ...) %>% 
-  as_tibble() %>% 
-  mutate_all(as.numeric)
-
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -188,6 +179,20 @@ For our purposes, we will assume that the data is drawn from the same population
 We have now completed wisdom by creating our Preceptor Table and analyzing our data and determining its application to our questions and our population. 
 
 ## age ~ party
+
+```{r}
+fit_1 <- stan_glm(age ~ party - 1, 
+                    data = trains, 
+                    seed = 17,
+                    refresh = 0)
+
+new_obs <- tibble(party = "Democrat")
+
+pp <- posterior_predict(fit_1, newdata = new_obs) %>% 
+  as_tibble() %>% 
+  mutate_all(as.numeric)
+```
+
 
 Now that we have completed Wisdom for all of our questions, let's look at the ones dealing specifically with the relation between age and party.
 
@@ -498,6 +503,21 @@ Next, let's consider the second question.
 
 Since our group has three Democrats and three Republicans, make a tibble with the observations of the column "party" that we desire. Store this as `new_obs`.
 
+```{r}
+newobs <- tibble(party = c("Democrat", "Democrat", "Democrat", 
+                        "Republican", "Republican","Republican"))
+
+pp <- posterior_predict(fit_1, newdata = newobs) %>%
+    as_tibble() %>%
+    mutate_all(as.numeric) %>% 
+    set_names(c("dem_1", "dem_2", "dem_3", 
+                "rep_1", "rep_2", "rep_3")) %>% 
+    rowwise() %>% 
+    mutate(dems_oldest = max(c_across(dem_1:dem_3)),
+           reps_youngest = min(c_across(rep_1:rep_3)),
+           age_diff = dems_oldest - reps_youngest)
+```
+
 
 ```{r age--party-ex-16, exercise = TRUE}
 
@@ -509,7 +529,7 @@ Since our group has three Democrats and three Republicans, make a tibble with th
 newobs <- tibble(party = c(...))
 ```
 
-```{r age--party-ex-16-hint-1, eval = FALSE}
+```{r age--party-ex-16-hint-2, eval = FALSE}
 newobs <- tibble(party = c("Democrat", "Democrat", "Democrat", 
                            "Republican", "Republican","Republican"))
 ```
@@ -548,12 +568,524 @@ Currently your posterior predict has numbered columns correlating to the order i
 Use the method set_names().
 ```
 
-```{r age--party-ex-18-hint-1, eval = FALSE}
+```{r age--party-ex-18-hint-2, eval = FALSE}
 set_names(c(..., ..., ..., ..., ..., ...))
 ```
 
 ###
 
+While the above step may not be necessary and we could proceed with the numbered columns, renaming makes it easier for us to use the distribution.
+
+### Exercise 19
+
+Next, group the data by row. Then, create a column `dems_oldest` that has the oldest aged 
+Democrat in the row, a column `reps_youngest` with the youngest aged Republican in the row, and a column `age_diff` for the difference between the oldest Democrat and the youngest Republican in this row. Store this as `pp` and print the result.
+
+```{r age--party-ex-19, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age--party-ex-19-hint-1, eval = FALSE}
+Recall the methods `max()` and `min()`. Also, `c_across()` can be used to create a list across columns.
+```
+
+```{r age--party-ex-19-hint-2, eval = FALSE}
+... %>% 
+  rowwise() %>% 
+  mutate(dems_oldest = max(c_across(...)),
+         reps_youngest = min(c_across(...)),
+         age_diff = dems_oldest - reps_youngest)
+```
+
+###
+
+In doing so, we have found the posterior distribution for the age difference between the oldest Democrat and youngest Republican for train commuters with a group of three Democrats and three Republicans.
+
+### Exercise 20
+
+Now, let's use the distribution to answer our questions by plotting it.
+
+Start by using `ggplot` and mapping the the age difference to the x-axis. Then, add the layer geom_histogram and use `aes()` within the first argument to set the y-value to be the probability. Additionally, set the second argument `bins` equal to 100.
+
+```{r age--party-ex-20, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age--party-ex-20-hint, eval = FALSE}
+pp %>% 
+  ggplot(aes(x = ...)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = ...)
+```
+
+### Exercise 21
+
+Continue this pipe by adding labels. Then change the y-axis to be in percent_format and add the layer `theme_classic()`.
+
+Remember, your plot should look something like this:
+
+```{r}
+pp %>%  
+  ggplot(aes(x = age_diff)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100) +
+    labs(title = "Posterior for Age Difference",
+         subtitle = "Oldest of three Democrats compared to youngest of three Republicans",
+         x = "Age",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+```
+
+
+```{r age--party-ex-21, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age--party-ex-21-hint, eval = FALSE}
+... +
+  labs(...) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic()
+```
+
+###
+
+With the posterior age difference model, we can now go on to answer our question.
+
+### Exercise 22
+
+Use the distribution to approximate what we would expect the age difference to be between the oldest Democrat and youngest Republican in a group of train commuters with 6 Democrats and 6 Republicans.
+
+```{r age--party-ex-22}
+question_text(NULL,
+	message = "As can be seen by the above distribution, we would expect the age difference to be about 22 years.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+As we have seen, through the use of our fitted data and `posterior_predict()`, we were able to answer our questions regarding age and party.
+
+Let's continue this process with our questions pertaining to immigration attitude and exposure to Spanish-speakers.
+
+## att_end~treatment
+
+Recall our third and fourth questions:
+
+*What is the average treatment effect, of exposing train commuters to Spanish-speakers, on their attitudes toward immigration?*
+
+*What is the largest causal effect of exposing train commuters to Spanish-speakers which still has a 1 in 10 chance of occurring?*
+
+Unlike our previous model, this will be a causal model since the treatment of being exposed to Spanish-speakers may cause a change in immigration attitudes, unlike how changing party registration will have no effect on age.
+
+### Exercise 1
+
+First, is the data representative of the population? Think specifically in terms of `att_end` and `treatment`. 
+
+```{r attendtreatment-ex-1}
+question_text(NULL,
+	message = "One point you may consider is how these may have changed over time. An additional point of discussion could be the location of Boston compared to other locations, such as those with a different sized Spanish-speaking population.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+### Exercise 2
+
+```{r}
+fit_2 <- stan_glm(att_end ~ treatment - 1, 
+                      data = trains, 
+                      seed = 45,
+                      refresh = 0)
+```
+
+
+Now, that we have considered the Justice virtue, let's continue to Courage and make our fitted model using `stan_glm()`. Set your outcome variable as `att_end`and your explanatory variable as `treatment` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `treatment` so we do not get an intercept.  Set `data` to `trains`, and `refresh` to 0. Set this to the `fit_2` and print it out.
+
+```{r attendtreatment-ex-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-2-hint, eval = FALSE}
+fit_2 <- stan_glm(... ~ ... -1,
+                  data = ...
+                  refresh = ...)
+```
+
+###
+
+Now, let's look at the posterior distributions for those who were treated and those who weren't.
+
+### Exercise 3
+
+First, make `fit_2` into a tibble and get rid of `sigma` since it is not of importance to us. Remember that you need to use `as_tibble()`.
+
+```{r attendtreatment-ex-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-3-hint, eval = FALSE}
+fit_2 %>% 
+  as_tibble() %>% 
+  select(...)
+```
+
+### Exercise 4
+
+Next, use `pivot_longer()` with the argument of `cols` set to the "treatmentTreated" and "treatmentControl". Set the argument `names_to` to "Parameter", and `values_to` to "attitude".
+
+```{r attendtreatment-ex-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-4-hint, eval = FALSE}
+... %>% 
+  pivot_longer(cols = ...,
+               names_to = ...
+               values_to = ...)
+```
+
+### Exercise 5
+
+Now, let's plot this. Plot `attitude` on the x-axis and set `fill` to `Parameter`. Add the layer `geom_histogram()` and make y into a probability. Set `alpha` to 0.5, `bins` to 100, and `position` to "identity".
+
+```{r attendtreatment-ex-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-5-hint, eval = FALSE}
+... %>% 
+  ggplot(aes(x = ..., y = ...)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 alpha = ...,
+                 bins = ...
+                 position = ...)
+```
+
+### Exercise 6
+
+Next, add labels, change the y-scale to be in a percent format and add the layer `theme_classic()`.
+
+The posterior should appear similar to the following:
+
+```{r}
+fit_2 %>% 
+  as_tibble() %>% 
+  select(-sigma) %>% 
+  pivot_longer(cols = treatmentTreated:treatmentControl,
+               names_to = "Parameter",
+               values_to = "attitude") %>% 
+  ggplot(aes(x = attitude, fill = Parameter)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = 0.5, 
+                   bins = 100, 
+                   position = "identity") +
+    labs(title = "Posterior for Expected Attitude Toward Immigration",
+         subtitle = "Treated individuals are more conservative",
+         x = "Attitude",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) + 
+    theme_classic()
+```
+
+
+```{r attendtreatment-ex-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-6-hint, eval = FALSE}
+... +
+  labs(...) + 
+  scale_y_continous(labels = scales::percent_format()) + 
+  theme_classic()
+```
+
+###
+
+Now, using this posterior distribution, we can go on to answer the questions that we began this section with. 
+
+### Exercise 7
+
+Recall our first question pertaining to this distribution:
+
+*What is the average treatment effect, of exposing people to Spanish-speakers, on their attitudes toward immigration?*
+
+Using the distribution, approximate the average treament effect.
+
+```{r attendtreatment-ex-7}
+question_text(NULL,
+	message = "Your answer should fall around 1.5",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+### Exercise 8
+
+```{r echo = FALSE, include = FALSE}
+newobs <- tibble(treatment = c("Treated", "Control"))
+
+pe <- posterior_epred(fit_2, newobs) %>% 
+    as_tibble() %>% 
+    mutate(ate = `1` - `2`)
+
+```
+
+
+Now, let's use `posterior_epred()` to answer this question. Create a tibble like we have done before with our desired ovservations. For this scenario, call it `newobs` and set `treatment` having two values, "Treated" and "Control".
+
+```{r attendtreatment-ex-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-8-hint, eval = FALSE}
+newobs <- tibble(treatment = c("Treated", "Control"))
+```
+
+### Exercise 9
+
+Next, use `posterior_epred()` and set the first argument to our fitted model and the second to the tibble we just created. Remember we need to use `as_tibble()`.
+
+```{r attendtreatment-ex-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-9-hint, eval = FALSE}
+posterior_epred(..., ...) %>% 
+  as_tibble()
+```
+
+### Exercise 10
+
+Continue this pipe and add a column `ate` for the average treatment effect. Set this to `pe`. 
+
+Recall that the average treatment effect is the control value subtracted from the treated value.
+
+```{r attendtreatment-ex-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-10-hint-1, eval = FALSE}
+Remember that our columns are not titled, but are numbered and we need to use the format `1` to get the value from our first column.
+```
+
+```{r attendtreatment-ex-10-hint-1, eval = FALSE}
+pe <- ... %>% 
+  mutate(ate = `1` - `2`)
+```
+
+###
+
+This results in the posterior probability distribution of average treatment effect.
+
+### Exercise 11
+
+Now, let's graph this as we have done before. Map `ate` to the x-axis and add the layer `geom_histogram()`. Make the values on the y-axis probabilities and set the argument `bins` to 100. 
+
+```{r attendtreatment-ex-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-11-hint, eval = FALSE}
+pe %>%
+  ggplot(aes(x = ...)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = ...)
+```
+
+### Exercise 12
+
+Next, add labels, format the values on the y-axis to be percents using `scale_y_continuous`, and add the layer `theme_classic()`.
+
+The posterior should look similar to the following:
+
+```{r}
+pe %>% 
+  ggplot(aes(x = ate)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100) +
+    labs(title = "Posterior for Average Treatment Effect",
+         subtitle = "Exposure to Spanish-speakers shifts immigration attitudes rightward",
+         x = "Difference in Attitude",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+```
+
+
+
+```{r attendtreatment-ex-12, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-12-hint, eval = FALSE}
+... + 
+  labs(...) + 
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic()
+```
+
+###
+
+In creating the posterior distribution, we have effectively answered our first question to determine the average treatment.
+
+### Exercise 13
+
+```{r, echo = FALSE}
+pp <- posterior_predict(fit_2, 
+                        newdata = newobs) %>%
+    as_tibble() %>%
+    mutate_all(as.numeric) %>% 
+    mutate(te = `1` - `2`)
+```
+
+
+Now, let's take a look at our second question. 
+
+*What is the largest effect size which still has a 1 in 10 chance of occurring?*
+
+To answer this one, we will use `posterior_predict()` for two people, one who is treated and the other control. In other words, we can use the tibble `newobs` which we already created. Set the first argument to our fitted model and `newdata` to `newobs`. Make sure to use `as_tibble()` and to make all the values numeric as we have done previously.
+
+```{r attendtreatment-ex-13, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-13-hint, eval = FALSE}
+posterior_predict(..., 
+                  newdata = ...) %>%
+  as_tibble() %>%
+  mutate_all(as.numeric)
+```
+
+### Exercise 14
+
+Continue this pipe and add a column `te` which is the difference between the treated person and the untreated person. Remember the columns are unnamed and that you must use numbers. Store this as `pp`.
+
+```{r attendtreatment-ex-14, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-14-hint, eval = FALSE}
+pp <- ... %>% 
+  mutate(te = `1` - `2`)
+```
+
+### 
+
+We have now created the posterior distribution for the treatment effect for one person. 
+
+### Exercise 15
+
+Let's now plot this. Map `te` to the x-axis and add the layer `geom_histogram()`. Make the values on the y-axis into probabilities and set the argument `bins` to 100.
+
+```{r attendtreatment-ex-15, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-15-hint, eval = FALSE}
+pp %>% 
+  ggplot(aes(x = ...)) +
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = ...)
+```
+
+### Exercise 16
+
+Continue this pipe and add labels, format the y-axis to percents, and add the layer `theme_classic()`.
+
+The result should appear similar to the following:
+```{r echo = FALSE}
+pp %>% 
+  ggplot(aes(x = te)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+    labs(title = "Posterior for Treatment Effect for One Person",
+         subtitle = "Causal effects are more variable for indvduals",
+         x = "Difference in Attitude",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+```
+
+
+```{r attendtreatment-ex-16, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-16-hint, eval = FALSE}
+... +
+  labs(...) + 
+  scale_y_continuous(labels = scales::percent_format()) + 
+  theme_classic()
+```
+
+###
+
+Using this distribution, we can evaluate the difference between treatment effect for a single individual and notice how large the spread is. To answer our question though, we need to look at the value at the 90th percentile since we are looking to find what the largest causal effect is that has a 1 in 10 chance of occurring.
+
+### Exercise 17
+
+In order to do so, we can use the function `quantile()`. To do so, select the `te` column of `pp` and use this as the first argument of `quantile()`. Set the second argument `prob` to our desired percentile, 0.9.
+
+```{r attendtreatment-ex-17, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attendtreatment-ex-17-hint, eval = FALSE}
+quantile(pp$te, prob = 0.9)
+```
+
+###
+
+As you can see above, the largest treatment effect that will occur about 10% of the time is 6.6
+
+<!-- MM: Don't hardcode that either -->
 
 
 ```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
