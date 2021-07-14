@@ -17,11 +17,23 @@
 #' @return formatted document with correct code and hint chunk labels
 check_current_tutorial <- function(){
 
-  change_label_function <- function(x, ...){
+  # Create function that will later be used
+  # to set the chunk label and code in the ast.
+
+  change_chunk_function <- function(x, ...){
     opts <- list(...)
-    x[["name"]] <- opts[[1]]
+    x[[opts[[1]]]] <- opts[[2]]
     x
   }
+
+  # Create function that will later be used
+  # to get the number of lines in an exercise.
+
+  get_chunk_lines <- function(x, ...){
+    length(x$code)
+  }
+
+  # Parse Rmd of current file
 
   file_path <- rstudioapi::getSourceEditorContext()$path
 
@@ -29,33 +41,69 @@ check_current_tutorial <- function(){
 
   tbl <- tibble::as_tibble(rmd)
 
+  # Set up tracker variables for the loop
+
   hint_count <- 0
 
   exercise_number <- 1
 
   curr_exercise <- ""
 
+  has_exercise <- FALSE
+
+  # The idea of this loop is to go through
+  # each element of the Rmd and change it to its desired format.
+
+  # Each code chunk will go through a series of conditions to
+  # determine what type of code chunk it is and what the label
+  # should be.
+
   for (i in seq_along(tbl$sec_h2)){
+
+    # Check if the code chunk is in a level 3 heading.
 
     l <- tbl$sec_h2[i]
 
     e <- tbl$sec_h3[i]
 
+    # Ignore all code chunks outside a level 3 heading.
+
     if (is.na(l) | is.na(e)){
       next
     }
 
+    # Check if current exercise is a new exercise:
+    # If it is, then the hint and exercise tracker is reset
+    # and the exercise number is updated.
+
     if (e != curr_exercise && nchar(trimws(e)) != 0){
       curr_exercise <- e
 
-      exercise_number <- readr::parse_integer(gsub(pattern = "[^0-9]", replacement = "", trimws(e)) )
+      exercise_number <- readr::parse_number(gsub(pattern = "[^0-9]", replacement = "", trimws(e)) )
 
       hint_count <- 0
+
+      has_exercise <- FALSE
     }
 
-    if (tbl$type[i] != "rmd_chunk"){
+    # Skip this loop if the current element fits any of the following:
+    # 1. not a code chunk
+    # 2. has NULL for its label
+    # 3. has an empty string for its label
+
+    if (tbl$type[i] != "rmd_chunk" | is.na(tbl$label[i]) | nchar(trimws(tbl$label[i])) == 0){
       next
     }
+
+    # If "hint" is in the current element's label
+    # but the element doesn't have the eval = FALSE option,
+    # add that option to the element.
+
+    if (stringr::str_detect(tbl$label[i], "hint") && length(parsermd::rmd_get_options(tbl$ast[i])[[1]]) == 0){
+      tbl$ast[i] <- parsermd::rmd_set_options(tbl$ast[i], eval = "FALSE")
+    }
+
+    # Create the standardized label of the current element
 
     possible_id_removed_prev <- gsub("\\{#(.*)\\}", "", l)
 
@@ -65,28 +113,86 @@ check_current_tutorial <- function(){
 
     section_id <- substr(gsub(" ", "-", lowercase_id), 0, 20)
 
+    # Read the options of the element
+
     filt_options <- parsermd::rmd_get_options(tbl$ast[i])[[1]]
 
+    # If the element has options, then check for the following:
+    #
+    # 1) If the element is a hint, set its label
+    #   to the hint format and increment the hint tracker
+    #   then skip to next loop
+    #
+    # 2) If the element is a child document, skip to next loop.
+    #
+    # 3) If the element is an exercise and does not have an empty line,
+    #   add an empty line.
 
     if (length(filt_options) > 0){
-      if (names(filt_options) == "eval" && filt_options == "FALSE"){
+      if (names(filt_options)[[1]] == "eval" && filt_options[[1]] == "FALSE"){
         hint_count <- hint_count + 1
 
         new_label <- paste0(section_id, "-", exercise_number, "-hint-", hint_count)
 
-        new_ast <- purrr::map(tbl$ast[i], change_label_function, new_label)
+        new_ast <- purrr::map(tbl$ast[i], change_chunk_function, "name", new_label)
 
         tbl$ast[i] <- new_ast
 
         next
       }
+
+      if (names(filt_options)[[1]] == "child"){
+        next
+      }
+
+      if (names(filt_options)[[1]] == "exercise" && filt_options[[1]] == "TRUE"){
+        if (purrr::map(tbl$ast[i], get_chunk_lines)[[1]] == 0){
+          new_ast <- purrr::map(tbl$ast[i], change_chunk_function, "code", "")
+          tbl$ast[i] <- new_ast
+        }
+      }
     }
+
+    # If this element is not a hint and the current level 3 heading
+    # already has an exercise, skip to the next loop because
+    # it must be some kind of set up code chunk.
+
+    if (has_exercise){
+      next
+    }
+
+    # After all the conditions above, the elements left
+    # MUST BE exercises, so the appropriate labels are set
+    # and the exercise tracker is updated.
+
     new_label <- paste0(section_id, "-", exercise_number)
 
-    new_ast <- purrr::map(tbl$ast[i], change_label_function, new_label)
+    new_ast <- purrr::map(tbl$ast[i], change_chunk_function, "name", new_label)
 
     tbl$ast[i] <- new_ast
+
+    has_exercise <- TRUE
   }
+
+  # This is quite interesting.
+  #
+  # The parsermd already has a as_document function
+  # that should've taken care of turning the changed Rmd structure
+  # into raw text.
+  #
+  # However, there was a thing with Rmarkdown sections in the structure
+  # where each time it is updated, it adds a newline to the section because
+  # while parsing, newlines counted as part of the Rmarkdown section.
+  #
+  # This created a cycle where each time an Rmd is checked, it would be
+  # padded with as many newlines as there are Rmarkdown sections.
+  #
+  # Therefore, I had to make my own way of transforming the Rmd back
+  # to plain text
+
+  # The only unique thing this part does is that it removes
+  # the last character of every Rmarkdown section, which is always
+  # a newline before adding it to the full document.
 
   new_doc <- ""
   for (i in seq_along(tbl$sec_h2)){
@@ -96,6 +202,9 @@ check_current_tutorial <- function(){
     }
     new_doc <- paste(new_doc, new_txt, sep = "\n")
   }
+
+  # This part just writes that reformatted document
+  # to the file.
 
   out <- file(file_path, "w")
   write(trimws(new_doc), file = out)
