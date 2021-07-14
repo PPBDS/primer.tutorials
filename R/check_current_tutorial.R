@@ -35,11 +35,14 @@ check_current_tutorial <- function(){
 
   curr_exercise <- ""
 
+  has_exercise <- FALSE
+
   for (i in seq_along(tbl$sec_h2)){
 
     l <- tbl$sec_h2[i]
 
     e <- tbl$sec_h3[i]
+
 
     if (is.na(l) | is.na(e)){
       next
@@ -48,12 +51,14 @@ check_current_tutorial <- function(){
     if (e != curr_exercise && nchar(trimws(e)) != 0){
       curr_exercise <- e
 
-      exercise_number <- readr::parse_integer(gsub(pattern = "[^0-9]", replacement = "", trimws(e)) )
+      exercise_number <- readr::parse_number(gsub(pattern = "[^0-9]", replacement = "", trimws(e)) )
 
       hint_count <- 0
+
+      has_exercise <- FALSE
     }
 
-    if (tbl$type[i] != "rmd_chunk"){
+    if (tbl$type[i] != "rmd_chunk" | is.na(tbl$label[i]) | nchar(trimws(tbl$label[i])) == 0){
       next
     }
 
@@ -67,7 +72,6 @@ check_current_tutorial <- function(){
 
     filt_options <- parsermd::rmd_get_options(tbl$ast[i])[[1]]
 
-
     if (length(filt_options) > 0){
       if (names(filt_options) == "eval" && filt_options == "FALSE"){
         hint_count <- hint_count + 1
@@ -80,12 +84,23 @@ check_current_tutorial <- function(){
 
         next
       }
+
+      if (names(filt_options) == "child"){
+        next
+      }
     }
+
+    if (has_exercise){
+      next
+    }
+
     new_label <- paste0(section_id, "-", exercise_number)
 
     new_ast <- purrr::map(tbl$ast[i], change_label_function, new_label)
 
     tbl$ast[i] <- new_ast
+
+    has_exercise <- TRUE
   }
 
   new_doc <- ""

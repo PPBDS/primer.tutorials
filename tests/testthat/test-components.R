@@ -12,9 +12,7 @@ library(tidyverse)
 # does not confirm that they are all together and in the correct order! But it
 # is good enough.
 
-information_lines <- readLines(
-  paste0(system.file("www/", package = "primer.tutorials"),
-         "information_check.txt"))
+information_lines <- readLines(system.file("www/information_check.txt", package = "primer.tutorials"))
 
 for(i in tutorial_paths){
   if(! all(information_lines %in% readLines(i))){
@@ -22,9 +20,7 @@ for(i in tutorial_paths){
   }
 }
 
-submission_lines <- readLines(
-  paste0(system.file("www/", package = "primer.tutorials"),
-         "submission_check.txt"))
+submission_lines <- readLines(system.file("www/submission_check.txt", package = "primer.tutorials"))
 
 for(i in tutorial_paths){
   if(! all(submission_lines %in% readLines(i))){
@@ -32,9 +28,7 @@ for(i in tutorial_paths){
   }
 }
 
-copy_button_lines <- readLines(
-  paste0(system.file("www/", package = "primer.tutorials"),
-         "copy_button_check.txt"))
+copy_button_lines <- readLines(system.file("www/copy_button_check.txt", package = "primer.tutorials"))
 
 for(i in tutorial_paths){
   if(! all(copy_button_lines %in% readLines(i))){
