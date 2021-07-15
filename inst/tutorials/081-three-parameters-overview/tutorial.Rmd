@@ -16,6 +16,7 @@ library(primer.tutorials)
 library(tidyverse)
 library(primer.data)
 library(rstanarm)
+library(gt)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
@@ -288,7 +289,7 @@ fit_1 <- ...
 Now let's display this information graphically. To do so, we will make the below plot.
 
 ```{r}
-age-party-graph <- fit_1 %>%
+age_party_graph <- fit_1 %>%
   as_tibble() %>%
   select(-sigma) %>%
   mutate(Democrat = partyDemocrat, Republican = partyRepublican) %>%
@@ -307,7 +308,7 @@ age-party-graph <- fit_1 %>%
     scale_y_continuous(labels = scales::percent_format()) +
     theme_classic()
 
-age-party-graph
+age_party_graph
 ```
 
 
@@ -397,7 +398,7 @@ Now, add labels and change the scale on the y-value to make it into a percent fo
 The graph should look something like the following:
 
 ```{r age-party-sample-graph, echo = FALSE}
-age-party-graph
+age_party_graph
 ```
 
 
@@ -470,7 +471,7 @@ pp <- posterior_predict(..., newdata = ...) %>%
 Now, let's plot this posterior and make the following plot.
 
 ```{r, echo = FALSE}
-age-dem <- pp %>% 
+age_dem <- pp %>% 
   ggplot(aes(x = `1`)) +
     geom_histogram(aes(y = after_stat(count/sum(count))),
                    bins = 100)  +
@@ -481,7 +482,7 @@ age-dem <- pp %>%
     scale_y_continuous(labels = scales::percent_format()) +
     theme_classic()
 
-age-dem
+age_dem
 ```
 
 
@@ -511,7 +512,7 @@ Now, add a labels, make the scale for the y-values into percent-format, and add 
 Recall, your result should appear similar to the following:
 
 ```{r, echo=FALSE}
-age-dem
+age_dem
 ```
 
 
@@ -666,7 +667,7 @@ In doing so, we have found the posterior distribution for the age difference bet
 Now, let's use the distribution to answer our questions by plotting it. To do so, we will create the following graph.
 
 ```{r}
-age-diff-graph <- pp %>%  
+age_diff_graph <- pp %>%  
   ggplot(aes(x = age_diff)) +
     geom_histogram(aes(y = after_stat(count/sum(count))),
                    bins = 100) +
@@ -677,7 +678,7 @@ age-diff-graph <- pp %>%
     scale_y_continuous(labels = scales::percent_format()) +
     theme_classic()
 
-age-diff-graph
+age_diff_graph
 ```
 
 
@@ -703,7 +704,7 @@ Continue this pipe by adding labels. Then change the y-axis to be in percent_for
 Remember, your plot should look something like this:
 
 ```{r, echo = FALSE}
-age-diff-graph
+age_diff_graph
 ```
 
 
@@ -778,7 +779,9 @@ fit_2 <- stan_glm(att_end ~ treatment - 1,
 ```
 
 
-Now, that we have considered the Justice virtue, let's continue to Courage and make our fitted model using `stan_glm()`. Set your outcome variable as `att_end`and your explanatory variable as `treatment` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `treatment` so we do not get an intercept.  Set `data` to `trains`, and `refresh` to 0. Set this to the `fit_2` and print it out.
+Now, that we have considered the Justice virtue, let's continue to Courage and make our fitted model using `stan_glm()`. 
+
+Set your outcome variable as `att_end`and your explanatory variable as `treatment` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `treatment` so we do not get an intercept.  Set `data` to `trains`, and `refresh` to 0. Set this to the `fit_2` and print it out.
 
 ```{r attendtreatment-ex-2, exercise = TRUE}
 
@@ -831,7 +834,32 @@ Next, use `pivot_longer()` with the argument of `cols` set to the "treatmentTrea
 
 ### Exercise 5
 
-Now, let's plot this. Plot `attitude` on the x-axis and set `fill` to `Parameter`. Add the layer `geom_histogram()` and make y into a probability. Set `alpha` to 0.5, `bins` to 100, and `position` to "identity".
+Now, let's plot this and make the following graph.
+
+```{r}
+treat_post <- fit_2 %>% 
+  as_tibble() %>% 
+  select(-sigma) %>% 
+  pivot_longer(cols = treatmentTreated:treatmentControl,
+               names_to = "Parameter",
+               values_to = "attitude") %>% 
+  ggplot(aes(x = attitude, fill = Parameter)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = 0.5, 
+                   bins = 100, 
+                   position = "identity") +
+    labs(title = "Posterior for Expected Attitude Toward Immigration",
+         subtitle = "Treated individuals are more conservative",
+         x = "Attitude",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) + 
+    theme_classic()
+
+treat_post
+```
+
+
+Plot `attitude` on the x-axis and set `fill` to `Parameter`. Add the layer `geom_histogram()` and make y into a probability. Set `alpha` to 0.5, `bins` to 100, and `position` to "identity".
 
 ```{r attendtreatment-ex-5, exercise = TRUE}
 
@@ -855,23 +883,7 @@ Next, add labels, change the y-scale to be in a percent format and add the layer
 The posterior should appear similar to the following:
 
 ```{r}
-fit_2 %>% 
-  as_tibble() %>% 
-  select(-sigma) %>% 
-  pivot_longer(cols = treatmentTreated:treatmentControl,
-               names_to = "Parameter",
-               values_to = "attitude") %>% 
-  ggplot(aes(x = attitude, fill = Parameter)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   alpha = 0.5, 
-                   bins = 100, 
-                   position = "identity") +
-    labs(title = "Posterior for Expected Attitude Toward Immigration",
-         subtitle = "Treated individuals are more conservative",
-         x = "Attitude",
-         y = "Probability") +
-    scale_y_continuous(labels = scales::percent_format()) + 
-    theme_classic()
+treat_post
 ```
 
 
@@ -976,7 +988,25 @@ This results in the posterior probability distribution of average treatment effe
 
 ### Exercise 11
 
-Now, let's graph this as we have done before. Map `ate` to the x-axis and add the layer `geom_histogram()`. Make the values on the y-axis probabilities and set the argument `bins` to 100. 
+Now, let's graph this to make the following plot.
+
+```{r, echo=FALSE}
+ate_graph <- pe %>% 
+  ggplot(aes(x = ate)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100) +
+    labs(title = "Posterior for Average Treatment Effect",
+         subtitle = "Exposure to Spanish-speakers shifts immigration attitudes rightward",
+         x = "Difference in Attitude",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+ate_graph
+```
+
+
+Map `ate` to the x-axis and add the layer `geom_histogram()`. Make the values on the y-axis probabilities and set the argument `bins` to 100. 
 
 ```{r attendtreatment-ex-11, exercise = TRUE}
 
@@ -998,16 +1028,7 @@ Next, add labels, format the values on the y-axis to be percents using `scale_y_
 The posterior should look similar to the following:
 
 ```{r}
-pe %>% 
-  ggplot(aes(x = ate)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100) +
-    labs(title = "Posterior for Average Treatment Effect",
-         subtitle = "Exposure to Spanish-speakers shifts immigration attitudes rightward",
-         x = "Difference in Attitude",
-         y = "Probability") +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
+ate_graph
 ```
 
 
@@ -1080,7 +1101,25 @@ We have now created the posterior distribution for the treatment effect for one 
 
 ### Exercise 15
 
-Let's now plot this. Map `te` to the x-axis and add the layer `geom_histogram()`. Make the values on the y-axis into probabilities and set the argument `bins` to 100.
+Let's now plot this and make the graph shown below. 
+
+```{r, echo=FALSE}
+te_graph <- pp %>% 
+  ggplot(aes(x = te)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+    labs(title = "Posterior for Treatment Effect for One Person",
+         subtitle = "Causal effects are more variable for indvduals",
+         x = "Difference in Attitude",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+te_graph
+```
+
+
+Map `te` to the x-axis and add the layer `geom_histogram()`. Make the values on the y-axis into probabilities and set the argument `bins` to 100.
 
 ```{r attendtreatment-ex-15, exercise = TRUE}
 
@@ -1101,16 +1140,7 @@ Continue this pipe and add labels, format the y-axis to percents, and add the la
 
 The result should appear similar to the following:
 ```{r, echo = FALSE}
-pp %>% 
-  ggplot(aes(x = te)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100)  +
-    labs(title = "Posterior for Treatment Effect for One Person",
-         subtitle = "Causal effects are more variable for indvduals",
-         x = "Difference in Attitude",
-         y = "Probability") +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
+te_graph
 ```
 
 
@@ -1149,7 +1179,7 @@ quantile(pp$te, prob = 0.9)
 
 As you can see above, the largest treatment effect that will occur about 10% of the time is 6.6
 
-<!-- MM: Don't hardcode that either -->
+<!-- MM: Don't hardcode that -->
 
 ## income ~ age
 
@@ -1161,7 +1191,7 @@ Unlike previous question we have dealt with regarding predictive modeling, the p
 
 ### Exercise 1
 
-First, let's make our fitted model using `stan_glm()`. Set your outcome variable to `income` and your explanator variable to `age`. Set data to `trains` and refresh to `0`. Store this as `fit_3`.
+First, let's make our fitted model using `stan_glm()`. Set your outcome variable to `income` and your explanatory variable to `age`. Set data to `trains` and refresh to `0`. Store this as `fit_3`.
 
 ```{r income--age-ex-1, exercise = TRUE}
 
@@ -1228,6 +1258,25 @@ Now that we have the posterior for expected income, let's plot it.
 
 ### Exercise 4
 
+We will be making the graph shown below.
+
+```{r}
+income_post <- pe %>% 
+  ggplot(aes(x = `1`)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+    labs(title = "Posterior for Expected Income",
+         subtitle = "A 40-years old commuter earns around $140,000",
+         x = "Income",
+         y = "Probability") +
+    scale_x_continuous(labels = scales::dollar_format()) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+income_post
+```
+
+
 Map the column for income to the x-axis. Then add the layer `geom_histogram()` and make y-value a probability. Additionally, make the argument `bins` equal to 100. 
 
 ```{r income--age-ex-4, exercise = TRUE}
@@ -1253,17 +1302,7 @@ Now add labels to the graph and format the x-values to be in dollar-format and t
 
 The posterior should appear similar to the following:
 ```{r, echo=FALSE}
-pe %>% 
-  ggplot(aes(x = `1`)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100)  +
-    labs(title = "Posterior for Expected Income",
-         subtitle = "A 40-years old commuter earns around $140,000",
-         x = "Income",
-         y = "Probability") +
-    scale_x_continuous(labels = scales::dollar_format()) +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
+income_post
 ```
 
 
@@ -1282,9 +1321,399 @@ pe %>%
   theme_classic()
 ```
 
+### Exercise 6
+
+Using the above distribution, estimate about how much a 40-year old train commuter would earn.
+
+```{r income--age-ex-6}
+question_text(NULL,
+	message = "They would earn around $140,000.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+While this may have been different from the previous predictive models we have worked with since income is a continuous scale, you can see that the process which we used to answer the question did not change.
+
+## liberal ~ income
+
+Now, let's move on to our final two questions.
+
+*Among all people who have an income $100,000, what proportion are liberal?*
+
+*Assume we have a group of eight people, two of whom make $100,000, two $200,000, two $300,000 and two $400,000. How many will be liberal?*
+
+### Exercise 1
+
+First determine the type of model this is as well as the outcome variable.
+
+```{r liberal--income-ex-1}
+question_text(NULL,
+	message = "This is a predictive model with `liberal` as the outcome variable.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+While this model is predictive like some others that we have done, it differs from those in that the outcome variable is not continuous. In the past three models, we have had outcome variables of `age`, `att_end`, and `income`, all of which have a range of values. 
+
+In this model, however, the outcome variable is `liberal` which only has values of TRUE and FALSE. Therefore, when we modeling, we must use the `binomial` family.
+
+### Exercise 2
+
+Now, before we make this model, consider the validity of the data. Discuss your beliefs on the validity of `income` and `liberal`.
+
+```{r liberal--income-ex-2}
+question_text(NULL,
+	message = "While your beliefs may differ, one points to consider are if income now signifies the same thing it did in 2012. Similarly, consider if being `liberal` now means the same thing as it did in 2012.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+### Exercise 3
+
+Let's now fit our model. Use `stan_glm()` and in the first argument, set the explanatory variable to `income` and the outcome variable to `liberal`. Use the data set `trains` and set `refresh` to 0. Additionally, recall that `liberal` only has two possible values, so set `family` to `binomial`. Store this as `fit_4` and print your results.
+
+```{r liberal--income-ex-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-3-hint, eval = FALSE}
+fit_4 <- stan_glm(liberal ~ income,
+                  data = ..., 
+                  family = ...,
+                  refresh = ...)
+```
+
+```{r, echo=FALSE}
+fit_4 <- stan_glm(liberal ~ income,
+                  data = trains, 
+                  family = binomial,
+                  refresh = 0)
+```
 
 
+### Exercise 4
 
+With our fitted model, we can proceed to answer our questions. Recall our first question for this relationship:
+
+*Among all people who have an income $100,000, what proportion are liberal?*
+
+Like always, to answer the question, we must first make a tibble with the observations we desire. In this case, make a tibble with `income` set to 100000, and store this as `newobs`.
+
+```{r liberal--income-ex-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-4-hint, eval = FALSE}
+newobs <- tibble(income = ...)
+```
+
+```{r, echo=FALSE}
+newobs <- tibble(income = 100000)
+```
+
+### Exercise 5
+
+Now, in order to get our posterior distribution, let's use `posterior_epred()` with the first argument as our fitted model, `fit_4`, and the second argument `newdata` as `newobs`. Remember to make this a tibble as well. Store this as `pe`.
+
+```{r liberal--income-ex-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-5-hint, eval = FALSE}
+pe <- posterior_epred(..., newdata = ...) %>% 
+  as_tibble()
+```
+
+```{r, echo=FALSE}
+pe <- posterior_epred(fit_4, newdata = newobs) %>% 
+  as_tibble()
+```
+
+### Exercise 6
+
+Print out `pe`.
+
+```{r liberal--income-ex-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-6-hint, eval = FALSE}
+pe
+```
+
+###
+
+The population proportion is the same as the probability for any single individual.
+
+### Exercise 7
+
+Now that we have made our posterior distribution, let's plot it by making the following graph.
+
+```{r, echo=FALSE}
+postlib <- pe %>% 
+  ggplot(aes(x = `1`)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+  
+    scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+    labs(title = "Posterior for Proportion Liberal Among $100,000 Earners",
+         subtitle = "The population proportion is the same as the probability for any individual",
+         x = "Income",
+         y = "Probability of Being Liberal") +
+  theme_classic()
+
+postlib
+```
+
+Start by making a pipe and using `ggplot()` to map the proportions to the x-axis. Add the layer `geom_histogram()` and use `aes(y = after_stat(count/sum(count)))` in order to make the y-axis a probability. Set the argument `bins` to 100.
+
+```{r liberal--income-ex-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-7-hint-1, eval = FALSE}
+Remember that your columns are not named, but numbered.
+```
+
+```{r liberal--income-ex-7-hint-2, eval = FALSE}
+pe %>% ggplot(aes(x = `1`)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = ...)
+```
+
+### Exercise 8
+
+Now, format the x and y-axis to appear as percentages.
+
+```{r liberal--income-ex-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-8-hint-1, eval = FALSE}
+Use `scale_x_continuous` and `scale_y_continuous`. Also, set `accuracy` to 1 in order to make the number an integer.
+```
+
+```{r liberal--income-ex-8-hint-2, eval = FALSE}
+... +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+```
+
+### Exercise 9
+
+Next, add in labels and the layer `theme_classic()`. Remember that your graph should appear similar to the following:
+
+```{r, echo=FALSE}
+postlib
+```
+
+```{r liberal--income-ex-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-9-hint, eval = FALSE}
+... + 
+  labs(...) + 
+  theme_classic().
+```
+
+### Exercise 10
+
+Now that we've answered our first question, let's consider our second question.
+
+*Assume we have a group of eight people, two of whom make $100,000, two $200,000, two $300,000 and two $400,000. How many will be liberal?*
+
+In order to answer this question, let's first make our tibble with the desired observations. In this case, we would like to have 2 people who make $100,000, $200,000, $300,000, and $400,000 each. So, in our tibble, set income to these values. Store this as `newobs`.
+
+```{r liberal--income-ex-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-10-hint-1, eval = FALSE}
+`rep()` can be used to replicate items in the tibble.
+```
+
+```{r liberal--income-ex-10-hint-2, eval = FALSE}
+newobs <- tibble(income = c(rep(100000, 2),
+                            rep(200000, 2),
+                            rep(300000, 2),
+                            rep(400000, 2)))
+```
+
+```{r, echo=FALSE}
+newobs <- tibble(income = c(rep(100000, 2),
+                            rep(200000, 2),
+                            rep(300000, 2),
+                            rep(400000, 2)))
+```
+
+### Exercise 11
+
+Now, let's make our posterior distribution. Stary by using `posterior_predict()` with the first argument as our fitted model `fit_4` and the second argument `newdata` set to `newobs`. Make this a tibble and convert the values to be numeric.
+
+```{r liberal--income-ex-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-11-hint, eval = FALSE}
+posterior_predict(..., newdata = ...) %>% 
+  as_tibble() %>% 
+  mutates_all(as.numeric)
+```
+
+### Exercise 12
+
+Continue that pipe by grouping the rows using `rowwise()`.
+
+```{r liberal--income-ex-12, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-12-hint, eval = FALSE}
+... %>% 
+  rowwise()
+```
+
+### Exercise 13
+
+Now, like we have done before, we are going to add a total column which is the sum of the entire row since every individual who is liberal in our groupings is represented by a `1` and everyone who isn't is represented by a `0`, so the total will give us the number of liberals in the group. Store this as `pp`.
+
+```{r liberal--income-ex-13, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-13-hint-1, eval = FALSE}
+You can use `c_across` to go across all the columns when taking the sum
+```
+
+```{r liberal--income-ex-13-hint-2, eval = FALSE}
+... %>% 
+  mutate(total = sum(c_across()))
+```
+
+```{r, echo=FALSE}
+pp <- posterior_predict(fit_4, 
+                        newdata = newobs) %>% 
+  as_tibble() %>% 
+  mutate_all(as.numeric) %>% 
+  rowwise() %>% 
+  mutate(total = sum(c_across()))
+```
+
+
+### Exercise 14
+
+Now, let's plot this by making the below graph.
+
+```{r}
+lib_group <- pp %>% 
+  ggplot(aes(x = total)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+    labs(title = "Posterior for Number of Liberals in Group with Varied Incomes",
+         subtitle = "Two is the most likely number, but values from 0 to 5 are plausible",
+         x = "Number of Liberals",
+         y = "Probability") +
+    scale_x_continuous(labels = scales::number_format(accuracy = 1)) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+    theme_classic()
+```
+
+Start by mapping `total` to the x-axis using `ggplot()` and add the layer `geom_histogram()`. Make the y-axis represent the probability rather than the count and set the argument `bins` to 100.
+
+```{r liberal--income-ex-14, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-14-hint-1, eval = FALSE}
+To make y a probability, use `aes(y = after_stat(count/sum(count)))` as the first argument of `geom_histogram()`.
+```
+
+```{r liberal--income-ex-14-hint-2, eval = FALSE}
+pp %>% 
+  ggplot(aes(x = total)) %>% 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 100)
+```
+
+### Exercise 15
+
+Now format the x and y axis so that x is an integer and y is a percentage. Use `scale_x_continuous` and `scale_y_continous` to do so.
+
+```{r liberal--income-ex-15, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-15-hint, eval = FALSE}
+... + 
+  scale_x_continuous(labels = scales::number_format(accuracy = 1)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+```
+
+### Exercise 16
+
+Now, add labels and layer `theme_classic()` in order to complete the graph. It should appear similar to the following.
+
+```{r, echo=FALSE}
+lib_group
+```
+
+
+```{r liberal--income-ex-16, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r liberal--income-ex-16-hint, eval = FALSE}
+... +
+  labs(...) + 
+  theme_classic()
+```
+
+###
+
+Through this posterior, it can be seen that it is most likely to have 2 liberals in this group with various incomes.
 
 ```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
 ```
