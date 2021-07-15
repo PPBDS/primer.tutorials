@@ -78,7 +78,7 @@ make_new_q_no_answer <- function(){
 
       lowercase_id <- tolower(trimws(possible_id_removed))
 
-      section_id <- substr(gsub(" ", "-", lowercase_id), 0, 20)
+      section_id <- trimws(substr(gsub(" ", "-", lowercase_id), 0, 20))
 
       # After finding a section, stop looping immediately
 

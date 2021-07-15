@@ -111,7 +111,7 @@ check_current_tutorial <- function(){
 
     lowercase_id <- tolower(trimws(possible_id_removed))
 
-    section_id <- substr(gsub(" ", "-", lowercase_id), 0, 20)
+    section_id <- trimws(substr(gsub(" ", "-", lowercase_id), 0, 20))
 
     # Read the options of the element
 
