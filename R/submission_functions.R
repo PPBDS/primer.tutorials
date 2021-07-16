@@ -102,11 +102,6 @@ submission_server <- function(input, output) {
           # If we are at or past the threshold, we have enough data for one page
           # so we append the current df to df_list and reset the df
 
-          if (curr_rows >= page_threshold){
-            curr_page <- curr_page + 1
-            curr_rows <- 0
-          }
-
           obj_type <- obj$type[[1]]
 
           obj_answer <- ""
@@ -120,6 +115,11 @@ submission_server <- function(input, output) {
           # Increment curr_rows by number of newlines
 
           curr_rows <- curr_rows + stringr::str_count(obj_answer, "\n")
+
+          if (curr_rows >= page_threshold){
+            curr_page <- curr_page + 1
+            curr_rows <- 0
+          }
 
           obj_id <- obj$id[[1]]
 
@@ -135,13 +135,12 @@ submission_server <- function(input, output) {
 
         # Write dataframe to corresponding page on PDF
 
-        for (num in levels(pdf_df$page_num)){
+        for (num in sort(parse_integer(levels(pdf_df$page_num)))){
 
-          gridExtra::grid.table(dplyr::select(dplyr::filter(pdf_df, pdf_df$page_num == num), -page_num))
+          grid::grid.newpage()
 
-          if (curr_page != num){
-            grid::grid.newpage()
-          }
+          gridExtra::grid.table(dplyr::select(dplyr::filter(pdf_df, pdf_df$page_num == toString(num)), -page_num))
+
 
         }
 
