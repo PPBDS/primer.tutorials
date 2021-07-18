@@ -443,9 +443,24 @@ Let's start by recalling the first question.
 
 *What is the probability that if a Democrat shows up to the train station, he will be over 50 years old?*
 
-Using our fitted data, we can now attempt to answer this question.
+Using our fitted data, we can now attempt to answer this question and to do so, will make the following plot.
 
-In order to do so, first make a new tibble with one observation of the `party set to the value of the "Democrat". Set this equal to `new_obs`.
+```{r echo = FALSE}
+age_dem <- pp %>% 
+  ggplot(aes(x = `1`)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+    labs(title = "Posterior for a Random Democrat's Age",
+         subtitle = "Individual predictions are always more variable than expected values",
+         x = "Age",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+age_dem
+```
+
+First make a new tibble with one observation of the `party set to the value of the "Democrat". Set this equal to `new_obs`.
 
 ```{r age--party-11, exercise = TRUE}
 
@@ -475,24 +490,7 @@ pp <- posterior_predict(..., newdata = ...) %>%
 
 ### Exercise 13
 
-Now, let's plot this posterior and make the following plot.
-
-```{r echo = FALSE}
-age_dem <- pp %>% 
-  ggplot(aes(x = `1`)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100)  +
-    labs(title = "Posterior for a Random Democrat's Age",
-         subtitle = "Individual predictions are always more variable than expected values",
-         x = "Age",
-         y = "Probability") +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
-
-age_dem
-```
-
-Plot the column representing age to the x-axis. Then use geom_histogram and use `aes()` in as the first argument to make the y-axiz represent the probability. Additionally, set `bins` to 100.
+Now, let's plot this. Map the column representing age to the x-axis. Then use geom_histogram and use `aes()` in as the first argument to make the y-axis represent the probability. To do so, use `aes(y = after_stat(count/sum(count)))` as the first argument. Additionally, set `bins` to 100.
 
 ```{r age--party-13, exercise = TRUE}
 
@@ -560,6 +558,23 @@ Therefore, the probability that the next Democrat will be over 50 is around 28%.
 Next, let's consider the second question. 
 
 *In a group of three Democrats and three Republicans, what will the age difference be between the oldest Democrat and the youngest Republican?*
+
+To answer this, we will create the following plot.
+
+```{r}
+age_diff_graph <- pp %>%  
+  ggplot(aes(x = age_diff)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100) +
+    labs(title = "Posterior for Age Difference",
+         subtitle = "Oldest of three Democrats compared to youngest of three Republicans",
+         x = "Age",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+age_diff_graph
+```
 
 Since our group has three Democrats and three Republicans, make a tibble with the observations of the column "party" that we desire. Store this as `new_obs`.
 
@@ -660,24 +675,7 @@ In doing so, we have found the posterior distribution for the age difference bet
 
 ### Exercise 20
 
-Now, let's use the distribution to answer our questions by plotting it. To do so, we will create the following graph.
-
-```{r}
-age_diff_graph <- pp %>%  
-  ggplot(aes(x = age_diff)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100) +
-    labs(title = "Posterior for Age Difference",
-         subtitle = "Oldest of three Democrats compared to youngest of three Republicans",
-         x = "Age",
-         y = "Probability") +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
-
-age_diff_graph
-```
-
-Start by using `ggplot` and mapping the the age difference to the x-axis. Then, add the layer geom_histogram and use `aes()` within the first argument to set the y-value to be the probability. Additionally, set the second argument `bins` equal to 100.
+Let's plot this. Start by using `ggplot` and mapping the the age difference to the x-axis. Then, add the layer geom_histogram and use `aes()` within the first argument to set the y-value to be the probability. Additionally, set the second argument `bins` equal to 100.
 
 ```{r age--party-20, exercise = TRUE}
 
@@ -770,7 +768,7 @@ fit_2 <- stan_glm(att_end ~ treatment - 1,
                       refresh = 0)
 ```
 
-Now, that we have considered the Justice virtue, let's continue to Courage and make our fitted model using `stan_glm()`. 
+Now, that we have considered the Justice virtue, let's continue to Courage and make our fitted model using `stan_glm()`.  
 
 Set your outcome variable as `att_end`and your explanatory variable as `treatment` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `treatment` so we do not get an intercept.  Set `data` to `trains`, and `refresh` to 0. Set this to the `fit_2` and print it out.
 
@@ -789,6 +787,30 @@ fit_2 <- stan_glm(... ~ ... -1,
 Now, let's look at the posterior distributions for those who were treated and those who weren't.
 
 ### Exercise 3
+
+To do so, we will make the following plot.
+
+```{r}
+treat_post <- fit_2 %>% 
+  as_tibble() %>% 
+  select(-sigma) %>% 
+  pivot_longer(cols = treatmentTreated:treatmentControl,
+               names_to = "Parameter",
+               values_to = "attitude") %>% 
+  ggplot(aes(x = attitude, fill = Parameter)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = 0.5, 
+                   bins = 100, 
+                   position = "identity") +
+    labs(title = "Posterior for Expected Attitude Toward Immigration",
+         subtitle = "Treated individuals are more conservative",
+         x = "Attitude",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) + 
+    theme_classic()
+
+treat_post
+```
 
 First, make `fit_2` into a tibble and get rid of `sigma` since it is not of importance to us. Remember that you need to use `as_tibble()`.
 
@@ -821,31 +843,7 @@ Next, use `pivot_longer()` with the argument of `cols` set to the "treatmentTrea
 
 ### Exercise 5
 
-Now, let's plot this and make the following graph.
-
-```{r}
-treat_post <- fit_2 %>% 
-  as_tibble() %>% 
-  select(-sigma) %>% 
-  pivot_longer(cols = treatmentTreated:treatmentControl,
-               names_to = "Parameter",
-               values_to = "attitude") %>% 
-  ggplot(aes(x = attitude, fill = Parameter)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   alpha = 0.5, 
-                   bins = 100, 
-                   position = "identity") +
-    labs(title = "Posterior for Expected Attitude Toward Immigration",
-         subtitle = "Treated individuals are more conservative",
-         x = "Attitude",
-         y = "Probability") +
-    scale_y_continuous(labels = scales::percent_format()) + 
-    theme_classic()
-
-treat_post
-```
-
-Plot `attitude` on the x-axis and set `fill` to `Parameter`. Add the layer `geom_histogram()` and make y into a probability. Set `alpha` to 0.5, `bins` to 100, and `position` to "identity".
+Let's plot this.  Map `attitude` on the x-axis and set `fill` to `Parameter`. Add the layer `geom_histogram()` and make y into a probability. Set `alpha` to 0.5, `bins` to 100, and `position` to "identity".
 
 ```{r attend--treatment-5, exercise = TRUE}
 
@@ -894,6 +892,23 @@ Now, using this posterior distribution, we can go on to answer the questions tha
 Recall our first question pertaining to this distribution:
 
 *What is the average treatment effect, of exposing people to Spanish-speakers, on their attitudes toward immigration?*
+
+To help us answer this, we will make the following plot.
+
+```{r echo = FALSE}
+ate_graph <- pe %>% 
+  ggplot(aes(x = ate)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100) +
+    labs(title = "Posterior for Average Treatment Effect",
+         subtitle = "Exposure to Spanish-speakers shifts immigration attitudes rightward",
+         x = "Difference in Attitude",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+ate_graph
+```
 
 Using the distribution, approximate the average treament effect.
 
@@ -968,24 +983,7 @@ This results in the posterior probability distribution of average treatment effe
 
 ### Exercise 11
 
-Now, let's graph this to make the following plot.
-
-```{r echo = FALSE}
-ate_graph <- pe %>% 
-  ggplot(aes(x = ate)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100) +
-    labs(title = "Posterior for Average Treatment Effect",
-         subtitle = "Exposure to Spanish-speakers shifts immigration attitudes rightward",
-         x = "Difference in Attitude",
-         y = "Probability") +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
-
-ate_graph
-```
-
-Map `ate` to the x-axis and add the layer `geom_histogram()`. Make the values on the y-axis probabilities and set the argument `bins` to 100. 
+Now, let's graph this. Map `ate` to the x-axis and add the layer `geom_histogram()`. Make the values on the y-axis probabilities and set the argument `bins` to 100. 
 
 ```{r attend--treatment-11, exercise = TRUE}
 
