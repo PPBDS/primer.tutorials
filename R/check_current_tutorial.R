@@ -165,7 +165,7 @@ check_current_tutorial <- function(){
     # MUST BE exercises, so the appropriate labels are set
     # and the exercise tracker is updated.
 
-    new_label <- paste0(section_id, "-", exercise_number)
+    new_label <- paste0(section_id, "-ex-", exercise_number)
 
     new_ast <- purrr::map(tbl$ast[i], change_chunk_function, "name", new_label)
 
