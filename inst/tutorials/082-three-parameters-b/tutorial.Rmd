@@ -21,15 +21,6 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
 
-fit_obj <- stan_glm(income ~ liberal - 1, 
-                    data = trains, 
-                    refresh = 0)
-
-new_obs <- tibble(liberal = TRUE)
-
-pp  <- posterior_predict(fit_obj, 
-                         newdata = new_obs)
-
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -48,442 +39,198 @@ pp  <- posterior_predict(fit_obj,
 
 <!-- Tell the story of experimenters who got lazy (or scared) and did not want to travel too far, and so your data only has 1188.  -->
 
-
 <!-- Try kenya. Feel free to simplify by, for example, only keeping around two treatments: control and something else.  -->
 
-<!-- Move all material from a to b. -->
+## Representative Data
 
-<!-- Make the tutorial follow the chapter very closely: section by section. -->
+Let's look at how whether or not data is representative can affect our results. To do so, let's consider the following questions.
 
-<!-- Use our new skeletons.  -->
+*In Kenya today, what is the expected average distance of away from polling locations for those assigned to it with a poverty rate of 0.2?*
 
-<!-- Change text questions to allow for written answers, and then provide your own perfect written answers. -->
+*In Kenya today, what is the expected difference in average distance of away from polling locations for those assigned to it between those with a poverty rate of 0.8 and 0.5?*
 
+We will use the data set `kenya` to answer this question.
 
-## EDA trains 
-
-Let's create this graph. 
-
-```{r}
-p_trains <- trains %>% 
-  select(liberal, att_end, income, treatment) %>% 
-  ggplot(aes(x = liberal, y = income)) + 
-    geom_jitter(width = 0.1, height = 0) + 
-    labs(title = "Income by Liberal Affiliation in Trains Data Set",
-         x = "Liberal",
-         y = "Income")
-
-p_trains
-```
+###
 
 ### Exercise 1
 
-Run `glimpse()` to explore the `trains` data set.
+First, determine the columns we would like in our Preceptor Table in order to answer this question.
 
-```{r eda-trains-1, exercise = TRUE}
-
+```{r representative-data-ex-1}
+question_text(NULL,
+	message = "We would like the columns for poverty rate of voting blocks and average distance from the polling location for voting blocks.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
 ```
 
 ### Exercise 2
 
-Start a pipe with `trains`. Select the `liberal`, `att_end`, `income`, and `treatment` variables. 
+Now, run `?kenya` to take a closer look at the data.
 
-
-```{r eda-trains-2, exercise = TRUE}
+```{r representative-data-ex-2, exercise = TRUE}
 
 ```
 
-```{r eda-trains-2-hint-1, eval = FALSE}
-trains %>% 
-  select(...)
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r representative-data-ex-2-hint, eval = FALSE}
+
 ```
+
+###
+
+As you can see, this data came from 2013, whereas our population is from now.
 
 ### Exercise 3
 
-Continue the pipe into `ggplot()`. Map `liberal` to the x-axis and `income` to the y axis. Use `geom_jitter()`. Set `width` to 0.1 and `height` to 0. 
+Write two sentences discussing whether you can consider the data from `kenya` and the columns from our Preceptor Table to be drawn from the same population.
 
-```{r eda-trains-3, exercise = TRUE}
-
-```
-
-```{r eda-trains-3-hint-1, eval = FALSE}
-trains %>% 
-  select(liberal, att_end, income, treatment) %>% 
-  ggplot(aes(x = ..., y = ...)) + 
-    geom_jitter(width = ..., height = ...)
+```{r representative-data-ex-3}
+question_text(NULL,
+	message = "While answers may vary, since this data set is very representative  of the populatin in 2013 and our population is that of Kenya, we will assume that they can be drawn from the same population and that there has not been significant change over time. Therefore, the data is representative enough of our population.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
 ```
 
 ### Exercise 4
 
-Title your graph "Income by Liberal Affiliation in Trains Data Set". Label your x-axis "Liberal" and your y-axis "Income". It should look something like our graph, but does not have to be exactly the same.
+```{r}
+kenya_1 <- kenya %>% 
+  filter(treatment %in% c("canvass", "control"))
+  
+
+kenya_1
+
+kenya_2 <- kenya_1 %>% 
+  filter(distance < 25)
+```
 
 ```{r}
-p_trains
+fit_1 <- stan_glm(distance ~ poverty,
+                  data = kenya_1,
+                  refresh = 0)
+
+fit_1
+
+newobs1 <- tibble(poverty = 0.2)
+
+pp <- posterior_epred(fit_1, newdata = newobs1) %>% 
+  as_tibble()
+
+exp_poverty <- pp %>%
+  ggplot(aes(x = `1`)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 100) +
+  labs(title = "Posterior for Expected Distance",
+       subtitle = "Polling locations about 13 miles away on average from those assigned to them have poverty rates of 0.2",
+       x = "Poverty Rate",
+       y = "Probability") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic()
+  
+
+exp_poverty
 ```
-
-```{r eda-trains-4, exercise = TRUE}
-
-```
-
-## income as a function of liberal
-
-Let's take a closer look at the graph you just created in the previous section. Say our motive for creating this graph was to answer the following question: _What is the probability that the next liberal who arrives at the train station today has an income greater than $100,000?_
-
-
-### Exercise 1
-
-Using **Wisdom**, write a paragraph about whether or not this data is relevant for the problem we face. See *The Primer* for guidance.
-
-```{r income-as-a-function-1}
-question_text(
-  "Answer:",
-  answer(NULL, correct = TRUE),
-  incorrect = "Ok",
-  try_again_button = "Modify your answer",
-  allow_retry = TRUE
-)
-```
-
-### Exercise 2
-
-In order for us to consider this model as causal, there need to be (at least) two potential outcomes. Let's say we consider this model to be casual. Write a sentence explaining the two potential outcomes. 
-
-```{r income-as-a-function-2}
-question_text(
-  "Answer:",
-  answer(NULL, correct = TRUE),
-  incorrect = "Ok",
-  try_again_button = "Modify your answer",
-  allow_retry = TRUE
-)
-```
-
-### Exercise 3
-
-Write a paragraph that provides arguments for considering this model as predictive and for considering it as causal. There is no right answer! 
-
-```{r income-as-a-function-3}
-question_text(
-  "Answer:",
-  answer(NULL, correct = TRUE),
-  incorrect = "Ok",
-  try_again_button = "Modify your answer",
-  allow_retry = TRUE
-)
-```
-
-### Exercise 4
-
-Recall the motto from Chapter 4: "No causation without manipulation". Write a paragraph about what manipulation you would propose --- in practice or in theory --- so one might see, for a given individual, one potential outcome or the other.
-
-```{r income-as-a-function-4}
-question_text(
-  "Answer:",
-  answer(NULL, correct = TRUE),
-  incorrect = "Ok",
-  try_again_button = "Modify your answer",
-  allow_retry = TRUE
-)
-```
-
-### Exercise 5
-
-In Chapter 4 we learned that one way to estimate the average treatment effect is to use the following formula: average of treated minus the average of control. Write a paragraph explaining the strengths or weaknesses of applying this formula to estimate, using our data set, the causal effect on income of being liberal.
-
-```{r income-as-a-function-5}
-question_text(
-  "Answer:",
-  answer(NULL, correct = TRUE),
-  incorrect = "Ok",
-  try_again_button = "Modify your answer",
-  allow_retry = TRUE
-)
-```
-
-### Exercise 6
-
-$$ \underbrace{y_i}_{outcome} = \underbrace{\beta_1 x_{t,i} + \beta_2 x_{f,i}}_{in\ the\ model} + \underbrace{\epsilon_i}_{not\ in\ the\ model}$$
-where \n
-$$x_{t,i}, x_{f,i} \in \{0,1\}$$ \n
-$$x_{t,i} +  x_{f,i} = 1$$ \n
-$$\epsilon_i \sim N(0, \sigma^2)$$  
-
-This set up is very similar to the ones in the *Primer*. Instead of $x_{r,i}$/$x_{d,i}$ indicating whether or not person $i$ is a Republican/Democrat, we now have $x_{t,i}$/$x_{f,i}$ indicating whether or not person $i$ is TRUE/FALSE for liberal. Which are the three parameters here? What do they mean? You do not need to figure out how to display the symbols in your answer, just write their names (i.e. "epsilon," "delta," etc. ).
-
-```{r income-as-a-function-6}
-question_text(
-  "Answer:",
-  answer(NULL, correct = TRUE),
-  incorrect = "Ok",
-  try_again_button = "Modify your answer",
-  allow_retry = TRUE
-)
-```
-
-Great! Now for the rest of the tutorial, we are going to consider this model as **predictive**. 
-
-### Exercise 7
-
-Let's now use `stan_glm()`. Set your outcome variable as `income`and your explanatory variable as `liberal` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `liberal` so we do not get an intercept.  Set `data` to `trains`, and `refresh` to 0. 
-
-```{r income-as-a-function-7, exercise = TRUE}
-
-```
-
-```{r income-as-a-function-7-hint-1, eval = FALSE}
-stan_glm(income ~ liberal - 1, 
-         data = ..., 
-         refresh = ...)
-```
-
-### Exercise 8
-
-Copy and paste your work from above, and assign it to an object named `fit_obj`. Then, on the next line, `print()` the object `fit_obj`. 
-
-```{r income-as-a-function-8, exercise = TRUE}
-
-```
-
-```{r income-as-a-function-8-hint-1, eval = FALSE}
-fit_obj <- stan_glm(income ~ liberal - 1, 
-                    data = trains, 
-                    refresh = 0)
-
-print(...)
-```
-
-### Exercise 9
-
-Now look at your printed model. In two sentences, interpret the meaning of the the Median and MAD SD values for `liberalFALSE`. 
-
-```{r income-as-a-function-9}
-question_text(
-  "Answer:",
-  answer(NULL, correct = TRUE),
-  incorrect = "Ok",
-  try_again_button = "Modify your answer",
-  allow_retry = TRUE
-)
-```
-
-### Exercise 10
-
-Let's now create the posterior probability distribution for $\beta_1$  and $\beta_2$. Remember: these are the average incomes of liberals and non-liberals in the population. This is the plot we will create.
 
 ```{r}
-p_post <- fit_obj %>% 
+fit_2 <- stan_glm(distance ~ poverty,
+                  data = kenya_2,
+                  refresh = 0)
+
+fit_2
+
+newobs2 <- tibble(poverty = 0.2)
+
+pp <- posterior_epred(fit_2, newdata = newobs2) %>% 
+  as_tibble()
+
+exp_poverty_2 <- pp %>%
+  ggplot(aes(x = `1`)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 100) +
+  labs(title = "Posterior for Expected Distance",
+       subtitle = "Polling locations about 11 miles away on average from those assigned to them have poverty rates of 0.2",
+       x = "Poverty Rate",
+       y = "Probability") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic()
+  
+exp_poverty_2
+```
+
+```{r}
+newobs3 <- tibble(poverty = c(0.5, 0.8))
+
+pp <- posterior_predict(fit_1, newdata = newobs3) %>% 
   as_tibble() %>% 
-  select(-sigma) %>% 
-  pivot_longer(cols = liberalFALSE :liberalTRUE,
-              names_to = "parameter",
-              values_to = "income") %>% 
-  ggplot(aes(x = income, color = parameter)) +
-    geom_density() +
-    labs(title = "Posterior Probability Distribution",
-         subtitle = "Average income for population in 2012",
-         x = "Income",
-         y = "Probability") +
-    theme_classic() + 
-    scale_x_continuous(labels=scales::dollar_format()) +  
-    scale_y_continuous(labels=scales::percent_format())
+  mutate_all(as.numeric) %>% 
+  rowwise() %>% 
+  mutate(pov_diff = `2` - `1`)
 
-p_post 
+exp_dist_diff <- pp %>% 
+  ggplot(aes(x = pov_diff)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 100) + 
+  labs(title = "Posterior for Expected Distance Difference",
+       subtitle = "The expected difference of average distance between polling locations with poverty rates of 0.5 and 0.8 is about 20 miles",
+       x = "Poverty Rate",
+       y = "Probability") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic()
+
+exp_dist_diff
 ```
-
-### Exercise 11
-
-Start a pipe with `fit_obj`. Use `as_tibble()`, then continue the pipe with `select()` to remove the `sigma` variable. We want to focus on our other two parameters:  $\beta_1$  and $\beta_2$.
-
-```{r income-as-a-function-11, exercise = TRUE}
-
-```
-
-```{r income-as-a-function-11-hint-1, eval = FALSE}
-fit_obj %>% 
-  as_tibble() %>% 
-  select(-...) 
-```
-
-### Exercise 12
-
-Continue the pipe with `pivot_longer()`. Set `cols` to `liberalFALSE` and `liberalTRUE` (Make sure you insert a colon between them). `names_to` should be set to "parameter" and `values_to` should be set to "income".
-
-```{r income-as-a-function-12, exercise = TRUE}
-
-```
-
-```{r income-as-a-function-12-hint-1, eval = FALSE}
-... %>% 
-pivot_longer(cols = ... : ...,
-             names_to = "...",
-             values_to = "...")
-```
-
-### Exercise 13
-
-Continue your pipe even further. Let's now use `ggplot()` to plot your data. Map `income` to the x-axis, and map `parameter` to the color. Add the layers `geom_density()`and `theme_classic()`. 
-
-```{r income-as-a-function-13, exercise = TRUE}
-
-```
-
-```{r income-as-a-function-13-hint-1, eval = FALSE}
-fit_obj %>% 
-  as_tibble() %>% 
-  select(-sigma) %>% 
-  pivot_longer(cols = liberalFALSE :liberalTRUE,
-              names_to = "parameter",
-              values_to = "income") %>% 
-  ggplot(aes(x = income, color = parameter)) +
-    geom_density() +
-    theme_classic() 
-```
-
-### Exercise 14
-
-Let's also change the y-axis values to show percents rather decimals (It is nicer to view probability this way). We do this by using `scale_y_continuous()`. Within `scale_y_continuous()`, set the`labels` to `scales::percent_format()`. Let's change the x-axis values of income to include dollar signs as well. We do this by using `scale_x_continuous()`, Within `scale_x_continuous()`, set the`labels` to `scales::dollar_format()`. 
-
-```{r income-as-a-function-14, exercise = TRUE}
-
-```
-
-```{r income-as-a-function-14-hint-1, eval = FALSE}
-Remember you are adding a layer here! ( you must use "+")
-```
-
-```{r income-as-a-function-14-hint-2, eval = FALSE}
-... + 
-  scale_y_continuous(labels=scales::percent_format()) +
-  scale_x_continuous(labels=scales::dollar_format())  
-```
-
-### Exercise 15
-
-Your final plot should look something like ours. All that is left to add is some labels.
 
 ```{r}
-p_post 
+newobs3 <- tibble(poverty = c(0.5, 0.8))
+
+pp <- posterior_predict(fit_2, newdata = newobs3) %>% 
+  as_tibble() %>% 
+  mutate_all(as.numeric) %>% 
+  rowwise() %>% 
+  mutate(pov_diff = `2` - `1`)
+
+exp_dist_diff_2 <- pp %>% 
+  ggplot(aes(x = pov_diff)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 100) + 
+  labs(title = "Posterior for Expected Distance Difference",
+       subtitle = "The expected difference of average distance between polling locations with poverty rates of 0.5 and 0.8 is about 5 miles",
+       x = "Poverty Rate",
+       y = "Probability") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic()
+
+exp_dist_diff_2
 ```
 
-```{r income-as-a-function-15, exercise = TRUE}
 
-```
-
-### Exercise 16
-
-How many unique fitted values do we have based on our data below? Provide a sentence of intuition for why.
-
-```{r}
-library(gt)
-trains %>% 
-  select(income, liberal) %>% 
-  mutate(fitted = fitted(fit_obj)) %>% 
-  mutate(residual = residuals(fit_obj)) %>% 
-  slice(1:8) %>% 
-  gt() %>%
-  cols_label(income = md("**Income**"),
-             liberal = md("**Liberal**"),
-             fitted = md("**Fitted**"),
-             residual = md("**Residual**")) %>%
-  fmt_number(columns = c(fitted), decimals = 2) %>% 
-  tab_header("8 Observations from Trains Dataset") %>%
-  cols_align(align = "center", columns = everything()) 
+Now, let's answer the question we started with. Note: we are only considering the treatments `canvass` and `control`. To do so, we will create the following graph.
 
 
-```
-
-```{r income-as-a-function-16}
-question_text(
-  "Answer:",
-  answer(NULL, correct = TRUE),
-  incorrect = "Ok",
-  try_again_button = "Modify your answer",
-  allow_retry = TRUE
-)
-```
-
-Let's now answer the following question:  _What is the probability that the next liberal who arrives at the train station today has an income greater than $100,000?_ . 
 
 
-### Exercise 17
-
-Let's create a tibble with a column named `liberal` and a single observation TRUE. Assign your work to an object named `new_obs`.
-
-```{r income-as-a-function-17, exercise = TRUE}
+```{r representative-data-ex-4, exercise = TRUE}
 
 ```
 
-```{r income-as-a-function-17-hint-1, eval = FALSE}
-new_obs <- tibble(liberal = ...)
-```
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-### Exercise 18
-
-Let's now use `posterior_predict()`. The first argument should be our fitted model `fit_obj`. The second argument `newdata` should be set to `new_obs`. Assign your work to an object named `pp`.  
-
-```{r income-as-a-function-18, exercise = TRUE}
+```{r representative-data-ex-4-hint, eval = FALSE}
 
 ```
 
-```{r income-as-a-function-18-hint-1, eval = FALSE}
-pp  <- posterior_predict(fit_obj, 
-                         newdata = ...)
+###
 
-```
 
-### Exercise 19
 
-Great! Now start a pipe with a tibble that has one variable `income` and its value is set to equal the first column of `pp`.    
-
-```{r income-as-a-function-19, exercise = TRUE}
-
-```
-
-```{r income-as-a-function-19-hint-1, eval = FALSE}
-tibble(income = pp[, 1])
-```
-
-### Exercise 20
-
-Pipe the results of the tibble to `mutate()` to create a new variable `gt_1k`. `gt_tk` should use an `ifelse` statement. Within `ifelse()`, check that `income` is a value greater than 100,000. If it is, return TRUE. If it is not, return FALSE.
-
-```{r income-as-a-function-20, exercise = TRUE}
-
-```
-
-```{r income-as-a-function-20-hint-1, eval = FALSE}
-tibble(income = pp[, 1]) %>% 
-  mutate(... = ifelse(income > ..., TRUE, FALSE))
-```
-
-### Exercise 21
-
-Continue the pipe. Use `summarize()` and create a new variable called `perc`, which is the `sum` of `gt_1k` divided by the function `n()`. 
-
-```{r income-as-a-function-21, exercise = TRUE}
-
-```
-
-```{r income-as-a-function-21-hint-1, eval = FALSE}
-... %>% 
-  summarize(perc = sum(...)/n())
-```
-
-Awesome! Now we know the probability that the next liberal who arrives at the train station today has an income greater than $100,000.
-
-### Exercise 22
-
-Using **Temperance**, write a paragraph about how you should use this estimate. Are you sure it is correct? How safely can you apply data from 8 years ago to today? How similar is the population from which you drew the data to the population to which you hope to apply your model? See *The Primer* for guidance.
-
-```{r income-as-a-function-22}
-question_text(
-  "Answer:",
-  answer(NULL, correct = TRUE),
-  incorrect = "Ok",
-  try_again_button = "Modify your answer",
-  allow_retry = TRUE
-)
-```
 
 ```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
 ```
