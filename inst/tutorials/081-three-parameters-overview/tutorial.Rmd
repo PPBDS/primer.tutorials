@@ -562,6 +562,21 @@ Next, let's consider the second question.
 To answer this, we will create the following plot.
 
 ```{r}
+newobs <- tibble(party = c("Democrat", "Democrat", "Democrat", 
+                        "Republican", "Republican","Republican"))
+
+pp <- posterior_predict(fit_1, newdata = newobs) %>%
+    as_tibble() %>%
+    mutate_all(as.numeric) %>% 
+    set_names(c("dem_1", "dem_2", "dem_3", 
+                "rep_1", "rep_2", "rep_3")) %>% 
+    rowwise() %>% 
+    mutate(dems_oldest = max(c_across(dem_1:dem_3)),
+           reps_youngest = min(c_across(rep_1:rep_3)),
+           age_diff = dems_oldest - reps_youngest)
+```
+
+```{r}
 age_diff_graph <- pp %>%  
   ggplot(aes(x = age_diff)) +
     geom_histogram(aes(y = after_stat(count/sum(count))),
@@ -578,20 +593,7 @@ age_diff_graph
 
 Since our group has three Democrats and three Republicans, make a tibble with the observations of the column "party" that we desire. Store this as `new_obs`.
 
-```{r}
-newobs <- tibble(party = c("Democrat", "Democrat", "Democrat", 
-                        "Republican", "Republican","Republican"))
 
-pp <- posterior_predict(fit_1, newdata = newobs) %>%
-    as_tibble() %>%
-    mutate_all(as.numeric) %>% 
-    set_names(c("dem_1", "dem_2", "dem_3", 
-                "rep_1", "rep_2", "rep_3")) %>% 
-    rowwise() %>% 
-    mutate(dems_oldest = max(c_across(dem_1:dem_3)),
-           reps_youngest = min(c_across(rep_1:rep_3)),
-           age_diff = dems_oldest - reps_youngest)
-```
 
 ```{r age--party-16, exercise = TRUE}
 
@@ -895,7 +897,16 @@ Recall our first question pertaining to this distribution:
 
 To help us answer this, we will make the following plot.
 
-```{r echo = FALSE}
+```{r}
+newobs <- tibble(treatment = c("Treated", "Control"))
+
+pe <- posterior_epred(fit_2, newobs) %>% 
+    as_tibble() %>% 
+    mutate(ate = `1` - `2`)
+
+```
+
+```{r}
 ate_graph <- pe %>% 
   ggplot(aes(x = ate)) +
     geom_histogram(aes(y = after_stat(count/sum(count))),
@@ -924,14 +935,7 @@ question_text(NULL,
 
 ### Exercise 8
 
-```{r echo = FALSE, include = FALSE}
-newobs <- tibble(treatment = c("Treated", "Control"))
 
-pe <- posterior_epred(fit_2, newobs) %>% 
-    as_tibble() %>% 
-    mutate(ate = `1` - `2`)
-
-```
 
 Now, let's use `posterior_epred()` to answer this question. Create a tibble like we have done before with our desired ovservations. For this scenario, call it `newobs` and set `treatment` having two values, "Treated" and "Control".
 
