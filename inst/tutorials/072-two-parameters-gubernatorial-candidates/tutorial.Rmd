@@ -7,10 +7,8 @@ output:
     progressive: yes
     allow_skip: yes
 runtime: shiny_prerendered
-description: Chapter 7 tutorial part B
+description: Chapter 7 tutorial part 2
 ---
-
-<!-- GP tutorial -->
 
 ```{r setup, include = FALSE}
 library(learnr)
@@ -23,8 +21,13 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local")
 
-election <- governors %>% 
-  select(election_age)
+winners <- governors %>% 
+  filter(win_margin > 0) %>% 
+  select(state, year, election_age)
+
+set.seed(1)
+tests <- tibble(score = floor(rnorm(100, mean = 90, sd = 4))) %>% 
+  filter(score < 101)
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -33,131 +36,144 @@ election <- governors %>%
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
-## Preliminaries
+## Wisdom
 
 ### 
 
-In this tutorial, we'll be working with the `governors` data from `primer.data`.
+In this tutorial, we'll be creating a two-parameter model using the `governors` data from `primer.data`.
 
 ### Exercise 1
 
 Run `?governors`. Read the description of the data. 
 
 
-```{r preliminaries-1, exercise = TRUE}
+```{r widsom-1, exercise = TRUE}
 
 ```
 
-```{r preliminaries-1-hint-1, eval = FALSE}
+```{r widsom-1-hint-1, eval = FALSE}
 ?governors
 ```
 
-###
+### 
 
+Notice that this data set only includes data for candidates who are now deceased.
 
+Keep details like these in mind as they may help in answering future questions about representativeness and validity.
 
 ### Exercise 2
 
 Print out the `governors` tibble. 
 
-```{r preliminaries-2, exercise = TRUE}
+```{r widsom-2, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r preliminaries-2-hint-1, eval = FALSE}
-governors
+```{r widsom-2-hint-1, eval = FALSE}
+print(...)
 ```
 
 ### 
 
-
+Notice that James Folsom appears more than once in this data. Therefore, this data is organized by specific running rather than by candidate, which may make it unsuitable to answer certain questions — another important detail to keep in mind.
 
 ### Exercise 3
 
 Use `skim()` from the `skimr` package to skim the `governors` data.
 
-```{r preliminaries-3, exercise = TRUE}
+```{r widsom-3, exercise = TRUE}
 
 ```
 
-```{r preliminaries-3-hint-1, eval = FALSE}
+```{r widsom-3-hint-1, eval = FALSE}
 skim(...)
 ```
 
 ### 
 
-Notice that the `election_age` has zero missing values, and an average of 51.7. This seems like a fun variable to work with!
+Look at `election_age`. Notice it has zero missing values, and an average of 51.7.
+
+### Our Question
+
+Suppose our goal is to answer the following question:
+
+<center>
+
+_What is the probability of the next elected governor of Massachusetts being over the age of 60?_
+
+</center>
 
 ### Exercise 4
 
-Start a new pipe with `governors`. Select only the `election_age` variable. Assign this to a new object called `election`.
+In this case, we are asking a question about the next *elected* candidate, not just the next candidate. We only care about the winners.
 
-```{r preliminaries-4, exercise = TRUE}
+Start a new pipe with `governors`. Use `filter()` to choose only rows with a positive win margin (i.e. elected candidates).
+
+```{r widsom-4, exercise = TRUE}
 
 ```
 
-```{r preliminaries-4-hint-1, eval = FALSE}
+```{r widsom-4-hint-1, eval = FALSE}
+governors %>% 
+  filter(...)
+```
+
+```{r widsom-4-hint-2, eval = FALSE}
+governors %>% 
+  filter(win_margin > ...)
+```
+
+### Exercise 5
+
+Copy your code from above. Continue your pipe by using `select()` to select `state`, `year`, and `election_age`.
+
+```{r widsom-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r widsom-5-hint-1, eval = FALSE}
+governors %>% 
+  filter(...) %>% 
+  select(...)
+```
+
+### Exercise 6
+
+Copy your code from above and assign it to a new object called `winners`.
+
+```{r widsom-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r widsom-6-hint-1, eval = FALSE}
 ... <- governors %>% 
+  filter(...) %>% 
   select(...)
 ```
 
 ### 
 
-We'll be using `election` later in this tutorial.
+We'll be using `winners` in later questions in this tutorial.
 
-### Exercise 5
+### Exercise 7
 
-Let's quickly review how to work with the `stan_glm()` function from the `rstanarm` package.
+<center>
 
-### 
+<span style="color:gray">Recall our question: _What is the probability of the next elected governor of Massachusetts being over the age of 60?_</span>
 
-Recall that `stan_glm()` has four arguments that should always be specified:
+</center>
 
-* The `data` argument, which tells `stan_glm()` what data frame to work with.
-* The `family` argument, which tells `stan_glm()` what error distribution and link function to use in the model.
-* The `refresh` argument, which should usually be set to `0` lest you get R spitting back a bunch of garbage at you.
-* The `formula` argument, which tells `stan_glm()` what model is to be fitted.
+###
 
-### 
+Our population table has **Preceptor Table** rows, **actual data** rows, and outstanding **population** rows. Describe, in a single short paragraph, what each of these three types of rows look like.
 
-Run
-
-```{r preliminaries-5, exercise = TRUE}
-
-```
-
-```{r preliminaries-5-hint-1, eval = FALSE}
-
-```
-
-### 
-
-<!-- 
-
-Questions:
-
-1. What is the average age of governors when they get elected?
-
-2. What is the probability of the next elected governor being over the age of 60?
-
-...
-
--->
-
-
-## Wisdom
-
-### Exercise 1
-
-Suppose we wanted to answer the following question: _What is the probability of the next elected governor being over the age of 60?_
-
-Write a paragraph about whether or not our data from `governors` is relevant in answering this question. Be sure to use terms like "population" and "Preceptor Table".
-
-```{r wisdom-1}
+```{r widsom-ex-7}
 question_text(NULL,
-	message = "answer here",
+	message = "There are 50 Preceptor Table rows — one for each of the 50 states. The year is 2022, but all other column entires are \"?\" (unknowns). In our actual data rows, all column entires are known. However, we only have data up until for candidates who ran up until 2011, and who have passed away as of 2012. Our outstanding population rows include data from candiates in all years, as well as data from both currently alive and deceased candidates.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -165,11 +181,166 @@ question_text(NULL,
 	options = list(nrows = 6))
 ```
 
-### 
+###
+
+GP: Not sure what knowledge to drop here yet, I'll think of something
 
 ## Justice
 
+###
+
+If you paid close attention in the **Wisdom** section, then you may have some concerns regarding whether or not we can *accurately* answer our question using the given data.
+
+### Exercise 1
+
+Use `sum()` to count how many entires we have in our `winners` data for the state of Massachusetts. 
+
+```{r justice-ex-1, exercise = TRUE}
+
+```
+
+```{r justice-ex-1-hint, eval = FALSE}
+sum(winners$state == ...)
+```
+
+###
+
+Only 14?! 14 data points is far too little to construct an (accurate) model to answer our question.
+
+### Exercise 2
+
+In order to construct a good model, we'll need to use data from all states.
+
+###
+
+Describe, in your own words, to what extent the data from the other 49 states is *representative* of the data from Massachusetts.
+
+```{r justice-ex-2}
+question_text(NULL,
+	message = "No answer yet",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+
+
+<!-- GP: Talk about concern over age bias. The ages will tend to be slightly older the greater the year is because we're only sampling from now-deceased candidates. The more we filter our data to only include early years, the more accurate data will be, but the less data points we'll have. So, in other words, we are trading PRECISION for ACCURACY. This is a super cool opportunity to discuss this type of tradeoff, and whether or not making it is worth it (- it is). -->
+
+
+
 ## Courage
+
+### 
+
+Let's quickly review how to work with the `stan_glm()` function from the `rstanarm` package.
+
+### Exercise 1
+
+Print out the `tests` tibble below.
+
+```{r courage-1, exercise = TRUE}
+
+```
+
+```{r courage-1-hint-1, eval = FALSE}
+print(tests)
+```
+
+### 
+
+Let's use this data to remind ourselves how to create two-parameter models.
+
+### Exercise 2
+
+Run `stan_glm()` and set the `data` argument equal to `tests`, and the `formula` argument equal to `score ~ 1`.
+
+```{r courage-2, exercise = TRUE}
+
+```
+
+```{r courage-2-hint-1, eval = FALSE}
+stan_glm(data = ...,
+         formula = ...)
+```
+
+### 
+
+We can see that we got some legible output in the lower code-chunk, but we also got a lot of messy garbage lines.
+
+### Exercise 3
+
+Let's tidy up our output a bit and get rid of these messy garbage lines.
+
+Copy your code from above, and add a new argument called `refresh`. Set this argument to `0`.
+
+```{r courage-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-3-hint-1, eval = FALSE}
+stan_glm(data = ...,
+         formula = ...,
+         refresh = ...)
+```
+
+### 
+
+We can see that now when we run the code, the get only the part of the output that we care about.
+
+### Exercise 4
+
+We should also tell `stan_glm()` what error distribution function to use in the model.
+
+Copy your code from above. Insert a new argument called `family` and set it equal to `guassian()` (which, for our purposes, is synonymous with `normal`).
+
+```{r courage-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-4-hint-1, eval = FALSE}
+stan_glm(data = ...,
+         formula = ...,
+         refresh = ...,
+         family = ...)
+```
+
+### 
+
+Notice that our output did not change. This is because `family` is set to `gaussian()` by default. Still, it's good practice to always specify it yourself and eliminate some of the guesswork for R.
+
+### Recap
+
+Recall that `stan_glm()` has four arguments that should always be specified:
+
+* The `data` argument, which tells `stan_glm()` what data frame to work with.
+* The `formula` argument, which tells `stan_glm()` what model is to be fitted.
+* The `refresh` argument, which should usually be set to `0` lest you get R spitting back a bunch of garbage at you.
+* The `family` argument, which tells `stan_glm()` what error distribution and link function to use in the model.
+
+### Exercise 5
+
+Start a new pipe with `winners`.
+
+```{r courage-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-5-hint-1, eval = FALSE}
+
+```
+
+### 
 
 ## Temperance
 
