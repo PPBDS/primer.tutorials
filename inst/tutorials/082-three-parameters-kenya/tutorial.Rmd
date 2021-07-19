@@ -1,0 +1,236 @@
+---
+title: "Three Parameters: Kenya"
+tutorial:
+  id: three-parameters-kenya
+output:
+  learnr::tutorial:
+    progressive: yes
+    allow_skip: yes
+runtime: shiny_prerendered
+description: Use data from Kenya voter registration efforts to construct a three parameter model.
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(primer.tutorials)
+library(tidyverse)
+library(primer.data)
+library(rstanarm)
+
+knitr::opts_chunk$set(echo = FALSE)
+options(tutorial.exercise.timelimit = 60, 
+        tutorial.storage = "local") 
+
+```
+
+```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
+```
+
+```{r info-section, child = "../../child_documents/info_section.Rmd"}
+```
+
+<!-- Let's make our own data set. Start with a primer.data data set. Filter our some of the rows in a way that messes things up in the same way that filtering our living candidates messes up go governors. -->
+
+<!-- Example from kenya is that if you want to estimate poverty ~ 1, you get an unbiased estimate if you use the whole data set. But if you restrit to just polling stations within 25 km, you get a biased model becuause polling stations farther away are poorer. But this example is no good because we need three parameters.-->
+
+<!-- So, find a simple linear model, like poverty ~ age, or distance ~ pop_density, or mean_age ~ distance, rv_12 ~ poverty. Good if the model works, meaningful relationship. Don't use treatment or reg_byrv13. Then, we modify the sample, in some way, by removing a bunch of rows in a non-crazy way which does not use the two variables in our model. But, we want a fun story to tell! There must be a biased which the non-reprsentative nature of our sample creates. In other words, the coefficient to be (very?) different between using all the data and using the reduced sample. -->
+
+<!-- Four different ways to mess up representative data. First, remove rows on the basis of a variable which is not in your model. Second, remove rows on the basis of an independent variable in the model. Third, remove rows on the basis of the dependent variable. Four, remove rows on the basis of potential outcomes.  -->
+
+<!-- Tell the story of experimenters who got lazy (or scared) and did not want to travel too far, and so your data only has 1188.  -->
+
+<!-- Try kenya. Feel free to simplify by, for example, only keeping around two treatments: control and something else.  -->
+
+## Representative Data
+
+Let's look at how whether or not data is representative can affect our results. To do so, let's consider the following questions.
+
+*In Kenya today, what is the expected average distance of away from polling locations for those assigned to it with a poverty rate of 0.2?*
+
+*In Kenya today, what is the expected difference in average distance of away from polling locations for those assigned to it between those with a poverty rate of 0.8 and 0.5?*
+
+We will use the data set `kenya` to answer this question.
+
+###
+
+### Exercise 1
+
+First, determine the columns we would like in our Preceptor Table in order to answer this question.
+
+```{r representative-data-ex-1}
+question_text(NULL,
+	message = "We would like the columns for poverty rate of voting blocks and average distance from the polling location for voting blocks.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+### Exercise 2
+
+Now, run `?kenya` to take a closer look at the data.
+
+```{r representative-data-ex-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r representative-data-ex-2-hint, eval = FALSE}
+
+```
+
+###
+
+As you can see, this data came from 2013, whereas our population is from now.
+
+### Exercise 3
+
+Write two sentences discussing whether you can consider the data from `kenya` and the columns from our Preceptor Table to be drawn from the same population.
+
+```{r representative-data-ex-3}
+question_text(NULL,
+	message = "While answers may vary, since this data set is very representative  of the populatin in 2013 and our population is that of Kenya, we will assume that they can be drawn from the same population and that there has not been significant change over time. Therefore, the data is representative enough of our population.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+### Exercise 4
+
+```{r}
+kenya_1 <- kenya %>% 
+  filter(treatment %in% c("canvass", "control"))
+  
+
+kenya_1
+
+kenya_2 <- kenya_1 %>% 
+  filter(distance < 25)
+```
+
+```{r}
+fit_1 <- stan_glm(distance ~ poverty,
+                  data = kenya_1,
+                  refresh = 0)
+
+fit_1
+
+newobs1 <- tibble(poverty = 0.2)
+
+pp <- posterior_epred(fit_1, newdata = newobs1) %>% 
+  as_tibble()
+
+exp_poverty <- pp %>%
+  ggplot(aes(x = `1`)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 100) +
+  labs(title = "Posterior for Expected Distance",
+       subtitle = "Polling locations about 13 miles away on average from those assigned to them have poverty rates of 0.2",
+       x = "Poverty Rate",
+       y = "Probability") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic()
+  
+
+exp_poverty
+```
+
+```{r}
+fit_2 <- stan_glm(distance ~ poverty,
+                  data = kenya_2,
+                  refresh = 0)
+
+fit_2
+
+newobs2 <- tibble(poverty = 0.2)
+
+pp <- posterior_epred(fit_2, newdata = newobs2) %>% 
+  as_tibble()
+
+exp_poverty_2 <- pp %>%
+  ggplot(aes(x = `1`)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 100) +
+  labs(title = "Posterior for Expected Distance",
+       subtitle = "Polling locations about 11 miles away on average from those assigned to them have poverty rates of 0.2",
+       x = "Poverty Rate",
+       y = "Probability") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic()
+  
+exp_poverty_2
+```
+
+```{r}
+newobs3 <- tibble(poverty = c(0.5, 0.8))
+
+pp <- posterior_predict(fit_1, newdata = newobs3) %>% 
+  as_tibble() %>% 
+  mutate_all(as.numeric) %>% 
+  rowwise() %>% 
+  mutate(pov_diff = `2` - `1`)
+
+exp_dist_diff <- pp %>% 
+  ggplot(aes(x = pov_diff)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 100) + 
+  labs(title = "Posterior for Expected Distance Difference",
+       subtitle = "The expected difference of average distance between polling locations with poverty rates of 0.5 and 0.8 is about 20 miles",
+       x = "Poverty Rate",
+       y = "Probability") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic()
+
+exp_dist_diff
+```
+
+```{r}
+newobs3 <- tibble(poverty = c(0.5, 0.8))
+
+pp <- posterior_predict(fit_2, newdata = newobs3) %>% 
+  as_tibble() %>% 
+  mutate_all(as.numeric) %>% 
+  rowwise() %>% 
+  mutate(pov_diff = `2` - `1`)
+
+exp_dist_diff_2 <- pp %>% 
+  ggplot(aes(x = pov_diff)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 100) + 
+  labs(title = "Posterior for Expected Distance Difference",
+       subtitle = "The expected difference of average distance between polling locations with poverty rates of 0.5 and 0.8 is about 5 miles",
+       x = "Poverty Rate",
+       y = "Probability") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic()
+
+exp_dist_diff_2
+```
+
+
+Now, let's answer the question we started with. Note: we are only considering the treatments `canvass` and `control`. To do so, we will create the following graph.
+
+
+
+
+```{r representative-data-ex-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r representative-data-ex-4-hint, eval = FALSE}
+
+```
+
+###
+
+
+
+
+```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
+```
