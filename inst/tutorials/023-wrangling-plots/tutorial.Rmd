@@ -24,6 +24,8 @@ description: Complex pipes leading to plots.
 
 <!-- https://ppbds.github.io/primer.tutorials/articles/instructions.html -->
 
+<!-- ROAS plots about percentage accounted for by top 10 names and last letter in boys names. See: https://github.com/avehtari/ROS-Examples/tree/master/Names-->
+
 
 
 ```{r setup, include = FALSE}
@@ -35,6 +37,7 @@ library(stringr)
 library(skimr)
 library(primer.data)
 library(ggdist)
+library(plotly)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
@@ -233,196 +236,306 @@ Reminder: This is what your plot should look like.
 nhanes_p
 ```
 
-## Kenya Voting
+## Covid-19
 ### 
 
-The `kenya` contains data from a study in which poll stations in Kenya were assigned to one of the two groups. Either the control group or a group in which one or more methods (an SMS reminder, canvassing, etc.) were used to encourage voter registration. 
+The `covid` contains data about Covid-19 and factors affecting Covid-19. Source of this data set is Johns Hopkins University. 
 
 
 ### 
 
-Let's create the following plot.
+Total Covid-19 cases over population proportion may be affected with ages of a country's residents, since Covid-19 has proven to be more infectious for elderly. 
 
-```{r kenya-answer}
-kenya_p <- kenya %>%
-  filter(treatment %in% c("control", "local", 
-                          "SMS", "canvass")) %>%
-  droplevels() %>%
-  select(treatment, mean_age, reg_byrv13) %>%
-  drop_na(mean_age) %>%
-  group_by(treatment) %>%
-  summarize(mean_turnout = mean(reg_byrv13, na.rm = TRUE),
-            .groups = "drop") %>% 
-  ggplot(mapping = aes(x = fct_reorder(treatment, mean_turnout), 
-                       y = mean_turnout)) +
-    geom_col(fill= 'cornflowerblue') +
-    theme_grey() +
-    labs(title = "Turnout Changes in a Kenyan Election",
-         subtitle = "Local canvassing has the largest effect",
-         x = "Treatment",
-         y = "Change in Mean Turnout",
-         caption= "Source: A study entitled 'Electoral Administration in Fledgling Democracies:Experimental Evidence from Kenya ' ")
+###
 
-kenya_p
+If we look at this plot, we can see that there is roughly a positive association between median age and total Covid-19 cases over population proportion.
+
+Let's create this plot.
+
+```{r,include=FALSE}
+covid <- read_csv('data/owid-covid-data.csv')
+```
+
+```{r covid, warning=FALSE}
+covid_graph <- covid %>%
+  select(continent, median_age, new_cases, location, population) %>%
+   drop_na(new_cases) %>% 
+   group_by(location) %>% 
+    filter(continent != 'World') %>%
+    summarize(case_by_pop = sum(new_cases) / first(population),
+              agemed = first(median_age),
+              continent = first(continent), 
+              rm.na = TRUE,
+              .group = 'drop') %>%
+               ggplot(mapping = aes(x = agemed, 
+                         y = case_by_pop,
+                         label=location,
+                         color=continent)) +
+               geom_point() + 
+               theme_economist() +
+               labs(x = "Median Age",
+         y = "Total Covid-19 cases over population ",
+         title = "Relation of Covid-19 cases and median age")
+    
+final_graph <-  ggplotly(covid_graph)
+
+final_graph
 ```
 
 ### Exercise 1
 
-`glimpse()` the `kenya` data set. 
+`glimpse()` the `covid` data set. 
 
-```{r kenya-voting-1, exercise = TRUE}
+```{r covid-1, exercise = TRUE}
 
 ```
 
-```{r kenya-voting-1-hint-1, eval = FALSE}
+```{r covid-1-hint-1, eval = FALSE}
 glimpse(...)
 ```
 
+###
+
+Although there are many Na values, these exist because of there isn't any of that variable. For example, for Covid-19 cases, there are Na values at the beginning since Covid-19 had not reached Afghanistan back then.
+
 ### Exercise 2
 
-`filter()` `kenya` to keep only the rows that have a `treatment` of "control," "local," "SMS," or "canvass." To accelerate the process, use the `%in% `operator with `c()`.
+`select` the "continent", "location", "new_cases", and "median_age" variables.
 
-```{r kenya-voting-2, exercise = TRUE}
+```{r covid-2, exercise = TRUE}
 
 ```
 
-```{r kenya-voting-2-hint-1, eval = FALSE}
-kenya %>%
-  filter(treatment %in% c(..., ..., ..., ...))
+```{r covid-2-hint-1, eval = FALSE}
+covid %>%
+  select(..., ..., ..., ...))
 ```
+
 
 ### Exercise 3
 
-Although we have filtered the data, because `treatment` is a factor, unused factor levels still exist. Implement  `droplevels()` as a new layer of the pipe. This will avoid future complications. 
+Because we do not want to include rows where there are no Covid-19 cases, drop Na values in the `new_cases` column. 
 
-```{r kenya-voting-3, exercise = TRUE}
+```{r covid-3, exercise = TRUE}
 
 ```
 
-```{r kenya-voting-3-hint-1, eval = FALSE}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r covid-3-hint-1, eval = FALSE}
 ... %>% 
-  droplevels()
+  drop_na()
 ```
-
 ### 
 
-If we did not `droplevels()` then the `treatment` variable would "remember" all the levels we began with, even though we deleted all the rows with data from those levels. These "phantom" levels can interfere with plotting. 
+If we did not `drop_na()`, errors would have been raised in further codes. 
 
 ### Exercise 4
 
-Now `select()` the columns `treatment`, `mean_age`, and `reg_byrv13`. 
+To make our further country-based calculations easer, Now group by `location`.
 
-```{r kenya-voting-4, exercise = TRUE}
-
-```
-
-```{r kenya-voting-4-hint-1, eval = FALSE}
-... %>%
-  select(...)
-```
-
-### Exercise 5
-
-Use `drop_na()` to remove all rows with a NA value in the `mean_age` column.
-
-```{r kenya-voting-5, exercise = TRUE}
+```{r covid-4, exercise = TRUE}
 
 ```
 
-```{r kenya-voting-5-hint-1, eval = FALSE}
-kenya %>%
-  filter(treatment %in% c("control", "local", "SMS", "canvass")) %>%
-  droplevels() %>%
-  select(treatment, mean_age, reg_byrv13) %>%
-  drop_na(...)
-```
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-### Exercise 6
-
-In cases like this, where there is data belonging to a certain number of categories, Performing on group level is  advantageous. To render this possible and group the data by `treatment`, use `group_by()` function.
-
-```{r kenya-voting-6, exercise = TRUE}
-
-```
-
-```{r kenya-voting-6-hint-1, eval = FALSE}
+```{r covid-4-hint-1, eval = FALSE}
 ... %>%
   group_by(...)
 ```
 
-### Exercise 7
+###
 
-`reg_byrv13` is a variable for the number of registered voters at polling location during intervention period divided by registered voters at polling location during 2013. We will use this to compare the impacts of different treatments. Higher this variable, greater the impact. 
+Our dataset includes rows where the continent is "world". However, we only want to analyse by country.
 
-### 
+### Exercise 5
 
-Using `summarize()` and `mean()`, create a tibble with a new column named `mean_turnout`. The first argument to `mean()` should be `reg_byrv13`. The second argument to `mean()` should set `na.rm` to `TRUE`, as there are some NA values in the `reg_byrv13` column. Within `summarize()`, set the argument `.groups` equal to `"drop"`. 
-
-
-```{r kenya-voting-7, exercise = TRUE}
+`filter` in a way that we extract all rows but the ones where the continent is `world`.
+```{r covid-5, exercise = TRUE}
 
 ```
 
-```{r kenya-voting-7-hint-1, eval = FALSE}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r covid-5-hint-1, eval = FALSE}
+... %>%
+  filter(...)
+```
+
+```{r covid-5-hint-2, eval = FALSE}
+To exclude a value, use `!=`.
+```
+
+### Exercise 6
+
+For our analysis, we want to calculate total Covid-19 cases divided by population for each country. To achieve, we need to create a variable using `summarize`
+
+###
+
+Create a variable `case_by_pop` that is equal to `sum()` of `new_cases` divided by population. 
+Since the population is the same for every row for a country, to get the population, choose the `first()` value.
+
+###
+
+Using the `first()` function, create a "agemed" and "continent" variables that should be equal to median age and continent of the country, respectively.
+
+###
+
+Furthermore, to avoid any errors NA values might cause, set `na.rm` argument to `TRUE`.
+
+```{r covid-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r covid-6-hint-1, eval = FALSE}
+... %>%
+      summarize(case_by_pop = sum(...) / first(...),
+              agemed = first(...),
+              continent = first(...),
+              na.rm = ...)
+```
+
+#
+
+Did you receive a warning message? 
+
+### Exercise 7
+
+Our job with groups is done since we have created the needed variables. However, we have to set an argument to choose what to do with groups. 
+
+###
+
+`.groups` is an argument that tells `summarize()` what to do with the grouping of the data after it has used the grouping to produce its summary. 
+
+If you exclude `groups` argument, you will get a warning message.
+
+### 
+
+within `summarize` function from previous exercise, set `.group` argument equal to "drop". 
+
+
+```{r covid-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r covid-7-hint-1, eval = FALSE}
 ... %>% 
-  summarize(... = mean(..., na.rm = ...),
+  summarize(...,
             .groups = "...")
 ```
 
-```{r kenya-voting-7-hint-2, eval = FALSE}
-Do not forget the .groups argument to summarize(). Never ignore warning
-messages.
-```
-
 ### 
 
-`.groups` is an argument that tells `summarize()` what to do with the grouping of the data after it has used the grouping to produce its summary. `.groups` does not affect the data in the summary tibble. You can either `"keep"` the grouping, `"drop"` the grouping, or `"drop_last"`, i.e. to drop the last of the specified grouping variables (this is because retaining all the same groups after summary creates groups which only contain single rows). `"drop_last"` is the default in most cases. If you exclude `.groups`, you will receive a warning message. 
+ `.groups` does not affect the data in the summary tibble. You can either `"keep"` the grouping, `"drop"` the grouping, or `"drop_last"`, i.e. to drop the last of the specified grouping variables (this is because retaining all the same groups after summary creates groups which only contain single rows). `"drop_last"` is the default in most cases.  
 
 ### Exercise 8
 
-Continue your pipe and add  `ggplot()`.  Use `fct_reorder()` to reorder the `treatment` variable by `mean_turnout` and map this to the x-axis. Moreover, map `mean_turnout` to the y-axis. Then, add the layer `geom_col()` and specify its `fill` argument as `'cornflowerblue'`. 
+To include all four variables on the plot, we have to map each of them to a different argument.
 
-```{r kenya-voting-8, exercise = TRUE}
+###
+
+Continue your pipe and add  `ggplot()`.  Map `agemed` to the x-axis, `case_by_pop` to the y-axis, `location` to the label, and `continent` to color.
+
+Then, to create a scatter, add a new layer `geom_point()`.
+
+```{r covid-8, exercise = TRUE}
 
 ```
 
-```{r kenya-voting-8-hint-1, eval = FALSE}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r covid-8-hint-1, eval = FALSE}
 ... %>% 
-  ggplot(mapping = aes(x = fct_reorder(treatment, mean_turnout), 
-                       y = ...) +
-  geom_col()
+  ggplot(mapping = aes(x = ..., 
+                       y = ...,
+                       label = ...,
+                       location = ...) +
+  geom_point()
 ```
-
-### 
-
-`geom_col()` is similar to `geom_bar()`, but `geom_col()` allows the heights of the bars to represent values in the data rather than count. 
 
 ### Exercise 9
 
-Add the theme `theme_grey()` to the plot.
+Add the theme `theme_economist()` as a new layer to the plot.
 
-```{r kenya-voting-9, exercise = TRUE}
+```{r covid-9, exercise = TRUE}
 
 ```
 
-```{r kenya-voting-9-hint-1, eval = FALSE}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r covid-9-hint-1, eval = FALSE}
 ... +
-  theme_bw()
+  theme_economist()
 ```
+
 
 ### Exercise 10
 
-To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choosing. 
+To finish your plot, use `labs()` to give the graph a title and axis labels.
 
 Reminder: This is what your plot should look like.
 
-```{r kenya-voting-10}
-kenya_p
+```{r covid10}
+final_graph
 ```
 
-```{r kenya10, exercise = TRUE}
+```{r covid-10, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+###
+
+Now, although our graph looks like the desired graph, it is not interactive, and unlike expected, nothing happens if you hover your mouse over the plot.
+
+This is beacuse, we have to make use of ` plotly()` package to create interactive graphs.
+
+### Exercise 11
+
+Moreover, to use plotly, we have to save our graph to a variable. Therefore, save our plot to a variable names `covid_graph`.
+
+```{r covid-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r covid-11-hint-1, eval = FALSE}
+covid_graph <- covid %>%
+  select(continent, median_age, new_cases, location, population) ...
+.
+.
+.
+```
+
+###
+
+Since we saved our graph as `covid_graph`, the only thing to do is pass our variable as an argument to `ggplotly` function.
+
+### Exercise 12
+
+```{r covid-12, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r covid-12-hint-1, eval = FALSE}
+...
+
+ggplotly(...)
+```
+
+###
+
+Well done!
+
 
 ## Seguro Popular
 
