@@ -10,7 +10,6 @@ runtime: shiny_prerendered
 description: Mapping data in R
 ---
 
-
 ```{r setup, include = FALSE}
 library(learnr)
 library(primer.tutorials)
@@ -21,6 +20,42 @@ library(ggthemes)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
+
+# This is all of the data that the Census Key is needed for.
+
+# rural <- get_decennial(geography = "state",
+#                        variables = c("P001001", "P002005"),
+#                        year = 2010,
+#                        output = "wide",
+#                        geometry = TRUE) 
+# write_rds(rural, "data/05-mapping-rural.rds")
+
+rural <- read_rds("data/05-mapping-rural.rds")
+
+# rural_shifted <- get_decennial(geography = "state",
+#                                variables = c("P001001", "P002005"),
+#                                year = 2010,
+#                                output = "wide",
+#                                geometry = TRUE)
+# rural_shifted <- tigris::shift_geometry(rural_shifted)
+# write_rds(rural_shifted, "data/05-mapping-rural-shifted.rds")
+
+rural_shifted <- read_rds("data/05-mapping-rural-shifted.rds")
+
+# racevars <- c(White = "B02001_002", 
+#               Black = "B02001_003", 
+#               Asian = "B02001_005",
+#               Hispanic = "B03003_003")
+# county_data <- get_acs(geography = "tract",
+#                        variables = racevars, 
+#                        year = 2018,
+#                        state = "TX",
+#                        county = "Harris County",
+#                        geometry = TRUE,
+#                        summary_var = "B02001_001")
+# write_rds(county_data, "data/05-mapping-county-data.rds")
+
+county_data <- read_rds("data/05-mapping-county-data.rds")
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -37,8 +72,6 @@ options(tutorial.exercise.timelimit = 60,
 In this tutorial, we're going to be creating maps based off of US Census Bureau data. We'll be utilizing commands from the "Downloading Census Data" tutorial in order to do this, so please do that tutorial before starting on this one.
 
 ### Exercise 1
-
-<!-- AG: I'm going to have them publish the maps because it's cool. These are the ramblings of a guy who's running on 4 hours of sleep though, so feel free to change it. -->
 
 Let's start a new R project so that we can create and eventually publish our maps.
 
@@ -90,7 +123,7 @@ This should include the R Markdown file you created.
 
 ### Exercise 3
 
-In this tutorial, we'll be using the **tidyverse**, **tidycensus**, and **ggthemes** packages. Load these packages in the setup chunk of your R Markdown file.
+In this tutorial, we'll be using the **tidyverse**, **tidycensus**, **ggthemes**, and **tigris** packages. Load these packages in the setup chunk of your R Markdown file.
 
 ###
 
@@ -136,11 +169,8 @@ In order to parse this information, we will be using the **sf** package to proce
 Let's try to recreate the following map:
 
 ```{r, message = FALSE, results = 'hide'}
-rural <- get_decennial(geography = "state",
-                       variables = c("P001001", "P002005"),
-                       year = 2010,
-                       output = "wide",
-                       geometry = TRUE) 
+# Including this in the tutorial instead of in the setup chunk because they
+# aren't supposed to be able to access it.
 
 basics_map <- rural %>%
                 filter(! NAME %in% c("Alaska", "Hawaii", "Puerto Rico")) %>%
@@ -277,10 +307,10 @@ When you run this code, you should see how the different states have different s
 ### Exercise 5
 
 This graph is passable, but it has a few problems:  
-- The fill colors are hard to distinguish
-- The darker colors map to a lower amount, which doesn't make sense
-- The background is grey
-- The legend and labels still don't exist.
+- The fill colors are hard to distinguish  
+- The darker colors map to a lower amount, which doesn't make sense  
+- The background is grey  
+- The legend and labels still don't exist.  
 
 ###
 
@@ -376,7 +406,9 @@ Let's add Alaska and Hawaii back into the map.
 
 <!-- AG: Rough explanation, needs refining in final draft -->
 
-Start a new R code chunk and copy the previous code, including the part where we defined `rural`. Add the argument `shift_geo = TRUE` to the `get_decennial()` function and rename the new `rural` to `rural_shifted`.
+<!-- AG: You're supposed to run it through the `tigris::shift_geometry()` function, not use shift_geo -->
+
+Start a new R code chunk and copy the previous code, including the part where we defined `rural`. Run `rural` through the function `tigris::shift_geometry()` and save it to the variable `rural_shifted`.
 
 ###
 
@@ -398,17 +430,10 @@ This shifts these state's locations to the corner of the map, allowing you to di
 
 ### Exercise 9
 
-Finally, change the map to use `rural_shifted` instead of `rural`. It should look like this:
+Finally, change the map to use `rural_shifted` instead of `rural` and remove the `filter()` command we used to remove the states earlier. The final map should look like this:
 
 ```{r, message = FALSE, results='hide'}
-rural_shifted <- get_decennial(geography = "state",
-                       variables = c("P001001", "P002005"),
-                       year = 2010,
-                       output = "wide",
-                       geometry = TRUE) 
-
 rural_shifted %>%
-  filter(! NAME %in% c("Alaska", "Hawaii", "Puerto Rico")) %>%
   ggplot(aes(fill = 100 * P002005 / P001001)) +
     geom_sf() + 
     scale_fill_viridis_c(option = "plasma",
@@ -435,7 +460,7 @@ question_text(NULL,
 
 ###
 
-This option removes Puerto Rico from your tibble altogether, so it is not a good choice if you want to show data from Puerto Rico.
+The **tigris** library is a key part in map making because it allows you to modify locations and such to fit on shape files that you can then map.
 
 ## Faceting maps
 
@@ -444,19 +469,6 @@ A powerful tool in ggplot2 to use with maps is faceting because it allows us to 
 Let's try to recreate this map:
 
 ```{r, message = FALSE, results = 'hide'}
-racevars <- c(White = "B02001_002", 
-              Black = "B02001_003", 
-              Asian = "B02001_005",
-              Hispanic = "B03003_003")
-
-county_data <- get_acs(geography = "tract",
-                       variables = racevars, 
-                       year = 2018,
-                       state = "TX",
-                       county = "Harris County",
-                       geometry = TRUE,
-                       summary_var = "B02001_001")
-
 county_map <- county_data %>%
                 mutate(Percent = 100 * (estimate / summary_est)) %>%
                 ggplot(aes(fill = Percent, color = Percent)) +
@@ -1036,6 +1048,12 @@ question_text(NULL,
 ```
 
 ###
+
+<!-- AG: I'm contemplating putting a section about mapping coordinates onto a map. It's really useful for when you want to map stations or points that aren't Census data since you aren't always going to have a shape file for everything and you might just have coordinates. -->
+
+###
+
+<!-- AG: Add publishing to RPubs section here. -->
 
 Congratulations on completing the tutorial.
 
