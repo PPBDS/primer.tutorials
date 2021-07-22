@@ -70,7 +70,7 @@ submission_server <- function(input, output) {
 
 
 
-    build_pdf <- function(file){
+    build_html <- function(file){
 
       question_or_exercise <- function(obj, ...){
         options <- list(...)
@@ -95,9 +95,6 @@ submission_server <- function(input, output) {
       # obj$type[[1]] "exercise_submission"
       # obj$id[[1]] "id"
 
-      print(objs)
-
-      print("hello world")
 
       out <- tibble::tibble(
         id = purrr::map_chr(objs, "id",
@@ -107,8 +104,6 @@ submission_server <- function(input, output) {
         answer = purrr::map(objs, question_or_exercise,
                             .default = NA)
       )
-
-      print(out)
 
 
       params <- list(
@@ -126,10 +121,10 @@ submission_server <- function(input, output) {
 
   }
 
-    output$downloadPdf <- shiny::downloadHandler(
+    output$downloadHtml <- shiny::downloadHandler(
       filename = paste0(learnr:::read_request(session, "tutorial.tutorial_id"),
                         "_answers.html"),
-      content = build_pdf
+      content = build_html
     )
 
     output$downloadRds <- shiny::downloadHandler(
@@ -230,7 +225,7 @@ submission_ui <- shiny::div(
     shiny::mainPanel(
       shiny::div(id = "form",
                  shiny::downloadButton(outputId = "downloadRds", label = "Download RDS"),
-                 shiny::downloadButton(outputId = "downloadPdf", label = "Download PDF"))
+                 shiny::downloadButton(outputId = "downloadHtml", label = "Download HTML"))
     )
   )
 )
