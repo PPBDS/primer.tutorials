@@ -135,7 +135,7 @@ In order to parse this information, we will be using the **sf** package to proce
 
 Let's try to recreate the following map:
 
-```{r}
+```{r, message = FALSE, results = 'hide'}
 rural <- get_decennial(geography = "state",
                        variables = c("P001001", "P002005"),
                        year = 2010,
@@ -277,10 +277,10 @@ When you run this code, you should see how the different states have different s
 ### Exercise 5
 
 This graph is passable, but it has a few problems:  
-* The fill colors are hard to distinguish
-* The darker colors map to a lower amount, which doesn't make sense
-* The background is grey
-* The legend and labels still don't exist.
+- The fill colors are hard to distinguish
+- The darker colors map to a lower amount, which doesn't make sense
+- The background is grey
+- The legend and labels still don't exist.
 
 ###
 
@@ -400,7 +400,7 @@ This shifts these state's locations to the corner of the map, allowing you to di
 
 Finally, change the map to use `rural_shifted` instead of `rural`. It should look like this:
 
-```{r}
+```{r, message = FALSE, results='hide'}
 rural_shifted <- get_decennial(geography = "state",
                        variables = c("P001001", "P002005"),
                        year = 2010,
@@ -441,9 +441,48 @@ This option removes Puerto Rico from your tibble altogether, so it is not a good
 
 A powerful tool in ggplot2 to use with maps is faceting because it allows us to easily compare data from different maps.
 
+Let's try to recreate this map:
+
+```{r, message = FALSE, results = 'hide'}
+racevars <- c(White = "B02001_002", 
+              Black = "B02001_003", 
+              Asian = "B02001_005",
+              Hispanic = "B03003_003")
+harris <- get_acs(geography = "tract",
+                  variables = racevars, 
+                  year = 2018,
+                  state = "TX",
+                  county = "Harris County",
+                  geometry = TRUE,
+                  summary_var = "B02001_001") 
+county_map <- harris %>%
+                mutate(Percent = 100 * (estimate / summary_est)) %>%
+                ggplot(aes(fill = Percent, color = Percent)) +
+                facet_wrap(~ variable) +
+                geom_sf() +
+                scale_fill_viridis_c(direction = -1) +
+                scale_color_viridis_c(direction = -1) +
+                labs(title = "Racial geography of Harris County, Texas",
+                     caption = "Source: American Community Survey 2014-2018") +
+                theme_void()
+county_map
+```
+
 ### Exercise 1
 
-<!-- building racevars by looking at load_variables -->
+This map is based off of the American Community Survey from 2014-2018, so we should use Census data from the ACS5 survey.
+
+The first step is to look at the Census variables so that we know what variables we need to pull our data from.
+
+###
+
+<!-- AG: The Hispanic variable is stupidly far away and hard to filter, so I'm just giving it to them -->
+
+Run `load_variables(2018, "acs5") %>% filter(concept == RACE)` in order to load most of the variables relating to race. Save the name of the variables relating to whites, African Americans, and Asians in a vector called `racevars`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r faceting-maps-1}
 question_text(NULL,
@@ -457,9 +496,19 @@ question_text(NULL,
 
 ###
 
+While you can't see this under the RACE category, the variable name for Hispanic populations is stored under `B03003_003`. You should also add this to your `racevars` vector.
+
 ### Exercise 2
 
-<!-- get_acs command, have them sub in their county and state -->
+Let's access the Census Data by using the `get_acs()` function.
+
+###
+
+Use the `get_acs()` function in a new R code chunk, setting the `geography` arguments to `"tract"`, the `variables` argument to the vector you created in the last exercise, the `year` to `2018`, the `state` to the state that you live in, the `county` to your county, the `geometry` to TRUE, and `summary_var` to `"B02001_001"`, the total population of your county.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r faceting-maps-2}
 question_text(NULL,
@@ -472,6 +521,13 @@ question_text(NULL,
 ```
 
 ###
+
+Some new features worth pointing out in this code:
+
+- The `year` for `get_acs()` is the last year of a five year sample.  Thus, our data will be from 2014--2018.  You can choose `year`s from 2009--2018.
+- Since our geography is "tract", we are further specifying the `state` and `county`. 
+- We are obtaining the data in a long format, which makes faceting easier.
+- We added a `summary_var`, "B02001_001", which is the total population.  As we'll see, this appears as a separate column, which is helpful to us.  (As an exercise, try going back to the code that created `rural` and see how you would do that in a long format with `summary_var`.)
 
 ### Exercise 3
 
