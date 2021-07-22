@@ -120,7 +120,7 @@ check_current_tutorial <- function(){
 
     possible_id_removed_prev <- gsub("\\{#(.*)\\}", "", l)
 
-    possible_id_removed <- gsub("[^a-zA-Z ]", "", possible_id_removed_prev)
+    possible_id_removed <- gsub("[^a-zA-Z0-9 ]", "", possible_id_removed_prev)
 
     lowercase_id <- tolower(trimws(possible_id_removed))
 
