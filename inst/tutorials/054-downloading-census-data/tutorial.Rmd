@@ -27,6 +27,8 @@ options(tutorial.exercise.timelimit = 60,
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
+<!-- AG: I'm not super clear on how these tutorials are supposed to be structured. For now, I'm going to have them create the actual project in the Mapping tutorial due to that tutorial not only being longer but also including a lot more than just a standard API request. It's fairly simple to change this though, so feel free to tell me what I need to do. -->
+
 ## Accessing the Census API
 ###
 
@@ -60,7 +62,6 @@ The output should include the string "package:tidycensus" in the output. This wi
 ### Exercise 2
 
 Now that we have the package needed to access the Census database, we need to get an API key. 
-
 
 An API key is basically a password for an API, but it often comes with certain restrictions. For example, the Census only allows you to collect 50 variables (or columns) from a database at a time. 
 
@@ -99,7 +100,7 @@ This should save your key into your `.Renviron` file.
 
 Run ``Sys.getenv("CENSUS_API_KEY")` in the Console. Copy-paste the command and the output in the space below. If you are nervous about sharing your Census API key, feel free to change it after your copy/paste it into the answer.
 
-```{r connect-git-ex-5}
+```{r api-access-3}
 question_text(NULL,
     answer(NULL, correct = TRUE),
     allow_retry = TRUE,
@@ -117,24 +118,379 @@ This should contain your Census API key. If you want to see where the key is sto
 ## Getting data from the Census API
 ###
 
+The Census API works by accessing Census databases and tables. We can find these tables by visiting [data.census.gov](data.census.gov). For this tutorial, we'll be using the **American Community Survey** and the **Decennial Census**.
+
+###
+
+If you want to see all supported Census tables, please visit [here](https://api.census.gov/data.html). 
+
+If you want to learn more about how the Census API is structured, please look at the official documentation [here](https://www.census.gov/content/dam/Census/data/developers/api-user-guide/api-guide.pdf).
+
+### Exercise 1
+
+Let's try accessing the American Community Survey database. In order to do this, we'll use the `get_acs()` function with the `geography`, `variables`, and `year` arguments.
+
+### 
+
+The geography argument determines the scope of the data (such as `us` for the entire country and `county` for counties), the `year` argument defines the year the data was accessed and the `variables` argument defines which variables you want to use.
+
+###
+
+<!-- AG: I think that the Primer is incorrect here. It shows a method for finding table IDs rather than variable names by going through data.census.gov. However, this seems to provide a table ID instead of a variable ID, and you can see their differences here: https://www.census.gov/content/dam/Census/library/publications/2019/acs/acs_summary-file_handbook_2019_ch03.pdf. As of right now, it seems like the only method to access variable names is through an API request. -->
+
+Let's try to find the total American population. First of all, we need to access the variable containing that population. We can do this by using the `load_variables()` function.
+
+###
+
+Run the `load_variables()` function below, setting the `year` argument to 2010 and the `dataset` argument to "acs5".
+
+```{r download-1, exercise = TRUE}
+
+```
+
+```{r download-1-hint-1, eval = FALSE}
+load_variables(year    = ...,
+               dataset = ...)
+```
+
+###
+
+This should show all of the variables that the **A**merican **C**ommunity **S**urvey (ACS) has as well as a brief explanation as to what they actually mean.
+
+As you can see, the first row of the table is the "UNWEIGHTED SAMPLE COUNT OF THE POPULATION", as shown by the `concept` column. That means that the population count is stored within the `B00001_001` variable. Let's try accessing the data under that variable.
+
+### Exercise 2
+
+Now that we have our variable name, we need to use it in our code.
+
+###
+
+Run the `get_acs()` function below and set the `geography` argument to `"us"`, the `year` argument to `2010`, and the `variables` argument to a string containing the variable that we just found.
+
+```{r download-2, exercise = TRUE}
+
+```
+
+```{r download-2-hint-1, eval = FALSE}
+get_acs(geography = ...,
+        year      = ...,
+        variables = ...)
+```
+
+###
+
+This returns a tibble with the geography, the name of the area described, the variable, and the estimate of the total population.
+
+### Exercise 3
+
+But variables contain a lot more information than just that. They also contain information about the different geographies located within that region. Think about each variable as a classification for different information. A variable about population includes information about the population at every level and at every scope.
+
+###
+
+Run the `get_acs()` function again, setting the `geography` argument to `"state"`, the `year` argument to `2010`, and the `variables` argument to a string containing the variable that we used earlier.
+
+```{r download-3, exercise = TRUE}
+
+```
+
+```{r download-1-hint-1, eval = FALSE}
+get_acs(geography = ...,
+        year      = ...,
+        variables = ...)
+```
+
+### 
+
+As you can see, variables contain a lot of different information at a lot of different levels. 
+
+The GEOID column contains the FIPS code of the area the data covers. This code is a standardized way to identify the different areas and gets larger as the scope narrows down. You can learn more about FIPS codes [here](https://transition.fcc.gov/oet/info/maps/census/fips/fips.txt#:~:text=FIPS%20codes%20are%20numbers%20which,to%20which%20the%20county%20belongs.).
+
+## Graphing Census data
+###
+
+Now that we've successfully accessed a variable name and the information contained within it, let's try graphing the ratio of rural population to the actual population for every state.
+
+### Exercise 1
+
+First, let's try to access the Decennial Census. The Decennial Census is conducted every 10 years and is the survey that the Census Bureau was established for in the first place.
+
+###
+
+Run the `load_variables()` function, setting the `year` argument to `2010` and the `dataset` argument to "sf1".
+
+```{r graphing-1, exercise = TRUE}
+
+```
+
+```{r graphing-1-hint-1, eval = FALSE}
+load_variables(year    = ...,
+               dataset = ...)
+```
+
+###
+
+This returns all of the variables that the Decennial Census uses. The "sf1" dataset contains the summary files for the Decennial Census, so we can look at it in order to see all of the variables used by the Census Bureau.
+
+### Exercise 2
+
+This returned a lot of information, but it's a little harder to find what we actually need. In this case, we need to find the actual population variable and the rural population so that we can determine the final ratio.
+
+###
+
+We can do this by using a standard `filter()` command like we did with tidyverse. 
+
+###
+
+Pipe the `load_variables()` function into a `filter()` command that filters the `concept` so that it is only `"URBAN AND RURAL"` and filters the `name` so that it contains the letter `"P"`.
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r graphing-2, exercise = TRUE}
+
+```
+
+```{r graphing-2-hint-1, eval = FALSE}
+load_variables(year    = ...,
+               dataset = ...) %>%
+  filter(context == ... & grepl(..., ...))
+```
 
 
+###
 
+This filters the variables so that it only has data about the urban and rural populations. Since we want the amount of the population that's rural, we're variable `P002005` since it's named `Total!!Rural` and as such describes the rural populations.
 
+### Exercise 3
 
+Now that we have our variable names, let's actually load in our data. We can do this using the `get_decennial()` function, which is very similar to the `get_acs()` function that we used earlier.
 
+###
 
+This time, we need to get data from 2 variables: The total population ("P001001") and the rural population ("P002005"). 
 
+###
 
+Run the `get_decennial()` function, setting the `geography` argument to `"state"`, the `year` argument to `2010`, the `variables` argument to a vector containing these two variable IDs, and the `output` argument to `"wide"`. 
 
+```{r graphing-3, exercise = TRUE}
 
+```
 
+```{r graphing-3-hint-1, eval = FALSE}
+get_decennial(geography = ...,
+              variables = c(..., ...),
+              year      = ...,
+              output    = "wide")
+```
 
+###
 
+By setting the `output` argument to wide, we make the variables their own columns, much like the `pivot_wider()` function. If you don't set the `output` argument to wide, a `variable` column containing the variable name will be created instead.
 
+### Exercise 4
 
+Let's create the following plot using this data.
 
+```{r}
+rural <- get_decennial(geography = "state",
+                       variables = c("P001001", "P002005"),
+                       year = 2010,
+                       output = "wide")
 
+rural_graph <- rural %>%
+                 mutate(prop_rural = P002005/P001001) %>% 
+                 ggplot(aes(x = prop_rural, y = fct_reorder(NAME, prop_rural))) +
+                   geom_point() +
+                   labs(title    = "Rural Population in US States in 2010",
+                        subtitle = "Maine and Vermont are the most rural states",
+                        caption  = "Source: US Census",
+                        x        = "Rural Population Proportion",
+                        y        = NULL)
+
+rural_graph
+```
+
+###
+
+Save the previous output to a variable named `rural` so that we can start out graph.
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r graphing-4, exercise = TRUE}
+
+```
+
+```{r graphing-4-hint-1, eval = FALSE}
+rural <- ...
+```
+
+###
+
+We'll be using this value to create a graph and save our data.
+
+### Exercise 5
+
+Start a new pipe using `rural` and add a column containing the ratio between P002005 and P001001.
+
+```{r graphing-5, exercise = TRUE}
+
+```
+
+```{r graphing-5-hint-1, eval = FALSE}
+rural %>%
+  mutate(prop_rural = ...)
+```
+
+### Exercise 6
+
+Continue the pipe and use the `ggplot()` function to create a graph. Map the `x` argument to the ratio and the `y` argument to `NAME`, then add a `geom_point()` layer.
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r graphing-6, exercise = TRUE}
+
+```
+
+```{r graphing-6-hint-1, eval = FALSE}
+... %>%
+  ggplot(aes(x = ..., y = ...)) +
+    geom_point()
+```
+
+###
+
+This should show all of the states and their rural population proportion in alphabetical order.
+
+### Exercise 7
+
+Let's sort the states by their rural population. Change the `y` argument to reorder the names based on the rural population ratio.
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r graphing-7, exercise = TRUE}
+
+```
+
+```{r graphing-7-hint-1, eval = FALSE}
+... %>%
+  ggplot(aes(x = ..., y = fct_reorder(..., ...))) +
+    geom_point()
+```
+
+### Exercise 8
+
+Now let's add the labels to the graph.
+
+As a reminder, here's what the graph should look like:
+
+```{r}
+rural_graph
+```
+
+###
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r graphing-8, exercise = TRUE}
+
+```
+
+```{r graphing-8-hint-1, eval = FALSE}
+... +
+  labs(title    = ...,
+       subtitle = ...,
+       caption  = ...,
+       x        = ...,
+       y        = ...)
+```
+
+###
+
+Now that we've looked at American Community Survey and Decennial Census data, let's look at PUMS data.
+
+## PUMS data
+###
+
+**P**ublic **U**se **M**icrodata **S**amples, or **PUMS** data, contains advanced census data on individual people. While it only contains data for about 1% of the US, it's extremely deep and lets you do a lot of cool things.
+
+### Exercise 1
+
+While this may seem intimidating, PUMS is largely the same as the previous functions with a few small differences. 
+
+###
+
+Run the `glimpse()` function on the dataset `pums_variables` to see what each of the variables represents.
+
+```{r pums-1, exercise = TRUE}
+
+```
+
+```{r pums-1-hint-1, eval = FALSE}
+pums_variables
+```
+
+###
+
+The `pums_variables` dataset is automatically constructed by the **tidycensus** package and contains a large amount of information, with 31,759 different variables.
+
+### Exercise 2
+
+Let's try to collect the age, sex, and income data for every single person in PUMS. The `AGEP` variable is for age, the `FINCP` variable is for income, and the `SEX` variable is the sex.
+
+###
+
+We can do this by using the `get_pums()` function. Run the `get_pums()` function, setting the `variables` argument to the ones described above, `state` to your state's name, `recode` to `TRUE`, and `survey` to `"acs1"`.
+
+```{r pums-2, exercise = TRUE}
+
+```
+
+```{r pums-2-hint-1, eval = FALSE}
+get_pums(variables = c(..., ..., ...),
+         state     = ...,
+         recode    = TRUE,
+         survey    = "acs1")
+```
+
+###
+
+If you wanted to import data from the entire United States, you can set the `state` argument to `state.name`. Keep in mind that this is all 3 million participants in the PUMS program, so it takes up a large amount of space (over 100 megabytes).
+
+The `recode` argument transforms numerical ID codes into human-readable strings, with columns like `ST` holding the FIPS code while `ST_label` has the actual name of the state.
+
+### Exercise 3
+
+<!-- AG: Just doing a simple point graph because that's the easiest to create right now. -->
+
+Let's try graphing the percent of PUMS participants below the poverty line in Illinois.
+
+Here's what your graph should look like.
+
+```{r}
+il_pums <- get_pums(variables = c("PUMA", "FINCP"),
+                    state     = "Illinois",
+                    recode    = TRUE,
+                    survey    = "acs1",
+                    year      = 2019)
+
+il_pums_income <- il_pums %>%
+                    group_by(PUMA) %>%
+                    summarize(total_pop  = sum(PWGTP),
+                              pct_income = sum(PWGTP[FINCP < 12880]) / total_pop,
+                              .groups    = "drop")
+
+il_pums_income %>%
+  ggplot(aes(x = pct_income, y = fct_reorder(PUMA, pct_income))) +
+  geom_point() +
+  labs(title    = "Poverty in Illinois PUMA Zones in 2019",
+       subtitle = "PUMA zones in Will County and Kane County have the lowest poverty rates.",
+       x        = "Poverty Population Percentage",
+       y        = "PUMA Zone Code")
+```
+
+###
+
+First we need to load our data. Run `get_pums()`, setting the `variables` argument to `"PUMA"` and `"FINCP"`, the `state` to Illinois, `recode` to `TRUE`, the `survey` to `"acs1"`, and the year to 2019.
 
 
 
