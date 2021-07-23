@@ -85,10 +85,12 @@ check_current_tutorial <- function(){
     }
 
 
-    if (e != curr_exercise && nchar(trimws(e)) != 0 && tbl$type[i] == "rmd_heading"){
+    if (nchar(trimws(e)) != 0 && tbl$type[i] == "rmd_heading"){
       exercise_number <- exercise_number + 1
 
       curr_exercise <- paste0("Exercise ", exercise_number)
+
+      print(curr_exercise)
 
       new_heading_ast <- purrr::map(tbl$ast[i], change_chunk_function, "name", curr_exercise)
 
