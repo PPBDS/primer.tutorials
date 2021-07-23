@@ -68,86 +68,63 @@ submission_server <- function(input, output) {
 
   local({
 
-    output$downloadPdf <- shiny::downloadHandler(
-      filename = paste0(learnr:::read_request(session, "tutorial.tutorial_id"),
-                        "_answers.pdf"),
-      content = function(file){
-        objs <- learnr:::get_all_state_objects(session)
-        objs <- learnr:::submissions_from_state_objects(objs)
-
-        # Following code formats all the answers into a dataframe
-        # and then writes that dataframe to a PDF
-
-        # Initialize empty dataframe outside of for-loop
-
-        pdf_df <- data.frame(
-          type_ = character(),
-          id_ = character(),
-          user_input = character(),
-          page_num = integer(),
-          stringsAsFactors=FALSE
-        )
-
-        # Threshold of number of text rows in one page
-
-        page_threshold <- 20
-
-        curr_rows <- 0
-
-        curr_page <- 0
 
 
-        for (obj in objs){
+    build_html <- function(file){
 
-          # If we are at or past the threshold, we have enough data for one page
-          # so we append the current df to df_list and reset the df
-
-          obj_type <- obj$type[[1]]
-
-          obj_answer <- ""
-
-          if (obj_type == "exercise_submission"){
-            obj_answer <- stringr::str_wrap(trimws(obj$data$code[[1]]), 45)
-          } else{
-            obj_answer <-  stringr::str_wrap(trimws(obj$data$answer[[1]]), 45)
-          }
-
-          # Increment curr_rows by number of newlines
-
-          curr_rows <- curr_rows + stringr::str_count(obj_answer, "\n")
-
-          if (curr_rows >= page_threshold){
-            curr_page <- curr_page + 1
-            curr_rows <- 0
-          }
-
-          obj_id <- obj$id[[1]]
-
-          pdf_df <- rbind(pdf_df, c(type_ = obj_type, id_ = obj_id, user_input = obj_answer, page_num = curr_page))
+      question_or_exercise <- function(obj, ...){
+        options <- list(...)
+        if (obj$type[[1]] == "exercise_submission"){
+          obj$data$code[[1]]
+        }else if (obj$type[[1]] == "question_submission"){
+          obj$data$answer[[1]]
+        }else{
+          options$default
         }
-
-        colnames(pdf_df) <- c("type_", "id_", "user_input", "page_num")
-        pdf_df$page_num <- factor(pdf_df$page_num)
-
-        # Create PDF
-
-        grDevices::pdf(file, height = 11, width = 20)
-
-        # Write dataframe to corresponding page on PDF
-
-        for (num in sort(parse_integer(levels(pdf_df$page_num)))){
-
-          grid::grid.newpage()
-
-          gridExtra::grid.table(dplyr::select(dplyr::filter(pdf_df, pdf_df$page_num == toString(num)), -page_num))
-
-
-        }
-
-        # Close PDF
-
-        grDevices::dev.off()
       }
+
+      tempReport <- file.path(tempdir(), "submission-temp.Rmd")
+      file.copy("../../www/submission-temp.Rmd", tempReport, overwrite = TRUE)
+
+      objs <- learnr:::get_all_state_objects(session)
+      objs <- learnr:::submissions_from_state_objects(objs)
+
+
+      # obj$data$answer[[1]] question answer
+      # obj$data$code[[1]] "exercise answer"
+      # obj$type[[1]] "exercise_submission"
+      # obj$id[[1]] "id"
+
+
+      out <- tibble::tibble(
+        id = purrr::map_chr(objs, "id",
+                            .default = NA),
+        submission_type = purrr::map_chr(objs, "type",
+                                         .default = NA),
+        answer = purrr::map(objs, question_or_exercise,
+                            .default = NA)
+      )
+
+
+      params <- list(
+        output = out,
+        title = paste0(learnr:::read_request(session, "tutorial.tutorial_id"), " submissions")
+      )
+
+      rmarkdown::render(tempReport,
+                        output_format = "html_document",
+                        output_file = file,
+                        params = params,
+                        envir = new.env(parent = globalenv())
+                        )
+
+
+  }
+
+    output$downloadHtml <- shiny::downloadHandler(
+      filename = paste0(learnr:::read_request(session, "tutorial.tutorial_id"),
+                        "_answers.html"),
+      content = build_html
     )
 
     output$downloadRds <- shiny::downloadHandler(
@@ -248,7 +225,7 @@ submission_ui <- shiny::div(
     shiny::mainPanel(
       shiny::div(id = "form",
                  shiny::downloadButton(outputId = "downloadRds", label = "Download RDS"),
-                 shiny::downloadButton(outputId = "downloadPdf", label = "Download PDF"))
+                 shiny::downloadButton(outputId = "downloadHtml", label = "Download HTML"))
     )
   )
 )

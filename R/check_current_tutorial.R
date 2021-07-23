@@ -49,6 +49,8 @@ check_current_tutorial <- function(){
 
   curr_exercise <- ""
 
+  curr_section <- ""
+
   has_exercise <- FALSE
 
   # The idea of this loop is to go through
@@ -76,10 +78,21 @@ check_current_tutorial <- function(){
     # If it is, then the hint and exercise tracker is reset
     # and the exercise number is updated.
 
-    if (e != curr_exercise && nchar(trimws(e)) != 0){
-      curr_exercise <- e
+    if (l != curr_section && nchar(trimws(l)) != 0 && tbl$type[i] == "rmd_heading"){
+      curr_section <- l
 
-      exercise_number <- readr::parse_number(gsub(pattern = "[^0-9]", replacement = "", trimws(e)) )
+      exercise_number <- 0
+    }
+
+
+    if (e != curr_exercise && nchar(trimws(e)) != 0 && tbl$type[i] == "rmd_heading"){
+      exercise_number <- exercise_number + 1
+
+      curr_exercise <- paste0("Exercise ", exercise_number)
+
+      new_heading_ast <- purrr::map(tbl$ast[i], change_chunk_function, "name", curr_exercise)
+
+      tbl$ast[i] <- new_heading_ast
 
       hint_count <- 0
 
@@ -107,7 +120,7 @@ check_current_tutorial <- function(){
 
     possible_id_removed_prev <- gsub("\\{#(.*)\\}", "", l)
 
-    possible_id_removed <- gsub("[^a-zA-Z ]", "", possible_id_removed_prev)
+    possible_id_removed <- gsub("[^a-zA-Z0-9 ]", "", possible_id_removed_prev)
 
     lowercase_id <- tolower(trimws(possible_id_removed))
 
@@ -151,6 +164,18 @@ check_current_tutorial <- function(){
           tbl$ast[i] <- new_ast
         }
       }
+    }
+
+    # If chunk label ends with "-setup",
+    # it is recognized as a setup code chunk,
+    # so the name is exercise name and -setup
+    # Ex: ex-1-setup for ex-1
+
+    if (grepl("-setup$", tbl$label[i])){
+      new_label <- paste0(section_id, "-", exercise_number, "-setup")
+      new_ast <- purrr::map(tbl$ast[i], change_chunk_function, "name", new_label)
+      tbl$ast[i] <- new_ast
+      next
     }
 
     # If this element is not a hint and the current level 3 heading
