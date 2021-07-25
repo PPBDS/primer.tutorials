@@ -18,6 +18,12 @@ description: Chapter 6 tutorial
 
 <!-- Should we do something with stan_glm? Probably. -->
 
+<!-- RS: Add graph of sampling distributions from shovels of size 25, 50, and 100 but using re factored code!! -->
+
+<!-- RS: Add to 100 shovels graph to overlay theoretical standard deviation using equations. (Call this section standard deviation). -->
+
+<!-- RS: Create box and whisker confidence intervals to demonstrate the connection between confidence intervals and standard error. (Call this section standard error). -->
+
 
 ```{r setup, include = FALSE}
 library(learnr)
@@ -33,22 +39,14 @@ options(tutorial.exercise.timelimit = 60,
 set.seed(10)
 urn <- tibble(color = c(rep("red", 400), rep("white", 600))) %>%
   sample_frac() %>% 
-  mutate(ID = 1:1000) %>% 
-  select(ID, color)
+  mutate(bead_ID = 1:1000) 
 
-virtual_samples <- tibble(ID = 1:1000) %>% 
-  mutate(shovel = map(ID, ~ sample_n(urn, size = 50))) %>% 
+virtual_samples <- tibble(trial_ID = 1:1000) %>% 
+  mutate(shovel = map(trial_ID, ~ sample_n(urn, size = 50))) %>% 
   mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) %>% 
   mutate(numb_beads = map_int(shovel, ~ length(.$color))) %>% 
   mutate(prop_red = numb_red / numb_beads)
 
-make_prop_red <- function(x, shovel_size, reps){
-  tibble(ID = 1:reps) %>% 
-    mutate(shovel = map(ID, ~ sample_n(x, size = shovel_size))) %>% 
-    mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) %>% 
-    mutate(numb_beads = map_int(shovel, ~ length(.$color))) %>% 
-    mutate(prop_red = numb_red / numb_beads)
-}
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -64,7 +62,7 @@ make_prop_red <- function(x, shovel_size, reps){
 Let's create the following plot that shows sampling variation for 1000 samples from an urn that contains red and white beads.
 
 ```{r}
-virt_p <- virtual_samples %>% 
+virtual_samples %>% 
   ggplot(aes(x = prop_red)) +
     geom_histogram(binwidth = 0.01, 
                    boundary = 0.4, 
@@ -72,167 +70,181 @@ virt_p <- virtual_samples %>%
     labs(x = expression(hat(p)), 
          y = "Count",
          title = "Distribution of 1,000 proportions red") 
-
-virt_p
 ```
 
 ### Exercise 1
 
 Type `urn` below to inspect the urn we will be using in this section.
 
-```{r virtual-sampling-1, exercise = TRUE}
+```{r virtual_sampling-1, exercise = TRUE}
 set.seed(10)
 urn <- tibble(color = c(rep("red", 400), rep("white", 600))) %>%
   sample_frac() %>% 
-  mutate(ID = 1:1000) %>% 
-  select(ID, color)
+  mutate(bead_ID = 1:1000) 
 ```
 
 ### Exercise 2
 
-To simulate the process of real-world sampling, let’s take a sample of 50 beads from our virtual urn. To do so, start a pipe by creating a `tibble()` that has one variable `ID` that takes on the values 1 to 1000.
+Good. Recall that the `rep()` function will repeat the first argument a number of times specified by the second argument. We then combine our 400 red beads and 600 white beads using `c()`, and finally "mix" the urn using `sample_frac()`. 
 
-```{r virtual-sampling-2, exercise = TRUE}
+To simulate the process of real-world sampling, let’s take a sample of 50 beads from our virtual urn. To do so, create a `tibble()` that has one variable `trial_ID` that takes on the values 1 to 1000.
+
+```{r virtual_sampling-2, exercise = TRUE}
 
 ```
 
-```{r virtual-sampling-2-hint-1, eval = FALSE}
-tibble(ID = ...)
+```{r virtual_sampling-2-hint-1, eval = FALSE}
+tibble(trial_ID = ...)
+```
+
+```{r virtual_sampling-2-hint-2, eval = FALSE}
+Use the : operator to create a range of integers.
 ```
 
 ### Exercise 3
 
-Great. Now pipe your results to the function `mutate()` to create the variable `shovel`, which is set to the function `map()`. The first argument to `map()` should be `ID`. The second argument should use `sample_n()` to take a sample `size` 50 beads from `urn`.
+Great. Now pipe your results to the function `mutate()` to create the variable `shovel`, which is set to the function `map()`. The first argument to `map()` should be `trial_ID`. The second argument should use `slice_sample()`. Within `slice_sample()`, the first argument should be `urn` (the data we want to sample from), and then set `n` equal to our sample size (we want a sample size of 50). 
 
-```{r virtual-sampling-3, exercise = TRUE}
+```{r virtual_sampling-3, exercise = TRUE}
 
 ```
 
-```{r virtual-sampling-3-hint-1, eval = FALSE}
-tibble(ID = 1:1000) %>% 
-  mutate(shovel = map(..., ~ sample_n(urn, size = ...)))
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r virtual_sampling-3-hint-1, eval = FALSE}
+... %>% 
+  mutate(shovel = map(..., ~ ...))
+```
+
+```{r virtual_sampling-3-hint-2, eval = FALSE}
+... %>% 
+  mutate(shovel = map(..., ~slice_sample(urn, n = ...)))
 ```
 
 ### Exercise 4
 
 Continue your pipe with `mutate()` to create the variable `numb_red`, which will tells us the number of red beads present. Set `numb_red` to the function `map_int()`. The first argument to `map_int()` should be `shovel`. The second argument should take the `sum()` of where the column `color` of `shovel` is equal to red.
 
-```{r virtual-sampling-4, exercise = TRUE}
+```{r virtual_sampling-4, exercise = TRUE}
 
 ```
 
-```{r virtual-sampling-4-hint-1, eval = FALSE}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r virtual_sampling-4-hint-1, eval = FALSE}
+... %>% 
+  mutate(... = map_int(..., ~...))
+```
+
+```{r virtual_sampling-4-hint-2, eval = FALSE}
 ... %>% 
   mutate(... = map_int(..., ~ sum(.$color == "red")))
 ```
 
 ### Exercise 5
 
-Great. Now use `mutate()` to create the variable `numb_beads`, which is set to the function `map_int()`. The first argument to `map_int()` should be `shovel`. The second argument should take the `length()` of the column `color` of `shovel`.
- 
+Use `mutate()` one last time to create the variable `prop_red`, which is our estimate of the proportion of red beads in the urn. Set `prop_red` to `numb_red` divided by the sample size (in this exercise we are using a set sample size of 50).
 
-```{r virtual-sampling-5, exercise = TRUE}
-
-```
-
-```{r virtual-sampling-5-hint-1, eval = FALSE}
-... %>% 
-  mutate(numb_beads = map_int(..., ~ length(...)))
-```
-
-```{r virtual-sampling-5-hint-2, eval = FALSE}
-... %>% 
-  mutate(numb_beads = map_int(..., ~ length(.$color)))
-```
-
-### Exercise 6
-
-Use `mutate()` one last time to create the variable `prop_red`, which is our estimate of the proportion of red beads in the urn. Set `prop_red` to `numb_red` divided by `numb_beads`.
-
-```{r virtual-sampling-6, exercise = TRUE}
+```{r virtual_sampling-5, exercise = TRUE}
 
 ```
 
-```{r virtual-sampling-6-hint-1, eval = FALSE}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r virtual_sampling-5-hint-1, eval = FALSE}
 ... %>% 
    mutate(prop_red = ... / ...)
 ```
 
-### Exercise 7
+### Exercise 6
 
-Copy/paste your code from above. Assign your code to an object named `virtual_samples`.
+Assign your code from above to an object named `virtual_samples`.
 
-```{r virtual-sampling-7, exercise = TRUE}
+```{r virtual_sampling-6, exercise = TRUE}
 
 ```
 
-```{r virtual-sampling-7-hint-1, eval = FALSE}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r virtual_sampling-6-hint-1, eval = FALSE}
 Use the assignment operator <-  to do so.
 ```
 
-### Exercise 8
+### Exercise 7
 
 Awesome. Now start a pipe with `virtual_samples`. Use `ggplot()`to map `prop_red` to the x-axis. Also, add the layer `geom_histogram()` to create a histogram of our data.
 
-```{r virtual-sampling-8, exercise = TRUE}
+```{r virtual_sampling-7, exercise = TRUE}
 
 ```
 
-```{r virtual-sampling-8-hint-1, eval = FALSE}
+```{r virtual_sampling-7-hint-1, eval = FALSE}
 virtual_samples %>% 
   ggplot(aes(...)) + 
   geom_histogram()
 ```
 
-### Exercise 9
+### Exercise 8
 
 Within `geom_histrogram()` set `binwidth` to .01, `boundary` to .4, and `color` to "white".
 
-```{r virtual-sampling-9, exercise = TRUE}
+```{r virtual_sampling-8, exercise = TRUE}
 
 ```
 
-```{r virtual-sampling-9-hint-1, eval = FALSE}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r virtual_sampling-8-hint-1, eval = FALSE}
 ... +
-  geom_histrogram(..., ..., ...)
+  geom_histrogram(binwidth = ..., boundary = ..., color = ...)
 ```
 
-### Exercise 10
+### Exercise 9
 
 To finish, use `labs()` to give your graph the appropriate title and axis labels. See **hint** for guidance to create the symbol $\hat{p}$.
 
 
-```{r virtual-sampling-10, exercise = TRUE}
+```{r virtual_sampling-9, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 Reminder: This is what your plot should look like. 
 
 ```{r}
-virt_p
+virtual_samples %>% 
+  ggplot(aes(x = prop_red)) +
+    geom_histogram(binwidth = 0.01, 
+                   boundary = 0.4, 
+                   color = "white") +
+    labs(x = expression(hat(p)), 
+         y = "Count",
+         title = "Distribution of 1,000 proportions red") 
 ```
 
-```{r virtual-sampling-10-hint-1, eval = FALSE}
+```{r virtual_sampling-9-hint-1, eval = FALSE}
 Within labs(), set x to expression(hat(p))
 ```
 
-## Different shovel sizes
+<!-- RS: Later on add exercises to build the graph that compares shovel size 25, 50, and 100. In a few days I will edit the primer to remove the bindrows() nonsense and create the graph using expand_grid(). -->
+
+## SE of different shovel sizes
 
 ### 
 
 Let's create the following plot that displays different standard deviations of red bead proportions for 100 different shovel sizes.
 
 ```{r}
-shovels_100 <- tibble(shovel_size = 1:100) %>%
-  mutate(prop_red_results = map(shovel_size,
-                                ~ make_prop_red(x = urn, 
-                                           shovel_size = .x, 
-                                           reps = 100))) %>% 
-  mutate(prop_red_sd = map_dbl(prop_red_results, 
-                               ~ pull(., prop_red) %>% sd()))
+shovels_100 <- expand_grid(trial_ID = 1:1000, shovel_size = 1:100) %>% 
+  mutate(shovel = map(shovel_size, ~ slice_sample(urn, n = .))) %>% 
+  mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) %>% 
+  mutate(prop_red = numb_red / shovel_size) %>% 
+  group_by(shovel_size) %>% 
+  summarize(st_dev_p_hat = sd(prop_red))
 
 shovel_p <- shovels_100 %>%
- ggplot(aes(x = shovel_size, y = prop_red_sd)) +
+ ggplot(aes(x = shovel_size, y = st_dev_p_hat)) +
  geom_point() +
  labs(title = "Sampling Variation",
       subtitle = "Larger samples have less variation",
@@ -242,171 +254,148 @@ shovel_p <- shovels_100 %>%
 shovel_p
 ```
 
+
 ### Exercise 1
 
-Before we begin, write two sentences explaining standard error.
-<!-- The code below is showing up as code within a code chunk. Not sure how to change it so that it shows up as a written response submittable question -->
-```{r different-shovel-siz-1, exercise = TRUE}
-question_text(NULL,
-    answer(NULL, correct = TRUE),
-    allow_retry = TRUE,
-    try_again_button = "Edit Answer",
-    incorrect = NULL,
-    options = list(nrows = 3))
+First, let's use `expand_grid()` to create the foundation of our tibble. Our first column in `expand_grid()` should be called `trial_ID`, and it should be the range of integers between 1 and 1,000. The second column should be called `shovel_size`, and should be the range of integers between 1 and 100.
+
+```{r different_shovel_siz-1, exercise = TRUE}
+
+```
+
+```{r different_shovel_siz-1-hint-1, eval = FALSE}
+expand_grid(trial_ID = ..., shovel_size = ...)
+```
+
+```{r different_shovel_siz-1-hint-2, eval = FALSE}
+Use the : operator to create a range of integers. 
 ```
 
 ### Exercise 2
 
-Let's create a function that calculates the proportion of red beads. We start with hard code. Recall our code for  `virtual_samples` in the previous section. Place the code within { } of `function()`. Name the function `make_prop_red()`.
+Use the pipe operator with your code from above. Use `mutate()`, creating a new column called `shovel`. Set `shovel` equal to a `map()` function, passing in `shovel_size` as the first argument, and the `slice_sample()` function as the second argument. Within `slice_sample()`, the first argument should be `urn` (the data we want to sample from), and then set `n` equal to `.` (we want to pass in the `shovel_size` using `map()`).
 
-```{r different-shovel-siz-2, exercise = TRUE}
-tibble(ID = 1:1000) %>% 
-  mutate(shovel = map(ID, ~ sample_n(urn, size = 50))) %>% 
-  mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) %>% 
-  mutate(numb_beads = map_int(shovel, ~ length(.$color))) %>% 
-  mutate(prop_red = numb_red / numb_beads)
+```{r different_shovel_siz-2, exercise = TRUE}
+
 ```
 
-```{r different-shovel-siz-2-hint-1, eval = FALSE}
-make_prop_red <- function(){
-  
-  ...
-  
-}
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
+```{r different_shovel_siz-2-hint-1, eval = FALSE}
+... %>%
+  mutate(shovel = map(..., ~ ... ))
+```
+
+```{r different_shovel_siz-2-hint-2, eval = FALSE}
+... %>%
+  mutate(shovel = map(... , ~ slice_sample(..., n = ...)))
 ```
 
 ### Exercise 3
 
-Copy/paste your code from above. Add the parameter `reps` within `function()`. Also replace the value 1000 within `tibble()` with `reps`.
+Continue your pipe with `mutate()` to create the variable `numb_red`, which will tells us the number of red beads present. Set `numb_red` to the function `map_int()`. The first argument to `map_int()` should be `shovel`. The second argument should take the `sum()` of where the column `color` of `shovel` is equal to red.
 
-```{r different-shovel-siz-3, exercise = TRUE}
+```{r different_shovel_siz-3, exercise = TRUE}
 
 ```
 
-```{r different-shovel-siz-3-hint-1, eval = FALSE}
-make_prop_red <- function(...){
-  tibble(ID = 1:reps) %>% 
-    ...
-}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different_shovel_siz-3-hint-1, eval = FALSE}
+... %>% 
+  mutate(... = map_int(..., ~ ...))
 ```
+
+```{r different_shovel_siz-3-hint-2, eval = FALSE}
+... %>% 
+  mutate(... = map_int(..., ~ sum(.$color == "red")))
+```
+
 
 ### Exercise 4
 
-Copy/paste your code from above. Add the parameter `x` within `function()`. Also replace the argument `urn` with `x` within `sample_n()`.
+Continue your pipe from above, using `mutate()` to create one final column called `prop_red` which represents the proportion of red beads in a sample. Set `prop_red` to `numb_red` divided by the `shovel_size` column. 
 
-```{r different-shovel-siz-4, exercise = TRUE}
+```{r different_shovel_siz-4, exercise = TRUE}
 
 ```
 
-```{r different-shovel-siz-4-hint-1, eval = FALSE}
-make_prop_red <- function(reps, ...){
-  tibble(ID = 1:reps) %>% 
-  mutate(shovel = map(ID, ~ sample_n(x, size = 50))) %>% 
-    ...
-}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different_shovel_siz-4-hint-1, eval = FALSE}
+... %>%
+  mutate(prop_red = ... / ...)
 ```
 
 ### Exercise 5
 
-Copy/paste your code from above. Add the parameter `shovel_size` within `function()`. Also set `size` to `shovel_size` within `sample_n()`.
+Great. Continue your pipe and use the `group_by()` function to group our tibble by `shovel_size`. 
 
-```{r different-shovel-siz-5, exercise = TRUE}
+```{r different_shovel_siz-5, exercise = TRUE}
 
 ```
 
-```{r different-shovel-siz-5-hint-1, eval = FALSE}
-make_prop_red <- function(reps, x, ...){
-  tibble(ID = 1:reps) %>% 
-  mutate(shovel = map(ID, ~ sample_n(x, size = ...))) %>% 
-    ...
-}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different_shovel_siz-5-hint-1, eval = FALSE}
+... %>%
+  group_by(...)
 ```
 
 ### Exercise 6
 
-Great. Let's now create a `tibble()` with one variable `shovel_size`, which takes on the values 1 through 100. 
+Continue your pipe one last time, and use `summarize()` to create a new column named `st_dev_p_hat` which is equal to the standard deviation of `prop_red`. (`sd()` calculates standard deviation).
+ 
 
-```{r different-shovel-siz-6, exercise = TRUE}
+```{r different_shovel_siz-6, exercise = TRUE}
 
 ```
 
-```{r different-shovel-siz-6-hint-1, eval = FALSE}
-tibble(shovel_size = ...)
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different_shovel_siz-6-hint-1, eval = FALSE}
+... %>% 
+  summarize(st_dev_p_hat = sd(...))
 ```
 
 ### Exercise 7
 
-Pipe your results to `mutate()` to create the variable `prop_red_results`, which is set to the function `map()`.The first argument to `map()` should be `shovel_size`. The second argument should be our function `make_prop_red()` where `x` is set to `urn`, `shovel_size` set to `.x`, and `reps` set to 100.
- 
+Assign your code from above to an object named `shovels_100`.
 
-```{r different-shovel-siz-7, exercise = TRUE}
+```{r different_shovel_siz-7, exercise = TRUE}
 
 ```
 
-```{r different-shovel-siz-7-hint-1, eval = FALSE}
-... %>% 
-  mutate(prop_red_results = map(...,
-                                ~ make_prop_red(..., ..., ...)))
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different_shovel_siz-7-hint-1, eval = FALSE}
+Use the assignment operator <-  to do so.
 ```
 
 ### Exercise 8
 
-Use `mutate()` once more to create the variable `prop_red_sd`, which is set to the function `map_dbl()`. The first argument to `map_dbl()` should be `prop_red_results`. The second argument should be `pull()`. The first argument to `pull()` should be `.`. The second argument should be `prop_red`.
+Start a new pipe from `shovels_100`. Use `ggplot()`to map `shovel_size` to the x-axis and `st_dev_p_hat` to the y axis. Also, add the layer `geom_point()` to create a scatterplot.
 
-```{r different-shovel-siz-8, exercise = TRUE}
+```{r different_shovel_siz-8, exercise = TRUE}
 
 ```
 
-```{r different-shovel-siz-8-hint-1, eval = FALSE}
-... %>% 
-mutate(... = map_dbl(..., 
-                      ~ pull(., prop_red))
+```{r different_shovel_siz-8-hint-1, eval = FALSE}
+shovels_100 %>% 
+  ggplot(aes(x = ..., y = ...)) + 
+  geom_point()
 ```
 
 ### Exercise 9
 
-Let's find the standard deviation of proportions red for our shovel sizes. Pipe the results of `pull()` to the function `sd()`. **Note**: You are still inside `map_dbl()`.
-
-```{r different-shovel-siz-9, exercise = TRUE}
-
-```
-
-```{r different-shovel-siz-9-hint-1, eval = FALSE}
-mutate(prop_red_sd = map_dbl(prop_red_results, 
-                               ~ pull(., prop_red) %>% ...)
-```
-
-### Exercise 11
-
-Copy/paste your code from above. Assign your code to an object named `shovels_100`. 
-
-```{r different-shovel-siz-11, exercise = TRUE}
-
-```
-
-### Exercise 12
-
-Start a pipe with `shovels_100`. Use `ggplot()` to map `shovel_size` to the x-axis and `prop_red_sd` to the y-axis. Also add the layer `geom_point()`.
-
-```{r different-shovel-siz-12, exercise = TRUE}
-
-```
-
-```{r different-shovel-siz-12-hint-1, eval = FALSE}
-... %>% 
-  ggplot(aes(x = ..., y = ...)) +
- geom_point() 
-```
-
-### Exercise 13
-
 Now use `labs()` to label the x-axis "Shovel size" and the y-axis 
 "Standard deviation of the proportion red". You should also provide a title and subtitle.
 
-```{r different-shovel-siz-13, exercise = TRUE}
+```{r different_shovel_siz-9, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 Reminder: This is what your plot should look like.
 
@@ -414,7 +403,7 @@ Reminder: This is what your plot should look like.
 shovel_p
 ```
 
-```{r different-shovel-siz-13-hint-1, eval = FALSE}
+```{r different-shovel-siz-9-hint-1, eval = FALSE}
 ... +
    labs(title = "Sampling Variation",
       subtitle = "Larger samples have less variation",
@@ -422,178 +411,7 @@ shovel_p
       y = "Standard deviation of the proportion red")
 ```
 
-## Posterior Distribution
 
-### 
-
-Let's create the following plot showing the posterior probability distribution of the proportion, $p$, of red beads in the urn.
-
-```{r}
-joint_dist <- 
-  tibble(red_in_urn = seq(from = 0, to = 1000, by = 1)) %>% 
-    mutate(p = red_in_urn / nrow(urn)) %>% 
-    mutate(red_in_shovel = map(p, ~ rbinom(n = 100, 
-                                               size = 50, 
-                                               prob = .))) %>%
-    unnest(red_in_shovel) 
-
-posterior_p <- joint_dist %>% 
-  filter(red_in_shovel == 17) %>% 
-  ggplot(aes(x = p)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 50) + 
-    labs(title = "Posterior Probability Distribution",
-         subtitle = "Proportion of red beads in urn is centered around 0.34",
-         x = "Proportion p of Red Beads in Urn",
-         y = "Probability") + 
-    scale_x_continuous(labels = scales::number_format()) +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
-
-posterior_p
-```
-
-### Exercise 1
-
-Create a `tibble()` with one variable `red_in_urn` that is set to the function `seq()`. Within `seq()` set `from` to 0, `to` to 1000, and `by` to 1.
-
-```{r posterior-distributi-1, exercise = TRUE}
-
-```
-
-```{r posterior-distributi-1-hint-1, eval = FALSE}
-tibble(red_in_urn = seq(...,...,...))
-```
-
-### Exercise 2
-
-Great. Now pipe your results to the function `mutate()` to create the variable `p`, which is set to `red_in_urn` divided by the `nrow(urn)`.
-
-```{r posterior-distributi-2, exercise = TRUE}
-
-```
-
-```{r posterior-distributi-2-hint-1, eval = FALSE}
-... %>% 
-    mutate(p = ... / ...) 
-```
-
-### Exercise 3
-
-Great. Now pipe your results to the function `mutate()` to create the variable `red_in_shovel`, which is set to the function `map()`. The first argument to `map()` should be `p`. The second argument should use `rbinom()`. Within `rbinom()` set `n` to 100, `size` to 50, and `prob` to `.`
-
-```{r posterior-distributi-3, exercise = TRUE}
-
-```
-
-```{r posterior-distributi-3-hint-1, eval = FALSE}
-... %>% 
-    mutate(red_in_shovel = map(..., ~ rbinom(..., 
-                                             ..., 
-                                              ...)))
-```
-
-### Exercise 4
-
-Continue your pipe with the function `unnest()` with the argument `red_in_shovel`. **Note**: unnesting flattens list columns back into regular columns.
-
-```{r posterior-distributi-4, exercise = TRUE}
-
-```
-
-```{r posterior-distributi-4-hint-1, eval = FALSE}
-... %>%
-    unnest(...) 
-```
-
-### Exercise 5
-
-Copy/paste your code from above. Assign your code to an object named `joint_dist`.
-
-```{r posterior-distributi-5, exercise = TRUE}
-
-```
-
-### Exercise 6
-
-Let's plot our joint distribution we just created. Start a pipe with `joint_dist` and `filter()` where `red_in_shovel` is equal to 17.
-
-```{r posterior-distributi-6, exercise = TRUE}
-
-```
-
-```{r posterior-distributi-6-hint-1, eval = FALSE}
-...%>% 
-  filter(red_in_shovel == ...)
-```
-
-### Exercise 7
-
-Continue your pipe with `ggplot()`to map `p` to the x-axis. Also, add the layer `geom_histogram()`.
-
-```{r posterior-distributi-7, exercise = TRUE}
-
-```
-
-```{r posterior-distributi-7-hint-1, eval = FALSE}
-...%>% 
-  ggplot(aes(...)) +
-    geom_histogram()
-```
-
-### Exercise 8
-
-Within `geom_histogram()`, use `after_stat()` . Inside `after_stat()`, use `aes()` with the argument `y = count/sum(count)` to convert the y-axis to percent values.
-
-```{r posterior-distributi-8, exercise = TRUE}
-
-```
-
-```{r posterior-distributi-8-hint-1, eval = FALSE}
-...%>% 
-    geom_histogram(aes(y = after_stat(...))
-```
-
-### Exercise 9
-
-Add the layer `scale_x_continuous()` with the argument `labels` set to `scales::number_format()`.
-
-```{r posterior-distributi-9, exercise = TRUE}
-
-```
-
-```{r posterior-distributi-9-hint-1, eval = FALSE}
-...%>% 
-   scale_x_continuous(labels = ...)
-```
-
-### Exercise 10
-
-Great. Now add the layer `scale_y_continuous()` with the argument `labels` set to `scales::percent_format()`.
-
-```{r posterior-distributi-10, exercise = TRUE}
-
-```
-
-```{r posterior-distributi-10-hint-1, eval = FALSE}
-...%>% 
-   scale_y_continuous(labels = ...)
-```
-
-### Exercise 11
-
-To finish, use `labs()` to give your graph the appropriate title, subtitle, and axis labels. Also add the layer `theme_classic()`.
-
-
-```{r posterior-distributi-11, exercise = TRUE}
-
-```
-
-Reminder: This is what your plot should look like. 
-
-```{r}
-posterior_p
-```
 
 ```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
 ```

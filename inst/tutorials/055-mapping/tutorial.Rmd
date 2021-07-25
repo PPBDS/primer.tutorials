@@ -1,0 +1,1079 @@
+---
+title: Mapping
+tutorial:
+  id: mapping
+output: 
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+runtime: shiny_prerendered
+description: Mapping data in R
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(primer.tutorials)
+library(tidyverse)
+library(primer.data)
+library(tidycensus)
+library(ggthemes)
+knitr::opts_chunk$set(echo = FALSE)
+options(tutorial.exercise.timelimit = 60, 
+        tutorial.storage = "local") 
+
+# This is all of the data that the Census Key is needed for.
+
+# rural <- get_decennial(geography = "state",
+#                        variables = c("P001001", "P002005"),
+#                        year = 2010,
+#                        output = "wide",
+#                        geometry = TRUE) 
+# write_rds(rural, "data/05-mapping-rural.rds")
+
+rural <- read_rds("data/05-mapping-rural.rds")
+
+# rural_shifted <- get_decennial(geography = "state",
+#                                variables = c("P001001", "P002005"),
+#                                year = 2010,
+#                                output = "wide",
+#                                geometry = TRUE)
+# rural_shifted <- tigris::shift_geometry(rural_shifted)
+# write_rds(rural_shifted, "data/05-mapping-rural-shifted.rds")
+
+rural_shifted <- read_rds("data/05-mapping-rural-shifted.rds")
+
+# racevars <- c(White = "B02001_002", 
+#               Black = "B02001_003", 
+#               Asian = "B02001_005",
+#               Hispanic = "B03003_003")
+# county_data <- get_acs(geography = "tract",
+#                        variables = racevars, 
+#                        year = 2018,
+#                        state = "TX",
+#                        county = "Harris County",
+#                        geometry = TRUE,
+#                        summary_var = "B02001_001")
+# write_rds(county_data, "data/05-mapping-county-data.rds")
+
+county_data <- read_rds("data/05-mapping-county-data.rds")
+```
+
+```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
+```
+
+```{r info-section, child = "../../child_documents/info_section.Rmd"}
+```
+
+<!-- AG: General note, I do not do a good job of describing when they should add new code chunks. It's not the best. -->
+
+<!-- * Use the new tigris::shift_geometry() in map chapter to make Alaska, Hawaii easier to include in US maps. Example: https://gist.github.com/walkerke/6025153da606ee8711a77f689196299e. -->
+
+<!-- Perhaps of interest: https://milospopovic.net/how-to-make-choropleth-map-in-r/ -->
+
+<!-- Also: https://github.com/r-spatial/mapview -->
+
+## Setup project
+###
+
+In this tutorial, we're going to be creating maps based off of US Census Bureau data. We'll be utilizing commands from the "Downloading Census Data" tutorial in order to do this, so please do that tutorial before starting on this one.
+
+### Exercise 1
+
+Let's start a new R project so that we can create and eventually publish our maps.
+
+###
+
+<!-- AG: Don't know what the syntax is for repo naming in the Primer, I think this is it. -->
+
+Create a new GitHub repo titled `mapping-in-r` and link it to your RStudio like you have done so far. Remember to update the `.gitignore` file.
+
+###
+
+<!-- AG: Should we use terminal or console commands for this tutorial? I'm going with console for now since I'm way too used it after the RStudio and Friends tutorial. -->
+
+Run `list.files()` in the Console to list all of the files. Copy and paste the output into the space below.
+
+```{r setup-project-1}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 2))
+```
+
+###
+
+We'll be working in this project for the rest of this tutorial.
+
+### Exercise 2
+
+Create a new R Markdown file titled `index.Rmd` and delete all of the things except for the setup chunk and the YAML header.
+
+###
+
+Run `list.files()` in the Console to list all of the files. Copy and paste the output into the space below.
+
+```{r setup-project-2}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 2))
+```
+
+###
+
+This should include the R Markdown file you created.
+
+### Exercise 3
+
+In this tutorial, we'll be using the **tidyverse**, **tidycensus**, **ggthemes**, and **tigris** packages. Load these packages in the setup chunk of your R Markdown file.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r setup-project-4}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+You may have to install some of these packages as we progress.
+
+## Mapping basics
+###
+
+You've likely heard of longitude and latitude, the global coordinate system that lets us pinpoint 2D locations on a 3D surface. This is also known as a **c**oordinate **r**eference **s**ystem, or **CRS**. CRSs use a 3D model of the Earth to define locations on the surface of a grid, with longitude determining the east/west distance and the latitude determining the north/south distance. 
+
+###
+
+CRS are used to define spatial data that we can then map. 
+
+###
+
+Spatial data with a defined CRS can either be vector or raster data. Vector data is based on points that can be connected to form lines and polygons. It is located within a coordinate reference system and is similar to what a roadmap would look like.
+
+###
+
+Raster data, however, are values within a grid system, such as satellite imagery. In this Primer, we will only be dealing with vector data, which is the format in which we get data from the **tidycensus** package.
+
+###
+
+In order to parse this information, we will be using the **sf** package to process vector data. The **sf** package stores data in data frames, allowing us to use the **dbplyr** methods that we're familiar with.
+
+###
+
+Let's try to recreate the following map:
+
+```{r, message = FALSE, results = 'hide'}
+# Including this in the tutorial instead of in the setup chunk because they
+# aren't supposed to be able to access it.
+
+basics_map <- rural %>%
+                filter(! NAME %in% c("Alaska", "Hawaii", "Puerto Rico")) %>%
+                ggplot(aes(fill = 100 * P002005 / P001001)) +
+                  geom_sf() + 
+                  scale_fill_viridis_c(option = "plasma",
+                                       direction = -1) +
+                  labs(title = "Rural geography of the United States",
+                       caption = "Source: Census 2010",
+                       fill = "Percent Rural") +
+                  theme_void()
+basics_map
+```
+
+### Exercise 1
+
+While R can handle a large amount of file formats for spatial data, we'll be focusing on shape files. While we refer to them as a "shapefile", it's actually composed of 3 basic files: `.shp` files for the shape and vertices, `.shx` files for indexes and offsets, and `.dbf` files to connect the geometry and the data. Luckily, this is already dealt with by **tidycensus** when it imports the Census shapefile.
+
+###
+
+In order to start mapping in R, we need to get a little more data from the **tidycensus** package. In particular, we need to set geometry = TRUE.
+
+###
+
+<!-- AG: Should we walk them through finding the variables again? -->
+
+Add a new code chunk into your R Markdown file and add the `get_decennial()` function into it. Set the argument `geography` to `"state"`, `variables` to `"P001001"` and `"P002005"`, `year` to `2010`, `output` to `"wide"`, and `geometry` to `TRUE`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-1}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    options = list(nrows = 2))
+```
+
+###
+
+<!-- AG: Can we link tutorials together like we do with Primer chapters? -->
+
+We covered this command in the Downloading Census Data tutorial. Please complete that tutorial first before starting on this one in order to avoid any confusion.
+
+### Exercise 2
+
+<!-- AG: I'm just condensing the Primer info here and putting it in the tutorial. -->
+
+If you run the code described in Exercise 1, you can see how there are a series of 5 columns: `GEOID`, `NAME`, `P001001`, `P002005`, and `geometry`.
+
+This is different from the tibbles that we created before because there is now a strange "multipolygon" column called `geometry` and it's actually no longer a tibble. The "multipolygon" column contains the information needed to create maps and such, but this data prevents it from being a tibble.
+
+In fact, if you run `class(rural)`, we can see that it's an `sf`, a special type of tibble that has plotting information. **Never use `as_tibble()` on an `sf` object unless you want to lose all of the plotting information.**
+
+###
+
+Let's create a map based on this `rural` data. This is similar to what we did before with `ggplot()`, but this time we use the function `geom_sf()`. Create a pipe using `rural` that contains `ggplot()` and `geom_sf()` like the previous plots.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-2}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+<!-- AG: Should I include examples for methods like this where we're trying to walk through what changes when we change the different arguments? -->
+
+You may notice that the plot is very stretched out with Alaska, Hawaii, and Puerto Rico causing the map to be zoomed out. Let's try to fix that.
+
+### Exercise 3
+
+Let's first try taking the nuclear option: removing Alaska, Hawaii, and Puerto Rico. By focusing on the continental US, we can zoom in on the states and focus on the areas that we actually have data for.
+
+###
+
+Create a new map with the same code as last time, but this time add a `filter()` layer before the `ggplot()`. Within the filter, you should check if `"Alaska"`, `"Hawaii"`, `"Puerto Rico"` are in NAME and then filter them out.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-3}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+You should now only see the continental United States, but there's still no data actually contained in the map.
+
+### Exercise 4
+
+Let's add the ratio of the different populations into the map.
+
+###
+
+Within the `ggplot()`, map the `fill` argument to the ratio of `P002005` and `P001001`. 
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-4}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+When you run this code, you should see how the different states have different shadings, with more urban states having a darker color.
+
+### Exercise 5
+
+This graph is passable, but it has a few problems:  
+- The fill colors are hard to distinguish  
+- The darker colors map to a lower amount, which doesn't make sense  
+- The background is grey  
+- The legend and labels still don't exist.  
+
+###
+
+Let's address these problems one at a time, starting with differentiating between the fill colors.
+
+###
+
+We can do this by changing the ratios into percents, creating a wider difference between the two ends of the scale. 
+
+Multiply the previous ratio by 100 in order to make this change.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-5}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+This makes the colors a lot easier to distinguish, but they're still flipped.
+
+### Exercise 6
+
+We can hit 2 birds with 1 stone by using the `scale_fill_viridis_c()` function to change the fill color scheme and invert the colors.
+
+###
+
+Add `scale_fill_viridis_c()` to the plot, setting `options` to `"plasma"` and `direction` to `-1`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-6}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+The `scale_fill_viridis_c()` function is extremely versatile for when you want to provide map fill colors because it can create new color palettes and color schemes. You can also reverse the default order of the colors with the direction = -1 option. This function is for continuous variables such as prop_rural; if you have a discrete variable, you can use the analogous scale_fill_viridis_d().
+
+### Exercise 7
+
+It's time to finalize this map and add the labels.
+
+Remember that we're trying to recreate this map:
+
+```{r}
+basics_map
+```
+
+###
+
+Set the labels as seen in the graph above and set the theme to `theme_void()`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-7}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+That finishes the first part of the map, but there are some pretty important states that we forgot.
+
+### Exercise 8
+
+Let's add Alaska and Hawaii back into the map.
+
+###
+
+<!-- AG: Rough explanation, needs refining in final draft -->
+
+<!-- AG: You're supposed to run it through the `tigris::shift_geometry()` function, not use shift_geo -->
+
+Start a new R code chunk and copy the previous code, including the part where we defined `rural`. Run `rural` through the function `tigris::shift_geometry()` and save it to the variable `rural_shifted`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-8}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+This shifts these state's locations to the corner of the map, allowing you to display the entire country with all 50 states.
+
+### Exercise 9
+
+Finally, change the map to use `rural_shifted` instead of `rural` and remove the `filter()` command we used to remove the states earlier. The final map should look like this:
+
+```{r, message = FALSE, results='hide'}
+rural_shifted %>%
+  ggplot(aes(fill = 100 * P002005 / P001001)) +
+    geom_sf() + 
+    scale_fill_viridis_c(option = "plasma",
+                         direction = -1) +
+    labs(title = "Rural geography of the United States",
+         caption = "Source: Census 2010",
+         fill = "Percent Rural") +
+    theme_void()
+```
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-9}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+The **tigris** library is a key part in map making because it allows you to modify locations and such to fit on shape files that you can then map.
+
+## Faceting maps
+
+A powerful tool in ggplot2 to use with maps is faceting because it allows us to easily compare data from different maps.
+
+Let's try to recreate this map:
+
+```{r, message = FALSE, results = 'hide'}
+county_map <- county_data %>%
+                mutate(Percent = 100 * (estimate / summary_est)) %>%
+                ggplot(aes(fill = Percent, color = Percent)) +
+                facet_wrap(~ variable) +
+                geom_sf() +
+                scale_fill_viridis_c(direction = -1) +
+                scale_color_viridis_c(direction = -1) +
+                labs(title = "Racial geography of Harris County, Texas",
+                     caption = "Source: American Community Survey 2014-2018") +
+                theme_void()
+
+county_map
+```
+
+### Exercise 1
+
+This map is based off of the American Community Survey from 2014-2018, so we should use Census data from the ACS5 survey.
+
+The first step is to look at the Census variables so that we know what variables we need to pull our data from.
+
+###
+
+<!-- AG: The Hispanic variable is stupidly far away and hard to filter, so I'm just giving it to them -->
+
+Run `load_variables(2018, "acs5") %>% filter(concept == RACE)` in order to load most of the variables relating to race. Save the name of the variables relating to whites, African Americans, and Asians in a vector called `racevars`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-1}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+While you can't see this under the RACE category, the variable name for Hispanic populations is stored under `B03003_003`. You should also add this to your `racevars` vector.
+
+### Exercise 2
+
+Let's access the Census Data by using the `get_acs()` function.
+
+###
+
+Use the `get_acs()` function in a new R code chunk, setting the `geography` arguments to `"tract"`, the `variables` argument to the vector you created in the last exercise, the `year` to `2018`, the `state` to `"TX"`, the `county` to `"Harris County"`, the `geometry` to TRUE, and `summary_var` to `"B02001_001"`, the total population of your county. Save this output to the `county_data` variable.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-2}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+Some new features worth pointing out in this code:
+
+- The `year` for `get_acs()` is the last year of a five year sample.  Thus, our data will be from 2014--2018.  You can choose `year`s from 2009--2018.
+- Since our geography is "tract", we are further specifying the `state` and `county`. 
+- We are obtaining the data in a long format, which makes faceting easier.
+- We added a `summary_var`, "B02001_001", which is the total population.  As we'll see, this appears as a separate column, which is helpful to us.  (As an exercise, try going back to the code that created `rural` and see how you would do that in a long format with `summary_var`.)
+
+### Exercise 3
+
+Now let's create the map of the data that we just accessed.
+
+###
+
+First of all, let's add a `Percent` column to the data that gets the ratio of `estimate` and `summary_est`, then multiplies it by 100 to get the percentage of the population that is part of that race.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-3}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+When you run this, you should see how each Census tract has a percentage for what the population actually is.
+
+### Exercise 4
+
+Use the `ggplot()` and `geom_sf()` functions to create a map. Map the `fill` and `color` arguments within `ggplot()` to the `Percent` column that we created earlier.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-4}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+While this does show all of the information, it doesn't really tell us anything. It's a lot of different colored rectangles in the shape of a county.
+
+### Exercise 5
+
+Earlier, we loaded all of the different variables but didn't actually differentiate between them in our map. That means that everything is overlaid on top of one another, which doesn't make for a good graph. We can fix this by using the `facet_wrap()` function.
+
+###
+
+Facet wrap the map created in the last exercise on the `variable` column. This will separate the different columns based on their variable.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-5}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+If you wanted to differentiate by even more variables like the percentage who are American Indian, just add another variable to the `racevars` vector and run the command again. This will create a new map for each variable used.
+
+### Exercise 6
+
+But our graph is still blue, and that's pretty annoying for colorblind people and just people looking to analyze the data in general since it all blends in together.
+
+###
+
+We can fix this by using the `scale_fill_viridis_c()` function to change the fill colour to something more vibrant.
+
+Add the layer `scale_fill_viridis_c()` and set the `direction` argument to `-1`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-6}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+The reason we set `direction` to `-1` is so that the areas with a higher value are recorded as darker. This makes it easier to see which parts have a higher value since they clearly stand out from the rest of the map.
+
+### Exercise 7
+
+But our graph still doesn't look that good. The border lines can hide data to the point where we can't even see the center of the county and what the data is like there. There's also a second legend for the border lines, which we don't want.
+
+###
+
+In order to fix this problem, we can use the `scale_color_viridis_c()` function. This is similar to `scale_fill_viridis_c()` but it instead sets the border color.
+
+Add the layer `scale_color_viridis_c()` and set the `direction` argument to `-1`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+
+```{r faceting-maps-7}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+In general, the color refers to the border color of a shape while the fill refers to the fill. This is the common standard used among most functions and packages.
+
+### Exercise 8
+
+Finally, let's pretty up our map.
+
+Remember that our final map is supposed to look like this:
+
+```{r}
+county_map
+```
+
+###
+
+Set the labels to what's seen in the graph above and set the theme to `theme_void()`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-8}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+## Dealing with big data
+
+<!-- description -->
+
+### Exercise 1
+
+<!-- find variables -->
+
+```{r dealing-with-big-dat-1}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 2
+
+<!-- create continental that excludes Alaska and Hawaii -->
+
+```{r dealing-with-big-dat-2}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 3
+
+<!-- get_acs command -->
+
+```{r dealing-with-big-dat-3}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 4
+
+<!-- generate percent column -->
+
+```{r dealing-with-big-dat-4}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 5
+
+<!-- ggplot and geom_sf -->
+
+```{r dealing-with-big-dat-5}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 6
+
+<!-- scale_fill_viridis_c -->
+
+```{r dealing-with-big-dat-6}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 7
+
+<!-- labs -->
+
+```{r dealing-with-big-dat-7}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 8
+
+<!-- theme_void() -->
+
+```{r dealing-with-big-dat-8}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+## PUMS data
+
+<!-- description -->
+
+### Exercise 1
+
+<!-- pums_variables -->
+
+```{r pums-data-1}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 2
+
+<!-- get_pums -->
+
+```{r pums-data-2}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 3
+
+<!-- nw_states creation -->
+
+```{r pums-data-3}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 4
+
+<!-- map() -->
+
+```{r pums-data-4}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 5
+
+<!-- get_pums() -->
+
+```{r pums-data-5}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 6
+
+<!-- group_by() -->
+
+```{r pums-data-6}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 7
+
+<!-- summarize pt 1 -->
+
+```{r pums-data-7}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 8
+
+<!-- summarize pt 2 -->
+
+```{r pums-data-8}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 9
+
+<!-- left_join for some reason -->
+
+```{r pums-data-9}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 10
+
+<!-- ggplot and geom_sf() -->
+
+```{r pums-data-10}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 11
+
+<!-- scale_fill_viridis_b and args -->
+
+```{r pums-data-11}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 12
+
+<!-- labs -->
+
+```{r pums-data-12}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+### Exercise 13
+
+<!-- theme_void -->
+
+```{r pums-data-13}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	options = list(nrows = 6))
+```
+
+###
+
+<!-- AG: I'm contemplating putting a section about mapping coordinates onto a map. It's really useful for when you want to map stations or points that aren't Census data since you aren't always going to have a shape file for everything and you might just have coordinates. -->
+
+###
+
+<!-- AG: Add publishing to RPubs section here. -->
+
+Congratulations on completing the tutorial.
+
+If you want to explore further:
+
+- Take a look at the [**tidycensus** website](https://walkerke.github.io/tidycensus/).
+- If you have shapefiles from a place other than **tidycensus**, you can read them in using `st_read()` in the **sf** package, join them with other data using **dplyr** functions, and then map them with `geom_sf()` as we have shown above.
+    - You may have to look into using [`coord_sf()`](https://ggplot2.tidyverse.org/reference/ggsf.html) if you have trouble displaying your data.
+- Want to add interactivity to your maps?  Check out the **leaflet** package.  [Here's](https://juliasilge.com/blog/using-tidycensus/) a good introduction to using **leaflet** with **tidycensus**.
+- Practice your skills with [Andrew Tran's case study slides](https://andrewbtran.github.io/NICAR/2019/mapping/02_case_study_slides.html), where you can replicate a graphic from the Washington Post. Note: this involves some packages we haven't shown you in this book, but if you follow along step by step you will be able to see how they are used.
+
+Downloading feature geometry from the Census website.  To cache shapefiles for use in future sessions, set `options(tigris_use_cache = TRUE)`.
+
+###
+
+```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
+```
