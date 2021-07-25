@@ -25,12 +25,20 @@ options(tutorial.exercise.timelimit = 60,
 
 winners <- governors %>% 
   filter(win_margin > 0) %>% 
-  select(state, year, election_age)
+  select(year, first_name, last_name, election_age)
 
 set.seed(1)
 
 tests <- tibble(score = floor(rnorm(100, mean = 90, sd = 4))) %>% 
   filter(score < 101)
+
+winners_ages <- winners %>% 
+  select(election_age)
+
+winners_model <- stan_glm(data = winners_ages,
+                          formula = election_age ~ 1,
+                          refresh = 0,
+                          family = gaussian())
 
 age_bias_plot <- governors %>% 
   select(year, election_age) %>% 
@@ -61,9 +69,11 @@ age_bias_plot <- governors %>%
 
 <!-- Then do it all again with only one row per candidate. -->
 
+<!-- Age bias: The ages will tend to be slightly older the greater the year is because we're only sampling from now-deceased candidates. The more we filter our data to only include early years, the more accurate data will be, but the less data points we'll have. So, in other words, we are trading PRECISION for ACCURACY. This is a super cool opportunity to discuss this type of tradeoff, and whether or not making it is worth it (- it is). -->
+
 So, now we have three versions of the anwser, corresponding to three different assumptions. 
 
-## Basic case
+## Base Case
 
 ### 
 
@@ -71,7 +81,7 @@ In this tutorial, we'll be creating a two-parameter model using the `governors` 
 
 ### Exercise 1
 
-Suppose our goal is to answer the following question:
+Wisdom always begins with a question. Suppose our goal in this tutorial is to answer the following question:
 
 _What is the probability of a governor elected in 2022 being over the age of 60?_
 
@@ -79,11 +89,11 @@ _What is the probability of a governor elected in 2022 being over the age of 60?
 
 Run `?governors`. Read the description of the data. 
 
-```{r basic-case-1, exercise = TRUE}
+```{r base-case-1, exercise = TRUE}
 
 ```
 
-```{r basic-case-1-hint-1, eval = FALSE}
+```{r base-case-1-hint-1, eval = FALSE}
 ?governors
 ```
 
@@ -97,11 +107,11 @@ Keep details like these in mind as they may help in answering future questions a
 
 Print out the `governors` tibble. 
 
-```{r basic-case-2, exercise = TRUE}
+```{r base-case-2, exercise = TRUE}
 
 ```
 
-```{r basic-case-2-hint-1, eval = FALSE}
+```{r base-case-2-hint-1, eval = FALSE}
 print(...)
 ```
 
@@ -115,11 +125,11 @@ Duplicate candidates *could* make this data unsuitable for answering certain que
 
 Use `skim()` from the **skimr** package to skim the `governors` data.
 
-```{r basic-case-3, exercise = TRUE}
+```{r base-case-3, exercise = TRUE}
 
 ```
 
-```{r basic-case-3-hint-1, eval = FALSE}
+```{r base-case-3-hint-1, eval = FALSE}
 skim(...)
 ```
 
@@ -133,31 +143,31 @@ In our case, we are asking a question about the next *elected* candidate, not ju
 
 Start a new pipe with `governors`. Use `filter()` to choose only rows with a positive win margin (i.e. elected candidates).
 
-```{r basic-case-4, exercise = TRUE}
+```{r base-case-4, exercise = TRUE}
 
 ```
 
-```{r basic-case-4-hint-1, eval = FALSE}
+```{r base-case-4-hint-1, eval = FALSE}
 governors %>% 
   filter(...)
 ```
 
-```{r basic-case-4-hint-2, eval = FALSE}
+```{r base-case-4-hint-2, eval = FALSE}
 governors %>% 
   filter(win_margin > ...)
 ```
 
 ### Exercise 5
 
-Copy your code from above. Continue your pipe by using `select()` to select `state`, `year`, and `election_age`.
+Copy your code from above. Continue your pipe by using `select()` to select `year`, `first_name`, `last_name`, and `election_age`.
 
-```{r basic-case-5, exercise = TRUE}
+```{r base-case-5, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r basic-case-5-hint-1, eval = FALSE}
+```{r base-case-5-hint-1, eval = FALSE}
 governors %>% 
   filter(...) %>% 
   select(...)
@@ -167,13 +177,13 @@ governors %>%
 
 Copy your code from above and assign it to a new object called `winners`.
 
-```{r basic-case-6, exercise = TRUE}
+```{r base-case-6, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r basic-case-6-hint-1, eval = FALSE}
+```{r base-case-6-hint-1, eval = FALSE}
 ... <- governors %>% 
   filter(...) %>% 
   select(...)
@@ -187,15 +197,15 @@ We'll be using `winners` in later questions in this tutorial.
 
 Recall our question:
 
-_What is the probability of the next elected governor of Massachusetts being over the age of 60?_
+_WWhat is the probability of a governor elected in 2022 being over the age of 60?_
 
 ### 
 
 Our population table has *Preceptor Table* rows, *actual data* rows, and outstanding *population* rows. Describe, in a single short paragraph, what each of these three types of rows look like.
 
-```{r basic-case-7}
+```{r base-case-7}
 question_text(NULL,
-	message = "There are 50 Preceptor Table rows — one for each of the 50 states. The year is one of the next four years (depending on when that state's gubernatorial election is), but all other column entires are \"?\" (unknowns). In our actual data rows, all column entires are known. However, we only have data for candidates who ran up until 2011, and who have passed away as of 2012. Our outstanding population rows include data from candiates in all years, as well as data from both currently alive and deceased candidates.",
+	message = "There are 36 Preceptor Table rows — one for each of the 36 states with gubernatorial elections in 2022. All columns besides year and state have entires that are \"?\" (unknowns). In our actual data rows, all column entires are known. However, we only have data for candidates who ran up until 2011, and who have passed away as of 2012. Our outstanding population rows include data from candiates in all years, as well as data from both currently alive and deceased candidates.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -205,76 +215,250 @@ question_text(NULL,
 
 ### 
 
-<!-- GP: Not sure what knowledge to drop here yet, I'll think of something -->
+At this point, you may have some concerns regarding whether or not we can *accurately* answer our question using the given data.
+
+Fortunately, Justice gives us a chance to address those concerns, and refine our data to eliminate those concerns if necessary.
 
 ### Exercise 8
 
-If you paid close attention during the Wisdom section, then you may have some concerns regarding whether or not we can *accurately* answer our question using the given data.
+<!-- GP: Since we changed the question from asking about Massachusetts to asking about all states with 2022 gubernatorial elections, I'm unsure what to put in the initial Justice segment. You said to *acknowledge* the problems, but not to fix them until the later 2nd and 3rd Justice segments. Well, I already acknowledged the problems near the beginning of Wisdom when we were examining the governors data (it's kinda impossible not to acknowledge them then). Still, even if I were to move the acknowledgements to this 1st Justice segment, it's not enough to warrant its own segment.
 
-Justice gives us a chance to address those concerns, and refine our data to eliminate those concerns if necessary.
-
-### 
-
-Use `sum()` to count how many entries we have in our `winners` data for the state of Massachusetts.
-
-```{r basic-case-8, exercise = TRUE}
-
-```
-
-```{r basic-case-8-hint-1, eval = FALSE}
-sum(winners$state == ...)
-```
-
-### 
-
-Only 14?! 14 data points is far too little to construct an (accurate) model to answer our question.
+TL;DR: Not sure what to put in the initial Justice section. -->
 
 ### Exercise 9
 
-In order to have enough data to construct a good model, we'll need to use data from all states.
+Let's quickly review how to work with the `stan_glm()` function from the **rstanarm** package.
 
-Describe, in your own words, to what extent the data from the other 49 states is *representative* of the data from Massachusetts. Can we draw reasonable conclusions about Massachusetts using data from elsewhere in the US?
+### 
 
-```{r basic-case-9}
-question_text(NULL,
-	message = "No answer yet",
-	answer(NULL,
-	correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	options = list(nrows = 6))
+Print out the `tests` tibble below.
+
+```{r base-case-9, exercise = TRUE}
+
+```
+
+```{r base-case-9-hint-1, eval = FALSE}
+print(tests)
 ```
 
 ### 
 
-For the sake of this tutorial, we'll assume that the answer to the above question is *yes*. That is,  we can in fact draw reasonable conclusions about Massachusetts using data from elsewhere in the US.
+Let's use this data to remind ourselves how to create simple Bayesian models.
 
 ### Exercise 10
 
-Since we've determined that we'll use data from all states, we no longer care about the `state` variable.
+Run `stan_glm()` and set the `data` argument equal to `tests`, and the `formula` argument equal to `score ~ 1`.
 
-Start a new pipe with `winners` and use `select()` to remove the `state` column. Remember to assign this pipe to `winners` in order to update the object.
-
-```{r basic-case-10, exercise = TRUE}
+```{r base-case-10, exercise = TRUE}
 
 ```
 
-```{r basic-case-10-hint-1, eval = FALSE}
-winners <- winners %>% 
-  select(-...)
+```{r base-case-10-hint-1, eval = FALSE}
+stan_glm(data = ...,
+         formula = ...)
 ```
 
-```{r include = FALSE}
+### 
 
-# To update the winners object
+The `data` argument tells `stan_glm()` what data frame to work with.
 
-winners <- winners %>% 
-  select(-state)
-```
+The `formula` argument tells `stan_glm()` what model is to be fitted.
 
 ### Exercise 11
 
-Another concern we may have is a potential bias towards older candidates.
+Let's tidy up our output a bit and get rid of the messy garbage lines.
+
+Copy your code from above, and add a new argument called `refresh`. Set this argument to `0`.
+
+```{r base-case-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r base-case-11-hint-1, eval = FALSE}
+stan_glm(data = ...,
+         formula = ...,
+         refresh = ...)
+```
+
+### 
+
+The `refresh` argument should usually be set to `0` lest you get R spitting back a bunch of garbage at you.
+
+### Exercise 12
+
+We should also tell `stan_glm()` what error distribution function to use in the model.
+
+Copy your code from above. Insert a new argument called `family` and set it equal to `guassian()`.
+
+```{r base-case-12, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r base-case-12-hint-1, eval = FALSE}
+stan_glm(data = ...,
+         formula = ...,
+         refresh = ...,
+         family = ...)
+```
+
+### 
+
+Notice that our output did not change. This is because `family` is set to `gaussian()` by default. Still, it's good practice to always specify it yourself and eliminate some of the guesswork for R.
+
+### Exercise 13
+
+Now that we've recalled how to use `stan_glm()`, we can begin working with our data.
+
+### 
+
+Start a new pipe with `winners`. Use `select()` to select only the `election_age` variable. Assign this to a new object called `winners_ages`.
+
+```{r base-case-13, exercise = TRUE}
+
+```
+
+```{r base-case-13-hint-1, eval = FALSE}
+... <- winners %>% 
+  select(...)
+```
+
+### 
+
+`winners_ages` is what we'll be using to create our Bayesian model.
+
+### Exercise 14
+
+Use `stan_glm()` to create a Bayesian model of `winners_ages` with the formula `election_age ~ 1`. (Remember the four arguments that should be specified!)
+
+```{r base-case-14, exercise = TRUE}
+
+```
+
+```{r base-case-14-hint-1, eval = FALSE}
+stan_glm(data = ...,
+         formula = ...,
+         refresh = ...,
+         family = ...)
+```
+
+### 
+
+If you've done everything correctly, your output should look like this:
+
+```{r stan-glm-output-1, echo = FALSE}
+stan_glm(data = winners_ages,
+         formula = election_age ~ 1,
+         refresh = 0,
+         family = gaussian())
+```
+
+### Exercise 15
+
+Copy your code from above, and assign it to a new object called `winners_model`.
+
+```{r base-case-15, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r base-case-15-hint-1, eval = FALSE}
+winners_model <- stan_glm(data = ...,
+                          formula = ...,
+                          refresh = ...,
+                          family = ...)
+```
+
+### 
+
+We can now use this object to create our two-parameter model.
+
+### Exercise 16
+
+Start a new pipe with `winners_model`, and continue it with `as_tibble()`.
+
+```{r base-case-16, exercise = TRUE}
+
+```
+
+```{r base-case-16-hint-1, eval = FALSE}
+... %>% 
+  as_tibble()
+```
+
+### Exercise 17
+
+Now copy the code from above and continue your pipe using `rename()` to rename `(Intercept)` to `mu`.
+
+```{r base-case-17, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r base-case-17-hint-1, eval = FALSE}
+... %>% 
+  as_tibble() %>% 
+  rename(...)
+```
+
+### Exercise 18
+
+Once again, copy the code from above and continue your pipe with `ggplot()`. Map `x` to `mu` in the `aes()` function. Use `geom_histogram()` and map `y` to the  `after_stat()` function. Set its argument to `count` divided by the `sum()` of `count`.
+
+```{r base-case-18, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r base-case-18-hint-1, eval = FALSE}
+... %>% 
+  as_tibble() %>% 
+  rename(...) %>% 
+  ggplot(...) + 
+  geom_histogram(...)
+```
+
+```{r base-case-18-hint-2, eval = FALSE}
+... %>% 
+  as_tibble() %>% 
+  rename(...) %>% 
+  ggplot(aes(x = ...)) + 
+  geom_histogram(aes(y = ...))
+```
+
+### Exercise 19
+
+Copy your code from above. Set the `bins` argument to 200 and the `color` argument to white within `geom_histogram()`.
+
+```{r base-case-19, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r base-case-19-hint-1, eval = FALSE}
+... %>% 
+  as_tibble() %>% 
+  rename(...) %>% 
+  ggplot(aes(x = ...)) + 
+  geom_histogram(aes(y = ...),
+                 bins = ...,
+                 color = ...)
+```
+
+### 
+
+## Age Bias
+
+### 
+
+One concern we may have about our result is a potential bias towards older candidates.
 
 This data's biggest drawback is that *all of the candidates in the data are now deceased*.
 
@@ -286,13 +470,13 @@ This bias is more prevalent for later years, since the less time that passes bet
 
 Here is a graph illustrating the above point:
 
-```{r echo = FALSE}
+```{r age-bias-plot, echo = FALSE}
 age_bias_plot
 ```
 
-### 
+### Exercise 1
 
-```{r basic-case-11}
+```{r age-bias-1}
 question_text(NULL,
 	message = "No answer yet",
 	answer(NULL,
@@ -302,116 +486,7 @@ question_text(NULL,
 	options = list(nrows = 6))
 ```
 
-### 
-
-<!-- GP: Talk about concern over age bias. The ages will tend to be slightly older the greater the year is because we're only sampling from now-deceased candidates. The more we filter our data to only include early years, the more accurate data will be, but the less data points we'll have. So, in other words, we are trading PRECISION for ACCURACY. This is a super cool opportunity to discuss this type of tradeoff, and whether or not making it is worth it (- it is). -->
-
-<!-- Three concerns: -->
-<!-- 1. is massachusetts sufficiently represented by elsewhere in the US? -->
-<!-- 2. age bias (deceased and therefore probably older candidates) -->
-<!-- 3. duplicate candidates -->
-
-
-
-### Exercise 12
-
-Let's quickly review how to work with the `stan_glm()` function from the **rstanarm** package.
-
-### 
-
-Print out the `tests` tibble below.
-
-```{r basic-case-12, exercise = TRUE}
-
-```
-
-```{r basic-case-12-hint-1, eval = FALSE}
-print(tests)
-```
-
-### 
-
-Let's use this data to remind ourselves how to create two-parameter models.
-
-### Exercise 13
-
-Run `stan_glm()` and set the `data` argument equal to `tests`, and the `formula` argument equal to `score ~ 1`.
-
-```{r basic-case-13, exercise = TRUE}
-
-```
-
-```{r basic-case-13-hint-1, eval = FALSE}
-stan_glm(data = ...,
-         formula = ...)
-```
-
-### 
-
-The `data` argument tells `stan_glm()` what data frame to work with.
-
-The `formula` argument tells `stan_glm()` what model is to be fitted.
-
-### Exercise 14
-
-Let's tidy up our output a bit and get rid of the messy garbage lines.
-
-Copy your code from above, and add a new argument called `refresh`. Set this argument to `0`.
-
-```{r basic-case-14, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r basic-case-14-hint-1, eval = FALSE}
-stan_glm(data = ...,
-         formula = ...,
-         refresh = ...)
-```
-
-### 
-
-The `refresh` argument should usually be set to `0` lest you get R spitting back a bunch of garbage at you.
-
-### Exercise 15
-
-We should also tell `stan_glm()` what error distribution function to use in the model.
-
-Copy your code from above. Insert a new argument called `family` and set it equal to `guassian()`.
-
-```{r basic-case-15, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r basic-case-15-hint-1, eval = FALSE}
-stan_glm(data = ...,
-         formula = ...,
-         refresh = ...,
-         family = ...)
-```
-
-### 
-
-Notice that our output did not change. This is because `family` is set to `gaussian()` by default. Still, it's good practice to always specify it yourself and eliminate some of the guesswork for R.
-
-### Exercise 16
-
-Start a new pipe with `winners`.
-
-```{r basic-case-16, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r basic-case-16-hint-1, eval = FALSE}
-
-```
-
-### 
+## Duplicate Candidates
 
 ```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
 ```
