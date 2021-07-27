@@ -13,6 +13,7 @@
 #' There is also no need to keep track of the exercise numbers
 #' because it is done for you in the add-in.
 #'
+#' @param file_path Character string
 #'
 #' @return formatted document with correct code and hint chunk labels
 
