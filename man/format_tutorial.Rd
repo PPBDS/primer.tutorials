@@ -6,6 +6,9 @@
 \usage{
 format_tutorial(file_path)
 }
+\arguments{
+\item{file_path}{Character string}
+}
 \value{
 formatted document with correct code and hint chunk labels
 }
