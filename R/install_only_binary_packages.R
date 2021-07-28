@@ -15,7 +15,7 @@ install_only_binary_packages <- function(){
   home <- Sys.getenv("HOME")
   rprof <- file.path(home, ".Rprofile")
 
-  line <- 'options(pkgType="binary")\n'
+  line <- 'options(pkgType = "binary")\n'
 
   if (file.exists(rprof)){
     message("Appending new option to your .Rprofile")
