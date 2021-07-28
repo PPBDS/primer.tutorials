@@ -16,6 +16,8 @@
 #' @param file_path Character string
 #'
 #' @return formatted document with correct code and hint chunk labels
+#'
+#' @export
 
 
 format_tutorial <- function(file_path){
