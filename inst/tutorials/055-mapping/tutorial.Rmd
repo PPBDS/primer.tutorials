@@ -1013,13 +1013,19 @@ The Census also collects **P**ublic **U**se **M**icrodata **S**amples, or **PUMS
 
 This contains advanced census data on individual people. While it only contains data for about 1% of the US, it's extremely deep and lets you do a lot of cool things.
 
+Let's try to recreate the following map:
+
+```{r}
+pums_map
+```
+
 ### Exercise 1
 
 Accessing PUMS data works just like accessing any Census data. However, there are a few key differences.
 
 ###
 
-Create a new code chunk and run the `glimpse()` function on the dataset `pums_variables` inside it. This will show all of the variables that PUMS collects as well as the various values contained within them.
+Create a new code chunk and run the `glimpse()` function on the dataset `pums_variables`. This will show all of the variables that PUMS collects as well as the various values contained within them.
 
 ###
 
@@ -1043,21 +1049,15 @@ One problem with using PUMS is that you only get the state and PUMA (**p**ublic 
 
 ### Exercise 2
 
-Let's use the `get_pums()` function to choose a few select variables such as the age and PUMA that the individual lives in.
+Mapping PUMS data is very different from normal mapping because we need to first map the PUMAS then attach our PUMS data to that map. This is because we can't get the shape files and `geometry` column for PUMAS like we did for the previous examples and as such have to get them from the **tigris** package.
 
 ###
 
-In this case, we'll be using the `AGEP` and `PUMA` variables.
+First, let's define what states we need to use. 
 
 ###
 
-If you want to see all of the variables that PUMS collects and what they represent, just run `view(pums_variables)` in the Console to open a table. Keep in mind that this table is *massive*, with over 31,759 variables collected.
-
-###
-
-We can do this by using the `get_pums()` function. 
-
-Run the `get_pums()` function in the code chunk and set the `variables` argument to the ones described above, `state` to `state.name`, `recode` to `TRUE`, and `survey` to `"acs1"`.
+Create a new vector containing `"OR"`, `"WA"`, and `"ID"` that's named `nw_states`.
 
 ###
 
@@ -1075,19 +1075,29 @@ question_text(NULL,
 
 ###
 
-One interesting aspect of `get_pums()` is that it will always contain the `SERIALNO`, `SPORDER`, `WGTP`, `PWGTP`, and `ST` columns. `SERIALNO` and `SPORDER` are the variables that uniquely identify observations, `WGTP` and `PWGTP` are the housing and person weights, and `ST` is the state code. 
+These are the northwestern states shown in the map (Oregon, Washington, and Idaho). While we're using their acronyms here, you can also use their full names for the steps below.
 
 ### Exercise 3
 
-Mapping PUMS data is very different from normal mapping because we need to first map the PUMAS then attach our PUMS data to that map.
+Let's use the `get_pums()` function to choose a few select variables such as the age and PUMA that the individual lives in.
 
 ###
 
-First, let's define what states we need to use. 
+In this case, we'll be using the `AGEP` and `PUMA` variables.
 
 ###
 
-<!-- nw_states creation -->
+If you want to see all of the variables that PUMS collects and what they represent, just run `view(pums_variables)` in the Console to open a table. Keep in mind that this table is *massive*, with over 31,759 variables collected.
+
+###
+
+We can do this by using the `get_pums()` function. 
+
+Add the `get_pums()` function to the code chunk and set the `variables` argument to the ones described above, `state` to `nw_states`, `recode` to `TRUE`, `survey` to `"acs1"`, and `year` to `2018`. Save the output to a variable called `nw_pums`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-3}
 question_text(NULL,
@@ -1101,9 +1111,21 @@ question_text(NULL,
 
 ###
 
+One interesting aspect of `get_pums()` is that it will always contain the `SERIALNO`, `SPORDER`, `WGTP`, `PWGTP`, and `ST` columns. `SERIALNO` and `SPORDER` are the variables that uniquely identify observations, `WGTP` and `PWGTP` are the housing and person weights, and `ST` is the state code. 
+
 ### Exercise 4
 
-<!-- map() -->
+This is good data, but it's really dirty and it doesn't have the information that we need. It's time to wrangle it into place.
+
+###
+
+Use the `group_by()` and `summarize()` functions to make a modified version of `nw_pums` called `nw_Senior`.
+
+Group the data by `ST` and `PUMA`, then summarize it to add a `total_pop` column containing the sum of all `PWGTP` and a `pct_Senior` column containing the ratio of the sum of all `PWGTP` with an `AGEP` over 64 and `total_pop`. Make sure to drop the groups after the `summarize()`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-4}
 question_text(NULL,
@@ -1117,9 +1139,19 @@ question_text(NULL,
 
 ###
 
+The `PWGTP` column is the number of people contained within that sample, so if you total all of the `PWGTP` column then you can get the total population within the study. This is why we can use it to not only find the total population but also the percent of the population that are over 64.
+
 ### Exercise 5
 
-<!-- get_pums() -->
+Now let's create the geometries for our PUMAs since we weren't able to load them from the `get_pums()` function.
+
+###
+
+Add `nw_pumas <- map(nw_states, tigris::pumas, class="sf", cb=TRUE) %>% reduce(rbind)` to your code chunk. This will create the necessary geometries and shape files for each PUMA in the state, allowing us to map them later.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-5}
 question_text(NULL,
@@ -1133,9 +1165,19 @@ question_text(NULL,
 
 ###
 
+Keep in mind that the `map()` function **does not generate a map**. It just applies a function to every element inside a list. In this case, the function is `tigris::pumas()`, which creates the shape files of the inputted state.
+
 ### Exercise 6
 
-<!-- group_by() -->
+It's time to combine our shape files with our data. We can do this by using `left_join()`.
+
+###
+
+Join the `nw_pumas` and `nw_Senior` datasets together using the `left_join()` function, mapping `"STATEFP10"` to `"ST"` and `"PUMACE10"` to `"PUMA"`. Save this output to a variable called `nw_final`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-6}
 question_text(NULL,
@@ -1149,9 +1191,15 @@ question_text(NULL,
 
 ###
 
+Now we have a completed dataset containing both the mapping information and the data that needs to be mapped, allowing us to map the function like we've done before.
+
 ### Exercise 7
 
-<!-- summarize pt 1 -->
+Start a pipe with `nw_final` and map it using the `ggplot()` and `geom_sf()` functions. Map the `fill` argument to `pct_Senior` in `ggplot()`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-7}
 question_text(NULL,
@@ -1165,9 +1213,24 @@ question_text(NULL,
 
 ###
 
+One interesting thing about PUMAs is that each PUMA covers 100,000 people, which is why areas like Seattle (in western Washington) have a lot of PUMAs while Idaho and Oregon have extremely large PUMAs, as you can see on the map you just created.
+
+```{r}
+nw_final %>% 
+  ggplot(aes(fill = pct_Senior)) +
+    geom_sf()
+```
+
+
 ### Exercise 8
 
-<!-- summarize pt 2 -->
+We now need to adequately color our data so that it's not all blue.
+
+###
+
+This time, we need to use the `scale_fill_viridis_b()` function in order to "bin" our data.
+
+Add this function as a layer, setting the `name` argument to `NULL`, `option` to `"magma"`, and `labels` to `scales::label_percent(1)`.
 
 ```{r pums-data-8}
 question_text(NULL,
@@ -1181,9 +1244,25 @@ question_text(NULL,
 
 ###
 
+We're using `scale_fill_viridis_b()` here in order to bin the data, or group it together so that there are set groups rather than a continuous legend. This makes it easier to see the large differences between groups rather than focusing on the percentage points.
+
 ### Exercise 9
 
-<!-- left_join for some reason -->
+Finally, we need to clean up our map and add our captions.
+
+Remember that our final map is supposed to look like this:
+
+```{r}
+pums_map
+```
+
+###
+
+Set the labels to what's seen in the graph above and set the theme to `theme_void()`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-9}
 question_text(NULL,
@@ -1197,11 +1276,31 @@ question_text(NULL,
 
 ###
 
-### Exercise 10
+<!-- AG: I'm contemplating putting a section about mapping coordinates onto a map. It's really useful for when you want to map stations or points that aren't Census data since you aren't always going to have a shape file for everything (stuff like weather stations). -->
 
-<!-- ggplot and geom_sf() -->
+## Rpubs Publishing
 
-```{r pums-data-10}
+<!-- AG: Add publishing to RPubs section here. This is just short and sweet since they should already know how to publish to RPubs. -->
+
+We're going to publish this file to RPubs in order to best show off your changes.
+
+### Exercise 1
+
+Clean up your R Markdown file and format it as you wish. 
+
+Make sure to clearly separate the different functions and different graphs so that you know what they do later.
+
+###
+
+### Exercise 2
+
+Publish your R Markdown file to RPubs by knitting the file and clicking the "Publish" button in the top right corner. 
+
+###
+
+Copy-paste your RPubs URL into the space below.
+
+```{r rpubs-publishing-2}
 question_text(NULL,
 	message = "answer here",
 	answer(NULL,
@@ -1212,60 +1311,6 @@ question_text(NULL,
 ```
 
 ###
-
-### Exercise 11
-
-<!-- scale_fill_viridis_b and args -->
-
-```{r pums-data-11}
-question_text(NULL,
-	message = "answer here",
-	answer(NULL,
-	correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	options = list(nrows = 6))
-```
-
-###
-
-### Exercise 12
-
-<!-- labs -->
-
-```{r pums-data-12}
-question_text(NULL,
-	message = "answer here",
-	answer(NULL,
-	correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	options = list(nrows = 6))
-```
-
-###
-
-### Exercise 13
-
-<!-- theme_void -->
-
-```{r pums-data-13}
-question_text(NULL,
-	message = "answer here",
-	answer(NULL,
-	correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	options = list(nrows = 6))
-```
-
-###
-
-<!-- AG: I'm contemplating putting a section about mapping coordinates onto a map. It's really useful for when you want to map stations or points that aren't Census data since you aren't always going to have a shape file for everything and you might just have coordinates. -->
-
-###
-
-<!-- AG: Add publishing to RPubs section here. -->
 
 Congratulations on completing the tutorial.
 
