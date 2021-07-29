@@ -13,4 +13,9 @@ to "binary".
 This sets the default package installation type to binary
 instead of source because students sometimes accidentally
 install packages from source.
+
+You can examine your .Rprofile to confirm this change with
+usethis::edit_r_profile()
+
+You can examine your .Renviron with usethis::edit_r_environ()
 }
