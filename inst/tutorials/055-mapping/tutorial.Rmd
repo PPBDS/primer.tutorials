@@ -56,6 +56,17 @@ rural_shifted <- read_rds("data/05-mapping-rural-shifted.rds")
 # write_rds(county_data, "data/05-mapping-county-data.rds")
 
 county_data <- read_rds("data/05-mapping-county-data.rds")
+
+# races_data <- get_acs(geography = "tract",
+#                  state = state.name[! state.name %in% c("Alaska", "Hawaii")],
+#                  variables = "B02001_008", 
+#                  year = 2018,
+#                  summary_var = "B02001_001",
+#                  geometry = TRUE)
+# write_rds(races_data, "data/05-mapping-races-data.rds")
+
+races_data <- read_rds("data/05-mapping-races-data.rds")
+view(races_data)
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -151,6 +162,8 @@ You may have to install some of these packages as we progress.
 
 ## Mapping basics
 ###
+
+<!-- AG: Going to move this to when I create a cloropleth map using this: https://milospopovic.net/how-to-make-choropleth-map-in-r/ as that's when we're actually dealing with shape files and things like that. Keeping it here for now while I work on that. -->
 
 You've likely heard of longitude and latitude, the global coordinate system that lets us pinpoint 2D locations on a 3D surface. This is also known as a **c**oordinate **r**eference **s**ystem, or **CRS**. CRSs use a 3D model of the Earth to define locations on the surface of a grid, with longitude determining the east/west distance and the latitude determining the north/south distance. 
 
@@ -324,7 +337,7 @@ Let's address these problems one at a time, starting with differentiating betwee
 
 ###
 
-We can do this by changing the ratios into percents, creating a wider difference between the two ends of the scale. 
+We can do this by changing the ratios into percents, creating a wider difference between the two ends of the scale (1 - 100 is a bigger range than 0.01 - 1).  
 
 Multiply the previous ratio by 100 in order to make this change.
 
@@ -348,7 +361,7 @@ This makes the colors a lot easier to distinguish, but they're still flipped.
 
 ### Exercise 6
 
-We can hit 2 birds with 1 stone by using the `scale_fill_viridis_c()` function to change the fill color scheme and invert the colors.
+We can kill 2 birds with 1 stone by using the `scale_fill_viridis_c()` function to change the fill color scheme and invert the colors.
 
 ###
 
@@ -370,7 +383,9 @@ question_text(NULL,
 
 ###
 
-The `scale_fill_viridis_c()` function is extremely versatile for when you want to provide map fill colors because it can create new color palettes and color schemes. You can also reverse the default order of the colors with the direction = -1 option. This function is for continuous variables such as prop_rural; if you have a discrete variable, you can use the analogous scale_fill_viridis_d().
+The `scale_fill_viridis_c()` function is extremely versatile for when you want to provide map fill colors because it can create new color palettes and color schemes. You can also reverse the default order of the colors with the direction = -1 option. 
+
+This function is for continuous variables such as prop_rural; if you have a discrete variable, you can use the analogous scale_fill_viridis_d().
 
 ### Exercise 7
 
@@ -412,9 +427,9 @@ Let's add Alaska and Hawaii back into the map.
 
 <!-- AG: Rough explanation, needs refining in final draft -->
 
-<!-- AG: You're supposed to run it through the `tigris::shift_geometry()` function, not use shift_geo -->
+<!-- AG: You're supposed to run it through the `tigris::shift_geometry()` function, not use shift_geo. DONE -->
 
-Start a new R code chunk and copy the previous code, including the part where we defined `rural`. Run `rural` through the function `tigris::shift_geometry()` and save it to the variable `rural_shifted`.
+Start a new R code chunk and copy the previous code, including the part where we defined `rural`. Continue the pipe where we defined `rural` and add the function `shift_geometry()`.
 
 ###
 
@@ -432,7 +447,7 @@ question_text(NULL,
 
 ###
 
-This shifts these state's locations to the corner of the map, allowing you to display the entire country with all 50 states.
+This shifts Alaska, Hawaii, and Puerto Rico's locations to the corner of the map, allowing you to display the entire country with all 50 states.
 
 ### Exercise 9
 
@@ -499,7 +514,7 @@ The first step is to look at the Census variables so that we know what variables
 
 <!-- AG: The Hispanic variable is stupidly far away and hard to filter, so I'm just giving it to them -->
 
-Run `load_variables(2018, "acs5") %>% filter(concept == RACE)` in order to load most of the variables relating to race. Save the name of the variables relating to whites, African Americans, and Asians in a vector called `racevars`.
+Run `load_variables(2018, "acs5") %>% filter(concept == "RACE")` in order to load most of the variables relating to race. Save the name of the variables relating to whites, African Americans, and Asians in a vector called `racevars`.
 
 ###
 
@@ -713,11 +728,19 @@ question_text(NULL,
 
 ## Dealing with big data
 
-<!-- description -->
+Instead of a census tract map for just one city, let’s do a “big data” project involving every census track in the country, plotting the percentage of people who are two or more races.
 
 ### Exercise 1
 
-<!-- find variables -->
+Let's start by finding the correct variable in the American Community Survey.
+
+###
+
+Run `load_variables(2018, "acs5") %>% filter(concept == "RACE")` in the Console in order to load most of the variables relating to race.
+
+###
+
+Type the names of the variables that refers to the total population and the variable that refers to the population that has a heritage of 2 or more races into the box below.
 
 ```{r dealing-with-big-dat-1}
 question_text(NULL,
@@ -731,7 +754,19 @@ question_text(NULL,
 
 ###
 
+You can determine what the variable refers to by looking at the `label` column. 
+
+For example, the variable `B02001_008` has a label of `Estimate!!Total!!Two or more races`, which means that it's looking at the number of people who are made up of 2 or more races out of the total estimated population. 
+
+By contrast, the variable `B02001_001` has a label of `Estimate!!Total`, showing how it represents the total estimated population.
+
 ### Exercise 2
+
+For this map, we want to focus on the mainland US in order to simplify things. In order to do this, we can just filter the states that aren't part of it. This is similar to the nuclear option we did earlier, but there's a key difference.
+
+###
+
+Create a new variable called `continental` that 
 
 <!-- create continental that excludes Alaska and Hawaii -->
 
@@ -762,6 +797,8 @@ question_text(NULL,
 ```
 
 ###
+
+And here we encounter one of the main problems in dealing with big data: **it takes a massive amount of time**. Even if you had a supercomputer, we're quite literally downloading 
 
 ### Exercise 4
 
