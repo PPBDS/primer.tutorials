@@ -17,6 +17,7 @@ library(tidyverse)
 library(primer.data)
 library(tidycensus)
 library(ggthemes)
+library(knitr)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
@@ -56,6 +57,73 @@ rural_shifted <- read_rds("data/05-mapping-rural-shifted.rds")
 # write_rds(county_data, "data/05-mapping-county-data.rds")
 
 county_data <- read_rds("data/05-mapping-county-data.rds")
+
+# AG: The file needed for the big data section is understandably large (so large
+# I can't put it on GitHub using the normal methods), so I'm saving the graph
+# rather than the data.
+
+# Also, the Primer has an old graph right now, it may be a good idea to rebuild
+# the maps chapter sometime in the future.
+# 
+# continental <- state.name[! state.name %in% c("Alaska", "Hawaii")]
+# 
+# races_data <- get_acs(geography = "tract",
+#                  state = continental,
+#                  variables = "B02001_008",
+#                  year = 2018,
+#                  summary_var = "B02001_001",
+#                  geometry = TRUE)
+# 
+# races_graph <- races_data  %>%
+#                  mutate(Percent = 100 * (estimate / summary_est)) %>%
+#                  ggplot(aes(fill = Percent)) +
+#                  geom_sf(size = 0.003) +
+#                  scale_fill_viridis_c(direction = -1, option = "inferno") +
+#                  labs(title = "Percent of People Who are Two or More Races by Census Tract",
+#                       caption = "Source: American Community Survey 2014-2018") +
+#                  theme_void()
+# write_rds(races_graph, "data/05-mapping-races-map.rds")
+# I then exported this as a png because I'm not going to have them download and
+# open a 175 MB file.
+
+# AG: Only showing the map as this also has way too much data to save normally.
+# 
+# nw_states <- c("OR", "WA", "ID")
+# 
+# nw_pums <- get_pums(variables = c("PUMA", "AGEP"),
+#                       state = nw_states,
+#                       recode = TRUE,
+#                       survey = "acs1",
+#                       year = 2018)
+# 
+# nw_Senior <- nw_pums %>%
+#     group_by(ST, PUMA) %>%
+#     summarize(total_pop = sum(PWGTP),
+#               pct_Senior = sum(PWGTP[AGEP > 64]) / total_pop,
+#               .groups = "drop")
+# 
+# nw_pumas <- map(nw_states,
+#                 tigris::pumas,
+#                 class = "sf",
+#                 cb = TRUE) %>%
+#             reduce(rbind)
+# 
+# nw_final <- nw_pumas %>%
+#     left_join(nw_Senior, by = c("STATEFP10" = "ST", "PUMACE10" = "PUMA"))
+# 
+# pums_map <- nw_final %>%
+#               ggplot(aes(fill = pct_Senior)) +
+#                 geom_sf() +
+#                 scale_fill_viridis_b(name = NULL,
+#                     option = "magma",
+#                     labels = scales::label_percent(1)) +
+#                 labs(title = "Percentage of population that are Seniors",
+#                      caption = "Source: American Community Survey 2014-2018") +
+#                 theme_void()
+# 
+# write_rds(pums_map, "data/05-mapping-pums-map.rds")
+
+pums_map <- read_rds("data/05-mapping-pums-map.rds")
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -64,9 +132,9 @@ county_data <- read_rds("data/05-mapping-county-data.rds")
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
-<!-- AG: General note, I do not do a good job of describing when they should add new code chunks. It's not the best. -->
+<!-- AG: General note, I do not do a good job of describing when they should add new code chunks. This should be refined after all the steps have been created. --> 
 
-<!-- * Use the new tigris::shift_geometry() in map chapter to make Alaska, Hawaii easier to include in US maps. Example: https://gist.github.com/walkerke/6025153da606ee8711a77f689196299e. -->
+<!-- * Use the new tigris::shift_geometry() in map chapter to make Alaska, Hawaii easier to include in US maps. Example: https://gist.github.com/walkerke/6025153da606ee8711a77f689196299e. DONE -->
 
 <!-- Perhaps of interest: https://milospopovic.net/how-to-make-choropleth-map-in-r/ -->
 
@@ -75,7 +143,9 @@ county_data <- read_rds("data/05-mapping-county-data.rds")
 ## Setup project
 ###
 
-In this tutorial, we're going to be creating maps based off of US Census Bureau data. We'll be utilizing commands from the "Downloading Census Data" tutorial in order to do this, so please do that tutorial before starting on this one.
+In this tutorial, we're going to be creating maps based off of US Census Bureau data. 
+
+We'll be utilizing commands from the "Downloading Census Data" tutorial in order to do this, so please complete that tutorial before starting this one.
 
 ### Exercise 1
 
@@ -83,13 +153,11 @@ Let's start a new R project so that we can create and eventually publish our map
 
 ###
 
-<!-- AG: Don't know what the syntax is for repo naming in the Primer, I think this is it. -->
+<!-- AG: Don't know what the syntax is for repo naming in the Primer, I think this is it (lowercase with dashes). -->
 
-Create a new GitHub repo titled `mapping-in-r` and link it to your RStudio like you have done so far. Remember to update the `.gitignore` file.
+Create a new GitHub repo titled `mapping-in-r` and link it to an RStudio project like you've done so far. Remember to update the `.gitignore` file to ignore the `.Rproj` file.
 
 ###
-
-<!-- AG: Should we use terminal or console commands for this tutorial? I'm going with console for now since I'm way too used it after the RStudio and Friends tutorial. -->
 
 Run `list.files()` in the Console to list all of the files. Copy and paste the output into the space below.
 
@@ -108,11 +176,11 @@ We'll be working in this project for the rest of this tutorial.
 
 ### Exercise 2
 
-Create a new R Markdown file titled `index.Rmd` and delete all of the things except for the setup chunk and the YAML header.
+Create a new R Markdown file titled `index.Rmd` and delete all of the text except for the setup chunk and the YAML header.
 
 ###
 
-Run `list.files()` in the Console to list all of the files. Copy and paste the output into the space below.
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
 
 ```{r setup-project-2}
 question_text(NULL,
@@ -147,14 +215,14 @@ question_text(NULL,
 
 ###
 
-You may have to install some of these packages as we progress.
+You may have to install some of these packages if you don't already have them loaded onto your computer.
 
 ## Mapping basics
 ###
 
-You've likely heard of longitude and latitude, the global coordinate system that lets us pinpoint 2D locations on a 3D surface. This is also known as a **c**oordinate **r**eference **s**ystem, or **CRS**. CRSs use a 3D model of the Earth to define locations on the surface of a grid, with longitude determining the east/west distance and the latitude determining the north/south distance. 
+<!-- AG: Going to move this section when I create a cloropleth map using this information: https://milospopovic.net/how-to-make-choropleth-map-in-r/ as that's when we're actually dealing with shape files and things like that. Keeping it here for now while I work on that. -->
 
-###
+You've likely heard of longitude and latitude, the global coordinate system that lets us pinpoint 2D locations on a 3D surface. This is also known as a **c**oordinate **r**eference **s**ystem, or **CRS**. CRSs use a 3D model of the Earth to define locations on the surface of a grid, with longitude determining the east/west distance and the latitude determining the north/south distance. 
 
 CRS are used to define spatial data that we can then map. 
 
@@ -175,8 +243,8 @@ In order to parse this information, we will be using the **sf** package to proce
 Let's try to recreate the following map:
 
 ```{r, message = FALSE, results = 'hide'}
-# Including this in the tutorial instead of in the setup chunk because they
-# aren't supposed to be able to access it.
+# This is included in the tutorial rather than the setup chunk because the
+# students aren't supposed to be able to access it.
 
 basics_map <- rural %>%
                 filter(! NAME %in% c("Alaska", "Hawaii", "Puerto Rico")) %>%
@@ -193,7 +261,7 @@ basics_map
 
 ### Exercise 1
 
-While R can handle a large amount of file formats for spatial data, we'll be focusing on shape files. While we refer to them as a "shapefile", it's actually composed of 3 basic files: `.shp` files for the shape and vertices, `.shx` files for indexes and offsets, and `.dbf` files to connect the geometry and the data. Luckily, this is already dealt with by **tidycensus** when it imports the Census shapefile.
+While R can handle a large amount of file formats for spatial data, we'll be focusing on shape files. While we refer to them as a "shapefile", they're actually composed of 3 basic files: `.shp` files for the shape and vertices, `.shx` files for indexes and offsets, and `.dbf` files to connect the geometry and the data. Luckily, this is already dealt with by **tidycensus** when it imports the Census shapefile.
 
 ###
 
@@ -201,7 +269,7 @@ In order to start mapping in R, we need to get a little more data from the **tid
 
 ###
 
-<!-- AG: Should we walk them through finding the variables again? -->
+<!-- AG: Should we walk them through finding the variables again? I will, but that's a final cleanup draft and not necessary as of right now. -->
 
 Add a new code chunk into your R Markdown file and add the `get_decennial()` function into it. Set the argument `geography` to `"state"`, `variables` to `"P001001"` and `"P002005"`, `year` to `2010`, `output` to `"wide"`, and `geometry` to `TRUE`.
 
@@ -220,9 +288,7 @@ question_text(NULL,
 
 ###
 
-<!-- AG: Can we link tutorials together like we do with Primer chapters? -->
-
-We covered this command in the Downloading Census Data tutorial. Please complete that tutorial first before starting on this one in order to avoid any confusion.
+The `get_decennial()` command pulls data from the US Census Bureau's Decennial Census by using **variables**. These variables refer to information in the Census Bureau. In this case, P001001 refers to the total population in a state while P002005 refers to the percentage of that population that lives in rural areas.
 
 ### Exercise 2
 
@@ -254,7 +320,7 @@ question_text(NULL,
 
 ###
 
-<!-- AG: Should I include examples for methods like this where we're trying to walk through what changes when we change the different arguments? -->
+<!-- AG: Should I include examples for methods like this where we're trying to walk through what changes when we change the different arguments? For example, should I show a map for each step of this tutorial or just leave it blank? -->
 
 You may notice that the plot is very stretched out with Alaska, Hawaii, and Puerto Rico causing the map to be zoomed out. Let's try to fix that.
 
@@ -324,7 +390,7 @@ Let's address these problems one at a time, starting with differentiating betwee
 
 ###
 
-We can do this by changing the ratios into percents, creating a wider difference between the two ends of the scale. 
+We can do this by changing the ratios into percents, creating a wider difference between the two ends of the scale (1 - 100 is a bigger range than 0.01 - 1).  
 
 Multiply the previous ratio by 100 in order to make this change.
 
@@ -348,7 +414,7 @@ This makes the colors a lot easier to distinguish, but they're still flipped.
 
 ### Exercise 6
 
-We can hit 2 birds with 1 stone by using the `scale_fill_viridis_c()` function to change the fill color scheme and invert the colors.
+We can kill 2 birds with 1 stone by using the `scale_fill_viridis_c()` function to change the fill color scheme and invert the colors.
 
 ###
 
@@ -370,7 +436,9 @@ question_text(NULL,
 
 ###
 
-The `scale_fill_viridis_c()` function is extremely versatile for when you want to provide map fill colors because it can create new color palettes and color schemes. You can also reverse the default order of the colors with the direction = -1 option. This function is for continuous variables such as prop_rural; if you have a discrete variable, you can use the analogous scale_fill_viridis_d().
+The `scale_fill_viridis_c()` function is extremely versatile for when you want to provide map fill colors because it can create new color palettes and color schemes. You can also reverse the default order of the colors with the direction = -1 option. 
+
+This function is for continuous variables such as prop_rural; if you have a discrete variable, you can use the analogous scale_fill_viridis_d().
 
 ### Exercise 7
 
@@ -412,9 +480,7 @@ Let's add Alaska and Hawaii back into the map.
 
 <!-- AG: Rough explanation, needs refining in final draft -->
 
-<!-- AG: You're supposed to run it through the `tigris::shift_geometry()` function, not use shift_geo -->
-
-Start a new R code chunk and copy the previous code, including the part where we defined `rural`. Run `rural` through the function `tigris::shift_geometry()` and save it to the variable `rural_shifted`.
+Start a new R code chunk and copy the previous code, including the part where we defined `rural`. Continue the pipe where we defined `rural` and add the function `shift_geometry()`.
 
 ###
 
@@ -432,7 +498,7 @@ question_text(NULL,
 
 ###
 
-This shifts these state's locations to the corner of the map, allowing you to display the entire country with all 50 states.
+This shifts Alaska, Hawaii, and Puerto Rico's locations to the corner of the map, allowing you to display the entire country with all 50 states.
 
 ### Exercise 9
 
@@ -497,9 +563,7 @@ The first step is to look at the Census variables so that we know what variables
 
 ###
 
-<!-- AG: The Hispanic variable is stupidly far away and hard to filter, so I'm just giving it to them -->
-
-Run `load_variables(2018, "acs5") %>% filter(concept == RACE)` in order to load most of the variables relating to race. Save the name of the variables relating to whites, African Americans, and Asians in a vector called `racevars`.
+Create a new code chunk and run `load_variables(2018, "acs5") %>% filter(concept == "RACE")` in order to load most of the variables relating to race. Save the name of the variables relating to whites, African Americans, and Asians in a vector called `racevars`.
 
 ###
 
@@ -525,7 +589,7 @@ Let's access the Census Data by using the `get_acs()` function.
 
 ###
 
-Use the `get_acs()` function in a new R code chunk, setting the `geography` arguments to `"tract"`, the `variables` argument to the vector you created in the last exercise, the `year` to `2018`, the `state` to `"TX"`, the `county` to `"Harris County"`, the `geometry` to TRUE, and `summary_var` to `"B02001_001"`, the total population of your county. Save this output to the `county_data` variable.
+Use the `get_acs()` function in a new R code chunk, setting the `geography` arguments to `"tract"`, the `variables` argument to the vector you created in the last exercise, the `year` to `2018`, the `state` to `"TX"`, the `county` to `"Harris County"`, the `geometry` to TRUE, and `summary_var` to `"B02001_001"`, the total population of the county. Save this output to the `county_data` variable.
 
 ###
 
@@ -626,11 +690,11 @@ If you wanted to differentiate by even more variables like the percentage who ar
 
 ### Exercise 6
 
-But our graph is still blue, and that's pretty annoying for colorblind people and just people looking to analyze the data in general since it all blends in together.
+But our graph is still blue, and that's pretty annoying for colorblind people and anyone trying to conduct specific analysis since all of the colors blend together.
 
 ###
 
-We can fix this by using the `scale_fill_viridis_c()` function to change the fill colour to something more vibrant.
+We can fix this by using the `scale_fill_viridis_c()` function to change the fill color to something more vibrant.
 
 Add the layer `scale_fill_viridis_c()` and set the `direction` argument to `-1`.
 
@@ -713,11 +777,25 @@ question_text(NULL,
 
 ## Dealing with big data
 
-<!-- description -->
+Instead of a census tract map for just one city, let’s do a “big data” project involving every census track in the country, plotting the percentage of people who are two or more races.
+
+Let's try to recreate this map:
+
+```{r}
+include_graphics("images/05-mapping-races-map.png")
+```
 
 ### Exercise 1
 
-<!-- find variables -->
+Let's start by finding the correct variable in the American Community Survey.
+
+###
+
+Run `load_variables(2018, "acs5") %>% filter(concept == "RACE")` in the Console in order to load most of the variables relating to race.
+
+###
+
+Type the names of the variables that refers to the total population and the variable that refers to the population that has a heritage of 2 or more races into the box below.
 
 ```{r dealing-with-big-dat-1}
 question_text(NULL,
@@ -731,9 +809,25 @@ question_text(NULL,
 
 ###
 
+You can determine what the variable refers to by looking at the `label` column. 
+
+For example, the variable `B02001_008` has a label of `Estimate!!Total!!Two or more races`, which means that it's looking at the number of people who are made up of 2 or more races out of the total estimated population. 
+
+By contrast, the variable `B02001_001` has a label of `Estimate!!Total`, showing how it represents the total estimated population.
+
 ### Exercise 2
 
-<!-- create continental that excludes Alaska and Hawaii -->
+For this map, we want to focus on the mainland US in order to simplify things. In order to do this, we can just filter the states that aren't part of it. This is similar to the nuclear option we did earlier, but this time we're manipulating the data instead of the graph.
+
+###
+
+Create a new code chunk to contain the code necessary for this function.
+
+Then, create a new variable called `continental` that contains the value `state.name[! state.name %in% c("Alaska", "Hawaii")]`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r dealing-with-big-dat-2}
 question_text(NULL,
@@ -747,9 +841,25 @@ question_text(NULL,
 
 ###
 
+The `state.name` variable is automatically installed in R, and it includes the name of every US state. In this case, we're filtering out Alaska and Hawaii so that they aren't included in our search. 
+
 ### Exercise 3
 
-<!-- get_acs command -->
+Now that we've filtered the data, let's try to download it from the Census onto our computers.
+
+Make sure to do any filters **before** you download any data so that you aren't pulling too much data onto your computer and taking too much time. 
+
+This is especially important when you're working with highly detailed data like this, where one state could have hundreds of rows.
+
+###
+
+In the "Faceting Maps" section, we created a `get_acs()` command that used multiple variables to create a facet for one county. 
+
+Create another `get_acs()` command with similar characteristics, but this time use the `continental` vector we created earlier as the `state` and the Census variable that described 2 races as the `variables` argument. Additionally, since we're looking at the entire country, remove the `county` argument. Save this to a variable named `races`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r dealing-with-big-dat-3}
 question_text(NULL,
@@ -763,9 +873,21 @@ question_text(NULL,
 
 ###
 
+And here we encounter one of the main problems in dealing with big data: **it takes a massive amount of time**. Unless you're directly plugged into a cell tower, you probably took at least a couple of seconds to download all 87.3 MB of data onto your computer. 
+
+This is why summary statistics are important. Rather than downloading all of the data for every census tract and then totaling it, it's much better to download the data for every state if that's what you need to do. In general, try to look for summary data first rather than finding very specific data about very specific cases.
+
 ### Exercise 4
 
-<!-- generate percent column -->
+Let's create a graph. If we don't change the information beforehand, we're going to run into the same problems that we did in the "Mapping Basics" section with the color and label problems. Let's implement the same fixes that we did before.
+
+###
+
+Create a pipe off of `races` and create a `Percent` column that is 100 times the ratio between the `estimate` and `summary_est` columns.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r dealing-with-big-dat-4}
 question_text(NULL,
@@ -779,9 +901,15 @@ question_text(NULL,
 
 ###
 
+Much like before, this changes the data into a percentage that lets us clearly distinguish between the different data points.
+
 ### Exercise 5
 
-<!-- ggplot and geom_sf -->
+Continue the pipe and create a map using the `ggplot()` and `geom_sf()` functions. Map the `fill` argument to the `Percent` column that we created before.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r dealing-with-big-dat-5}
 question_text(NULL,
@@ -795,9 +923,15 @@ question_text(NULL,
 
 ###
 
+Now we can clearly distinguish between the areas, but it's very hard to distinguish between the different census tracts.
+
 ### Exercise 6
 
-<!-- scale_fill_viridis_c -->
+Within the `geom_sf()` function, set the `size` argument to `0.003`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r dealing-with-big-dat-6}
 question_text(NULL,
@@ -811,9 +945,15 @@ question_text(NULL,
 
 ###
 
+By setting size to 0.003, we can create thin outlines around our census tracts. Any larger and these outlines would make it hard to see our tracts.
+
 ### Exercise 7
 
-<!-- labs -->
+Now, continue the pipe and add the `scale_fill_viridis_c()` function. Invert the colors using the `direction` argument and set the `option` to `"inferno"`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r dealing-with-big-dat-7}
 question_text(NULL,
@@ -827,9 +967,25 @@ question_text(NULL,
 
 ###
 
+The `inferno` option sets the color palette to have smaller percentages be lighter while higher percentages are darker. This makes it easy for anyone to understand your graph, even if they're colorblind.
+
 ### Exercise 8
 
-<!-- theme_void() -->
+Finally, we need to clean up our map and make it understandable.
+
+Remember that our final map is supposed to look like this:
+
+```{r}
+include_graphics("images/05-mapping-races-map.png")
+```
+
+###
+
+Set the labels to what's seen in the graph above and set the theme to `theme_void()`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r dealing-with-big-dat-8}
 question_text(NULL,
@@ -845,11 +1001,27 @@ question_text(NULL,
 
 ## PUMS data
 
-<!-- description -->
+The Census also collects **P**ublic **U**se **M**icrodata **S**amples, or **PUMS** data. 
+
+This contains advanced census data on individual people. While it only contains data for about 1% of the US, it's extremely deep and lets you do a lot of cool things.
+
+Let's try to recreate the following map:
+
+```{r}
+pums_map
+```
 
 ### Exercise 1
 
-<!-- pums_variables -->
+Accessing PUMS data works just like accessing any Census data. However, there are a few key differences.
+
+###
+
+Create a new code chunk and run the `glimpse()` function on the dataset `pums_variables`. This will show all of the variables that PUMS collects as well as the various values contained within them.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-1}
 question_text(NULL,
@@ -863,9 +1035,25 @@ question_text(NULL,
 
 ###
 
+As you can see, there's a lot of information here ranging from where the person lives to whether they have a fridge or not. We're not going to be using all of it, but we can filter it by the variable code.
+
+One problem with using PUMS is that you only get the state and PUMA (**p**ublic **u**se **m**icrodata **a**rea) of each individual in the row. PUMAs are Census geographies that are entirely within a single state and are completely independent of other areas, so they don't line up with other boundaries. For example, New York City has PUMAs in its community districts but other places have it in their census tracts. As such, you can't use PUMS data for other small areas.
+
 ### Exercise 2
 
-<!-- get_pums -->
+Mapping PUMS data is very different from normal mapping because we need to first map the PUMAS then attach our PUMS data to that map. This is because we can't get the shape files and `geometry` column for PUMAS like we did for the previous examples and as such have to get them from the **tigris** package.
+
+###
+
+First, let's define what states we need to use. 
+
+###
+
+Create a new vector containing `"OR"`, `"WA"`, and `"ID"` that's named `nw_states`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-2}
 question_text(NULL,
@@ -879,9 +1067,29 @@ question_text(NULL,
 
 ###
 
+These are the northwestern states shown in the map (Oregon, Washington, and Idaho). While we're using their acronyms here, you can also use their full names for the steps below.
+
 ### Exercise 3
 
-<!-- nw_states creation -->
+Let's use the `get_pums()` function to choose a few select variables such as the age and PUMA that the individual lives in.
+
+###
+
+In this case, we'll be using the `AGEP` and `PUMA` variables.
+
+###
+
+If you want to see all of the variables that PUMS collects and what they represent, just run `view(pums_variables)` in the Console to open a table. Keep in mind that this table is *massive*, with over 31,759 variables collected.
+
+###
+
+We can do this by using the `get_pums()` function. 
+
+Add the `get_pums()` function to the code chunk and set the `variables` argument to the ones described above, `state` to `nw_states`, `recode` to `TRUE`, `survey` to `"acs1"`, and `year` to `2018`. Save the output to a variable called `nw_pums`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-3}
 question_text(NULL,
@@ -895,9 +1103,21 @@ question_text(NULL,
 
 ###
 
+One interesting aspect of `get_pums()` is that it will always contain the `SERIALNO`, `SPORDER`, `WGTP`, `PWGTP`, and `ST` columns. `SERIALNO` and `SPORDER` are the variables that uniquely identify observations, `WGTP` and `PWGTP` are the housing and person weights, and `ST` is the state code. 
+
 ### Exercise 4
 
-<!-- map() -->
+This is good data, but it's really dirty and it doesn't have the information that we need. It's time to wrangle it into place.
+
+###
+
+Use the `group_by()` and `summarize()` functions to make a modified version of `nw_pums` called `nw_Senior`.
+
+Group the data by `ST` and `PUMA`, then summarize it to add a `total_pop` column containing the sum of all `PWGTP` and a `pct_Senior` column containing the ratio of the sum of all `PWGTP` with an `AGEP` over 64 and `total_pop`. Make sure to drop the groups after the `summarize()`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-4}
 question_text(NULL,
@@ -911,9 +1131,19 @@ question_text(NULL,
 
 ###
 
+The `PWGTP` column is the number of people contained within that sample, so if you total all of the `PWGTP` column then you can get the total population within the study. This is why we can use it to not only find the total population but also the percent of the population that are over 64.
+
 ### Exercise 5
 
-<!-- get_pums() -->
+Now let's create the geometries for our PUMAs since we weren't able to load them from the `get_pums()` function.
+
+###
+
+Add `nw_pumas <- map(nw_states, tigris::pumas, class="sf", cb=TRUE) %>% reduce(rbind)` to your code chunk. This will create the necessary geometries and shape files for each PUMA in the state, allowing us to map them later.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-5}
 question_text(NULL,
@@ -927,9 +1157,19 @@ question_text(NULL,
 
 ###
 
+Keep in mind that the `map()` function **does not generate a map**. It just applies a function to every element inside a list. In this case, the function is `tigris::pumas()`, which creates the shape files of the PUMAs contained within an inputted state.
+
 ### Exercise 6
 
-<!-- group_by() -->
+It's time to combine our shape files with our data. We can do this by using `left_join()`.
+
+###
+
+Join the `nw_pumas` and `nw_Senior` datasets together using the `left_join()` function, mapping `"STATEFP10"` to `"ST"` and `"PUMACE10"` to `"PUMA"`. Save this output to a variable called `nw_final`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-6}
 question_text(NULL,
@@ -943,9 +1183,15 @@ question_text(NULL,
 
 ###
 
+Now we have a completed dataset containing both the mapping information and the data that needs to be mapped, allowing us to map the data like we did in the previous sections.
+
 ### Exercise 7
 
-<!-- summarize pt 1 -->
+Start a pipe with `nw_final` and map it using the `ggplot()` and `geom_sf()` functions. Map the `fill` argument to `pct_Senior` in `ggplot()`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-7}
 question_text(NULL,
@@ -959,9 +1205,17 @@ question_text(NULL,
 
 ###
 
+One interesting thing about PUMAs is that each PUMA covers 100,000 people, which is why areas like Seattle (in western Washington) have a lot of PUMAs while Idaho and Oregon have extremely large PUMAs, as you can see on the map you just created.
+
 ### Exercise 8
 
-<!-- summarize pt 2 -->
+We now need to adequately color our data so that it's not all blue.
+
+###
+
+This time, we need to use the `scale_fill_viridis_b()` function in order to "bin" our data.
+
+Add this function as a layer, setting the `name` argument to `NULL`, `option` to `"magma"`, and `labels` to `scales::label_percent(1)`.
 
 ```{r pums-data-8}
 question_text(NULL,
@@ -975,9 +1229,25 @@ question_text(NULL,
 
 ###
 
+We're using `scale_fill_viridis_b()` here in order to bin the data, or group it together so that there are set groups rather than a continuous legend. This makes it easier to see the large differences between groups rather than focusing on the percentage points.
+
 ### Exercise 9
 
-<!-- left_join for some reason -->
+Finally, we need to clean up our map and add our captions.
+
+Remember that our final map is supposed to look like this:
+
+```{r}
+pums_map
+```
+
+###
+
+Set the labels to what's seen in the graph above and set the theme to `theme_void()`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
 ```{r pums-data-9}
 question_text(NULL,
@@ -991,11 +1261,29 @@ question_text(NULL,
 
 ###
 
-### Exercise 10
+<!-- AG: I'm contemplating putting a section about mapping coordinates onto a map. It's really useful for when you want to map stations or points that aren't Census data since you aren't always going to have a shape file for everything (stuff like weather stations). -->
 
-<!-- ggplot and geom_sf() -->
+## Rpubs Publishing
 
-```{r pums-data-10}
+<!-- AG: Add publishing to RPubs section here. This is just short and sweet since they should already know how to publish to RPubs. -->
+
+We're going to publish this file to RPubs in order to best show off your changes.
+
+### Exercise 1
+
+Clean up your R Markdown file and format it as you wish. 
+
+Make sure to clearly separate the different functions and different graphs so that you know what they do later.
+
+### Exercise 2
+
+Publish your R Markdown file to RPubs by knitting the file and clicking the "Publish" button in the top right corner. 
+
+###
+
+Copy-paste your RPubs URL into the space below.
+
+```{r rpubs-publishing-2}
 question_text(NULL,
 	message = "answer here",
 	answer(NULL,
@@ -1006,60 +1294,6 @@ question_text(NULL,
 ```
 
 ###
-
-### Exercise 11
-
-<!-- scale_fill_viridis_b and args -->
-
-```{r pums-data-11}
-question_text(NULL,
-	message = "answer here",
-	answer(NULL,
-	correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	options = list(nrows = 6))
-```
-
-###
-
-### Exercise 12
-
-<!-- labs -->
-
-```{r pums-data-12}
-question_text(NULL,
-	message = "answer here",
-	answer(NULL,
-	correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	options = list(nrows = 6))
-```
-
-###
-
-### Exercise 13
-
-<!-- theme_void -->
-
-```{r pums-data-13}
-question_text(NULL,
-	message = "answer here",
-	answer(NULL,
-	correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	options = list(nrows = 6))
-```
-
-###
-
-<!-- AG: I'm contemplating putting a section about mapping coordinates onto a map. It's really useful for when you want to map stations or points that aren't Census data since you aren't always going to have a shape file for everything and you might just have coordinates. -->
-
-###
-
-<!-- AG: Add publishing to RPubs section here. -->
 
 Congratulations on completing the tutorial.
 
@@ -1071,7 +1305,7 @@ If you want to explore further:
 - Want to add interactivity to your maps?  Check out the **leaflet** package.  [Here's](https://juliasilge.com/blog/using-tidycensus/) a good introduction to using **leaflet** with **tidycensus**.
 - Practice your skills with [Andrew Tran's case study slides](https://andrewbtran.github.io/NICAR/2019/mapping/02_case_study_slides.html), where you can replicate a graphic from the Washington Post. Note: this involves some packages we haven't shown you in this book, but if you follow along step by step you will be able to see how they are used.
 
-Downloading feature geometry from the Census website.  To cache shapefiles for use in future sessions, set `options(tigris_use_cache = TRUE)`.
+Downloading feature geometry from the Census website. To cache shapefiles for use in future sessions, set `options(tigris_use_cache = TRUE)`.
 
 ###
 
