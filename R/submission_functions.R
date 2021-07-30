@@ -68,9 +68,20 @@ submission_server <- function(input, output) {
 
   local({
 
-
-
     build_html <- function(file){
+
+      # Inspired by Matt Blackwell's implementation of a similar idea.
+      # https://github.com/mattblackwell/qsslearnr/blob/main/R/submission.R
+      #
+      # In order to keep similar question order as in the exercise,
+      # label_list.rds, which is written everytime a tutorial is ran,
+      # is read in.
+
+      label_list <- readRDS(system.file("www/label_list.rds", package = "primer.tutorials"))
+
+      # Create function to map objects over that will
+      # return different results based on if it is a
+      # code or question exercise.
 
       question_or_exercise <- function(obj, ...){
         options <- list(...)
@@ -82,6 +93,8 @@ submission_server <- function(input, output) {
           options$default
         }
       }
+
+      # Copy over a report Rmd template to write to.
 
       tempReport <- file.path(tempdir(), "submission-temp.Rmd")
       file.copy("../../www/submission-temp.Rmd", tempReport, overwrite = TRUE)
@@ -95,6 +108,8 @@ submission_server <- function(input, output) {
       # obj$type[[1]] "exercise_submission"
       # obj$id[[1]] "id"
 
+      # Format objs from learnr into a tibble
+      # and reorder tibble rows based on label_list
 
       out <- tibble::tibble(
         id = purrr::map_chr(objs, "id",
@@ -105,6 +120,13 @@ submission_server <- function(input, output) {
                             .default = NA)
       )
 
+      out$id <- factor(out$id, levels = label_list)
+
+      out <- arrange(out, out$id)
+
+      # Pass tibble and title as parameters into
+      # the report template, then render template as
+      # an html document.
 
       params <- list(
         output = out,
