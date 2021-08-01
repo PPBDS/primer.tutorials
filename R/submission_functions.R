@@ -52,6 +52,7 @@
 #'
 #' @param input unused
 #' @param output unused
+#' @param session used to get current directory of tutorial
 #'
 #' @rdname submission_functions
 #' @export
