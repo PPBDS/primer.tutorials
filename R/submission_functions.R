@@ -69,8 +69,6 @@ submission_server <- function(input, output, session) {
 
   local({
 
-    print(session$options$appDir)
-
     build_html <- function(file){
 
 
