@@ -19,4 +19,4 @@ county_data <- get_acs(geography = "tract",
                        summary_var = "B02001_001")
 
 # Saves the data to an RDS file.
-write_rds(county_data, "data/05-mapping-county-data.rds")
+write_rds(county_data, "data/county-data.rds")
