@@ -28,17 +28,18 @@ options(tutorial.exercise.timelimit = 60,
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
-<!-- Everything is sum of two dice. -->
+<!-- Review all current code and clean it up. -->
 
-<!-- Key insight: We are in the business of comparing the model --- a data generating mechanism which we create with code --- with the data. In particular, we simulate from 10,000 draws (or create or just draw) from the DGM. Then, we look at the data we have. How well do those match up? If they match up OK, then we are good! If they match up poorly, we need a new DGM.  -->
+<!-- Key insight: We are in the business of comparing the model --- a data generating mechanism (DGM) which we create with code --- with the data. In particular, we simulate from 10,000 draws (or create or just draw) from the DGM. Then, we look at the data we have. How well do those match up? If they match up OK, then we are good! If they match up poorly, we need a new DGM.  -->
 
-<!-- Data Generating Mechanism: Five possible states of the world. Or five possible models. Or five possible assumptions. p_6 = c(0.15, 0.20, 0.3, 0.5, 0.75). Do 10,000 draws for each. The DGM is something which is made --- in theory --- before you even look at your data. So, let's make 5 of them. Of course, there are an infinite number of possible DGMs. -->
 
-<!--  Fourth example: shows what happens when we directly compare data (which we know to be false) to simulations from the model (which we define as the truth.) With 10,000 draws, it is obvious that the data demonstrates that the model is false. (Maybe this is combined with second example. Maybe not.) Key is that we are comparing the model with the data and, on the basis of a discrepancy between the two, determining that we need to fix the model. Introduce the concept of model checking. -->
+<!-- Perhaps use the Statistical Rethinking chapter 2 example which is similar to, but more complex than, our  -->
 
-<!-- Forth example, assume that we know that  -->
 
-<!-- Fifth example: Use the Statistical Rethinking chapter 2 example which is similar to, but more complex than, our  -->
+
+
+## Puzzling data
+
 
 
 
@@ -46,9 +47,42 @@ options(tutorial.exercise.timelimit = 60,
 
 ### 
 
-The larger the sample size, the more closely your empirical distribution will match the mathematical distribution **if** your mathematical assumptions are correct.
+The larger the sample size, the more closely your empirical distribution will match the data generating mechanism (DGM) **if** your assumptions about the DGM are correct.
 
 ### 
+
+For example, you might think that the two dice are fair and that, therefore, the data generating mechanism --- which is a tool you can use, for example, to forecast future rolls --- is defined as:
+
+<!-- DK: Not sure I like this p_x(X) stuff. Need to revisit, both here and in the Primer. -->
+
+$$ p_X(x) = \begin{cases} \dfrac{x-1}{36} &\text{for }x=1,2,3,4,5,6 \\ \dfrac{13-x}{36} &\text{for }x=7,8,9,10,11,12 \\ 0 &\text{otherwise} \end{cases} $$
+
+This is, of course, the mathematical distribution for fair dice. Graphically, it looks like:
+
+
+```{r}
+tibble(sum = c(rep(c(2, 12), 1), 
+               rep(c(3, 11), 2),
+               rep(c(4, 10), 3), 
+               rep(c(5,  9), 4),
+               rep(c(6,  8), 5),
+               rep(c(7), 6))) %>% 
+  ggplot(aes(x = sum)) +
+  geom_histogram(aes(y = after_stat(count/sum(count))), 
+                   binwidth = 1, 
+                   color = "white") +
+  labs(title = "Mathematical Probability Distribution",
+         subtitle = "Expectation for the sum from rolling two dice",
+         x = "Outcome\nSum of Two Die",
+         y = "Probability") +
+  scale_x_continuous(breaks = seq(2, 12, 1), labels = 2:12) +
+  scale_y_continuous(labels = 
+                         scales::percent_format(accuracy = 1)) +
+  theme_classic()
+```
+
+###
+
 
 This is the plot we will replicate.
 
@@ -72,16 +106,16 @@ dice_p <- tibble(N = c(rep("10", 10),
   mutate(N = fct_inseq(N)) %>%
   summarise(N, result) %>%
   ggplot(aes(x = result)) +
-  geom_histogram(aes(y = stat(density)),
-                 binwidth = 1, 
-                 color = "white") +
-  labs(title = "Empirical Probability Distribution",
-         subtitle = "Sum from rolling two dice, Sample size changes",
-         x = "Outcome\nSum of Two Die",
-         y = "Probability") +
-  facet_wrap(~ N, scales = "free") +
-  scale_x_continuous(breaks = seq(2, 12, 1), labels = 2:12) +
-  scale_y_continuous(labels= scales::percent_format(accuracy = 1))
+    geom_histogram(aes(y = stat(density)),
+                   binwidth = 1, 
+                   color = "white") +
+    labs(title = "Empirical Probability Distribution",
+           subtitle = "Sum from rolling two dice, Sample size changes",
+           x = "Outcome\nSum of Two Die",
+           y = "Probability") +
+    facet_wrap(~ N, scales = "free") +
+    scale_x_continuous(breaks = seq(2, 12, 1), labels = 2:12) +
+    scale_y_continuous(labels= scales::percent_format(accuracy = 1))
 
 dice_p
 
@@ -89,6 +123,7 @@ dice_p
 
 ```
 
+The more data you have, the more that the empirical distribution will match the data generating mechanism, if your assumptions about the DGM are correct.
 
 
 ### Exercise 1
@@ -530,14 +565,16 @@ Reminder: Your plot should look similar to the the one below.
 dice_p
 ```
 
+###
+
+The larger the sample size, the more closely your empirical distribution will match the data generating mechanism (DGM) **if** your assumptions about the DGM are correct.
 
 ## Weighted dice
 ###
 
-If your assumptions about the process which generates the data are false, then it may take a lot of data to see evidence of that.
+If your assumptions about the process which generates the data (i.e., the data generating mechanism) are false, then it may take a lot of data to see evidence for that falseness. 
 
 ###
-
 
 Consider this plot:
 
@@ -574,28 +611,7 @@ dicefalse_p
 
 ###
 
-Note that this graph looks completly different from the mathematical assumption in the primer that looks like this.
 
-```{r}
-tibble(sum = c(rep(c(2, 12), 1), 
-               rep(c(3, 11), 2),
-               rep(c(4, 10), 3), 
-               rep(c(5,  9), 4),
-               rep(c(6,  8), 5),
-               rep(c(7), 6))) %>% 
-  ggplot(aes(x = sum)) +
-  geom_histogram(aes(y = after_stat(count/sum(count))), 
-                   binwidth = 1, 
-                   color = "white") +
-  labs(title = "Mathematical Probability Distribution",
-         subtitle = "Expectation for the sum from rolling two dice",
-         x = "Outcome\nSum of Two Die",
-         y = "Probability") +
-  scale_x_continuous(breaks = seq(2, 12, 1), labels = 2:12) +
-  scale_y_continuous(labels = 
-                         scales::percent_format(accuracy = 1)) +
-  theme_classic()
-```
 
 
 
@@ -628,7 +644,6 @@ Use `sample()` to generate integers 1 to 6 for any order.
 ```{r rolling-two-dice-bad-assumption-ex-2-hint, eval = FALSE}
 sample(1:6)
 ```
-
 
 ###
 
@@ -900,6 +915,7 @@ Now use `scale_y_continuous()` to put the x-axis in percent format. Within `scal
 ### Exercise 19
 
 Finally, use `labs()` to add the appropriate title, subtitle, and axis labels.
+
 ```{r rolling-two-dice-false-assumption-ex-19, exercise = TRUE}
 
 ```
@@ -920,10 +936,214 @@ dicefalse_p
 
 ###
 
-With little data, we can't be sure that our model is correct. With lots of data, we can be sure that the model is false.
+If your assumptions about the process which generates the data (i.e., the data generating mechanism) are false, then it may take a lot of data to see evidence for that falseness. 
+
+## Different data generating mechanism
+###
+
+There are an infinite number of possible data generating mechanisms (DGMs) for every data science problem. 
+
+###
+
+Consider this graph where we have different probability for the 6s to appear, where 0 present a zero chance, 0.2 is 20%, 0.4 is 40%, 0.6 is 60%, 0.8 is 80% and 1 is 100% respectively, every single one of them represent an different Data Generating Mechanism (DGM). Now let's make this plot ourself.
+```{r}
+tibble(die1 = list(c(0.2, 0.2, 0.2, 0.2, 0.2, 0), 
+                   c(0.16, 0.16, 0.16, 0.16 ,0.16, 0.20), 
+                   c(0.12, 0.12, 0.12, 0.12, 0.12, 0.40), 
+                   c(0.08, 0.08, 0.08, 0.08, 0.08, 0.60),
+                   c(0.04, 0.04, 0.04, 0.04, 0.04, 0.80), 
+                   c(0, 0, 0, 0, 0, 1))) %>%
+   mutate(die2 = map(die1, ~ .)) %>%
+   mutate(prob = c(.0, .2, .4, .6, .8, 1) ) %>%
+   mutate(sample1 = map(die1, ~ sample(1:6, replace = T, size = 10000, prob = .))) %>%
+   mutate(sample2 = map(die2, ~ sample(1:6, replace = T, size = 10000, prob = .))) %>%
+   unnest(c(sample1, sample2)) %>%
+   mutate(sum = sample1 + sample2) %>%
+   ggplot(aes(sum)) + 
+   geom_histogram(aes(y = stat(density)),
+                 binwidth = 1, 
+                 color = "white") +
+  facet_wrap(~ prob, scales = "free")+
+  scale_x_continuous(breaks = seq(2, 12, 1), labels = 2:12) +
+  scale_y_continuous(labels= scales::percent_format(accuracy = 1)) 
+```
+
+### Exercise 1
+
+
+```{r different-data-gener-1, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different-data-gener-1-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 2
+
+
+```{r different-data-gener-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different-data-gener-2-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 3
+
+
+```{r different-data-gener-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different-data-gener-3-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 4
+
+
+```{r different-data-gener-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different-data-gener-4-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 5
+
+
+```{r different-data-gener-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different-data-gener-5-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 6
+
+
+```{r different-data-gener-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different-data-gener-6-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 7
+
+
+```{r different-data-gener-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different-data-gener-7-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 8
+
+
+```{r different-data-gener-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different-data-gener-8-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 9
+
+
+```{r different-data-gener-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different-data-gener-9-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 10
+
+
+```{r different-data-gener-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r different-data-gener-10-hint, eval = FALSE}
+
+```
+
+###
 
 
 
+
+
+
+
+
+<!-- Six possible states of the world. Or five possible models. Or five possible assumptions. p_6 = c(0, 0.20, 0.4, 0.6, 0.8, 1). Do 10,000 draws for each. The DGM is something which is made --- in theory --- before you even look at your data. So, let's make 5 of them. Of course, there are an infinite number of possible DGMs. -->
+
+
+## Rejecting a proposed DGM
+###
+
+<!-- Someone says: 5s and 6s have a 20% chance, all other numbers have a 15% chance. We simulate that DGM. And we compare --- side by side histograms? overlapping histograms? overlapping densities? maybe use patchwork --- 10,000 data points (generated by dice with 20% chance for *4* and 5 and 6) --- although we are considering this to be real data which someone handed us) with 10,000 points from their DGM. -->
+
+<!-- Maybe data is stacked --- meaning "tidy" --- with a column called "source" with values either "data" or "DGM".  -->
+
+<!--  Shows what happens when we directly compare data  to simulations from the model (which we define as the truth.) With 10,000 draws, it is obvious that the data demonstrates that the model is false. Key is that we are comparing the model with the data and, on the basis of a discrepancy between the two, determining that we need to fix the model. Introduce the concept of model checking. -->
+
+
+## Selecting a DGM
+###
+
+
+
+<!-- -->
 
 
 
