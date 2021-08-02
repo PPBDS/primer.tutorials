@@ -139,7 +139,7 @@ submission_server <- function(input, output, session) {
 
       out$id <- factor(out$id, levels = label_list)
 
-      out <- arrange(out, out$id)
+      out <- dplyr::arrange(out, out$id)
 
       # Pass tibble and title as parameters into
       # the report template, then render template as
