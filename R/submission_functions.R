@@ -52,11 +52,12 @@
 #'
 #' @param input unused
 #' @param output unused
+#' @param session used to get current directory of tutorial
 #'
 #' @rdname submission_functions
 #' @export
 
-submission_server <- function(input, output) {
+submission_server <- function(input, output, session) {
   p = parent.frame()
   check_server_context(p)
 
@@ -70,14 +71,30 @@ submission_server <- function(input, output) {
 
     build_html <- function(file){
 
+
+
       # Inspired by Matt Blackwell's implementation of a similar idea.
       # https://github.com/mattblackwell/qsslearnr/blob/main/R/submission.R
       #
-      # In order to keep similar question order as in the exercise,
-      # label_list.rds, which is written everytime a tutorial is ran,
-      # is read in.
+      # In order to keep same question order as in the exercise,
+      # use parsermd to define factor level for exercise order
+      # and store it in label_list
+      #
+      # information-name, information-email, download-answers-1
+      # are questions that are part of the child documents, which
+      # remain constant. Therefore, they are added in manually.
 
-      label_list <- readRDS(system.file("www/label_list.rds", package = "primer.tutorials"))
+      manual_list <- list("information-name", "information-email", "download-answers-1")
+
+      rmd_path <- file.path(session$options$appDir, "tutorial.Rmd")
+
+      rmd <- parsermd::parse_rmd(rmd_path)
+
+      rmd_tbl <- parsermd::as_tibble(rmd)
+
+      rmd_chunk_labels <- dplyr::filter(rmd_tbl, rmd_tbl$type == "rmd_chunk")$label
+
+      label_list <- c(manual_list, rmd_chunk_labels)
 
       # Create function to map objects over that will
       # return different results based on if it is a
@@ -122,7 +139,7 @@ submission_server <- function(input, output) {
 
       out$id <- factor(out$id, levels = label_list)
 
-      out <- arrange(out, out$id)
+      out <- dplyr::arrange(out, out$id)
 
       # Pass tibble and title as parameters into
       # the report template, then render template as
