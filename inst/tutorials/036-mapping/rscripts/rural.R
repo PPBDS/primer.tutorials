@@ -11,4 +11,4 @@ rural <- get_decennial(geography = "state",
                        geometry = TRUE)
 
 # Saves the data to an RDS file.
-write_rds(rural, "data/rural.rds")
+write_rds(rural, "inst/tutorials/036-mapping/data/rural.rds")
