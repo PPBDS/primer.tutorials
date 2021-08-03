@@ -74,7 +74,7 @@ make_new_q_with_answer <- function(){
 
       possible_id_removed_prev <- gsub("\\{#(.*)\\}", "", l)
 
-      possible_id_removed <- gsub("[^a-zA-Z ]", "", possible_id_removed_prev)
+      possible_id_removed <- gsub("[^a-zA-Z0-9 ]", "", possible_id_removed_prev)
 
       lowercase_id <- tolower(trimws(possible_id_removed))
 
@@ -90,7 +90,7 @@ make_new_q_with_answer <- function(){
   # inserting the appropriate label
   # and exercise number at the right places
 
-  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-%s}\nquestion_text(NULL,\n\tmessage = \"answer here\",\n\tanswer(NULL,\n\tcorrect = TRUE),\n\tallow_retry = FALSE,\n\tincorrect = NULL,\n\toptions = list(nrows = 6))\n```\n\n###\n\n",
+  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-%s}\nquestion_text(NULL,\n\tmessage = \"answer here\",\n\tanswer(NULL,\n\tcorrect = TRUE),\n\tallow_retry = FALSE,\n\tincorrect = NULL,\n\trows = 6)\n```\n\n###\n\n",
                           exercise_number,
                           section_id,
                           exercise_number)

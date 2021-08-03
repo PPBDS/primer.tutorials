@@ -15,10 +15,10 @@ description: Reading data from files.
 library(learnr)
 library(primer.tutorials)
 library(tidyverse)
+library(janitor)
 library(readxl)
 library(jsonlite)
 library(knitr)
-
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
@@ -52,37 +52,43 @@ example_1 <- tibble(name= c("Miguel", "Sofia", "Aya", "Cheng"),
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
-<!-- Own every word here. Do the entire tutorial again. -->
-
-<!-- Add copy buttons as appropriate. -->
-
-<!-- Exercise 2 should use `show_col_types = FALSE` to get rid of that ugly guessing. -->
-
-<!-- col_select also looks interesting. Also read_tsv("/tmp/flights_AA.tsv", name_repair = janitor::make_clean_names) -->
 
 
-<!-- Be aware of new readr 2.0 version which may make some questions obsolete. Done, did not see any questions not working See: -->
+<!-- Add exercise with col_select.  -->
 
-<!-- https://www.tidyverse.org/blog/2021/07/readr-2-0-0/ -->
+<!-- Exercises about name_repair argument. Show them the "universal" option. -->
 
-<!-- Add meat to JSON section. Done. -->
+<!-- Add a question or two about using janitor:clean_names().  -->
 
-<!-- Add section on Google sheets. https://cran.r-project.org/web/packages/googlesheets4/index.html -->
+<!-- Then show read_csv("whatever", name_repair = janitor::make_clean_names) -->
 
 <!-- Make use of the copy button, for example in Exercise 5 of CVS files. -->
 
-<!-- A question or two about name.repair with read_csv(). Example: name_repair = janitor::make_clean_names -->
 
 <!-- Show example, from readr 2.0, if being able to read in more than one identical file in a single command. Need to take the student on a tour of the files first. A similar example:
 
 
-list.files(…) |>
+list.files(…) %>% 
   read_csv(
     name_repair = janitor::make_clean_names
   )
 
+Start with list.files("data")
+Then list.files("data", pattern = "similar")
+Then list.files("data", pattern = "similar", full.names = TRUE)
+Then list.files("data", pattern = "similar", full.names = TRUE) %>% read_csv()
+list.files("data", pattern = "similar", full.names = TRUE) %>% read_csv(na = ".")
+list.files("data", pattern = "similar", full.names = TRUE) %>% read_csv(na = ".", show_col_types = FALSE)
 
+But that is still a problem, because "b" is read in as character, because of the initial dot. 
 -->
+
+
+
+<!-- Add section on Google sheets. https://cran.r-project.org/web/packages/googlesheets4/index.html -->
+
+<!-- realising that #dplyr::select() can also simultaneously rename columns! -->
+
 
 ## CSV Files
 
@@ -101,7 +107,7 @@ cat(readLines("data/test_1.csv"), sep = "\n")
 
 ### 
 
-Write code to read this file into R.
+Write code to read this file into R using read_csv(), and set the `file` argument to "data/test_1.csv".
 
 ```{r csv-files-1, exercise = TRUE}
 
@@ -126,11 +132,11 @@ read_csv("data/test_1.csv")
 
 ### 
 
-The column specification message is a suggestion to specify the data types for each column of data. R "guesses" a data type until you do. For now, ignore the message. You will resolve this issue in a later exercise.
+The column specification message is a suggestion to specify the data types for each column of data. R "guesses" a data type until we use the `col_types` argument. 
 
 ### Exercise 2
 
-Make the warning message disappear with `show_col_types = FALSE`.
+Make the warning message disappear by setting the `show_col_types` argument to `False`.
 
 ```{r csv-files-2, exercise = TRUE}
 
@@ -141,6 +147,15 @@ Make the warning message disappear with `show_col_types = FALSE`.
 ```{r csv-files-2-hint-1, eval = FALSE}
 read_csv(files = "data/test_1.csv",
          show_col_types = ...)
+```
+
+###
+
+Your code should look like this after running it:
+
+```{r}
+read_csv("data/test_2.csv",
+         show_col_types = FALSE)
 ```
 
 ### 
@@ -161,7 +176,7 @@ cat(readLines("data/test_2.csv"), sep = "\n")
 
 ### 
 
-Write code for skipping the text at the top of this file.
+Write code for skipping the text at the top of this file by setting the second argumet `skip` to the appropriate number.
 
 ```{r csv-files-3, exercise = TRUE}
 
@@ -187,9 +202,7 @@ read_csv("data/test_2.csv",
          skip = 2)
 ```
 
-### 
 
-There are many arguments to `read_csv()` which allow us to deal with data formatted in different ways.
 
 ### Exercise 4
 
@@ -205,7 +218,7 @@ cat(readLines("data/test_3.csv"), sep = "\n")
 
 ### 
 
-Write code that will create default names for the file.
+Write code that will create default names for the file by setting the `col_names` argument to `FALSE`.
 
 ```{r csv-files-4, exercise = TRUE}
 
@@ -220,7 +233,7 @@ read_csv(file = "data/test_3.csv",
           col_names = ...)
 ```
 
-### 
+###
 
 The result when your code is run should look like this:
 
@@ -232,7 +245,7 @@ read_csv("data/test_3.csv",
 
 ### 
 
-The argument `col_names()` can also be used to create custom column names. You will learn to do so in the next exercise.
+The argument `col_names()` can also be used to create custom column names. 
 
 ### Exercise 5
 
@@ -248,11 +261,13 @@ cat(readLines("data/test_3.csv"), sep = "\n")
 
 ### 
 
-Write code that will name the columns `a`, `b` and `c`, respectively. 
+Using `col_names`, write code that will name the columns `a`, `b` and `c`, respectively. 
 
 ```{r csv-files-5, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r csv-files-5-hint-1, eval = FALSE}
 Use the `col_names` argument and set it to c("a", "b", "c"). 
@@ -267,22 +282,24 @@ read_csv("data/test_3.csv",
          col_names = (c("a", "b", "c")))
 ```
 
-### 
 
-Recall the column specification message. To get rid of this message, we need to use the `col_types` argument and specify the data types.
+
 
 ### Exercise 6
+
 
 ```{r csv-files-6-setup}
 cat(readLines("data/test_3.csv"), sep = "\n")
 ```
 
-Set the `col_types` argument to `cols(a = col_double(), b = col_double(), c = col_double())`.
+Get rid of the column specification message by setting the `col_types` argument to `cols(a = col_double(), b = col_double(), c = col_double())`.
 
 
 ```{r csv-files-6, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ### 
 
@@ -314,7 +331,7 @@ cat(readLines("data/test_5.csv"), sep = "\n")
 
 ### 
 
-Write code to recognize the `.` value for `b` as an NA value.
+Write code to recognize the `.` value for `b` as an NA value by setting the `na` argument to "." in `read_csv`.
 
 ```{r csv-files-7, exercise = TRUE}
 
@@ -352,7 +369,7 @@ cat(readLines("data/test_6.csv"), sep = "\n")
 
 ### 
 
-Write code for skipping the text lines within the file.
+Write code for skipping the text lines within the file by setting the `comment` to "#".
 
 ```{r csv-files-8, exercise = TRUE}
 
@@ -414,7 +431,7 @@ read_csv("data/test_7.csv",
 
 ### 
 
-Recall R "guesses" the data types when you do not explicitly specify them with `col_types`. Besides getting rid of the message, it's smart to specify the data types because R could guess wrong!
+It is smart to specify the data types because R could guess wrong!
 
 ### Exercise 10
 
@@ -518,7 +535,7 @@ cat(readLines("data/delim_2.txt"), sep = "\n")
 
 ### 
 
-Write code for reading this file in to R, using the argument tricks you used in the previous question. Also, use the `col_types` argument to both prevent the col_types message from printing out and to set `population` as an integer.
+Write code for reading this file in to R. Also, use the `col_types` argument to both prevent the col_types message from printing out and to set `population` as an integer.
 
 ```{r text-files-2, exercise = TRUE}
 
@@ -543,9 +560,6 @@ read_delim("data/delim_2.txt",
                             town = col_character()))
 ```
 
-### 
-
-Sadly, many text files you encounter will be much more of a mess than these examples. 
 
 
 ## Excel Files
@@ -569,7 +583,7 @@ include_graphics("images/excel_1.png")
 
 ### 
 
-Write code for reading this file in to R. Use the `read_excel()` function from the **readxl** package. (You may assume that the package has already been loaded for you.)
+Write code for reading this file in to R by using the `read_excel()` function from the **readxl** package.
 
 ```{r excel-files-1, exercise = TRUE}
 
@@ -590,7 +604,7 @@ read_excel("data/excel_1.xlsx")
 
 ### 
 
-You use the function `read_excel()` more than `write_excel()`. Writing excel files is a tricky process. 
+We use `write.xlsx` from another package to write out Excel files, but it can be tricky.
 
 ### Exercise 2
 
@@ -607,11 +621,13 @@ include_graphics("images/excel_2.png")
 
 ### 
 
-Write code for reading the second sheet of the file into R.
+Write code for reading the second sheet of the file into R by setting the `sheet` argument to "sheet 2".
 
 ```{r excel-files-2, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r excel-files-2-hint-1, eval = FALSE}
 Use the `sheet` argument to look at other sheets.
@@ -628,7 +644,7 @@ read_excel("data/excel_1.xlsx", sheet = "Sheet2")
 
 ### 
 
-To write Excel files out, you need to use a different package.
+To write Excel files out, you need to use the `xlsx` package, which we will not cover.
 
 
 ## RDS Files
@@ -716,7 +732,7 @@ read_rds(file = "data/test_1.rds")
 
 ### 
 
-Plots are just one example of what we can store in and .rds file. Let's now try to store the dataset `mtcars`.
+Plots are just one example of what we can store in and .rds file. We can also store datasets.
 
 ### Exercise 4
 
@@ -834,7 +850,7 @@ toJSON(example_1)
 
 ### 
 
-Reading data as a tibble is makes it much easier to view data.
+Reading data as a tibble is makes it much easier to view data, but we can make the JSON format cleaner by using the `pretty` argument in `toJSON`.
 
 
 ### Exercise 3
@@ -883,11 +899,11 @@ fromJSON(json)
 
 ### 
 
-As you can see, `fromJSON()` can display arrays as well. 
+As you can see, `fromJSON()` can display arrays as well, which can be useful for datasets that include matrices. 
 
 ### Exercise 5
 
-You can also write arrays with the same number of dimensions to a JSON format using `toJSON()`. Display a 3x3 array in JSON format.
+You can also write arrays with the same number of rows and columns to a JSON format using `toJSON()`. Display a 3x3 array in JSON format.
 
 ```{r json-files-5, exercise = TRUE}
 
@@ -902,8 +918,12 @@ json2 <- '[[..., ..., ...], [..., ..., ...], [..., ..., ...]]'
 json2 <- '[[..., ..., ...], [..., ..., ...], [..., ..., ...]]'
 toJSON(json2)
 ```
+###
+
+Matrices with the square dimensions can be used to determine the determinant, which is very important operation used in calculus and linear algebra. 
 
 ## Parsing a vector
+###
 
 There are many `parse_*()` functions that break down the most important parts of an individual vector.
 
@@ -943,7 +963,6 @@ parse_double("1,23", locale = ...)
 
 Note that **readr’s** default locale is US-centric because R is generally US-centric.
 
-### 
 
 ### Exercise 3
 
@@ -962,9 +981,10 @@ Use `parse_number()` with the argument "$100". Then on the line below, use `pars
 
 ```
 
+###
+
 Notice how R will ignore both the % and $ signs. 
 
-### 
 
 ### Exercise 4
 
@@ -974,14 +994,16 @@ Great. Now use `parse_number()` with the argument "The cost of the package is $4
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r parsing-a-vector-4-hint-1, eval = FALSE}
 parse_number("The cost of ...." )
 ```
 
+###
+
 `parse_number()` can even scan through full sentences and pick out just the numbers!
 
-
-### 
 
 ### Exercise 5
 
@@ -1001,11 +1023,13 @@ parse_date("...")
 
 ### Exercise 6
 
-Great. Now use `parse_date()` the date April 16, 2019.
+Great. Now use `parse_date()` on the date April 16, 2019.
 
 ```{r parsing-a-vector-6, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r parsing-a-vector-6-hint-1, eval = FALSE}
 parse_date("2019-04-16")
@@ -1059,9 +1083,12 @@ To look at the problems in more depth, pipe the results of `read_csv("data/ex_1.
 cat(readLines("data/ex_1.csv"), sep = "\n")
 ```
 
+
 ```{r parsing-a-file-2, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ### 
 
@@ -1079,12 +1106,13 @@ cat(readLines("data/ex_1.csv"), sep = "\n")
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r parsing-a-file-3-hint-1, eval = FALSE}
 ... %>% 
  tail()
 ```
 
-### 
 
 ### Exercise 4
 
@@ -1097,6 +1125,8 @@ cat(readLines("data/ex_1.csv"), sep = "\n")
 ```{r parsing-a-file-4, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r parsing-a-file-4-hint-1, eval = FALSE}
 read_csv("data/ex_1.csv", 
@@ -1115,9 +1145,12 @@ Let's now fix the type of the `y` column by specifying that `y` is a date column
 cat(readLines("data/ex_1.csv"), sep = "\n")
 ```
 
+
 ```{r parsing-a-file-5, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r parsing-a-file-5-hint-1, eval = FALSE}
 read_csv("data/ex_1.csv", 
@@ -1132,7 +1165,7 @@ read_csv("data/ex_1.csv",
 
 With this last file, we used the `col_types` argument to `read_csv()` to resolve the failures. However, we will now explore a different approach using different parsing functions we learned in the "Parsing a vector" section.
 
-### 
+
 
 ### Exercise 6
 
@@ -1158,11 +1191,14 @@ cat(readLines("data/ex_2.csv"), sep = "\n")
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+
 ### 
 
 Notice that R parses column `a` and `b` both as a doubles. However, column `a` should be parsed as an integer and column `b` should be parsed as a date. Let's fix this.
 
-### 
+
 
 ### Exercise 8
 
@@ -1199,6 +1235,8 @@ cat(readLines("data/ex_2.csv"), sep = "\n")
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r parsing-a-file-9-hint-1, eval = FALSE}
 ... %>% 
     mutate(a = ...)
@@ -1206,7 +1244,6 @@ cat(readLines("data/ex_2.csv"), sep = "\n")
 
 ### 
 
-Great. Now let's take care of column `b`.
 
 
 ### Exercise 10
@@ -1220,6 +1257,8 @@ cat(readLines("data/ex_2.csv"), sep = "\n")
 ```{r parsing-a-file-10, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r parsing-a-file-10-hint-1, eval = FALSE}
 ... %>% 
@@ -1283,6 +1322,8 @@ cat(readLines("data/ex_3.csv"), sep = "\n")
 ```{r parsing-a-file-13, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r parsing-a-file-13-hint-1, eval = FALSE}
 ... %>% 

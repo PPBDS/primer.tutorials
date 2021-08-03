@@ -11,9 +11,8 @@ library(tidyverse)
 # much more robust than that. In other words, it catches things that do not
 # cause (immediate) failures with Start Tutorial.
 
-# See the discussions.txt file for some thoughts on what this is doing and how
+# See the details.Rmd file for some thoughts on what this is doing and how
 # we might improve it.
-
 
 for(i in tutorial_paths){
   cat(paste("Testing tutorial:", i, "\n"))
@@ -22,7 +21,6 @@ for(i in tutorial_paths){
                   "tutorial.html")
   })
 }
-
 
 # There are two problems with this list of files. First, it is long! There are a
 # lot of tutorials and they take a while to run. There is not a lot to be done
@@ -36,6 +34,3 @@ for(i in tutorial_paths){
 # user because it won't find submission_ui. But such a flawed tutorial.Rmd will
 # pass this test because we load library(primary.tutorials) before we start the
 # test above. Maybe this is just an edge case we can ignore.
-
-
-
