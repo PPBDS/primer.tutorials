@@ -3,6 +3,7 @@
 # Load libraries
 library(tidyverse)
 library(ipumsr)
+library(ggthemes)
 
 # Load data (stolen from the R command file that came with the data extract)
 
