@@ -21,6 +21,7 @@
 # sessions which learnr itself starts and stops?
 
 # Ought to understand and explain exactly what shiny::div() does.
+# NL: Creates an html <div></div> element.
 
 #' @title Tutorial submission functions
 #'
@@ -35,7 +36,7 @@
 #' `context="server"`. Conversely, any of the ui functions, `*_ui()`, must *not*
 #' be included in an R chunk with a `context`.
 #'
-#' @param session
+#' @param session session object from shiny with learnr
 #'
 #' @rdname submission_functions
 #' @export
@@ -51,99 +52,12 @@ submission_server <- function(session) {
 
   local({
 
-    build_html <- function(file){
-
-      # Inspired by Matt Blackwell's implementation of a similar idea.
-      # https://github.com/mattblackwell/qsslearnr/blob/main/R/submission.R
-      #
-      # In order to keep same question order as in the exercise,
-      # use parsermd to define factor level for exercise order
-      # and store it in label_list
-      #
-      # information-name, information-email, download-answers-1
-      # are questions that are part of the child documents, which
-      # remain constant. Therefore, they are added in manually.
-
-      manual_list <- list("information-name", "information-email", "download-answers-1")
-
-      rmd_path <- file.path(session$options$appDir, "tutorial.Rmd")
-
-      rmd <- parsermd::parse_rmd(rmd_path)
-
-      rmd_tbl <- parsermd::as_tibble(rmd)
-
-      rmd_chunk_labels <- dplyr::filter(rmd_tbl, rmd_tbl$type == "rmd_chunk")$label
-
-      label_list <- c(manual_list, rmd_chunk_labels)
-
-      # Create function to map objects over that will
-      # return different results based on if it is a
-      # code or question exercise.
-
-      question_or_exercise <- function(obj, ...){
-        options <- list(...)
-        if (obj$type[[1]] == "exercise_submission"){
-          obj$data$code[[1]]
-        }else if (obj$type[[1]] == "question_submission"){
-          obj$data$answer[[1]]
-        }else{
-          options$default
-        }
-      }
-
-      # Copy over a report Rmd template to write to.
-
-      tempReport <- file.path(tempdir(), "submission-temp.Rmd")
-      file.copy("../../www/submission-temp.Rmd", tempReport, overwrite = TRUE)
-
-      objs <- learnr:::get_all_state_objects(session)
-      objs <- learnr:::submissions_from_state_objects(objs)
-
-
-      # obj$data$answer[[1]] question answer
-      # obj$data$code[[1]] "exercise answer"
-      # obj$type[[1]] "exercise_submission"
-      # obj$id[[1]] "id"
-
-      # Format objs from learnr into a tibble and reorder tibble rows based on
-      # label_list.
-
-      out <- tibble::tibble(
-        id = purrr::map_chr(objs, "id",
-                            .default = NA),
-        submission_type = purrr::map_chr(objs, "type",
-                                         .default = NA),
-        answer = purrr::map(objs, question_or_exercise,
-                            .default = NA)
-      )
-
-      out$id <- factor(out$id, levels = label_list)
-
-      out <- dplyr::arrange(out, out$id)
-
-      # Pass tibble and title as parameters into
-      # the report template, then render template as
-      # an html document.
-
-      params <- list(
-        output = out,
-        title = paste0(learnr:::read_request(session, "tutorial.tutorial_id"), " submissions")
-      )
-
-      rmarkdown::render(tempReport,
-                        output_format = "html_document",
-                        output_file = file,
-                        params = params,
-                        envir = new.env(parent = globalenv())
-                        )
-
-
-  }
-
     output$downloadHtml <- shiny::downloadHandler(
       filename = paste0(learnr:::read_request(session, "tutorial.tutorial_id"),
                         "_answers.html"),
-      content = build_html
+      content = function(file){
+        build_html(file, session)
+      }
     )
 
     output$downloadRds <- shiny::downloadHandler(
@@ -170,8 +84,7 @@ submission_server <- function(session) {
         # are small, so we might just copy them over. But given that we need
         # learnr regardless, that seems excessive.
 
-        objs <- learnr:::get_all_state_objects(session)
-        objs <- learnr:::submissions_from_state_objects(objs)
+        objs <- get_submissions_from_learnr_session(session)
 
         readr::write_rds(objs, file)
       }
@@ -201,7 +114,6 @@ submission_ui <- shiny::div(
     )
   )
 )
-
 
 # Never understand what this hack does or why it is necessary.
 
