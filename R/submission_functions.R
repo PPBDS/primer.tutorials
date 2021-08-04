@@ -35,7 +35,7 @@
 #' `context="server"`. Conversely, any of the ui functions, `*_ui()`, must *not*
 #' be included in an R chunk with a `context`.
 #'
-#' @param session
+#' @param session derived from the Shiny workspace for the tutorial
 #'
 #' @rdname submission_functions
 #' @export
