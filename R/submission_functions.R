@@ -7,12 +7,6 @@
 # functions we use. Or we could just incorporate the key code from those
 # functions where we need them.
 
-# Third, consider getting rid of all these helper functions. If we only use
-# something once, I don't think we need a separate function. And, indeed, for
-# some of this checking, maybe we don't need it at all. We could delete
-# check_server_context() and is_server_context(). We only use a couple of lines
-# from encode_obj().
-
 # What we really want is a single function which, when called from the tutorial,
 # does all the stuff we need. But, presumably, that is impossible. We need (?) a
 # Shiny server and Shiny ui. This is not (?) any other way to produce this
@@ -28,21 +22,12 @@
 
 # Ought to understand and explain exactly what shiny::div() does.
 
-# Add in a function (here?) for parsing the resulting RDS files.
-
-# Add in a function (here?) for pulling out an answer key to share with
-# students. Maybe we distribute a PDF in order to make copy/pasting harder?
-
-
-
 #' @title Tutorial submission functions
 #'
 #' @description
 #'
 #' The following function was modified from Colin Rundel's learnrhash package,
-#' available at https://github.com/rundel/learnrhash. Many thanks to Professor
-#' Rundel, who has developed a fantastic tool for courses that teach R and use
-#' the learnr package.
+#' available at https://github.com/rundel/learnrhash.
 #'
 #' This note is also modified from Professor Rundel's description: Note that
 #' when including these functions in a learnr Rmd document it is necessary that
@@ -50,16 +35,13 @@
 #' `context="server"`. Conversely, any of the ui functions, `*_ui()`, must *not*
 #' be included in an R chunk with a `context`.
 #'
-#' @param input unused
-#' @param output unused
-#' @param session used to get current directory of tutorial
+#' @param session
 #'
 #' @rdname submission_functions
 #' @export
 
-submission_server <- function(input, output, session) {
+submission_server <- function(session) {
   p = parent.frame()
-  check_server_context(p)
 
   # We need information from the parent frame --- from the learnr code which is
   # running this tutorial. This is the environment which is calling this
@@ -70,8 +52,6 @@ submission_server <- function(input, output, session) {
   local({
 
     build_html <- function(file){
-
-
 
       # Inspired by Matt Blackwell's implementation of a similar idea.
       # https://github.com/mattblackwell/qsslearnr/blob/main/R/submission.R
@@ -125,8 +105,8 @@ submission_server <- function(input, output, session) {
       # obj$type[[1]] "exercise_submission"
       # obj$id[[1]] "id"
 
-      # Format objs from learnr into a tibble
-      # and reorder tibble rows based on label_list
+      # Format objs from learnr into a tibble and reorder tibble rows based on
+      # label_list.
 
       out <- tibble::tibble(
         id = purrr::map_chr(objs, "id",
@@ -193,58 +173,11 @@ submission_server <- function(input, output, session) {
         objs <- learnr:::get_all_state_objects(session)
         objs <- learnr:::submissions_from_state_objects(objs)
 
-        responses <- encode_obj(objs)
-        readr::write_rds(responses, file)
+        readr::write_rds(objs, file)
       }
     )
 
   }, envir = p)
-}
-
-check_server_context <- function(.envir) {
-  if (!is_server_context(.envir)) {
-    calling_func = deparse(sys.calls()[[sys.nframe()-1]])
-
-    err = paste0(
-      "Function `", calling_func,"`",
-      " must be called from an Rmd chunk where `context = \"server\"`"
-    )
-
-    stop(err, call. = FALSE)
-  }
-}
-
-is_server_context <- function(.envir) {
-  # We are in the server context if there are the follow:
-  # * input - input reactive values
-  # * output - shiny output
-  # * session - shiny session
-  #
-  # Check context by examining the class of each of these.
-  # If any is missing then it will be a NULL which will fail.
-
-  inherits(.envir$input,   "reactivevalues") &
-    inherits(.envir$output,  "shinyoutput")    &
-    inherits(.envir$session, "ShinySession")
-}
-
-#' Encode an R object into hashed text; from github::rundel/learnrhash
-#'
-#' @param obj R object
-#' @param compress Compression method.
-#'
-#' @export
-
-# DK: We can delete this next function and just hard code
-# the encoding call above.
-
-encode_obj = function(obj, compress = c("bzip2", "gzip", "xz", "none"))  {
-  compress = match.arg(compress)
-
-  raw = serialize(obj, NULL)
-  comp_raw = memCompress(raw, type = compress)
-
-  base64enc::base64encode(comp_raw)
 }
 
 
