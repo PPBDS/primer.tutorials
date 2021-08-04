@@ -14,13 +14,11 @@ submission_server(session)
 submission_ui
 }
 \arguments{
-\item{session}{used to get current directory of tutorial}
+\item{session}{}
 }
 \description{
 The following function was modified from Colin Rundel's learnrhash package,
-available at https://github.com/rundel/learnrhash. Many thanks to Professor
-Rundel, who has developed a fantastic tool for courses that teach R and use
-the learnr package.
+available at https://github.com/rundel/learnrhash.
 
 This note is also modified from Professor Rundel's description: Note that
 when including these functions in a learnr Rmd document it is necessary that
