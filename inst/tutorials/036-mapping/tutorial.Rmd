@@ -1,0 +1,1766 @@
+---
+title: Mapping
+author: Anmay Gupta
+tutorial:
+  id: mapping
+output: 
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+runtime: shiny_prerendered
+description: Mapping data in R
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(primer.tutorials)
+library(tidyverse)
+library(primer.data)
+library(tidycensus)
+library(ggthemes)
+library(knitr)
+knitr::opts_chunk$set(echo = FALSE)
+options(tutorial.exercise.timelimit = 60, 
+        tutorial.storage = "local") 
+
+# This is all of the data that the Census Key is needed for. See the rscripts
+# folder if you want to see the source code for these files.
+
+rural <- read_rds("data/rural.rds")
+
+rural_shifted <- read_rds("data/rural-shifted.rds")
+
+county_data <- read_rds("data/county-data.rds")
+
+pums_map <- read_rds("data/pums-map.rds")
+```
+
+```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
+```
+
+```{r info-section, child = "../../child_documents/info_section.Rmd"}
+```
+
+
+<!-- Perhaps of interest: https://milospopovic.net/how-to-make-choropleth-map-in-r/ and https://github.com/r-spatial/mapview. -->
+
+
+## Setup project
+###
+
+In this tutorial, we're going to be creating maps based off of US Census Bureau data, then publishing them to a GitHub Pages website. 
+
+We'll be utilizing commands from the "Downloading Census Data" tutorial in order to do this, so please complete that tutorial first.
+
+### Exercise 1
+
+Let's start a new R project so that we can create and eventually publish our maps.
+
+###
+
+Create a new GitHub repo titled `mapping-in-r` and link it to an RStudio project like you've done so far. Remember to update the `.gitignore` file so that it ignores the `.Rproj` file.
+
+###
+
+Run `list.files()` in the Console to list all of the files. Copy and paste the output into the space below.
+
+```{r setup-project-1}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    rows = 2)
+```
+
+###
+
+We'll be working in this project for the rest of this tutorial.
+
+### Exercise 2
+
+Create a new R Markdown file titled `index.Rmd` and delete all of the text except for the setup chunk and the YAML header.
+
+###
+
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
+
+```{r setup-project-2}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    rows = 2)
+```
+
+###
+
+This should include the R Markdown file you created.
+
+### Exercise 3
+
+In this tutorial, we'll be using the **tidyverse**, **tidycensus**, **ggthemes**, and **tigris** packages. Load these packages in the setup chunk of your R Markdown file.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r setup-project-3}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+You may have to install some of these packages if you don't already have them loaded onto your computer.
+
+### Exercise 4
+
+Now add some information about what you plan to do in this tutorial. Feel free to include information about the tutorial, your name, and how we're using Census Bureau data.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r setup-project-4}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This will act as the "home page" of the website that we'll be publishing our graphs to.
+
+## Mapping basics
+###
+
+<!-- Going to move this section when I create a cloropleth map using this information: https://milospopovic.net/how-to-make-choropleth-map-in-r/ as that's when we're actually dealing with shape files and things like that. Keeping it here for now while I work on that. -->
+
+You've likely heard of longitude and latitude, the global coordinate system that lets us pinpoint 2D locations on a 3D surface. This is also known as a **c**oordinate **r**eference **s**ystem, or **CRS**. CRSs use a 3D model of the Earth to define locations on the surface of a grid, with longitude determining the east/west distance and the latitude determining the north/south distance. 
+
+CRS are used to define spatial data that we can then map. 
+
+###
+
+Spatial data with a defined CRS can either be vector or raster data. Vector data is based on points that can be connected to form lines and polygons. It is located within a coordinate reference system and is similar to what a roadmap would look like.
+
+###
+
+Raster data, however, are values within a grid system, such as satellite imagery. In this Primer, we will only be dealing with vector data, which is the format in which we get data from the **tidycensus** package.
+
+###
+
+In order to parse this information, we will be using the **sf** package to process vector data. The **sf** package stores data in data frames, allowing us to use the **dbplyr** methods that we're familiar with.
+
+###
+
+Let's try to recreate the following map:
+
+```{r, message = FALSE, results = 'hide'}
+# This is included in the tutorial rather than the setup chunk because the
+# students aren't supposed to be able to access it.
+
+basics_map <- rural %>%
+                filter(! NAME %in% c("Alaska", "Hawaii", "Puerto Rico")) %>%
+                ggplot(aes(fill = 100 * P002005 / P001001)) +
+                  geom_sf() + 
+                  scale_fill_viridis_c(option = "plasma",
+                                       direction = -1) +
+                  labs(title = "Rural geography of the United States",
+                       caption = "Source: Census 2010",
+                       fill = "Percent Rural") +
+                  theme_void()
+basics_map
+```
+
+### Exercise 1
+
+First, we need to create a new R Markdown file to actually hold our map.
+
+###
+
+Create a new R Markdown file titled `rural.Rmd` and delete all of the text except for the setup chunk and the YAML header. Then, load the libraries into the setup chunk like we did in exercise 3 of the previous section.
+
+###
+
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
+
+```{r mapping-basics-1}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Feel free to add some text about the map that we're producing and what's included inside it into your R Markdown file.  
+Keep in mind that the published tutorial *will* be included in your professional portfolio, so you should try to make it as clean as possible.
+
+### Exercise 2
+
+While R can handle a large amount of file formats for spatial data, we'll be focusing on shape files. While we refer to them as a "shapefile", they're actually composed of 3 basic files: `.shp` files for the shape and vertices, `.shx` files for indexes and offsets, and `.dbf` files to connect the geometry and the data. Luckily, this is already dealt with by **tidycensus** when it imports the Census shapefile.
+
+###
+
+In order to start mapping in R, we need to get a little more data from the **tidycensus** package. In particular, we need to set geometry = TRUE.
+
+###
+
+<!-- Walk them through finding the variables again. I will, but that's a final cleanup thing and not necessary as of right now. -->
+
+Add a new code chunk into your R Markdown file and add the `get_decennial()` function into it. Set the argument `geography` to `"state"`, `variables` to `"P001001"` and `"P002005"`, `year` to `2010`, `output` to `"wide"`, and `geometry` to `TRUE`.
+
+###
+
+Run `readLines("rural.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-2}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    rows = 2)
+```
+
+###
+
+The `get_decennial()` command pulls data from the US Census Bureau's Decennial Census by using **variables**. These variables refer to information in the Census Bureau. In this case, P001001 refers to the total population in a state while P002005 refers to the percentage of that population that lives in rural areas.
+
+### Exercise 3
+
+If you run the code described in Exercise 1, you can see how there are a series of 5 columns: `GEOID`, `NAME`, `P001001`, `P002005`, and `geometry`.
+
+This is different from the tibbles that we created before because there is now a strange "multipolygon" column called `geometry` and it's actually no longer a tibble. The "multipolygon" column contains the information needed to create maps and such, but this data prevents it from being a tibble.
+
+In fact, if you run `class(rural)`, we can see that it's an `sf`, a special type of tibble that has plotting information. **Never use `as_tibble()` on an `sf` object unless you want to lose all of the plotting information.**
+
+###
+
+Let's create a map based on this `rural` data. This is similar to what we did before with `ggplot()`, but this time we use the function `geom_sf()`. Create a pipe using `rural` that contains `ggplot()` and `geom_sf()` like the previous plots.
+
+###
+
+Run `readLines("rural.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-3}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+<!-- Should I include examples for methods like this where we're trying to walk through what changes when we change the different arguments? For example, should I show a map for each step of this tutorial or just leave it blank? -->
+
+You may notice that the plot is very stretched out with Alaska, Hawaii, and Puerto Rico causing the map to be zoomed out. Let's try to fix that.
+
+### Exercise 4
+
+Let's first try taking the nuclear option: removing Alaska, Hawaii, and Puerto Rico. By focusing on the continental US, we can zoom in on the states and focus on the areas that we actually have data for.
+
+###
+
+Create a new map with the same code as last time, but this time add a `filter()` layer before the `ggplot()`. Within the filter, you should check if `"Alaska"`, `"Hawaii"`, `"Puerto Rico"` are in NAME and then filter them out.
+
+###
+
+Run `readLines("rural.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-4}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+You should now only see the continental United States, but there's still no data actually contained in the map.
+
+### Exercise 5
+
+Let's add the ratio of the different populations into the map.
+
+###
+
+Within the `ggplot()`, map the `fill` argument to the ratio of `P002005` and `P001001`. 
+
+###
+
+Run `readLines("rural.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-5}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+When you run this code, you should see how the different states have different shadings, with more urban states having a darker color.
+
+### Exercise 6
+
+This graph is passable, but it has a few problems:  
+- The fill colors are hard to distinguish  
+- The darker colors map to a lower amount, which doesn't make sense  
+- The background is grey  
+- The legend and labels still don't exist.  
+
+###
+
+Let's address these problems one at a time, starting with differentiating between the fill colors.
+
+###
+
+We can do this by changing the ratios into percents, creating a wider difference between the two ends of the scale (1 - 100 is a bigger range than 0.01 - 1).  
+
+Multiply the previous ratio by 100 in order to make this change.
+
+###
+
+Run `readLines("rural.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-6}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This makes the colors a lot easier to distinguish, but they're still flipped.
+
+### Exercise 7
+
+We can kill 2 birds with 1 stone by using the `scale_fill_viridis_c()` function to change the fill color scheme and invert the colors.
+
+###
+
+Add `scale_fill_viridis_c()` to the plot, setting `options` to `"plasma"` and `direction` to `-1`.
+
+###
+
+Run `readLines("rural.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-7}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+The `scale_fill_viridis_c()` function is extremely versatile for when you want to provide map fill colors because it can create new color palettes and color schemes. You can also reverse the default order of the colors with the direction = -1 option. 
+
+This function is for continuous variables such as prop_rural; if you have a discrete variable, you can use the analogous scale_fill_viridis_d().
+
+### Exercise 8
+
+It's time to finalize this map and add the labels.
+
+Remember that we're trying to recreate this map:
+
+```{r}
+basics_map
+```
+
+###
+
+Set the labels as seen in the graph above and set the theme to `theme_void()`.
+
+###
+
+Run `readLines("rural.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-8}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+That finishes the first part of the map, but there are some pretty important states that we forgot.
+
+### Exercise 9
+
+Let's add Alaska and Hawaii back into the map.
+
+###
+
+Start a new R code chunk and copy all of the previous code into it. Continue the pipe where we defined `rural` and add the function `shift_geometry()`.
+
+###
+
+Run `readLines("rural.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-9}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This shifts Alaska, Hawaii, and Puerto Rico's locations to the corner of the map, allowing you to display the entire country with all 50 states.
+
+### Exercise 10
+
+Finally, change the map to use `rural_shifted` instead of `rural` and remove the `filter()` command we used to remove the states earlier. The final map should look like this:
+
+```{r, message = FALSE, results='hide'}
+rural_shifted %>%
+  ggplot(aes(fill = 100 * P002005 / P001001)) +
+    geom_sf() + 
+    scale_fill_viridis_c(option = "plasma",
+                         direction = -1) +
+    labs(title = "Rural geography of the United States",
+         caption = "Source: Census 2010",
+         fill = "Percent Rural") +
+    theme_void()
+```
+
+###
+
+Run `readLines("rural.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r mapping-basics-10}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+The **tigris** library is a key part in map making because it allows you to modify locations and such to fit on shape files that you can then map.
+
+### Exercise 11
+
+Now that we finished creating this map, let's update our GitHub repository with the new file.
+
+###
+
+Commit and push the `basics.Rmd` file into your GitHub repository using the "Git" window in the top right of RStudio.
+
+###
+
+Run `gert::git_ahead_behind()$ahead` in the Console. Copy and paste the command and result below.
+
+```{r mapping-basics-11}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This should return `0`, showing that you are 0 commits ahead of your GitHub repository.
+
+In general, you should make sure to pull before you push your changes into a repository so that you can avoid any conflicts between your version of a repo and GitHub's version.
+
+## Faceting maps
+
+A powerful tool in ggplot2 to use with maps is faceting because it allows us to easily compare data from different maps.
+
+Let's try to recreate this map:
+
+```{r, message = FALSE, results = 'hide'}
+county_map <- county_data %>%
+                mutate(Percent = 100 * (estimate / summary_est)) %>%
+                ggplot(aes(fill = Percent, color = Percent)) +
+                facet_wrap(~ variable) +
+                geom_sf() +
+                scale_fill_viridis_c(direction = -1) +
+                scale_color_viridis_c(direction = -1) +
+                labs(title = "Racial geography of Harris County, Texas",
+                     caption = "Source: American Community Survey 2014-2018") +
+                theme_void()
+
+county_map
+```
+
+### Exercise 1
+
+First, we need to create a new R Markdown file to hold our map. We'll be doing this for every section of this tutorial so that our maps are separated into different pages when we finally publish them.
+
+###
+
+Create a new R Markdown file titled `county.Rmd` and delete all of the text except for the setup chunk and the YAML header. Then, load the libraries into the setup chunk like we did in exercise 3 of the previous section.
+
+###
+
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
+
+```{r faceting-maps-1}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Feel free to add some text about the map that we're producing and what's included inside it into your R Markdown file.
+
+### Exercise 2
+
+This map is based off of the American Community Survey from 2014-2018, so we should use Census data from the ACS5 survey.
+
+The first step is to look at the Census variables so that we know what variables we need to pull our data from.
+
+###
+
+Create a new code chunk and run `load_variables(2018, "acs5") %>% filter(concept == "RACE")` in order to load most of the variables relating to race. Save the name of the variables relating to whites, African Americans, and Asians in a vector called `racevars`.
+
+###
+
+Run `readLines("county.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-2}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+While you can't see this under the RACE category, the variable name for Hispanic populations is stored under `B03003_003`. You should also add this to your `racevars` vector.
+
+### Exercise 3
+
+Let's access the Census Data by using the `get_acs()` function.
+
+###
+
+Use the `get_acs()` function in a new R code chunk, setting the `geography` arguments to `"tract"`, the `variables` argument to the vector you created in the last exercise, the `year` to `2018`, the `state` to your state's name, the `county` to your county's name, the `geometry` to TRUE, and `summary_var` to `"B02001_001"`, the total population of the county. Save this output to the `county_data` variable.
+
+###
+
+Run `readLines("county.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-3}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Some new features worth pointing out in this code:
+
+- The `year` for `get_acs()` is the last year of a five year sample.  Thus, our data will be from 2014--2018.  You can choose `year`s from 2009--2018.
+- Since our geography is "tract", we are further specifying the `state` and `county`. 
+- We are obtaining the data in a long format, which makes faceting easier.
+- We added a `summary_var`, "B02001_001", which is the total population.  As we'll see, this appears as a separate column, which is helpful to us.  (As an exercise, try going back to the code that created `rural` and see how you would do that in a long format with `summary_var`.)
+
+### Exercise 4
+
+Now let's create the map of the data that we just accessed.
+
+###
+
+First of all, let's add a `Percent` column to the data that gets the ratio of `estimate` and `summary_est`, then multiplies it by 100 to get the percentage of the population that is part of that race.
+
+###
+
+Run `readLines("county.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-4}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+When you run this, you should see how each Census tract has a percentage for what the population actually is.
+
+### Exercise 5
+
+Use the `ggplot()` and `geom_sf()` functions to create a map. Map the `fill` and `color` arguments within `ggplot()` to the `Percent` column that we created earlier.
+
+###
+
+Run `readLines("county.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-5}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+While this does show all of the information, it doesn't really tell us anything. It's a lot of different colored rectangles in the shape of a county.
+
+### Exercise 6
+
+Earlier, we loaded all of the different variables but didn't actually differentiate between them in our map. That means that everything is overlaid on top of one another, which doesn't make for a good graph. We can fix this by using the `facet_wrap()` function.
+
+###
+
+Facet wrap the map created in the last exercise on the `variable` column. This will separate the different columns based on their variable.
+
+###
+
+Run `readLines("county.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-6}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+If you wanted to differentiate by even more variables like the percentage who are American Indian, just add another variable to the `racevars` vector and run the command again. This will create a new map for each variable used.
+
+### Exercise 7
+
+But our graph is still blue, and that's pretty annoying for colorblind people and anyone trying to conduct specific analysis since all of the colors blend together.
+
+###
+
+We can fix this by using the `scale_fill_viridis_c()` function to change the fill color to something more vibrant.
+
+Add the layer `scale_fill_viridis_c()` and set the `direction` argument to `-1`.
+
+###
+
+Run `readLines("county.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-7}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+The reason we set `direction` to `-1` is so that the areas with a higher value are recorded as darker. This makes it easier to see which parts have a higher value since they clearly stand out from the rest of the map.
+
+### Exercise 8
+
+But our graph still doesn't look that good. The border lines can hide data to the point where we can't even see the center of the county and what the data is like there. There's also a second legend for the border lines, which we don't want.
+
+###
+
+In order to fix this problem, we can use the `scale_color_viridis_c()` function. This is similar to `scale_fill_viridis_c()` but it instead sets the border color.
+
+Add the layer `scale_color_viridis_c()` and set the `direction` argument to `-1`.
+
+###
+
+Run `readLines("county.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-8}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+In general, the color refers to the border color of a shape while the fill refers to the fill. This is the common standard used among most functions and packages.
+
+### Exercise 9
+
+Finally, let's pretty up our map.
+
+Remember that our final map is supposed to look like this:
+
+```{r}
+county_map
+```
+
+###
+
+Set the labels to what's seen in the graph above and set the theme to `theme_void()`.
+
+###
+
+Run `readLines("county.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r faceting-maps-9}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Your map should now look similar to the example, but with your home county instead of Harris County.
+
+### Exercise 10
+
+Now that we finished creating this map, let's update our GitHub repository with the new file.
+
+###
+
+Commit and push the `county.Rmd` file into your GitHub repository using the "Git" window in the top right of RStudio.
+
+###
+
+Run `gert::git_ahead_behind()$ahead` in the Console. Copy and paste the command and result below.
+
+```{r faceting-maps-10}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This should return `0`, showing that you are 0 commits ahead of your GitHub repository.
+
+## Dealing with big data
+
+<!-- AG: Personal note - Change this so that it's an R script and RDS rather than an R Markdown, it's necessary for something this big. Teach them how to undo a checkin when they mistakenly try to do so. (Answer? git reset --hard HEAD~1). Teach them to modify the gitignore so as to not check in large data sets.  Drop some knowledge about using LFS for Git. -->
+
+Instead of a census tract map for just one city, let’s do a “big data” project involving every census track in the country, plotting the percentage of people who are two or more races.  
+
+Let's try to recreate this map:
+
+```{r}
+include_graphics("images/races-map.png")
+```
+
+### Exercise 1
+
+First, we need to create a new R Markdown file to hold our map.
+
+###
+
+Create a new R Markdown file titled `tworaces.Rmd` and delete all of the text except for the setup chunk and the YAML header. Then, load the libraries into the setup chunk like we did in exercise 3 of the previous section.
+
+###
+
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-1}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Feel free to add some text about the map that we're producing and what's included inside it.
+
+### Exercise 2
+
+Let's start our map by finding the correct variable in the American Community Survey.
+
+###
+
+Run `load_variables(2018, "acs5") %>% filter(concept == "RACE")` in the Console in order to load most of the variables relating to race.
+
+###
+
+Type the names of the variables that refers to the total population and the variable that refers to the population that has a heritage of 2 or more races into the box below.
+
+```{r dealing-with-big-dat-2}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+You can determine what the variable refers to by looking at the `label` column. 
+
+For example, the variable `B02001_008` has a label of `Estimate!!Total!!Two or more races`, which means that it's looking at the number of people who are made up of 2 or more races out of the total estimated population. 
+
+By contrast, the variable `B02001_001` has a label of `Estimate!!Total`, showing how it represents the total estimated population.
+
+### Exercise 3
+
+For this map, we want to focus on the mainland US in order to simplify things. In order to do this, we can just filter the states that aren't part of it. This is similar to the nuclear option we did earlier, but this time we're manipulating the data instead of the graph.
+
+###
+
+Create a new code chunk to contain the code necessary for this function.
+
+Then, create a new variable called `continental` that contains the value `state.name[! state.name %in% c("Alaska", "Hawaii")]`.
+
+###
+
+Run `readLines("tworaces.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-3}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+The `state.name` variable is automatically installed in R, and it includes the name of every US state. In this case, we're filtering out Alaska and Hawaii so that they aren't included in our search. 
+
+### Exercise 4
+
+Now that we've filtered the data, let's try to download it from the Census onto our computers.
+
+Make sure to do any filters **before** you download any data so that you aren't pulling too much data onto your computer and taking too much time. 
+
+This is especially important when you're working with highly detailed data like this, where one state could have hundreds of rows.
+
+###
+
+In the "Faceting Maps" section, we created a `get_acs()` command that used multiple variables to create a facet for one county. 
+
+Create another `get_acs()` command with similar characteristics, but this time use the `continental` vector we created earlier as the `state` and the Census variable that described 2 races as the `variables` argument. Additionally, since we're looking at the entire country, remove the `county` argument. Save this to a variable named `races`.
+
+###
+
+Run `readLines("tworaces.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-4}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+And here we encounter one of the main problems in dealing with big data: **it takes a massive amount of time**. Unless you're directly plugged into a cell tower, you probably took at least a couple of seconds to download all 87.3 MB of data onto your computer. 
+
+This is why summary statistics are important. Rather than downloading all of the data for every census tract and then totaling it, it's much better to download the data for every state if that's what you need to do. In general, try to look for summary data first rather than finding very specific data about very specific cases.
+
+### Exercise 5
+
+Let's create a graph. If we don't change the information beforehand, we're going to run into the same problems that we did in the "Mapping Basics" section with the color and label problems. Let's implement the same fixes that we did before.
+
+###
+
+Create a pipe off of `races` and create a `Percent` column that is 100 times the ratio between the `estimate` and `summary_est` columns.
+
+###
+
+Run `readLines("tworaces.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-5}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Much like before, this changes the data into a percentage that lets us clearly distinguish between the different data points.
+
+### Exercise 6
+
+Continue the pipe and create a map using the `ggplot()` and `geom_sf()` functions. Map the `fill` argument to the `Percent` column that we created before.
+
+###
+
+Run `readLines("tworaces.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-6}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Now we can clearly distinguish between the areas, but it's very hard to distinguish between the different census tracts.
+
+### Exercise 7
+
+Within the `geom_sf()` function, set the `size` argument to `0.003`.
+
+###
+
+Run `readLines("tworaces.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-7}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+By setting size to 0.003, we can create thin outlines around our census tracts. Any larger and these outlines would make it hard to see our tracts.
+
+### Exercise 8
+
+Now, continue the pipe and add the `scale_fill_viridis_c()` function. Invert the colors using the `direction` argument and set the `option` to `"inferno"`.
+
+###
+
+Run `readLines("tworaces.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-8}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+The `inferno` option sets the color palette to have smaller percentages be lighter while higher percentages are darker. This makes it easy for anyone to understand your graph, even if they're colorblind.
+
+### Exercise 9
+
+Finally, we need to clean up our map and make it understandable.
+
+Remember that our final map is supposed to look like this:
+
+```{r}
+include_graphics("images/races-map.png")
+```
+
+###
+
+Set the labels to what's seen in the graph above and set the theme to `theme_void()`.
+
+###
+
+Run `readLines("tworaces.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-9}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+You may have noticed how applying `theme_void()` gets rid of the x and y axes. This is especially important for maps because the x and y axes represent latitude and longitude lines, which aren't very useful when you're trying to create infographics and don't need the exact coordinates of a location.
+
+### Exercise 10
+
+Now that we finished creating this map, let's update our GitHub repository with the new file.
+
+###
+
+Commit and push the `tworaces.Rmd` file into your GitHub repository using the "Git" window in the top right of RStudio.
+
+###
+
+Run `gert::git_ahead_behind()$ahead` in the Console. Copy and paste the command and result below.
+
+```{r dealing-with-big-dat-10}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This should return `0`, showing that you are 0 commits ahead of your GitHub repository.
+
+## PUMS data
+
+The Census also collects **P**ublic **U**se **M**icrodata **S**amples, or **PUMS** data. 
+
+This contains advanced census data on individual people. While it only contains data for about 1% of the US, it's extremely deep and lets you do a lot of cool things.
+
+Let's try to recreate the following map:
+
+```{r}
+pums_map
+```
+
+### Exercise 1
+
+First, we need to create a new R Markdown file to hold our map.
+
+###
+
+Create a new R Markdown file titled `senior.Rmd` and delete all of the text except for the setup chunk and the YAML header. Then, load the libraries into the setup chunk like we did in exercise 3 of the previous section.
+
+###
+
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
+
+```{r pums-data-1}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Feel free to add some text about the map that we're producing and what's included inside it into your R Markdown file.
+
+### Exercise 2
+
+Accessing PUMS data works just like accessing any Census data. However, there are a few key differences.
+
+###
+
+Create a new code chunk and run the `glimpse()` function on the dataset `pums_variables`. This will show all of the variables that PUMS collects as well as the various values contained within them.
+
+###
+
+Run `readLines("senior.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r pums-data-2}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+As you can see, there's a lot of information here ranging from where the person lives to whether they have a fridge or not. We're not going to be using all of it, but we can filter it by the variable code.
+
+One problem with using PUMS is that you only get the state and PUMA (**p**ublic **u**se **m**icrodata **a**rea) of each individual in the row. PUMAs are Census geographies that are entirely within a single state and are completely independent of other areas, so they don't line up with other boundaries. For example, New York City has PUMAs in its community districts but other places have it in their census tracts. As such, you can't use PUMS data for other small areas.
+
+### Exercise 3
+
+Mapping PUMS data is very different from normal mapping because we need to first map the PUMAS then attach our PUMS data to that map. This is because we can't get the shape files and `geometry` column for PUMAS like we did for the previous examples and as such have to get them from the **tigris** package.
+
+###
+
+First, let's define what states we need to use. 
+
+###
+
+Create a new vector containing `"OR"`, `"WA"`, and `"ID"` that's named `nw_states`.
+
+###
+
+Run `readLines("senior.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r pums-data-3}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+These are the northwestern states shown in the map (Oregon, Washington, and Idaho). While we're using their acronyms here, you can also use their full names for the steps below.
+
+### Exercise 4
+
+Let's use the `get_pums()` function to choose a few select variables such as the age and PUMA that the individual lives in.
+
+###
+
+In this case, we'll be using the `AGEP` and `PUMA` variables.
+
+###
+
+If you want to see all of the variables that PUMS collects and what they represent, just run `view(pums_variables)` in the Console to open a table. Keep in mind that this table is *massive*, with over 31,759 variables collected.
+
+###
+
+We can do this by using the `get_pums()` function. 
+
+Add the `get_pums()` function to the code chunk and set the `variables` argument to the ones described above, `state` to `nw_states`, `recode` to `TRUE`, `survey` to `"acs1"`, and `year` to `2018`. Save the output to a variable called `nw_pums`.
+
+###
+
+Run `readLines("senior.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r pums-data-4}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+One interesting aspect of `get_pums()` is that it will always contain the `SERIALNO`, `SPORDER`, `WGTP`, `PWGTP`, and `ST` columns. `SERIALNO` and `SPORDER` are the variables that uniquely identify observations, `WGTP` and `PWGTP` are the housing and person weights, and `ST` is the state code. 
+
+### Exercise 5
+
+This is good data, but it's really dirty and it doesn't have the information that we need. It's time to wrangle it into place.
+
+###
+
+Use the `group_by()` and `summarize()` functions to make a modified version of `nw_pums` called `nw_Senior`.
+
+Group the data by `ST` and `PUMA`, then summarize it to add a `total_pop` column containing the sum of all `PWGTP` and a `pct_Senior` column containing the ratio of the sum of all `PWGTP` with an `AGEP` over 64 and `total_pop`. Make sure to drop the groups after the `summarize()`.
+
+###
+
+Run `readLines("senior.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r pums-data-5}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+The `PWGTP` column is the number of people contained within that sample, so if you total all of the `PWGTP` column then you can get the total population within the study. This is why we can use it to not only find the total population but also the percent of the population that are over 64.
+
+### Exercise 6
+
+Now let's create the geometries for our PUMAs since we weren't able to load them from the `get_pums()` function.
+
+###
+
+Add `nw_pumas <- map(nw_states, tigris::pumas, class="sf", cb=TRUE) %>% reduce(rbind)` to your code chunk. This will create the necessary geometries and shape files for each PUMA in the state, allowing us to map them later.
+
+###
+
+Run `readLines("senior.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r pums-data-6}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Keep in mind that the `map()` function **does not generate a map**. It just applies a function to every element inside a list. In this case, the function is `tigris::pumas()`, which creates the shape files of the PUMAs contained within an inputted state.
+
+### Exercise 7
+
+It's time to combine our shape files with our data. We can do this by using `left_join()`.
+
+###
+
+Join the `nw_pumas` and `nw_Senior` datasets together using the `left_join()` function, mapping `"STATEFP10"` to `"ST"` and `"PUMACE10"` to `"PUMA"`. Save this output to a variable called `nw_final`.
+
+###
+
+Run `readLines("senior.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r pums-data-7}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Now we have a completed dataset containing both the mapping information and the data that needs to be mapped, allowing us to map the data like we did in the previous sections.
+
+### Exercise 8
+
+Start a pipe with `nw_final` and map it using the `ggplot()` and `geom_sf()` functions. Map the `fill` argument to `pct_Senior` in `ggplot()`.
+
+###
+
+Run `readLines("senior.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r pums-data-8}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+One interesting thing about PUMAs is that each PUMA covers 100,000 people, which is why areas like Seattle (in western Washington) have a lot of PUMAs while Idaho and Oregon have extremely large PUMAs, as you can see on the map you just created.
+
+### Exercise 9
+
+We now need to adequately color our data so that it's not all blue.
+
+###
+
+This time, we need to use the `scale_fill_viridis_b()` function in order to "bin" our data.
+
+Add this function as a layer, setting the `name` argument to `NULL`, `option` to `"magma"`, and `labels` to `scales::label_percent(1)`.
+
+###
+
+Run `readLines("senior.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r pums-data-9}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+We're using `scale_fill_viridis_b()` here in order to bin the data, or group it together so that there are set groups rather than a continuous legend. This makes it easier to see the large differences between groups rather than focusing on the percentage points.
+
+### Exercise 10
+
+Finally, we need to clean up our map and add our captions.
+
+Remember that our final map is supposed to look like this:
+
+```{r}
+pums_map
+```
+
+###
+
+Set the labels to what's seen in the graph above and set the theme to `theme_void()`.
+
+###
+
+Run `readLines("senior.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r pums-data-10}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+### Exercise 11
+
+Now that we finished creating this map, let's update our GitHub repository with the new file.
+
+###
+
+Commit and push the `senior.Rmd` file into your GitHub repository using the "Git" window in the top right of RStudio.
+
+###
+
+Run `gert::git_ahead_behind()$ahead` in the Console. Copy and paste the command and result below.
+
+```{r pums-data-11}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This should return `0`, showing that you are 0 commits ahead of your GitHub repository.
+
+<!-- ## Mapping points -->
+
+<!-- AG: This is the section for mapping latitude and longitude -->
+
+<!-- Address to lat long converter found here: https://www.census.gov/programs-surveys/geography/technical-documentation/complete-technical-documentation/census-geocoder.html may be a good idea to download a bunch of addresses and then map them. Library found here: https://cran.r-project.org/web/packages/tidygeocoder/tidygeocoder.pdf -->
+
+<!-- The plan is map McDonald locations vs avg income by county and see how they differ. Or something similar to show how there are a bunch of food deserts based on income, forcing people to eat unhealthy foods. It's an interesting concept that I feel suits a final project.-->
+
+## Publishing
+
+
+<!-- AG: I'm wondering if I should walk them through the advanced YAML stuff like bibliographies. It's not totally necessary (at least without IPUMS which requires you to use a bibliography), but it may be nice. Nothing wrong with making and using a .bib file. -->
+
+We're going to publish this file to a GitHub Pages website so that we can publish everything on different pages.
+
+
+This is extremely similar to what we did with Distill, but we're not using the extra systems that Distill provides. This is so that this page is still accessible on the Internet, but it's much more lightweight and doesn't include all of the unused infrastructure.
+
+### Exercise 1
+
+Clean up your R Markdown files and format them as you wish.
+
+Make sure to clearly separate the different functions and different graphs so that you know what they do later.
+
+###
+
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
+
+```{r publishing-1}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This should display all of the files you've created so far, including `index.Rmd`, `rural.Rmd`, `county.Rmd`, `tworaces.Rmd`, and `senior.Rmd`. These are the pages that we'll be using in our GitHub Pages website.
+
+### Exercise 2
+
+First, we need to tell RStudio that our project is actually a website. We can do this by configuring the project's options.
+
+###
+
+Go to Tools -> Project Options -> Build Tools and change the "Project Build Tools" field from "None" to "Website". This will restart your R session and will show a "Build" tab in the top right of RStudio.
+
+```{r, out.width="875px"}
+include_graphics("images/proj_to_website.gif")
+```
+
+###
+
+<!-- AG: Not sure if this is exactly the most professional way to read the build type, but it's the closest I can find. -->
+
+Run `tail(readLines("website-test.Rproj"), 1)` in the Console. Copy and paste the command and the result below.
+
+```{r publishing-2}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This should show `"BuildType: Website"` to signify that your R project is a website. If it doesn't show that, you didn't set your project build tools correctly.
+
+This is also how you can turn your R project into a package, but it's recommended to make your project a package when you create the project as this method requires you to create all of the necessary files from scratch.
+
+### Exercise 3
+
+Navigate to the "Build" tab in the top right corner and press "Build Website" or run `rmarkdown::render_site()` in the Console. This should return an error because there's no site generator found.
+
+###
+
+Basically, we made it so that our project is a website, but we never defined what files we want to show or how we want our website to be structured. We can do this by create a `_site.yml` file.
+
+###
+
+Create a new text file using File -> New File -> New Text File, then save it as `_site.yml`. This will change the file's type into a `.yml` file that defines the structure of our website.
+
+```{r, out.width = "875px"}
+include_graphics("images/create_yml.gif")
+```
+
+###
+
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
+
+```{r publishing-3}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+**Y**et **A**nother **M**arkup **L**anguage (YAML) files are a type of markup file like HTML files that determines the structure of a website, and they're the main thing that we use to structure websites on GitHub pages. These are *very* picky as to their syntax, so make sure you follow the instructions exactly.
+
+This is the same thing that's at the top of your R Markdown files, but when you use it as a website there are a lot more functions that you can use.
+
+### Exercise 4
+
+Now, if you built the website at this point, you'd only seeing one file and wouldn't be able to access any other pages. This is because you haven't set up your website and are instead hosting only one page.
+
+###
+
+The first step to structure your website is to name it and bring the files out into the open. Add the lines `name: mapping-in-r` and `output_dir: "."` to your `_site.yml` file.
+
+###
+
+Run `readLines("_site.yml")` in the Console to list the content of `_site.yml`. Copy and paste the output into the space below.
+
+```{r publishing-4}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This names the website and brings the output files into your current directory, allowing you to publish your website to GitHub pages.
+
+### Exercise 5
+
+But we still have a problem. We can't navigate between the different pages of our website. We can do this by using a navigation bar.
+
+###
+
+Add the line `navbar:` to your file, then add `title: Mapping Demonstration` below it. Make sure to indent the `title:` line once so that it's contained within the `navbar:` block.
+
+```
+navbar:
+  title: "Mapping Demonstration"
+```
+
+###
+
+Run `readLines("_site.yml")` in the Console to list the content of `_site.yml`. Copy and paste the output into the space below.
+
+```{r publishing-5}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This adds a navigation bar to the top of the website, creating the basics for navigating through it. However, we still need to add our other pages.
+
+### Exercise 6
+
+Add the lines `left:`, `- text: "Home"`, and `href: index.html`, indenting the last two lines so that they're contained under the `left:` command.
+
+###
+
+Run `readLines("_site.yml")` in the Console to list the content of `_site.yml`. Copy and paste the output into the space below.
+
+```{r publishing-6}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+So far, your `_site.yml` file should look like this:
+
+```
+name: mapping-in-r
+output_dir: "."
+navbar:
+  title: "Mapping Demonstration"
+  left:
+    - text: "Home"
+      href: index.html
+```
+
+This adds a new item on the left of the navigation bar that contains the text `"Home"` and a link to the `index.html` file. The `index.html` file is created by the `index.Rmd` file that we created in the Setup Project section of this tutorial.
+
+### Exercise 7
+
+Let's add our other pages to the navigation bar.
+
+###
+
+Repeat adding the `- text:` and `href` lines, this time substituting the names of the files that we created in the previous sections. Try to make sure that all of the pages have the same format.
+
+###
+
+Run `readLines("_site.yml")` in the Console to list the content of `_site.yml`. Copy and paste the output into the space below.
+
+```{r publishing-7}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This adds all of our pages to the navigation bar, allowing us to click between them with ease.
+
+### Exercise 8
+
+So far, your `_site.yml` file should include the `name`, `output_dir`, `navbar`, `title`, `left`, `text`, and `href` fields, repeating the last two multiple times in order to include all of the pages created in this tutorial.
+
+###
+
+Now let's make our website look a little bit better. On a new line with no indentation, add the line `output:`. Underneath that, indent and add `html_document:`. Finally, add a new line and indent then type `theme: cosmo`.
+
+###
+
+Run `readLines("_site.yml")` in the Console to list the content of `_site.yml`. Copy and paste the output into the space below.
+
+```{r publishing-8}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This isn't the limit of YAML files. Visit one of the websites below to learn more about publishing R Markdown files and using YAML files.
+
+* https://resources.github.com/whitepapers/github-and-rstudio/  
+* https://garrettgman.github.io/rmarkdown/rmarkdown_websites.html#overview  
+* https://bookdown.org/yihui/rmarkdown/rmarkdown-site.html  
+* https://www.emilyzabor.com/tutorials/rmarkdown_websites_tutorial.html#Types_of_websites
+
+### Exercise 9
+
+We're just about done now, but we need to add one more file.
+
+###
+
+By default, GitHub pages uses [Jekyll](https://github.com/jekyll/jekyll) to create websites from scratch, but that doesn't work for when we're using R Markdown and YAML files to structure our content. We can fix this by adding the `.nojekyll` file.
+
+###
+
+Create a text file using the same method as when we created our `_site.yml` file, but this time save it as `.nojekyll.
+
+```{r, out.width = "875px"}
+include_graphics("images/create_nojekyll.gif")
+```
+
+###
+
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
+
+```{r publishing-9}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Learn more about Jekyll and using it in GitHub pages [here](https://jekyllrb.com/docs/github-pages/).
+
+### Exercise 10
+
+It's finally time to publish our website to GitHub pages and push it into the Internet.
+
+###
+
+First, we need to update our GitHub repository so that it has the files it needs. Commit and push the `senior.Rmd` file into your GitHub repository using the "Git" window in the top right of RStudio.
+
+###
+
+Run `gert::git_ahead_behind()$ahead` in the Console. Copy and paste the command and result below.
+
+```{r publishing-10}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This should return `0`, showing that you are 0 commits ahead of your GitHub repository.
+
+### Exercise 11
+
+Now that our files are updated, let's create our website.
+
+###
+
+Go to the GitHub page for your repository, then navigate Settings -> Pages. Change the source for your GitHub page from "None" to "master". Click "Save" to finally publish your website.
+
+###
+
+Copy-paste your GitHub website URL into the space below.
+
+```{r publishing-11}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Congratulations on completing the tutorial.
+
+###
+
+If you want to explore further:
+
+- Take a look at the [**tidycensus** website](https://walkerke.github.io/tidycensus/).
+- If you have shapefiles from a place other than **tidycensus**, you can read them in using `st_read()` in the **sf** package, join them with other data using **dplyr** functions, and then map them with `geom_sf()` as we have shown above.
+    - You may have to look into using [`coord_sf()`](https://ggplot2.tidyverse.org/reference/ggsf.html) if you have trouble displaying your data.
+- Want to add interactivity to your maps?  Check out the **leaflet** package.  [Here's](https://juliasilge.com/blog/using-tidycensus/) a good introduction to using **leaflet** with **tidycensus**.
+- Practice your skills with [Andrew Tran's case study slides](https://andrewbtran.github.io/NICAR/2019/mapping/02_case_study_slides.html), where you can replicate a graphic from the Washington Post. Note: this involves some packages we haven't shown you in this book, but if you follow along step by step you will be able to see how they are used.
+
+Downloading feature geometry from the Census website. To cache shapefiles for use in future sessions, set `options(tigris_use_cache = TRUE)`.
+
+###
+
+```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
+```

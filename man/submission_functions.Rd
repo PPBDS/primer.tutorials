@@ -9,7 +9,7 @@
 An object of class \code{shiny.tag} of length 3.
 }
 \usage{
-submission_server(input, output)
+submission_server(input, output, session)
 
 submission_ui
 }
@@ -17,6 +17,8 @@ submission_ui
 \item{input}{unused}
 
 \item{output}{unused}
+
+\item{session}{used to get current directory of tutorial}
 }
 \description{
 The following function was modified from Colin Rundel's learnrhash package,

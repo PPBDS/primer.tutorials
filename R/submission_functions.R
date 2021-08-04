@@ -52,11 +52,12 @@
 #'
 #' @param input unused
 #' @param output unused
+#' @param session used to get current directory of tutorial
 #'
 #' @rdname submission_functions
 #' @export
 
-submission_server <- function(input, output) {
+submission_server <- function(input, output, session) {
   p = parent.frame()
   check_server_context(p)
 
@@ -68,9 +69,36 @@ submission_server <- function(input, output) {
 
   local({
 
-
-
     build_html <- function(file){
+
+
+
+      # Inspired by Matt Blackwell's implementation of a similar idea.
+      # https://github.com/mattblackwell/qsslearnr/blob/main/R/submission.R
+      #
+      # In order to keep same question order as in the exercise,
+      # use parsermd to define factor level for exercise order
+      # and store it in label_list
+      #
+      # information-name, information-email, download-answers-1
+      # are questions that are part of the child documents, which
+      # remain constant. Therefore, they are added in manually.
+
+      manual_list <- list("information-name", "information-email", "download-answers-1")
+
+      rmd_path <- file.path(session$options$appDir, "tutorial.Rmd")
+
+      rmd <- parsermd::parse_rmd(rmd_path)
+
+      rmd_tbl <- parsermd::as_tibble(rmd)
+
+      rmd_chunk_labels <- dplyr::filter(rmd_tbl, rmd_tbl$type == "rmd_chunk")$label
+
+      label_list <- c(manual_list, rmd_chunk_labels)
+
+      # Create function to map objects over that will
+      # return different results based on if it is a
+      # code or question exercise.
 
       question_or_exercise <- function(obj, ...){
         options <- list(...)
@@ -82,6 +110,8 @@ submission_server <- function(input, output) {
           options$default
         }
       }
+
+      # Copy over a report Rmd template to write to.
 
       tempReport <- file.path(tempdir(), "submission-temp.Rmd")
       file.copy("../../www/submission-temp.Rmd", tempReport, overwrite = TRUE)
@@ -95,6 +125,8 @@ submission_server <- function(input, output) {
       # obj$type[[1]] "exercise_submission"
       # obj$id[[1]] "id"
 
+      # Format objs from learnr into a tibble
+      # and reorder tibble rows based on label_list
 
       out <- tibble::tibble(
         id = purrr::map_chr(objs, "id",
@@ -105,6 +137,13 @@ submission_server <- function(input, output) {
                             .default = NA)
       )
 
+      out$id <- factor(out$id, levels = label_list)
+
+      out <- dplyr::arrange(out, out$id)
+
+      # Pass tibble and title as parameters into
+      # the report template, then render template as
+      # an html document.
 
       params <- list(
         output = out,

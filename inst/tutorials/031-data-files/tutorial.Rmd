@@ -15,10 +15,24 @@ description: Reading data from files.
 library(learnr)
 library(primer.tutorials)
 library(tidyverse)
+library(janitor)
 library(readxl)
 library(jsonlite)
 library(knitr)
+library(googlesheets4)
+library(googledrive)
 
+gs4_deauth()
+
+
+# gs4_auth(
+#   email = gargle::gargle_oauth_email(),
+#   path = NULL,
+#   scopes = "https://www.googleapis.com/auth/spreadsheets",
+#   cache = gargle::gargle_oauth_cache(),
+#   use_oob = gargle::gargle_oob_default(),
+#   token = NULL
+# )
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
@@ -52,37 +66,42 @@ example_1 <- tibble(name= c("Miguel", "Sofia", "Aya", "Cheng"),
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
-<!-- Own every word here. Do the entire tutorial again. -->
+<!-- Add exercise with col_select. Done.-->
 
-<!-- Add copy buttons as appropriate. -->
+<!-- Exercises about name_repair argument. Show them the "universal" option.Done. -->
 
-<!-- Exercise 2 should use `show_col_types = FALSE` to get rid of that ugly guessing. -->
+<!-- Add a question or two about using janitor:clean_names().Done.  -->
 
-<!-- col_select also looks interesting. Also read_tsv("/tmp/flights_AA.tsv", name_repair = janitor::make_clean_names) -->
+<!-- Then show read_csv("whatever", name_repair = janitor::make_clean_names) Done.-->
 
+<!-- Make use of the copy button, for example in Exercise 5 of CVS files.Done. -->
 
-<!-- Be aware of new readr 2.0 version which may make some questions obsolete. Done, did not see any questions not working See: -->
-
-<!-- https://www.tidyverse.org/blog/2021/07/readr-2-0-0/ -->
-
-<!-- Add meat to JSON section. Done. -->
-
-<!-- Add section on Google sheets. https://cran.r-project.org/web/packages/googlesheets4/index.html -->
-
-<!-- Make use of the copy button, for example in Exercise 5 of CVS files. -->
-
-<!-- A question or two about name.repair with read_csv(). Example: name_repair = janitor::make_clean_names -->
 
 <!-- Show example, from readr 2.0, if being able to read in more than one identical file in a single command. Need to take the student on a tour of the files first. A similar example:
 
 
-list.files(…) |>
+list.files(…) %>% 
   read_csv(
     name_repair = janitor::make_clean_names
-  )
+  ) 
 
+Start with list.files("data")
+Then list.files("data", pattern = "similar")
+Then list.files("data", pattern = "similar", full.names = TRUE)
+Then list.files("data", pattern = "similar", full.names = TRUE) %>% read_csv()
+list.files("data", pattern = "similar", full.names = TRUE) %>% read_csv(na = ".")
+list.files("data", pattern = "similar", full.names = TRUE) %>% read_csv(na = ".", show_col_types = FALSE) 
 
+But that is still a problem, because "b" is read in as character, because of the initial dot. Done.
 -->
+
+
+
+<!-- Add section on Google sheets. https://cran.r-project.org/web/packages/googlesheets4/index.html Done.-->
+
+<!-- realising that #dplyr::select() can also simultaneously rename columns! -->
+
+<!-- Look through entire tutorial and add knowledge drops and fix exercises based on setup tutorial -->
 
 ## CSV Files
 
@@ -101,7 +120,7 @@ cat(readLines("data/test_1.csv"), sep = "\n")
 
 ### 
 
-Write code to read this file into R.
+Write code to read this file into R using read_csv(), and set the `file` argument to "data/test_1.csv".
 
 ```{r csv-files-1, exercise = TRUE}
 
@@ -126,11 +145,11 @@ read_csv("data/test_1.csv")
 
 ### 
 
-The column specification message is a suggestion to specify the data types for each column of data. R "guesses" a data type until you do. For now, ignore the message. You will resolve this issue in a later exercise.
+The column specification message is a suggestion to specify the data types for each column of data. R "guesses" a data type until we use the `col_types` argument. 
 
 ### Exercise 2
 
-Make the warning message disappear with `show_col_types = FALSE`.
+Make the warning message disappear by setting the `show_col_types` argument to `False`.
 
 ```{r csv-files-2, exercise = TRUE}
 
@@ -141,6 +160,15 @@ Make the warning message disappear with `show_col_types = FALSE`.
 ```{r csv-files-2-hint-1, eval = FALSE}
 read_csv(files = "data/test_1.csv",
          show_col_types = ...)
+```
+
+### 
+
+Your code should look like this after running it:
+
+```{r}
+read_csv("data/test_2.csv",
+         show_col_types = FALSE)
 ```
 
 ### 
@@ -161,7 +189,7 @@ cat(readLines("data/test_2.csv"), sep = "\n")
 
 ### 
 
-Write code for skipping the text at the top of this file.
+Write code for skipping the text at the top of this file by setting the second argumet `skip` to the appropriate number.
 
 ```{r csv-files-3, exercise = TRUE}
 
@@ -187,10 +215,6 @@ read_csv("data/test_2.csv",
          skip = 2)
 ```
 
-### 
-
-There are many arguments to `read_csv()` which allow us to deal with data formatted in different ways.
-
 ### Exercise 4
 
 ```{r csv-files-4-setup}
@@ -205,7 +229,7 @@ cat(readLines("data/test_3.csv"), sep = "\n")
 
 ### 
 
-Write code that will create default names for the file.
+Write code that will create default names for the file by setting the `col_names` argument to `FALSE`.
 
 ```{r csv-files-4, exercise = TRUE}
 
@@ -232,7 +256,7 @@ read_csv("data/test_3.csv",
 
 ### 
 
-The argument `col_names()` can also be used to create custom column names. You will learn to do so in the next exercise.
+The argument `col_names()` can also be used to create custom column names. 
 
 ### Exercise 5
 
@@ -248,11 +272,13 @@ cat(readLines("data/test_3.csv"), sep = "\n")
 
 ### 
 
-Write code that will name the columns `a`, `b` and `c`, respectively. 
+Using `col_names`, write code that will name the columns `a`, `b` and `c`, respectively. 
 
 ```{r csv-files-5, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r csv-files-5-hint-1, eval = FALSE}
 Use the `col_names` argument and set it to c("a", "b", "c"). 
@@ -267,22 +293,20 @@ read_csv("data/test_3.csv",
          col_names = (c("a", "b", "c")))
 ```
 
-### 
-
-Recall the column specification message. To get rid of this message, we need to use the `col_types` argument and specify the data types.
-
 ### Exercise 6
 
 ```{r csv-files-6-setup}
 cat(readLines("data/test_3.csv"), sep = "\n")
 ```
 
-Set the `col_types` argument to `cols(a = col_double(), b = col_double(), c = col_double())`.
+Get rid of the column specification message by setting the `col_types` argument to `cols(a = col_double(), b = col_double(), c = col_double())`.
 
 
 ```{r csv-files-6, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ### 
 
@@ -314,7 +338,7 @@ cat(readLines("data/test_5.csv"), sep = "\n")
 
 ### 
 
-Write code to recognize the `.` value for `b` as an NA value.
+Write code to recognize the `.` value for `b` as an NA value by setting the `na` argument to "." in `read_csv`.
 
 ```{r csv-files-7, exercise = TRUE}
 
@@ -352,7 +376,7 @@ cat(readLines("data/test_6.csv"), sep = "\n")
 
 ### 
 
-Write code for skipping the text lines within the file.
+Write code for skipping the text lines within the file by setting the `comment` to "#".
 
 ```{r csv-files-8, exercise = TRUE}
 
@@ -414,7 +438,7 @@ read_csv("data/test_7.csv",
 
 ### 
 
-Recall R "guesses" the data types when you do not explicitly specify them with `col_types`. Besides getting rid of the message, it's smart to specify the data types because R could guess wrong!
+It is smart to specify the data types because R could guess wrong!
 
 ### Exercise 10
 
@@ -458,6 +482,268 @@ Run `list.files()`. You should see your newly created file listed.
 ```
 
 Your result should look like include two files: `exercise.Rmd`, which is a file used by the **learnr** package and `tbl_1.csv`, which is the file you created.
+
+### Exercise 12
+
+Consider the contents of the `test_bad_names.csv` file.
+
+```{r comment = ''}
+cat(readLines("data/test_bad_names.csv"), sep = "\n")
+```
+
+### 
+
+Many files will have column names that are not formatted correctly, but tidyverse has the `name_repair` argument to fix that. Using the contents of `test_bad_names.csv`, use the `name_repair` argument and set it to `"universal"` in `read_csv()`
+
+```{r csv-files-12, exercise = TRUE}
+
+```
+
+```{r csv-files-12-hint-1, eval = FALSE}
+read_csv(file="data/test_bad_names.csv", name_repair="universal")
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+read_csv(file = "data/test_bad_names.csv", name_repair = "universal")
+```
+
+### 
+
+The `"universal"` makes sure the columns names are all unique and uses the syntax already built into the `name_repair` command to organize the names. There are other options such as `minimal` and`unique`, try them out!
+
+### Exercise 13
+
+The package `janitor` is also commonly used for cleaning names. Pipe `read_csv(file = "data/test_bad_names.csv")` with the `clean_names()` function.
+
+```{r csv-files-13, exercise = TRUE}
+library("janitor")
+```
+
+```{r csv-files-13-hint-1, eval = FALSE}
+read_csv(file = "data/test_bad_names.csv") %>% clean_names()
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+read_csv(file = "data/test_bad_names.csv") %>% clean_names()
+```
+
+### 
+
+The function `clean_names()` used the syntax within the `janitor` package to clean the names and also makes them unique.
+
+### Exercise 14
+
+To make the code cleaner and to reduce the number of pipes, you can set the `name_repair` argument to `janitor::make_clean_names`.
+
+```{r csv-files-14, exercise = TRUE}
+
+```
+
+```{r csv-files-14-hint-1, eval = FALSE}
+read_csv(file = "data/test_bad_names.csv", 
+         name_repair = janitor::make_clean_names)
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+read_csv(file = "data/test_bad_names.csv",
+         name_repair = janitor::make_clean_names)
+```
+
+## Parsing Multiple Files
+
+Data Scientists deal with a huge number of files loaded with data, so it is important to learn how to clean multiple files at once.
+
+### 
+
+### Exercise 1
+
+Run `list.files("data")` to check what files there are in the `data` folder.
+
+```{r parsing-multiple-fil-1, exercise = TRUE}
+
+```
+
+```{r parsing-multiple-fil-1-hint-1, eval = FALSE}
+list.files("data")
+```
+
+### 
+
+We have many files, but we will focus on the files with "similar" in their names.
+
+### Exercise 2
+
+Set the argument `pattern` to `"similar"` to only look at the files with the names "similar" in them.
+
+```{r parsing-multiple-fil-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r parsing-multiple-fil-2-hint-1, eval = FALSE}
+list.files("data", pattern = "similar")
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+list.files("data", pattern = "similar")
+```
+
+### Exercise 3
+
+To show the exact directory of where the files came from, set the argument `full.names` to `TRUE`. 
+
+```{r parsing-multiple-fil-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r parsing-multiple-fil-3-hint-1, eval = FALSE}
+list.files("data", pattern = "similar", full.names = TRUE)
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+list.files("data", pattern = "similar", full.names = TRUE)
+```
+
+### Exercise 4
+
+These are the contents of `similar_1.csv`, `similar_2.csv`, `similar_3.csv`, respectively.
+
+```{r}
+cat(readLines("data/similar_1.csv"), sep = "\n")
+cat(readLines("data/similar_2.csv"), sep = "\n")
+cat(readLines("data/similar_3.csv"), sep = "\n")
+```
+
+### 
+
+Now let's combine the files by piping the previous code with `read_csv()`!
+
+```{r parsing-multiple-fil-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r parsing-multiple-fil-4-hint-1, eval = FALSE}
+list.files("data", pattern = "similar", full.names = TRUE) %>% 
+  read_csv()
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+list.files("data", pattern = "similar", full.names = TRUE) %>% 
+  read_csv()
+```
+
+### 
+
+Column `b`'s type is `chr` because the "." in `similar_1.csv` makes R think the rest of the column are characters. We will fix that using the `na` argument.
+
+### Exercise 5
+
+In `read_csv()`, set the argument `na` to `"."` to get rid of the character in column `b`.
+
+```{r parsing-multiple-fil-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r parsing-multiple-fil-5-hint-1, eval = FALSE}
+... %>% 
+  read_csv(na = ".")
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+list.files("data", pattern = "similar", full.names = TRUE) %>% 
+  read_csv(na = ".")
+```
+
+### 
+
+Because the "." is gone, column `b`'s type is `dbl` now. 
+
+### Exercise 6
+
+Now let's get rid of the annoying "specify column types" message by using the `show_col_types` argument.
+
+```{r parsing-multiple-fil-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r parsing-multiple-fil-6-hint-1, eval = FALSE}
+... %>% read_csv(na = ".", show_col_types = FALSE)
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+list.files("data", pattern = "similar", full.names = TRUE) %>% 
+  read_csv(na = ".", show_col_types = FALSE)
+```
+
+### Exercise 7
+
+Now let's practice cleaning the names of the columns by setting `name_repair` to `janitor::make_clean_names`
+
+```{r parsing-multiple-fil-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r parsing-multiple-fil-7-hint-1, eval = FALSE}
+... %>% read_csv(na = ".", show_col_types = FALSE, 
+                 name_repair = janitor::make_clean_names)
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+list.files("data", pattern = "similar", full.names = TRUE) %>% 
+  read_csv(na = ".", show_col_types = FALSE, 
+                 name_repair = janitor::make_clean_names)
+```
+
+### 
+
+These functions can be used as a stepping stone to filter huge amounts of data, but Tidyverse has many interesting functions, explore them!
 
 
 ## Text Files
@@ -518,7 +804,7 @@ cat(readLines("data/delim_2.txt"), sep = "\n")
 
 ### 
 
-Write code for reading this file in to R, using the argument tricks you used in the previous question. Also, use the `col_types` argument to both prevent the col_types message from printing out and to set `population` as an integer.
+Write code for reading this file in to R. Also, use the `col_types` argument to both prevent the col_types message from printing out and to set `population` as an integer.
 
 ```{r text-files-2, exercise = TRUE}
 
@@ -543,11 +829,6 @@ read_delim("data/delim_2.txt",
                             town = col_character()))
 ```
 
-### 
-
-Sadly, many text files you encounter will be much more of a mess than these examples. 
-
-
 ## Excel Files
 
 ### 
@@ -569,7 +850,7 @@ include_graphics("images/excel_1.png")
 
 ### 
 
-Write code for reading this file in to R. Use the `read_excel()` function from the **readxl** package. (You may assume that the package has already been loaded for you.)
+Write code for reading this file in to R by using the `read_excel()` function from the **readxl** package.
 
 ```{r excel-files-1, exercise = TRUE}
 
@@ -590,7 +871,7 @@ read_excel("data/excel_1.xlsx")
 
 ### 
 
-You use the function `read_excel()` more than `write_excel()`. Writing excel files is a tricky process. 
+We use `write.xlsx` from another package to write out Excel files, but it can be tricky.
 
 ### Exercise 2
 
@@ -607,11 +888,13 @@ include_graphics("images/excel_2.png")
 
 ### 
 
-Write code for reading the second sheet of the file into R.
+Write code for reading the second sheet of the file into R by setting the `sheet` argument to "sheet 2".
 
 ```{r excel-files-2, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r excel-files-2-hint-1, eval = FALSE}
 Use the `sheet` argument to look at other sheets.
@@ -628,8 +911,234 @@ read_excel("data/excel_1.xlsx", sheet = "Sheet2")
 
 ### 
 
-To write Excel files out, you need to use a different package.
+To write Excel files out, you need to use the `xlsx` package, which we will not cover.
 
+
+## Google Sheets
+
+Google sheets are also used as databases, so it's important to learn how to import and analyze them.
+
+### 
+
+### Exercise 1
+
+First we have to load in the `googlesheets4` package, do that below.
+
+```{r google-sheets-1, exercise = TRUE}
+
+```
+
+```{r google-sheets-1-hint-1, eval = FALSE}
+library(googlesheets4)
+```
+
+### Exercise 2
+
+We will use the Google sheets provided from the `googlesheets4` documentation, so use `read_sheet()` and use `url` in it. You might be prompted to sign into your google account.
+
+```{r google-sheets-2, exercise = TRUE}
+url <- "https://docs.google.com/spreadsheets/d/1U6Cf_qEOhiR9AZqTqS3mbMF3zt2db48ZP5v3rkrAEJY/edit#gid=780868077"
+```
+
+```{r google-sheets-2-hint-1, eval = FALSE}
+read_sheet(url)
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+url <- "https://docs.google.com/spreadsheets/d/1U6Cf_qEOhiR9AZqTqS3mbMF3zt2db48ZP5v3rkrAEJY/edit#gid=780868077"
+read_sheet(url)
+```
+
+### Exercise 3
+
+Sheets also have a unique ID they can be identified with, which are much shorter than urls. The variable `id` has already been assigned an ID, input it in `read_sheet()`.
+
+```{r google-sheets-3, exercise = TRUE}
+id <- "1U6Cf_qEOhiR9AZqTqS3mbMF3zt2db48ZP5v3rkrAEJY"
+```
+
+```{r google-sheets-3-hint-1, eval = FALSE}
+read_sheet(id)
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+id <- "1U6Cf_qEOhiR9AZqTqS3mbMF3zt2db48ZP5v3rkrAEJY"
+read_sheet(id)
+```
+
+<!-- ### Exercise 4 -->
+
+<!-- Google drive can also be accessed, using the `googledrive` package which has already been loaded for you. Use `drive_get()`, input a sheet name from your drive, and pipe it with `read_sheet()`. -->
+
+<!-- ```{r google-sheets-4, exercise = TRUE} -->
+<!-- library(googledrive) -->
+<!-- ``` -->
+
+<!-- ```{r google-sheets-4-hint-1, eval = FALSE} -->
+<!-- drive_get("...") %>%  -->
+<!--   read_sheet() -->
+<!-- ``` -->
+
+### Exercise 4
+
+The `googlesheets4` package also has example sheets we can use. Use the function `gs4_example()`, input in the name `"deaths"`, and pipe it with `read_sheet()`
+
+```{r google-sheets-4, exercise = TRUE}
+
+```
+
+```{r google-sheets-4-hint-1, eval = FALSE}
+gs4_example("deaths") %>% 
+  read_sheet()
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+gs4_example("deaths") %>% 
+  read_sheet()
+```
+
+### Exercise 5
+
+We can also print out a sheet's metadata, which shows details about the sheet itself. Input `ss` in `gs4_get` to display all of the data. 
+
+```{r google-sheets-5, exercise = TRUE}
+ss <- gs4_example("deaths")
+```
+
+```{r google-sheets-5-hint-1, eval = FALSE}
+gs4_get(ss)
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+ss <- gs4_example("deaths")
+gs4_get(ss)
+```
+
+### Exercise 6
+
+The previous sheet file had two worksheets, `arts` and `other`. In `read_sheet`, set the first argument to `gs4_example("deaths")`, and set the second argument `sheet` to `2`.
+```{r google-sheets-6, exercise = TRUE}
+
+```
+
+```{r google-sheets-6-hint-1, eval = FALSE}
+read_sheet(gs4_example("deaths"), sheet = 2)
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+read_sheet(gs4_example("deaths"), sheet = 2)
+```
+
+### Exercise 7
+
+You can also set the range of rows and columns you want to look at. In the previous code, set the `range` argument to `"A5:F15"`.
+
+```{r google-sheets-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r google-sheets-7-hint-1, eval = FALSE}
+read_sheet(gs4_example("deaths"), sheet = 2, range = "A5:F15")
+```
+
+### 
+
+The result when your code is run should look like this:
+
+```{r}
+read_sheet(gs4_example("deaths"), sheet = 2, range = "A5:F15")
+```
+
+<!-- ### Exercise 9 -->
+
+<!-- We can also write files, using `data.frame` and `sheet_write`. In `data.frame`, set the argument `x` to `1:3`, and the second argument `y` to `letters[1:3]`. Set the whole function to a variable names `df`. -->
+
+<!-- ```{r google-sheets-9, exercise = TRUE} -->
+
+<!-- ``` -->
+
+<!-- ```{r google-sheets-9-hint-1, eval = FALSE} -->
+<!-- df <- data.frame(x = 1:3, y = letters[1:3]) -->
+<!-- ``` -->
+
+<!-- ### Exercise 10 -->
+
+<!-- Then in `sheet_write()`, input the variable `df` from the previous example, and set the whole function to a variable named `ss`.   -->
+
+<!-- ```{r google-sheets-10, exercise = TRUE} -->
+
+<!-- ``` -->
+
+<!-- ```{r google-sheets-10-hint-1, eval = FALSE} -->
+<!-- ss <- sheet_write(df) -->
+<!-- ``` -->
+
+<!-- ###  -->
+
+<!-- `Sheet_write()` creates a random name for the sheets. To create our own name for the sheet, we will use `gs4_create`. -->
+
+<!-- ### Exercise 11 -->
+
+<!-- In `gs4_create()`, set the first argument to whatever name you want the new sheet to be, and for the second argument `sheets`, set it to the data frame `df`. Set the whole function to the `ss` variable.  -->
+
+<!-- ```{r google-sheets-11, exercise = TRUE} -->
+<!-- googledrive::drive_trash(ss) -->
+<!-- ``` -->
+
+<!-- ```{r google-sheets-11-hint-1, eval = FALSE} -->
+<!-- ss <- gs4_create("...", sheets = df) -->
+<!-- ``` -->
+<!-- ###  -->
+
+<!-- As you can see, before creating a new `ss` sheet, we have to delete the old one using `googledrive::drive_trash()`. -->
+
+<!-- ### Exercise 12 -->
+
+<!-- To check out the results, use `read_sheet()` and input the variable `ss` from the last example.  -->
+
+<!-- ```{r google-sheets-12, exercise = TRUE} -->
+
+<!-- ``` -->
+
+<!-- ```{r google-sheets-12-hint-1, eval = FALSE} -->
+<!-- read_sheet(ss) -->
+<!-- ``` -->
+
+<!-- ###  -->
+
+<!-- The result when your code is run should look like this: -->
+
+<!-- ```{r} -->
+<!-- df <- data.frame(x = 1:3, y = letters[1:3]) -->
+<!-- ss <- sheet_write(df) -->
+<!-- read_sheet(ss) -->
+<!-- ``` -->
+
+<!-- ###  -->
+
+<!-- You just created your first ever sheet file using R! There are many more arguments that can be used to customize your sheets such as `sheet_append()` and `gs4_create()`, check them out by searching up the `googlesheets4` documentation.  -->
 
 ## RDS Files
 
@@ -716,7 +1225,7 @@ read_rds(file = "data/test_1.rds")
 
 ### 
 
-Plots are just one example of what we can store in and .rds file. Let's now try to store the dataset `mtcars`.
+Plots are just one example of what we can store in and .rds file. We can also store datasets.
 
 ### Exercise 4
 
@@ -834,7 +1343,7 @@ toJSON(example_1)
 
 ### 
 
-Reading data as a tibble is makes it much easier to view data.
+Reading data as a tibble is makes it much easier to view data, but we can make the JSON format cleaner by using the `pretty` argument in `toJSON`.
 
 
 ### Exercise 3
@@ -883,11 +1392,11 @@ fromJSON(json)
 
 ### 
 
-As you can see, `fromJSON()` can display arrays as well. 
+As you can see, `fromJSON()` can display arrays as well, which can be useful for datasets that include matrices. 
 
 ### Exercise 5
 
-You can also write arrays with the same number of dimensions to a JSON format using `toJSON()`. Display a 3x3 array in JSON format.
+You can also write arrays with the same number of rows and columns to a JSON format using `toJSON()`. Display a 3x3 array in JSON format.
 
 ```{r json-files-5, exercise = TRUE}
 
@@ -903,7 +1412,13 @@ json2 <- '[[..., ..., ...], [..., ..., ...], [..., ..., ...]]'
 toJSON(json2)
 ```
 
+### 
+
+Matrices with the square dimensions can be used to determine the determinant, which is very important operation used in calculus and linear algebra. 
+
 ## Parsing a vector
+
+### 
 
 There are many `parse_*()` functions that break down the most important parts of an individual vector.
 
@@ -943,7 +1458,6 @@ parse_double("1,23", locale = ...)
 
 Note that **readr’s** default locale is US-centric because R is generally US-centric.
 
-### 
 
 ### Exercise 3
 
@@ -962,9 +1476,10 @@ Use `parse_number()` with the argument "$100". Then on the line below, use `pars
 
 ```
 
+### 
+
 Notice how R will ignore both the % and $ signs. 
 
-### 
 
 ### Exercise 4
 
@@ -974,14 +1489,16 @@ Great. Now use `parse_number()` with the argument "The cost of the package is $4
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r parsing-a-vector-4-hint-1, eval = FALSE}
 parse_number("The cost of ...." )
 ```
 
+### 
+
 `parse_number()` can even scan through full sentences and pick out just the numbers!
 
-
-### 
 
 ### Exercise 5
 
@@ -1001,11 +1518,13 @@ parse_date("...")
 
 ### Exercise 6
 
-Great. Now use `parse_date()` the date April 16, 2019.
+Great. Now use `parse_date()` on the date April 16, 2019.
 
 ```{r parsing-a-vector-6, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r parsing-a-vector-6-hint-1, eval = FALSE}
 parse_date("2019-04-16")
@@ -1063,6 +1582,8 @@ cat(readLines("data/ex_1.csv"), sep = "\n")
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ### 
 
 A good strategy is to work column by column until there are no problems remaining. Here we can see that there are a lot of parsing problems with the `y` column.
@@ -1079,12 +1600,12 @@ cat(readLines("data/ex_1.csv"), sep = "\n")
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r parsing-a-file-3-hint-1, eval = FALSE}
 ... %>% 
  tail()
 ```
-
-### 
 
 ### Exercise 4
 
@@ -1097,6 +1618,8 @@ cat(readLines("data/ex_1.csv"), sep = "\n")
 ```{r parsing-a-file-4, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r parsing-a-file-4-hint-1, eval = FALSE}
 read_csv("data/ex_1.csv", 
@@ -1119,6 +1642,8 @@ cat(readLines("data/ex_1.csv"), sep = "\n")
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r parsing-a-file-5-hint-1, eval = FALSE}
 read_csv("data/ex_1.csv", 
   col_types = cols(
@@ -1132,7 +1657,7 @@ read_csv("data/ex_1.csv",
 
 With this last file, we used the `col_types` argument to `read_csv()` to resolve the failures. However, we will now explore a different approach using different parsing functions we learned in the "Parsing a vector" section.
 
-### 
+
 
 ### Exercise 6
 
@@ -1158,11 +1683,14 @@ cat(readLines("data/ex_2.csv"), sep = "\n")
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+
 ### 
 
 Notice that R parses column `a` and `b` both as a doubles. However, column `a` should be parsed as an integer and column `b` should be parsed as a date. Let's fix this.
 
-### 
+
 
 ### Exercise 8
 
@@ -1199,15 +1727,14 @@ cat(readLines("data/ex_2.csv"), sep = "\n")
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r parsing-a-file-9-hint-1, eval = FALSE}
 ... %>% 
     mutate(a = ...)
 ```
 
 ### 
-
-Great. Now let's take care of column `b`.
-
 
 ### Exercise 10
 
@@ -1220,6 +1747,8 @@ cat(readLines("data/ex_2.csv"), sep = "\n")
 ```{r parsing-a-file-10, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r parsing-a-file-10-hint-1, eval = FALSE}
 ... %>% 
@@ -1283,6 +1812,8 @@ cat(readLines("data/ex_3.csv"), sep = "\n")
 ```{r parsing-a-file-13, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r parsing-a-file-13-hint-1, eval = FALSE}
 ... %>% 

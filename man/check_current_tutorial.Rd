@@ -2,22 +2,16 @@
 % Please edit documentation in R/check_current_tutorial.R
 \name{check_current_tutorial}
 \alias{check_current_tutorial}
-\title{Format Tutorial}
+\title{Check Current Tutorial}
 \usage{
 check_current_tutorial()
 }
 \value{
-formatted document with correct code and hint chunk labels
+current document OVERWRITTEN and formatted with correct chunk labels
 }
 \description{
 An add-in for formatting primer.tutorials.
 
-It adjusts the code and hint chunk labels correctly.
-
-This should make things easier for tutorial-writers
-because it will allow fast chunk label updating and quick formatting
-and checking
-
-There is also no need to keep track of the exercise numbers
-because it is done for you in the add-in.
+It uses format_tutorial() to format the tutorial Rmd open
+in the current editor
 }
