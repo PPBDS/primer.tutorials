@@ -17,6 +17,9 @@ library(primer.tutorials)
 library(tidyverse)
 library(primer.data)
 library(tidycensus)
+library(ipumsr)
+library(ggthemes)
+library(knitr)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
@@ -155,7 +158,14 @@ The geography argument determines the scope of the data (such as `us` for the en
 
 ###
 
-<!-- AG: I think that the Primer is incorrect here. It shows a method for finding table IDs rather than variable names by going through data.census.gov. However, this seems to provide a table ID instead of a variable ID, and you can see their differences here: https://www.census.gov/content/dam/Census/library/publications/2019/acs/acs_summary-file_handbook_2019_ch03.pdf. As of right now, it seems like the only method to access variable names is through an API request. -->
+<!-- I think that the Primer is incorrect here. It shows a method for finding table
+IDs rather than variable names by going through data.census.gov. However, this
+seems to provide a table ID instead of a variable ID, and you can see their
+differences here:
+https://www.census.gov/content/dam/Census/library/publications/2019/acs/acs_summary-file_handbook_2019_ch03.pdf.
+As of right now, it seems like the only method to access variable names is
+through an API request.
+-->
 
 <!-- DK: Please fix the Primer. -->
 
@@ -654,6 +664,598 @@ Additionally, continue the pipe and add the function `theme(axis.text.y = elemen
 ###
 
 If you want to see what PUMA zones correlate to what counties, you can visit the [interactive map](https://iecam.illinois.edu/maps/public-use-microdata-areas-pumas/) or the [Census Bureau documentation](https://www.census.gov/geographies/reference-maps/2010/geo/2010-pumas/illinois.html).
+
+## IPUMS data
+
+<!-- With the introduction of IPUMS, there's a small conundrum. You need to download absolutely massive files if you want to use IPUMS (3199967 rows! 280.8 MB! 13 columns!), which makes it fundamentally incompatible with the tutorials. As such, I'm making this a separate project that they then publish, kind of like a final project. This is also a great time to walk them through dealing with large files through .gitignore.-->
+
+IPUMS, or the **I**ntegrated **P**ublic **U**se **M**icrodata **S**eries, is a great source for big data. 
+
+It includes the Current Population Survey (CPS) from the U.S. Census as well as other health and housing data. 
+
+This allows you to create a subset of these massive repositories of collected data that fits your needs and interests.
+
+###
+
+An initial word of caution to those new to the system is that your requests are not filled immediately, so **start early!**
+
+You may have to pause the tutorial while you wait for your account to be approved.
+
+### Exercise 1
+
+We're going to be publishing our graph to an RPubs website, so we need to create a new GitHub repo and R project.
+
+###
+
+Create a new GitHub repo named "ipums-graph" and link it to an RStudio project. Make sure to edit `.gitignore` to ignore the `.Rproj` file.
+
+###
+
+Then create a new R Markdown file titled "IPUMS_Graph". Then save the file and name it "index.Rmd".
+
+###
+
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
+
+```{r ipums-data-1}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This will be the file that we're coding in for the rest of this tutorial. Knit the file first to make sure that it's all up and running.
+
+### Exercise 2
+
+Delete all of the text other than the YAML header and setup chunk in `index.Rmd`.
+
+###
+
+Then load the packages **tidyverse**, **ggthemes**, and **ipumsr** into the setup chunk using the `library()` command. We're going to be using these packages throughout the rest of this tutorial.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r ipums-data-2}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+The **ipumsr** package is an easy way to import IPUMS data. You can learn more about it [here](https://cran.r-project.org/web/packages/ipumsr/vignettes/ipums.html).
+
+### Exercise 3
+
+Now that we have our project ready, we need to actually download our data. We'll do this by directly downloading from the IPUMS website and manually generating a request.
+
+###
+
+Start at the [IPUMS home page](https://ipums.org/) and select the survey you wish to explore via the 'visit site' option.
+
+```{r, echo = FALSE, output.width = "500px"}
+include_graphics("images/step_1visit_site.png")
+```
+
+###
+
+From here you will see a prompt to login or register at the very top of the widow:
+
+```{r, echo = FALSE, output.width = "500px"}
+include_graphics("images/login_pt1_02.png")
+```
+
+###
+
+If you have used IPUMS before, then you may proceed to login and move on to select your data. However, if you are a new user, you will need to apply for access. The register tab will ask you for standard account creation information.
+
+###
+
+You should list Harvard University as your institution, undergraduate as your occupation, and statistics as your research area. Make sure to state that you are completing the Primer as part of your research statement. Otherwise just use your normal email and don't fill in the optional fields like your occupation title.
+
+###
+
+There are a handful of data use agreements you will be required to agree to in this process which you should note specifically with regard to citations.
+
+Once you have applied, you will need to await the confirmation of your account to log in fully.
+
+###
+
+The official slogan of IPUMS is **Use it for GOOD -- never for EVIL** and it's even included in the terms and conditions.
+
+As such, we're now contractually obligated to use IPUMS for good things.  
+<font size = "1"> There goes my dream of being a mad (data) scientist. </font>
+
+<!-- screw programming i should be a standup comedian. my stand up show would be a genocide -->
+
+### Exercise 4
+
+Once you receive the email confirmation and logged in properly, you'll be able to start selecting and importing your data.
+
+###
+
+Let's try to recreate the following graph:
+
+<!-- AG: This is a poor imitation of the graph in the Primer, I would like the source code for it since this graph is hacky and stupid, plus I'm not sure if I used the right theme. -->
+
+```{r, out.width="875px"}
+include_graphics("images/ipums_plot.png")
+```
+
+###
+
+The first option you will need to consider and specify will be the samples (see 'select samples' button), or time the period covered by your data. By default, all of the data from all possible years is selected, but that's obviously way too much data for our purposes.
+
+###
+
+We only need to read in the data for the year 2019, so change the sample to only use 2019 ACS data.
+
+```{r, out.width="875px"}
+include_graphics("images/sample_select.gif")
+```
+
+###
+
+Keep in mind that we only want 2019 ACS data, not ACS5 data. ACS5 is a 5 year survey that includes all of the data from the past 5 years, which in this case would be 2014-2019.
+
+### Exercise 5
+
+When you submit your sample, you'll be redirected to the variable selection page.
+
+###
+
+You can see below that the household and person tabs (highlighted) will provide a drop down of common variables from this repository under the respective classifications. To add a variable to your ‘cart’ you simply select the + icon, if not available either there is a corresponding explanation or it simply isn’t available.
+
+```{r, out.width="875px"}
+include_graphics("images/var_selection_01.png")
+```
+
+###
+
+You can also search for variables. In this case, we want the 'INCTOT' and 'EMPSTAT' variables to get the income of a person and their employment status.
+
+Find those variables and add them into your cart.
+
+### Exercise 6
+
+Click "View Cart" to show your cart. Here, you can review and revise your selections in the cart menu prior to requesting the ‘pull.’ 
+
+###
+
+Shown below is what the cart review window should show. An X indicates the existence of data in the given time period. Note that since we're only pulling from one year, we only have data for the 2019 ACS.
+
+```{r}
+include_graphics("images/cart_02.png")
+```
+
+###
+
+The cart also has a large amount of preselected variables. These are mandatory, but they contain a large amount of information such as the year and the serial number of the data.
+
+### Exercise 7
+
+When you are satisfied with the sample specifications, you can proceed to the create data extract page. 
+
+###
+
+This will provide you with a handful of final options and a text window to describe the sample you’ve created. You should treat this like a commit message in GitHub - brief and meaningful.
+
+Look at the "ESTIMATED SIZE" field. This file is a _massive_ 287.3 MB, or about 1,673 copies of Tales of Beedle the Bard.
+
+Unrecognizable references aside, this is an important fact that you should keep in mind later on.
+
+###
+
+Submitting your request should automatically bring you to the request history page associated with your account. You should note that your requests will only be available for 72 hours, and you should make sure to promptly download your information upon receipt.
+
+```{r}
+include_graphics("images/request_history_01.jpg")
+```
+
+###
+
+Download the `.dat` file, the DDI Codebook, and the R Command file from the request page. 
+
+You will need to first download the data via Download.DAT, then you will need to save the DDI and R links (via ‘save as’) in the same location as your .dat.gz file. Then relocate these files into your R project.
+
+###
+
+Here's a full GIF of the process:
+
+```{r, out.width="875px"}
+include_graphics("images/full_demo.gif")
+```
+
+###
+
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
+
+```{r ipums-data-7}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+We finally have all of our files in R, but there's a few things missing before we can start.
+
+### Exercise 8
+
+Our data file is currently _compressed_ in a `.gz` folder, which needs to be unzipped.
+
+###
+
+Download [7zip](https://www.7-zip.org/download.html), a free unzipping program, and unzip the `dat.gz` file. Extract all of the files from the file, then pull the file out of the resulting folder and place it into your general R project.
+
+###
+
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
+
+```{r ipums-data-8}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+A `.gz` file is a compressed folder much like a ZIP file, reducing the file size. You can learn more about `.gz` files [here](https://www.makeuseof.com/what-is-gz-file/).
+
+This process is used by most government agencies to distribute data to researchers, with databases like [The Cancer Genome Atlas](https://portal.gdc.cancer.gov/) requiring you to download certain case data and then unzip it using 7zip.
+
+### Exercise 9
+
+Now that we finally have our data downloaded, let's create our graph.
+
+###
+
+First, let's bring our data out of the file and into our R project. Add the line `source(usa_00001.R)` to the setup chunk of `index.Rmd`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r ipums-data-9}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+The `source()` command runs an R file at the very beginning of the R Markdown command, which is extremely useful for a case like this where we have our R code already written for us.
+
+When you run the `source(usa_00001.R)` command, it should load the `ddi` and `data` objects. Try running `view(data)` to see all of the data that we just imported from PUMS. It should have over 3 million rows, making it decidedly "big" data.
+
+### Exercise 10
+
+So let's start graphing.
+
+###
+
+Start a pipe with data and select the `INCTOT` and `EMPSTAT` columns.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r ipums-data-10}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+These are the only columns that we need, and they're the variables that we asked for in our requests.
+
+### Exercise 11
+
+Now if we look closely at our `data` object, we'll see that there are a few columns with the `haven_labelled` datatype. While this is useful for other languages like Stata, it's pretty useless in R.
+
+###
+
+Continue the pipe and create a new column named `incstat` that contains `INCSTAT` as an integer. Then create another column named `empstat` that contains `EMPSTAT` as a factor.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r ipums-data-11}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+To learn more about Haven labelled variables, please visit the [Primer](https://ppbds.github.io/primer/ipums.html#haven-labelled-variables).
+
+### Exercise 12
+
+Now, you may have seen that when you opened the "DDI" file from the original request link, it looked something like this:
+
+```{r}
+include_graphics("images/xml_view.png")
+```
+
+###
+
+This is because the `.xml` file contains *metadata*, or information about your imported data. And we can read through that information to find out what we need to use. For example, the metadata about the `EMPSTAT` variable looks like this:
+
+```{r}
+include_graphics("images/variable_view.png")
+```
+
+We can use the categories to format our data.
+
+###
+
+Change the `empstat` column to replace the numbers with the strings shown above. Use the `case_when()` function to replace `0` with `"NA"`, `1` with `"Employed"`, `2` with `"Unemployed"`, and `3` with `"Not in labor force"`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r ipums-data-12}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+You can see a lot of important information about each of the different variables by reading through the `.xml` file. XML files are a type of file storage similar to HTML but more suited to data transport. You can read more about XML files [here](https://www.howtogeek.com/357092/what-is-an-xml-file-and-how-do-i-open-one/).
+
+### Exercise 13
+
+If we look at the very bottom of the XML file, we can see how INCTOT also has certain exceptions. Specifically, the value `9999999` means `NA`, which is pretty important for our purposes.
+
+```
+INCTOT Specific Variable Codes
+-009995 = -$9,900 (1980)
+-000001 = Net loss (1950)
+0000000 = None
+0000001 = $1 or break even (2000, 2005-onward ACS and PRCS)
+9999999 = N/A
+```
+
+###
+
+Mutate the `inctot` column so that the value is `NA` if it's `9999999`. Use the `na_if()` function.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r ipums-data-13}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+These coding exceptions are listed throughout the XML file, so make sure you read through it whenever you have anything to change.
+
+### Exercise 14
+
+There's one more step before we finish wrangling our data.
+
+###
+
+Mutate the `inctot` column so that it's divided by 100,000.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r ipums-data-14}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This makes our income brackets much smaller and much easier to deal with, rather than the wide, spread out income ranges that make our graph extremely wide.
+
+### Exercise 15
+
+Continue the pipe and add the `ggplot()` function, mapping `x` to `inctot`, `y` to `..scaled..`, `fill` to `empstat`, and `color` to `empstat`.
+
+###
+
+Then add the `geom_density()` function, setting the `alpha` argument to `0.3` and `na.rm` to `TRUE`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below. 
+
+```{r ipums-data-15}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This creates a graph that contains the density of each income bracket. The `..scaled..` option means that the density is scaled so that it fits within a range of 0 to 1.
+
+### Exercise 16
+
+Now, our graph is extremely big for what it is.
+
+###
+
+Limit the x axis to between 0 and 8 using the `xlim()` function.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r ipums-data-16}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This constrains the values to a reasonable limit and normalizes most of the data.
+
+### Exercise 17
+
+Now let's refine our y axis numbers.
+
+###
+
+Add the function `scale_y_continuous(labels = scales::label_number())` to your graph.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r ipums-data-17}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+This formats the y axis so that it properly formats the decimals without converting it to scientific notation.
+
+### Exercise 18
+
+Now, if you tried to generate this graph as it is you'd notice how the legend is still kind of messed up.
+
+###
+
+Add the layers `scale_fill_discrete()` and `scale_color_discrete()`, setting the `name` argument to `Employment Status` in both functions.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r ipums-data-18}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+We're almost done, we just need to set our themes and do the final clean up.
+
+### Exercise 19
+
+Let's change our labels and the theme now.
+
+Remember, we're trying to recreate the following graph:
+
+```{r, out.width="875px"}
+include_graphics("images/ipums_plot.png")
+```
+
+The theme used is `theme_economist(dkpanel=TRUE)`.
+
+###
+
+Run `readLines("index.Rmd") %>% tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r ipums-data-19}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+We're finally done! Finish formatting your R Markdown file and add descriptions or headers with whatever you want to do. 
+
+## Publishing
+
+We're now going to publish our R Markdown file to RPubs and show it off to the world.
+
+### Exercise 1
+
+Publish your file to RPubs by knitting and clicking the "Publish" button. Paste the URL into the space below.
+
+```{r publishing-1}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
 
 ###
 

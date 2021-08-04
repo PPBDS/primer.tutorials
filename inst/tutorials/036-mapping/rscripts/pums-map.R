@@ -43,4 +43,4 @@ pums_map <- nw_final %>%
                 theme_void()
 
 # Saves the map to an RDS file.
-write_rds(pums_map, "data/05-mapping-pums-map.rds")
+write_rds(pums_map, "inst/tutorials/036-mapping/data/pums-map.rds")
