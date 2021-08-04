@@ -15,7 +15,7 @@ saved_session <- readRDS(system.file("www/session_save.rds", package = "primer.t
 
 # Test get_label_list()
 
-label_list_test <- get_label_list(saved_session)
+label_list_test <- get_label_list(saved_session, is_test = TRUE)
 
 label_list_output <- readRDS(system.file("www/submission_test_outputs/label_list_output.rds", package = "primer.tutorials"))
 

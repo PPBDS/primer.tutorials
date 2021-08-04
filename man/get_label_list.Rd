@@ -4,10 +4,12 @@
 \alias{get_label_list}
 \title{Get Label Order}
 \usage{
-get_label_list(sess)
+get_label_list(sess, is_test = FALSE)
 }
 \arguments{
 \item{sess}{session object from shiny with learnr}
+
+\item{is_test}{check if testing function}
 }
 \value{
 list of labels in the correct order
