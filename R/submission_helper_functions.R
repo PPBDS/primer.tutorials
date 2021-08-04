@@ -86,12 +86,13 @@ build_html <- function(file, session){
 #' Get Label Order
 #'
 #' @param sess session object from shiny with learnr
+#' @param is_test check if testing function
 #'
 #' @return list of labels in the correct order
 #' @export
 #'
 #'
-get_label_list <- function(sess){
+get_label_list <- function(sess, is_test = FALSE){
 
   # In order to keep same question order as in the exercise,
   # use parsermd to define factor level for exercise order
@@ -103,7 +104,7 @@ get_label_list <- function(sess){
 
   manual_list <- list("information-name", "information-email", "download-answers-1")
 
-  rmd_path <- file.path(sess$options$appDir, "tutorial.Rmd")
+  rmd_path <- ifelse(is_test, system.file("www/session_check_tutorial.Rmd", package = "primer.tutorials"), file.path(sess$options$appDir, "tutorial.Rmd"))
 
   rmd <- parsermd::parse_rmd(rmd_path)
 
