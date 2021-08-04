@@ -25,6 +25,6 @@ races_map <- races_data  %>%
                  theme_void()
 
 # Saves map as a png file.
-png(filename = "inst/tutorials/055-mapping/images/05-mapping-races-map.png")
+png(filename = "inst/tutorials/036-mapping/images/races-map.png")
 races_map
 dev.off()

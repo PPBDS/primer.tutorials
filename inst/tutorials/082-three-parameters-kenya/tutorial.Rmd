@@ -1,5 +1,5 @@
 ---
-title: "Three Parameters: Kenya"
+title: 'Three Parameters: Kenya'
 author: Mahima Malhotra
 tutorial:
   id: three-parameters-kenya
@@ -8,7 +8,7 @@ output:
     progressive: yes
     allow_skip: yes
 runtime: shiny_prerendered
-description: Use data from Kenya voter registration efforts to construct a three parameter model.
+description: "Use data from Kenya voter registration efforts to construct a three parameter model."
 ---
 
 ```{r setup, include = FALSE}
@@ -23,6 +23,50 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
 
+kenya_2 <- kenya %>% 
+  filter(distance < 25)
+
+fit_1 <- stan_glm(distance ~ poverty,
+                  data = kenya,
+                  refresh = 0)
+
+newobs <- tibble(poverty = 0.2)
+
+pe <- posterior_epred(fit_1, newdata = newobs) %>% 
+  as_tibble()
+
+exp_poverty <- pe %>%
+  ggplot(aes(x = `1`)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 100) +
+  labs(title = "Posterior for Expected Distance",
+       subtitle = "Polling locations that are on average 12 km from those assigned to them have poverty rates of 0.2",
+       x = "Poverty Rate",
+       y = "Probability") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic()
+
+fit_2 <- stan_glm(distance ~ poverty,
+                  data = kenya_2,
+                  refresh = 0)
+
+fit_2
+
+newobs2 <- tibble(poverty = 0.2)
+
+pe2 <- posterior_epred(fit_2, newdata = newobs2) %>% 
+  as_tibble()
+
+exp_poverty_2 <- pe2 %>%
+  ggplot(aes(x = `1`)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 100) +
+  labs(title = "Posterior for Expected Distance",
+       subtitle = "Polling locations about 11 km away on average from those assigned to them have poverty rates of 0.2",
+       x = "Poverty Rate",
+       y = "Probability") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic()
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -31,17 +75,9 @@ options(tutorial.exercise.timelimit = 60,
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
-<!-- Let's make our own data set. Start with a primer.data data set. Filter our some of the rows in a way that messes things up in the same way that filtering our living candidates messes up go governors. -->
-
-<!-- Example from kenya is that if you want to estimate poverty ~ 1, you get an unbiased estimate if you use the whole data set. But if you restrit to just polling stations within 25 km, you get a biased model becuause polling stations farther away are poorer. But this example is no good because we need three parameters.-->
-
-<!-- So, find a simple linear model, like poverty ~ age, or distance ~ pop_density, or mean_age ~ distance, rv_12 ~ poverty. Good if the model works, meaningful relationship. Don't use treatment or reg_byrv13. Then, we modify the sample, in some way, by removing a bunch of rows in a non-crazy way which does not use the two variables in our model. But, we want a fun story to tell! There must be a biased which the non-reprsentative nature of our sample creates. In other words, the coefficient to be (very?) different between using all the data and using the reduced sample. -->
 
 <!-- Four different ways to mess up representative data. First, remove rows on the basis of a variable which is not in your model. Second, remove rows on the basis of an independent variable in the model. Third, remove rows on the basis of the dependent variable. Four, remove rows on the basis of potential outcomes.  -->
 
-<!-- Tell the story of experimenters who got lazy (or scared) and did not want to travel too far, and so your data only has 1188.  -->
-
-<!-- Try kenya. Feel free to simplify by, for example, only keeping around two treatments: control and something else.  -->
 
 ## Representative Data
 
@@ -49,19 +85,22 @@ Let's look at how whether or not data is representative can affect our results. 
 
 *Recall: the variable "distance" is the number of kilometers, which the person who is assigned to a given polling location, lives from that polling location. In Kenya today, what is the expected value of distance for polling locations with a poverty rate of 0.2?*
 
-*In Kenya today, what is the expected difference in average distance of away from polling locations for those assigned to it between those with a poverty rate of 0.8 and 0.5?*
+We will use the data set `kenya` to answer this question, and will make the following posterior distribution.
 
-We will use the data set `kenya` to answer this question.
+```{r}
+exp_poverty
+```
 
-###
+
+### 
 
 ### Exercise 1
 
 First, determine the columns we would like in our Preceptor Table in order to answer these questions.
 
-```{r representative-data-ex-1}
+```{r representative-data-1}
 question_text(NULL,
-	message = "We would like the columns for poverty rate of voting blocks and average distance from the polling location for voting blocks.",
+	message = "We would like the columns for poverty rate of voting blocks assigned to a polling location and the average distance people in a voting block have to travel to their polling location.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -69,14 +108,14 @@ question_text(NULL,
 	rows = 6)
 ```
 
-###
+### 
 
 Therefore, our Preceptor Table would appear as the following:
 
 ```{r}
 tibble(ID = c("Community 1", "Community 2", "...", "Community 1000", "Community 1001", "..."),
        distance = c("23", "5", "...", "47", "32", "..."),
-       poverty_rate = c("0.4", "0.85", "...", "0.21", "0.63", "...")
+       poverty = c("0.4", "0.85", "...", "0.21", "0.63", "...")
        ) %>%
   
   # Then, we use the gt function to make it pretty
@@ -84,7 +123,7 @@ tibble(ID = c("Community 1", "Community 2", "...", "Community 1000", "Community 
   gt() %>%
   cols_label(ID = md("ID"),
              distance = md("Distance"),
-             poverty_rate = md("Poverty Rate")) %>%
+             poverty = md("Poverty Rate")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = c(ID))) %>%
   tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
@@ -94,32 +133,33 @@ tibble(ID = c("Community 1", "Community 2", "...", "Community 1000", "Community 
   fmt_markdown(columns = everything())
 ```
 
-
 ### Exercise 2
 
 Now, run `?kenya` to take a closer look at the data.
 
-```{r representative-data-ex-2, exercise = TRUE}
+```{r representative-data-2, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r representative-data-ex-2-hint, eval = FALSE}
+```{r representative-data-2-hint-1, eval = FALSE}
 
 ```
 
-###
+### 
 
-As you can see, this data came from 2013, whereas our population is from now.
+Pay special attention to the variables we are looking at: distance and poverty. Notice that the definition of distance matches our definition from the questions we seek to answer. Additionally notice that the study worked with 1,674 voting blocks in Kenya.
 
 ### Exercise 3
 
 Write two sentences discussing whether you can consider the data from `kenya` and the columns from our Preceptor Table to be drawn from the same population.
 
-```{r representative-data-ex-3}
+<!-- MM: What year is the data from? Should specify in below answer -->
+
+```{r representative-data-3}
 question_text(NULL,
-	message = "Since this data set is very representative  of the population in 2013 and our population is that of Kenya, we will assume that they can be drawn from the same population and that there has not been significant change over time. Therefore, the data is representative enough of our population.",
+	message = "Since this data set dealt with a fairly large number of voting communities in Kenya at the time and our population is that of Kenya now. So, the difference between the data and our Preceptor Table is mostly time, which we will assume had little affect on poverty rates and voting blocks. So, we will assume that they can be drawn from the same population.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -127,135 +167,366 @@ question_text(NULL,
 	rows = 6)
 ```
 
+### 
+
+Having determined that we can consider the data from `kenya` and our Preceptor Table to be drawn from the same population, our population table is the following:
+
+```{r}
+tibble(source = c("Preceptor Table", "Preceptor Table", "...", "Data", "Data", "...", "Other", "Other", "..."),
+       year = c("2021", "2021", "...", "???", "???", "...", "?", "?", "..."),
+       distance = c("32", "51", "...", "5", "41", "...", "?", "?", "..."),
+       poverty = c("0.24", "0.55", "...", "0.81", "0.39", "...", "?", "?", "...")
+       ) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(source = md("Source"),
+             year = md("Year"),
+             distance = md("Distance"),
+             poverty = md("Poverty Rate")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = c(source))) %>%
+  tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
+            locations = cells_column_labels(columns = c(source))) %>%
+  cols_align(align = "center", columns = everything()) %>%
+  cols_align(align = "left", columns = c(source)) %>%
+  fmt_markdown(columns = everything())
+```
+
 ### Exercise 4
 
-```{r}
-kenya_1 <- kenya %>% 
-  filter(treatment %in% c("canvass", "control"))
-  
+Given our Population Table, let's consider the aspects of Justice. First, let's look at validity. Can we consider the columns `distance` and `poverty` to have the same meaning in our data and our Preceptor Table? Write two sentences considering this.
 
-kenya_1
-
-kenya_2 <- kenya_1 %>% 
-  filter(distance < 25)
+```{r representative-data-4}
+question_text(NULL,
+	message = "We will consider our data to be valid, however, one point you may consider is if there was large redistricting that added more districts or changed the size of districts meaning that the average distance a voter would have to travel to reach their polling location per voting block would have vastly changed",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
 ```
 
-```{r}
-fit_1 <- stan_glm(distance ~ poverty,
-                  data = kenya_1,
-                  refresh = 0)
+### Exercise 5
 
-fit_1
+Now, consider stability. Write two sentences considering whether we can consider the relationship between `distance` and `poverty` to be the same between "year of data" and 2021.
 
-newobs1 <- tibble(poverty = 0.2)
+```{r representative-data-5}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
 
-pp <- posterior_epred(fit_1, newdata = newobs1) %>% 
+### Exercise 6
+
+Next, write two sentences determining if we can consider the data from "year" to be representative of the entirety of Kenya in "year". 
+
+```{r representative-data-6}
+question_text(NULL,
+	message = "Since, to our knowledge, areas of Kenya were not left out of the study and a large number of Kenya's voting block communities were studies, we can consider this data to be representative.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 7
+
+Finally, as our last step of Justice, determine whether the data-generating mechanism is linear or logistic and why. Also state the corresponding family argument of `stan_glm()` needed to make that type of model. Use the phrase "outcome variable".
+
+```{r representative-data-7}
+question_text(NULL,
+	message = "The DGM will be linear because we can consider our outcome variable `distance` to be continuous and therefore we will set the family argument to 'gaussian'",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 8
+
+Having completed Justice, we will now move onto Courage. Let's make our posterior distribution using 'stan_glm()'. Set your outcome variable as `distance`and your explanatory variable as `poverty` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `poverty` so we do not get an intercept.  Set `data` to `kenya`, and `refresh` to 0. Store this as `fit_1`.
+
+```{r representative-data-8, exercise = TRUE}
+
+```
+
+```{r representative-data-8-hint-1, eval = FALSE}
+fit_1 <- stan_glm(distance ~ poverty -1,
+                  data = ...,
+                  refresh = ...)
+```
+
+### Exercise 9
+
+With our fitted model, we can answer our question. Recall:
+
+*In Kenya today, what is the expected value of distance for polling locations with a poverty rate of 0.2?*
+
+To do so, first make a new tibble with the observations we would like. In this case, we are looking at locations where the poverty rate is 0.2. Set this new tibble to `newobs`.
+
+```{r representative-data-9, exercise = TRUE}
+
+```
+
+```{r representative-data-9-hint, eval = FALSE}
+newobs <- tibble(poverty = ...)
+```
+
+### Exercise 10
+
+Recall that `posterior_epred()` is used when looking for expected values such as in this case. Therefore, use `posterior_epred()` with the first argument as our fitted model `fit_1` and the `newdata` argument as `newobs`. Continue this pipe with `as_tibble()`. Store this as `pe`.
+
+```{r representative-data-10, exercise = TRUE}
+
+```
+
+```{r representative-data-10-hint, eval = FALSE}
+pe <- posterior_epred(..., newdata = ...) %>% 
   as_tibble()
-
-exp_poverty <- pp %>%
-  ggplot(aes(x = `1`)) + 
-  geom_histogram(aes(y = after_stat(count/sum(count))),
-                 bins = 100) +
-  labs(title = "Posterior for Expected Distance",
-       subtitle = "Polling locations about 13 miles away on average from those assigned to them have poverty rates of 0.2",
-       x = "Poverty Rate",
-       y = "Probability") +
-  scale_y_continuous(labels = scales::percent_format()) +
-  theme_classic()
-  
-
-exp_poverty
 ```
 
-```{r}
-fit_2 <- stan_glm(distance ~ poverty,
-                  data = kenya_2,
-                  refresh = 0)
+### Exercise 11
 
-fit_2
+With our posterior distribution, we can now seek to answer our question. To do so, make a new pipe and map `distance` to the x-axis. Then add the layer `geom_histogram()` and map the probability to the y-axis. Set the bins argument to 100.
 
-newobs2 <- tibble(poverty = 0.2)
-
-pp <- posterior_epred(fit_2, newdata = newobs2) %>% 
-  as_tibble()
-
-exp_poverty_2 <- pp %>%
-  ggplot(aes(x = `1`)) + 
-  geom_histogram(aes(y = after_stat(count/sum(count))),
-                 bins = 100) +
-  labs(title = "Posterior for Expected Distance",
-       subtitle = "Polling locations about 11 miles away on average from those assigned to them have poverty rates of 0.2",
-       x = "Poverty Rate",
-       y = "Probability") +
-  scale_y_continuous(labels = scales::percent_format()) +
-  theme_classic()
-  
-exp_poverty_2
-```
-
-```{r}
-newobs3 <- tibble(poverty = c(0.5, 0.8))
-
-pp <- posterior_predict(fit_1, newdata = newobs3) %>% 
-  as_tibble() %>% 
-  mutate_all(as.numeric) %>% 
-  rowwise() %>% 
-  mutate(pov_diff = `2` - `1`)
-
-exp_dist_diff <- pp %>% 
-  ggplot(aes(x = pov_diff)) + 
-  geom_histogram(aes(y = after_stat(count/sum(count))),
-                 bins = 100) + 
-  labs(title = "Posterior for Expected Distance Difference",
-       subtitle = "The expected difference of average distance between polling locations with poverty rates of 0.5 and 0.8 is about 20 miles",
-       x = "Poverty Rate",
-       y = "Probability") +
-  scale_y_continuous(labels = scales::percent_format()) +
-  theme_classic()
-
-exp_dist_diff
-```
-
-```{r}
-newobs3 <- tibble(poverty = c(0.5, 0.8))
-
-pp <- posterior_predict(fit_2, newdata = newobs3) %>% 
-  as_tibble() %>% 
-  mutate_all(as.numeric) %>% 
-  rowwise() %>% 
-  mutate(pov_diff = `2` - `1`)
-
-exp_dist_diff_2 <- pp %>% 
-  ggplot(aes(x = pov_diff)) + 
-  geom_histogram(aes(y = after_stat(count/sum(count))),
-                 bins = 100) + 
-  labs(title = "Posterior for Expected Distance Difference",
-       subtitle = "The expected difference of average distance between polling locations with poverty rates of 0.5 and 0.8 is about 5 miles",
-       x = "Poverty Rate",
-       y = "Probability") +
-  scale_y_continuous(labels = scales::percent_format()) +
-  theme_classic()
-
-exp_dist_diff_2
-```
-
-
-Now, let's answer the question we started with. Note: we are only considering the treatments `canvass` and `control`. To do so, we will create the following graph.
-
-
-
-
-```{r representative-data-ex-4, exercise = TRUE}
+```{r representative-data-11, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r representative-data-ex-4-hint, eval = FALSE}
+```{r representative-data-11-hint-1, eval = FALSE}
+Remember that the columns aren't named when `posterior_epred()` is used, but rather numbered. To call the first column, you should use the format `1`.
+```
+
+```{r representative-data-11-hint-2, eval = FALSE}
+To map the probability to the y-axis, set the first argument of `geom_histogram()` to `aes(y = after_stat(count/sum(count)))`.
+```
+
+```{r representative-data-11-hint-3, eval = FALSE}
+pe %>% 
+  ggplot(mapping = aes(x = ...)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = ...)
+```
+
+### Exercise 12
+
+Now add a title, subtitle, and axis labels to your graph.
+
+```{r representative-data-12, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r representative-data-12-hint, eval = FALSE}
++
+  labs(...)
+```
+
+### Exercise 13
+
+Lastly, use `scale_y_continuous()` to format the y-axis to be formatted as a percentage. To do so, Set the first argument of `scale_y_continuous` to `scales::percent_format()`. To finish the plot, add `theme_classic()`.
+
+```{r representative-data-13, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r representative-data-13-hint, eval = FALSE}
++ 
+  scale_y_continuous(...) +
+  theme_classic()
+```
+
 ###
+
+Recall that your plot should appear similar to the following:
+
+```{r}
+exp_poverty
+```
+
+###
+
+Through this, we have determined that we expect polling locations which are 12 km away on average from those who are assigned to that location to have a poverty rate of 0.2, and achieved this answer with data that we considered to be pretty representative.
+
+## Non-Representative Data
+
+In our last model, we could consider our data to be representative of our population, however, what if that were not the case? Now, let's answer the same question, but with unrepresentative data. To do so, we will make the following graph:
+
+```{r}
+exp_poverty_2
+```
+
+Recall our question.
+
+*Recall: the variable "distance" is the number of kilometers, which the person who is assigned to a given polling location, lives from that polling location. In Kenya today, what is the expected value of distance for polling locations with a poverty rate of 0.2?*
+
+###
+
+### Exercise 1
+
+Consider that more rural communities far away from the locations where those conducting the study were staying also tended to have polling locations which spanned larger areas and people had to travel more on average to reach. Given this piece of information, let's also say that our researchers were kind of lazy and wanted to get back home more quickly. So, they decided that places further away from where they were staying were too far to study and would take too much time to reach. This caused them to not travel to any polling locations that were more than 25 km away from those who were assigned to it.
+
+With this scenario, write two sentences discussing representativeness and whether we can consider data from this scenario in that same year to be representative of Kenya that year.
+
+```{r nonrepresentative-da-1}
+question_text(NULL,
+	message = "Given that rural communities are not being reached in this scenario and therefore also communities that are located further away from their polling location, we can't consider this data to be representative of the entirety of Kenya.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Although we might not be able to consider this data very representative of Kenya, if this were the data we had, we could acknowledge the problems with it and consider it representative enough to continue.
+
+### Exercise 2
+
+Let's mimic this scenario with our data `kenya` and answer our question with non-representative data. To do so, use `kenya` and filter out communities that are on average more than 25 km away from their polling location. Store this as `kenya_2`.
+
+```{r nonrepresentative-da-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-2-hint, eval = FALSE}
+kenya_2 %>% 
+  filter(distance < 25)
+```
+
+###
+
+With this, we have essentially created a data set that could possible come from our lazy researchers scenario.
+
+### Exercise 3
+
+Now, let's make the fitted model. As we did before, use `stan_glm()` and set your outcome variable as `distance`and your explanatory variable as `poverty` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `poverty` so we do not get an intercept.  Set `data` to `kenya_2`, and `refresh` to 0. Store this as `fit_2`.
+
+```{r nonrepresentative-da-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-3-hint, eval = FALSE}
+fit_2 <-
+  stan_glm(distance ~ poverty - 1,
+           data = ...,
+           refresh = ...)
+```
+
+### Exercise 4
+
+Now, make a new tibble with the observations we would like. As before, we are looking at locations where the poverty rate is 0.2. Set this new tibble to `newobs`.
+
+```{r nonrepresentative-da-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-4-hint, eval = FALSE}
+
+```
+
+### Exercise 5
+
+Now, use `posterior_epred()` to make our posterior distribution. Set the first argument to our fitted model `fit_2` and the `newdata` argument to `newobs`. Continue this pipe with `as_tibble()` and store this as `pe2`.
+
+```{r nonrepresentative-da-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-5-hint, eval = FALSE}
+pe2 <- posterior_epred(...,
+                newdata = ...) %>% 
+  as_tibble()
+```
+
+### Exercise 6
+
+Let's plot our posterior distribution. To do so, make a new pipe and map `distance` to the x-axis. Then add the layer `geom_histogram()` and map the probability to the y-axis. Set the bins argument to 100.
+
+```{r nonrepresentative-da-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-6-hint-1, eval = FALSE}
+Remember that the columns aren't named when `posterior_epred()` is used, but rather numbered. To call the first column, you should use the format `1`.
+```
+
+```{r nonrepresentative-da-6-hint-2, eval = FALSE}
+To map the probability to the y-axis, set the first argument of `geom_histogram()` to `aes(y = after_stat(count/sum(count)))`.
+```
+
+```{r nonrepresentative-da-6-hint-3, eval = FALSE}
+pe2 %>% 
+  ggplot(mapping = aes(x = ...)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = ...)
+
+```
+
+### Exercise 7
+
+Now, add a title, subtitle, and axis labels to your graph. 
+
+```{r nonrepresentative-da-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-7-hint, eval = FALSE}
+... +
+  labs(...)
+```
+
+### Exercise 8
+
+Lastly, use `scale_y_continuous()` to format the y-axis to be formatted as a percentage. To do so, Set the first argument of `scale_y_continuous` to `scales::percent_format()`. To finish the plot, add `theme_classic()`.
+
+```{r nonrepresentative-da-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-8-hint, eval = FALSE}
+... +
+  scale_y_continuous(scales::percent_format()) + 
+  theme_classic()
+```
+
+###
+
+Recall that your graph should appear similar to the following:
+
+```{r}
+exp_poverty_2
+```
+
+
 
 
 

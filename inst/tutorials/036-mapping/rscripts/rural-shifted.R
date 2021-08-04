@@ -14,4 +14,4 @@ rural_shifted <- get_decennial(geography = "state",
 rural_shifted <- tigris::shift_geometry(rural_shifted)
 
 # Saves the data to an RDS file.
-write_rds(rural_shifted, "data/05-mapping-rural-shifted.rds")
+write_rds(rural_shifted, "inst/tutorials/036-mapping/data/rural-shifted.rds")
