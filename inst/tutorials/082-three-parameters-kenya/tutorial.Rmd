@@ -74,7 +74,7 @@ exp_poverty <- pe %>%
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = 100) +
   labs(title = "Posterior for Expected Distance",
-       subtitle = "Polling locations that are on average 12 miles from those assigned to them have poverty rates of 0.2",
+       subtitle = "Polling locations that are on average 12 km from those assigned to them have poverty rates of 0.2",
        x = "Poverty Rate",
        y = "Probability") +
   scale_y_continuous(labels = scales::percent_format()) +
@@ -93,15 +93,15 @@ fit_2
 
 newobs2 <- tibble(poverty = 0.2)
 
-pp <- posterior_epred(fit_2, newdata = newobs2) %>% 
+pe2 <- posterior_epred(fit_2, newdata = newobs2) %>% 
   as_tibble()
 
-exp_poverty_2 <- pp %>%
+exp_poverty_2 <- pe2 %>%
   ggplot(aes(x = `1`)) + 
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = 100) +
   labs(title = "Posterior for Expected Distance",
-       subtitle = "Polling locations about 11 miles away on average from those assigned to them have poverty rates of 0.2",
+       subtitle = "Polling locations about 11 km away on average from those assigned to them have poverty rates of 0.2",
        x = "Poverty Rate",
        y = "Probability") +
   scale_y_continuous(labels = scales::percent_format()) +
@@ -124,7 +124,7 @@ exp_dist_diff <- pp %>%
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = 100) + 
   labs(title = "Posterior for Expected Distance Difference",
-       subtitle = "The expected difference of average distance between polling locations with poverty rates of 0.5 and 0.8 is about 20 miles",
+       subtitle = "The expected difference of average distance between polling locations with poverty rates of 0.5 and 0.8 is about 20 km",
        x = "Poverty Rate",
        y = "Probability") +
   scale_y_continuous(labels = scales::percent_format()) +
@@ -147,7 +147,7 @@ exp_dist_diff_2 <- pp %>%
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = 100) + 
   labs(title = "Posterior for Expected Distance Difference",
-       subtitle = "The expected difference of average distance between polling locations with poverty rates of 0.5 and 0.8 is about 5 miles",
+       subtitle = "The expected difference of average distance between polling locations with poverty rates of 0.5 and 0.8 is about 5 km",
        x = "Poverty Rate",
        y = "Probability") +
   scale_y_continuous(labels = scales::percent_format()) +
@@ -389,7 +389,7 @@ To map the probability to the y-axis, set the first argument of `geom_histogram(
 ```
 
 ```{r representative-data-11-hint-3, eval = FALSE}
-pp %>% 
+pe %>% 
   ggplot(mapping = aes(x = ...)) + 
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = ...)
@@ -436,15 +436,175 @@ exp_poverty
 
 ###
 
-Through this, we have determined that we expect polling locations which are 12 miles away on average from those who are assigned to that location to have a poverty rate of 0.2, and achieved this answer with data that we considered to be pretty representative.
+Through this, we have determined that we expect polling locations which are 12 km away on average from those who are assigned to that location to have a poverty rate of 0.2, and achieved this answer with data that we considered to be pretty representative.
 
 ## Non-Representative Data
 
-In our last model, we could consider our data to be representative of our population, however, what if that were not the case? Now, let's answer the same question, but with unrepresentative data. Recall our question.
+In our last model, we could consider our data to be representative of our population, however, what if that were not the case? Now, let's answer the same question, but with unrepresentative data. To do so, we will make the following graph:
+
+```{r}
+exp_poverty_2
+```
+
+Recall our question.
 
 *Recall: the variable "distance" is the number of kilometers, which the person who is assigned to a given polling location, lives from that polling location. In Kenya today, what is the expected value of distance for polling locations with a poverty rate of 0.2?*
 
 ###
+
+### Exercise 1
+
+Consider that more rural communities far away from the locations where those conducting the study were staying also tended to have polling locations which spanned larger areas and people had to travel more on average to reach. Given this piece of information, let's also say that our researchers were kind of lazy and wanted to get back home more quickly. So, they decided that places further away from where they were staying were too far to study and would take too much time to reach. This caused them to not travel to any polling locations that were more than 25 km away from those who were assigned to it.
+
+With this scenario, write two sentences discussing representativeness and whether we can consider data from this scenario in that same year to be representative of Kenya that year.
+
+```{r nonrepresentative-da-1}
+question_text(NULL,
+	message = "Given that rural communities are not being reached in this scenario and therefore also communities that are located further away from their polling location, we can't consider this data to be representative of the entirety of Kenya.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Although we might not be able to consider this data very representative of Kenya, if this were the data we had, we could acknowledge the problems with it and consider it representative enough to continue.
+
+### Exercise 2
+
+Let's mimic this scenario with our data `kenya` and answer our question with non-representative data. To do so, use `kenya` and filter out communities that are on average more than 25 km away from their polling location. Store this as `kenya_2`.
+
+```{r nonrepresentative-da-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-2-hint, eval = FALSE}
+kenya_2 %>% 
+  filter(distance < 25)
+```
+
+###
+
+With this, we have essentially created a data set that could possible come from our lazy researchers scenario.
+
+### Exercise 3
+
+Now, let's make the fitted model. As we did before, use `stan_glm()` and set your outcome variable as `distance`and your explanatory variable as `poverty` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `poverty` so we do not get an intercept.  Set `data` to `kenya_2`, and `refresh` to 0. Store this as `fit_2`.
+
+```{r nonrepresentative-da-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-3-hint, eval = FALSE}
+fit_2 <-
+  stan_glm(distance ~ poverty - 1,
+           data = ...,
+           refresh = ...)
+```
+
+### Exercise 4
+
+Now, make a new tibble with the observations we would like. As before, we are looking at locations where the poverty rate is 0.2. Set this new tibble to `newobs`.
+
+```{r nonrepresentative-da-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-4-hint, eval = FALSE}
+
+```
+
+### Exercise 5
+
+Now, use `posterior_epred()` to make our posterior distribution. Set the first argument to our fitted model `fit_2` and the `newdata` argument to `newobs`. Continue this pipe with `as_tibble()` and store this as `pe2`.
+
+```{r nonrepresentative-da-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-5-hint, eval = FALSE}
+pe2 <- posterior_epred(...,
+                newdata = ...) %>% 
+  as_tibble()
+```
+
+### Exercise 6
+
+Let's plot our posterior distribution. To do so, make a new pipe and map `distance` to the x-axis. Then add the layer `geom_histogram()` and map the probability to the y-axis. Set the bins argument to 100.
+
+```{r nonrepresentative-da-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-6-hint-1, eval = FALSE}
+Remember that the columns aren't named when `posterior_epred()` is used, but rather numbered. To call the first column, you should use the format `1`.
+```
+
+```{r nonrepresentative-da-6-hint-2, eval = FALSE}
+To map the probability to the y-axis, set the first argument of `geom_histogram()` to `aes(y = after_stat(count/sum(count)))`.
+```
+
+```{r nonrepresentative-da-6-hint-3, eval = FALSE}
+pe2 %>% 
+  ggplot(mapping = aes(x = ...)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = ...)
+
+```
+
+### Exercise 7
+
+Now, add a title, subtitle, and axis labels to your graph. 
+
+```{r nonrepresentative-da-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-7-hint, eval = FALSE}
+... +
+  labs(...)
+```
+
+### Exercise 8
+
+Lastly, use `scale_y_continuous()` to format the y-axis to be formatted as a percentage. To do so, Set the first argument of `scale_y_continuous` to `scales::percent_format()`. To finish the plot, add `theme_classic()`.
+
+```{r nonrepresentative-da-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r nonrepresentative-da-8-hint, eval = FALSE}
+... +
+  scale_y_continuous(scales::percent_format()) + 
+  theme_classic()
+```
+
+###
+
+Recall that your graph should appear similar to the following:
+
+```{r}
+exp_poverty_2
+```
+
+
+
 
 
 
