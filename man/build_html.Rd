@@ -4,12 +4,14 @@
 \alias{build_html}
 \title{Build HTML Submission Report}
 \usage{
-build_html(file, session)
+build_html(file, session, is_test = FALSE)
 }
 \arguments{
 \item{file}{location to render Rmd tibble into HTML}
 
 \item{session}{session object from shiny with learnr}
+
+\item{is_test}{check if testing function}
 }
 \value{
 a rendered html document with a tibble submission report
