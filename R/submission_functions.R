@@ -84,13 +84,7 @@ submission_server <- function(session) {
         # are small, so we might just copy them over. But given that we need
         # learnr regardless, that seems excessive.
 
-        objs <- get_submissions_from_learnr_session(session)
-
-        label_list <- get_label_list(session)
-
-        out <- create_tibble_from_submissions(objs, label_list)
-
-        readr::write_rds(out, file)
+        build_rds(file, session)
       }
     )
 

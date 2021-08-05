@@ -23,6 +23,13 @@ build_html <- function(file, session, is_test = FALSE){
 
   # Get submissions from learnr
 
+  # Data Structure of a learnr submission object
+
+  # obj$data$answer[[1]] question answer
+  # obj$data$code[[1]] "exercise answer"
+  # obj$type[[1]] "exercise_submission"
+  # obj$id[[1]] "id"
+
   if(is_test){
     objs <- readRDS(system.file("www/submission_test_outputs/learnr_submissions_output.rds", package = "primer.tutorials"))
   }
@@ -49,6 +56,50 @@ build_html <- function(file, session, is_test = FALSE){
                     envir = new.env(parent = globalenv()))
 
 
+}
+
+
+
+#' Build RDS Submission Object
+#'
+#' @param file location to save RDS file
+#' @param session session object from shiny with learnr
+#' @param is_test check if testing function
+#'
+#' @return
+#' @export
+
+build_rds <- function(file, session, is_test = FALSE){
+
+  # Get submissions from learnr
+
+  # Data Structure of a learnr submission object
+
+  # obj$data$answer[[1]] question answer
+  # obj$data$code[[1]] "exercise answer"
+  # obj$type[[1]] "exercise_submission"
+  # obj$id[[1]] "id"
+
+  if(is_test){
+    objs <- readRDS(system.file("www/submission_test_outputs/learnr_submissions_output.rds", package = "primer.tutorials"))
+  }
+  else{
+    objs <- get_submissions_from_learnr_session(session)
+  }
+
+  # Get label order to order answers
+
+  label_list <- get_label_list(session, is_test = is_test)
+
+  # Create tibble that is ordered by code chunk appearance
+
+  out <- create_tibble_from_submissions(objs, label_list)
+
+  # save tibble object in destination
+
+  saveRDS(out, file)
+
+  file
 }
 
 
@@ -93,12 +144,19 @@ get_label_list <- function(sess, is_test = FALSE){
 
 get_submissions_from_learnr_session <- function(sess){
 
-  # Data Structure of learnr submission object
+  # This is an annoying link of the entire chain of building the submission
+  # report because it has to communicate with the learnr session ENVIRONMENT,
+  # not just the object.
 
-  # obj$data$answer[[1]] question answer
-  # obj$data$code[[1]] "exercise answer"
-  # obj$type[[1]] "exercise_submission"
-  # obj$id[[1]] "id"
+  # Since we are using the session environment, we currently don't have a way to
+  # save the environment and hence can't test this function.
+
+  # So learnr:::get_all_state_objects() finds and returns ALL state objects
+  # relating to the session environment and tutorial. This includes the tutorial
+  # id, version, submissions, everything that defines the current "state".
+
+  # learnr:::submissions_from_state_objects() then filters the results to only
+  # submission-related state objects, which are the student answers.
 
   objs <- learnr:::get_all_state_objects(sess)
   learnr:::submissions_from_state_objects(objs)
