@@ -6,7 +6,7 @@
 #'
 #' @return a rendered html document with a tibble submission report
 #' @export
-#'
+
 build_html <- function(file, session, is_test = FALSE){
 
   # Inspired by Matt Blackwell's implementation of a similar idea.
@@ -23,9 +23,17 @@ build_html <- function(file, session, is_test = FALSE){
 
   # Get submissions from learnr
 
-  if (is_test){
+  # Data Structure of a learnr submission object
+
+  # obj$data$answer[[1]] question answer
+  # obj$data$code[[1]] "exercise answer"
+  # obj$type[[1]] "exercise_submission"
+  # obj$id[[1]] "id"
+
+  if(is_test){
     objs <- readRDS(system.file("www/submission_test_outputs/learnr_submissions_output.rds", package = "primer.tutorials"))
-  }else{
+  }
+  else{
     objs <- get_submissions_from_learnr_session(session)
   }
 
@@ -33,23 +41,65 @@ build_html <- function(file, session, is_test = FALSE){
 
   out <- create_tibble_from_submissions(objs, label_list)
 
-  # Pass tibble and title as parameters into
-  # the report template, then render template as
-  # an html document.
+  # Pass tibble and title as parameters into the report template, then render
+  # template as an html document.
 
-  params <- list(
-    output = out,
-    title = paste0(learnr:::read_request(session, "tutorial.tutorial_id"), " submissions")
-  )
+  params <- list(output = out,
+                 title = paste0(learnr:::read_request(session,
+                                                      "tutorial.tutorial_id"),
+                                " submissions"))
 
   rmarkdown::render(tempReport,
                     output_format = "html_document",
                     output_file = file,
                     params = params,
-                    envir = new.env(parent = globalenv())
-  )
+                    envir = new.env(parent = globalenv()))
 
 
+}
+
+
+
+#' Build RDS Submission Object
+#'
+#' @param file location to save RDS file
+#' @param session session object from shiny with learnr
+#' @param is_test check if testing function
+#'
+#' @return
+#' @export
+
+build_rds <- function(file, session, is_test = FALSE){
+
+  # Get submissions from learnr
+
+  # Data Structure of a learnr submission object
+
+  # obj$data$answer[[1]] question answer
+  # obj$data$code[[1]] "exercise answer"
+  # obj$type[[1]] "exercise_submission"
+  # obj$id[[1]] "id"
+
+  if(is_test){
+    objs <- readRDS(system.file("www/submission_test_outputs/learnr_submissions_output.rds", package = "primer.tutorials"))
+  }
+  else{
+    objs <- get_submissions_from_learnr_session(session)
+  }
+
+  # Get label order to order answers
+
+  label_list <- get_label_list(session, is_test = is_test)
+
+  # Create tibble that is ordered by code chunk appearance
+
+  out <- create_tibble_from_submissions(objs, label_list)
+
+  # save tibble object in destination
+
+  saveRDS(out, file)
+
+  file
 }
 
 
@@ -60,21 +110,21 @@ build_html <- function(file, session, is_test = FALSE){
 #'
 #' @return list of labels in the correct order
 #' @export
-#'
-#'
+
 get_label_list <- function(sess, is_test = FALSE){
 
-  # In order to keep same question order as in the exercise,
-  # use parsermd to define factor level for exercise order
-  # and store it in label_list
-  #
-  # information-name, information-email, download-answers-1
-  # are questions that are part of the child documents, which
-  # remain constant. Therefore, they are added in manually.
+  # In order to keep same question order as in the exercise, use parsermd to
+  # define factor level for exercise order and store it in label_list
+
+  # information-name, information-email, download-answers-1 are questions that
+  # are part of the child documents, which remain constant. Therefore, they are
+  # added in manually.
 
   manual_list <- list("information-name", "information-email", "download-answers-1")
 
-  rmd_path <- ifelse(is_test, system.file("www/session_check_tutorial.Rmd", package = "primer.tutorials"), file.path(sess$options$appDir, "tutorial.Rmd"))
+  rmd_path <- ifelse(is_test, system.file("www/session_check_tutorial.Rmd",
+                                          package = "primer.tutorials"),
+                     file.path(sess$options$appDir, "tutorial.Rmd"))
 
   rmd <- parsermd::parse_rmd(rmd_path)
 
@@ -91,15 +141,22 @@ get_label_list <- function(sess, is_test = FALSE){
 #'
 #' @return exercise submissions of tutorial
 #' @export
-#'
+
 get_submissions_from_learnr_session <- function(sess){
 
-  # Data Structure of learnr submission object
+  # This is an annoying link of the entire chain of building the submission
+  # report because it has to communicate with the learnr session ENVIRONMENT,
+  # not just the object.
 
-  # obj$data$answer[[1]] question answer
-  # obj$data$code[[1]] "exercise answer"
-  # obj$type[[1]] "exercise_submission"
-  # obj$id[[1]] "id"
+  # Since we are using the session environment, we currently don't have a way to
+  # save the environment and hence can't test this function.
+
+  # So learnr:::get_all_state_objects() finds and returns ALL state objects
+  # relating to the session environment and tutorial. This includes the tutorial
+  # id, version, submissions, everything that defines the current "state".
+
+  # learnr:::submissions_from_state_objects() then filters the results to only
+  # submission-related state objects, which are the student answers.
 
   objs <- learnr:::get_all_state_objects(sess)
   learnr:::submissions_from_state_objects(objs)
@@ -113,7 +170,7 @@ get_submissions_from_learnr_session <- function(sess){
 #'
 #' @return tibble with ordered answers based on label_list
 #' @export
-#'
+
 create_tibble_from_submissions <- function(objs, label_list){
 
   # Create function to map objects over that will
@@ -122,23 +179,23 @@ create_tibble_from_submissions <- function(objs, label_list){
 
   question_or_exercise <- function(obj, ...){
     options <- list(...)
-    if (obj$type[[1]] == "exercise_submission"){
+    if(obj$type[[1]] == "exercise_submission"){
       obj$data$code[[1]]
-    }else if (obj$type[[1]] == "question_submission"){
+    }
+    else if(obj$type[[1]] == "question_submission"){
       obj$data$answer[[1]]
-    }else{
+    }
+    else{
       options$default
     }
   }
 
   # Format objs from learnr into a tibble
   #
-  # We are creating a tibble with 3 columns:
-  # id, submission_type, answer
+  # We are creating a tibble with 3 columns: id, submission_type, answer
   #
-  # purrr::map_chr() and purrr::map() iterates over each object
-  # in a list, extracting the correct attribute from the objects
-  # and returning a list.
+  # purrr::map_chr() and purrr::map() iterates over each object in a list,
+  # extracting the correct attribute from the objects and returning a list.
 
   out <- tibble::tibble(
     id = purrr::map_chr(objs, "id",
