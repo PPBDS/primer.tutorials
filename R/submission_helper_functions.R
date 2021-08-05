@@ -16,21 +16,6 @@ build_html <- function(file, session, is_test = FALSE){
 
   label_list <- get_label_list(session, is_test = is_test)
 
-  # Create function to map objects over that will
-  # return different results based on if it is a
-  # code or question exercise.
-
-  question_or_exercise <- function(obj, ...){
-    options <- list(...)
-    if (obj$type[[1]] == "exercise_submission"){
-      obj$data$code[[1]]
-    }else if (obj$type[[1]] == "question_submission"){
-      obj$data$answer[[1]]
-    }else{
-      options$default
-    }
-  }
-
   # Copy over a report Rmd template to write to.
 
   tempReport <- file.path(tempdir(), "submission-temp.Rmd")
@@ -38,37 +23,15 @@ build_html <- function(file, session, is_test = FALSE){
 
   # Get submissions from learnr
 
-
-
   objs <- ifelse(
     is_test,
     readRDS(system.file("www/submission_test_outputs/learnr_submissions_output.rds", package = "primer.tutorials")),
     get_submissions_from_learnr_session(session)
     )
 
-  # Format objs from learnr into a tibble
-  #
-  # We are creating a tibble with 3 columns:
-  # id, submission_type, answer
-  #
-  # purrr::map_chr() and purrr::map() iterates over each object
-  # in a list, extracting the correct attribute from the objects
-  # and returning a list.
+  # Create tibble that is ordered by code chunk appearance
 
-  out <- tibble::tibble(
-    id = purrr::map_chr(objs, "id",
-                        .default = NA),
-    submission_type = purrr::map_chr(objs, "type",
-                                     .default = NA),
-    answer = purrr::map(objs, question_or_exercise,
-                        .default = NA)
-  )
-
-  # reorder tibble rows based on label_list.
-
-  out$id <- factor(out$id, levels = label_list)
-
-  out <- dplyr::arrange(out, out$id)
+  out <- create_tibble_from_submissions(objs, label_list)
 
   # Pass tibble and title as parameters into
   # the report template, then render template as
@@ -141,3 +104,56 @@ get_submissions_from_learnr_session <- function(sess){
   objs <- learnr:::get_all_state_objects(sess)
   learnr:::submissions_from_state_objects(objs)
 }
+
+
+#' Create Ordered Tibble from Submissions
+#'
+#' @param objs learnr session submissions
+#' @param label_list order of code chunks
+#'
+#' @return tibble with ordered answers based on label_list
+#' @export
+#'
+create_tibble_from_submissions <- function(objs, label_list){
+
+  # Create function to map objects over that will
+  # return different results based on if it is a
+  # code or question exercise.
+
+  question_or_exercise <- function(obj, ...){
+    options <- list(...)
+    if (obj$type[[1]] == "exercise_submission"){
+      obj$data$code[[1]]
+    }else if (obj$type[[1]] == "question_submission"){
+      obj$data$answer[[1]]
+    }else{
+      options$default
+    }
+  }
+
+  # Format objs from learnr into a tibble
+  #
+  # We are creating a tibble with 3 columns:
+  # id, submission_type, answer
+  #
+  # purrr::map_chr() and purrr::map() iterates over each object
+  # in a list, extracting the correct attribute from the objects
+  # and returning a list.
+
+  out <- tibble::tibble(
+    id = purrr::map_chr(objs, "id",
+                        .default = NA),
+    submission_type = purrr::map_chr(objs, "type",
+                                     .default = NA),
+    answer = purrr::map(objs, question_or_exercise,
+                        .default = NA)
+  )
+
+  # reorder tibble rows based on label_list.
+
+  out$id <- factor(out$id, levels = label_list)
+
+  dplyr::arrange(out, out$id)
+
+}
+
