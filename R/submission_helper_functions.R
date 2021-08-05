@@ -2,18 +2,19 @@
 #'
 #' @param file location to render Rmd tibble into HTML
 #' @param session session object from shiny with learnr
+#' @param is_test check if testing function
 #'
 #' @return a rendered html document with a tibble submission report
 #' @export
 #'
-build_html <- function(file, session){
+build_html <- function(file, session, is_test = FALSE){
 
   # Inspired by Matt Blackwell's implementation of a similar idea.
   # https://github.com/mattblackwell/qsslearnr/blob/main/R/submission.R
 
   # Get label order to order answers
 
-  label_list <- get_label_list(session)
+  label_list <- get_label_list(session, is_test = is_test)
 
   # Create function to map objects over that will
   # return different results based on if it is a
@@ -37,7 +38,13 @@ build_html <- function(file, session){
 
   # Get submissions from learnr
 
-  objs <- get_submissions_from_learnr_session(session)
+
+
+  objs <- ifelse(
+    is_test,
+    readRDS(system.file("www/submission_test_outputs/learnr_submissions_output.rds", package = "primer.tutorials")),
+    get_submissions_from_learnr_session(session)
+    )
 
   # Format objs from learnr into a tibble
   #
