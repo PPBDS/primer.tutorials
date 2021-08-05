@@ -13,8 +13,6 @@ saved_session <- readRDS(session_path)
 
 message(paste0("Saved Session Path:\n", session_path))
 
-message(saved_session)
-
 
 # Test get_label_list()
 
