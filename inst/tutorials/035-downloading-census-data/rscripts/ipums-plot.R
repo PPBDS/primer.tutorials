@@ -38,7 +38,7 @@ ipums_plot <- clean_data %>%
   theme_economist(dkpanel=TRUE) +
   labs(title = "2019 Income Distribution by Employment Status",
        x = "Income: Values Scaled by 1/100000",
-       y = "",
+       y = NULL,
        caption = "Source: IPUMS, 2019")
 ipums_plot
 

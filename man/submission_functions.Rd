@@ -14,7 +14,7 @@ submission_server(session)
 submission_ui
 }
 \arguments{
-\item{session}{}
+\item{session}{session object from shiny with learnr}
 }
 \description{
 The following function was modified from Colin Rundel's learnrhash package,
