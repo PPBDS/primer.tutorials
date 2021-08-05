@@ -86,7 +86,11 @@ submission_server <- function(session) {
 
         objs <- get_submissions_from_learnr_session(session)
 
-        readr::write_rds(objs, file)
+        label_list <- get_label_list(session)
+
+        out <- create_tibble_from_submissions(objs, label_list)
+
+        readr::write_rds(out, file)
       }
     )
 
