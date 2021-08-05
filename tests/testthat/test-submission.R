@@ -9,8 +9,11 @@ library(rvest)
 
 # Load session saved in rds
 
-saved_session <- readRDS(system.file("www/session_save.rds", package = "primer.tutorials"))
+saved_session <- readRDS(session_path)
 
+message(paste0("Saved Session Path:\n", session_path))
+
+message(saved_session)
 
 
 # Test get_label_list()
