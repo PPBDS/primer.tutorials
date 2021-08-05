@@ -23,11 +23,11 @@ build_html <- function(file, session, is_test = FALSE){
 
   # Get submissions from learnr
 
-  objs <- ifelse(
-    is_test,
-    readRDS(system.file("www/submission_test_outputs/learnr_submissions_output.rds", package = "primer.tutorials")),
-    get_submissions_from_learnr_session(session)
-    )
+  if (is_test){
+    objs <- readRDS(system.file("www/submission_test_outputs/learnr_submissions_output.rds", package = "primer.tutorials"))
+  }else{
+    objs <- get_submissions_from_learnr_session(session)
+  }
 
   # Create tibble that is ordered by code chunk appearance
 
