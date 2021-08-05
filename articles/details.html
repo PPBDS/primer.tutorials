@@ -94,13 +94,13 @@
 
     
     
-<p>This document reviews some of the technical details behind the special modifications we have made to the basic tutorial technology. It is only of interest to those thinking of modifying the current approach.</p>
+<p>This document reviews some of the technical details behind the special modifications we have made to the basic tutorial technology. It is only of interest to those thinking of modifying the current approach. It also includes some items worth investigating and/or fixing.</p>
 <div id="showing-r-code-chunks" class="section level2">
 <h2 class="hasAnchor">
 <a href="#showing-r-code-chunks" class="anchor" aria-hidden="true"></a>Showing R code chunks</h2>
 <p>It is strongly discouraged for tutorial makers to use in tutorials to show code chunks. Instead, as of now, we encourage just including photos.</p>
-<p>This is because of one of our dependency packages, parsermd, which is used in primer.tutorials::submission_server() and primer.tutorials::format_tutorial() to read and parse tutorial Rmd documents.</p>
-<p><a href="https://github.com/rundel/parsermd/issues/27" class="external-link">An issue is raised on github</a> for the parsermd package creator, Professor Rundel, to fix this. It is, however, not top priority. He instead offered a workaround other than using an image.</p>
+<p>This is because <strong>parsermd</strong> — which is used in <code><a href="../reference/submission_functions.html">primer.tutorials::submission_server()</a></code> and <code><a href="../reference/format_tutorial.html">primer.tutorials::format_tutorial()</a></code> to read and parse tutorial Rmd documents — fails if appears.</p>
+<p><a href="https://github.com/rundel/parsermd/issues/27" class="external-link">An issue is raised on github</a> for the <strong>parsermd</strong> package creator, Colin Rundel, to fix this. It is, however, not top priority. He instead offered a workaround other than using an image.</p>
 <p>The workaround uses a zero-width space to stop the knitr from knitting that code chunk. The example Professor Rundel pointed to is <a href="https://github.com/yihui/knitr-examples/blob/master/065-rmd-chunk.Rmd" class="external-link">an Rmd document written by Yihui</a>. It includes more details about how zero-width space works and how to implement it.</p>
 </div>
 <div id="package-locations" class="section level2">
@@ -205,18 +205,28 @@
 <div class="sourceCode" id="cb7"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb7-1"><a href="#cb7-1"></a>&lt;div id="filter-hint"&gt;</span>
 <span id="cb7-2"><a href="#cb7-2"></a>**Hint:** You may want to use the dplyr <span class="bn">`filter`</span> function.</span>
 <span id="cb7-3"><a href="#cb7-3"></a>&lt;/div&gt;</span></code></pre></div>
-<ul>
-<li>Why do we handle images differently from files? The key is the difference between something (like images) which is only needed when the tutorial is being knit and other things (like csv files) which must be accessible during run-time.</li>
-</ul>
 </div>
 <div id="comments-on--rbuildignore" class="section level3">
 <h3 class="hasAnchor">
 <a href="#comments-on--rbuildignore" class="anchor" aria-hidden="true"></a>Comments on .Rbuildignore</h3>
-<p>For some reason, it is impossible to include comments in the .Rbuildignore. Here are some comments on the current version.</p>
+<p>For some reason, it is impossible to include comments in the .Rbuildignore, at least by using the “#” symbol. I think the key issue is that using <code>*</code> (or maybe a parenthesis) in a line which begins with <code>#</code> causes trouble. Regardless, here are some thoughts on the current version.</p>
+<p>We would like to ensure that all the junk files which end up in the <code>tutorials/*</code> directories are not included in the build. Such files are often large. They also run the risk of messing things up in that they might cause certain tests to pass for us but which would fail for anyone who downloads from Github. (The .gitignore file does a reasonable ensuring that such files do not end up on Github.)</p>
 <p>The key line is:</p>
-<pre><code>tutorials/[^/]*/(?!(images|.*Rmd))</code></pre>
-<p>This excludes everything in any subdirectory of the tutorials directory except an images directory (a file named images would also be included) or a file suffixed with “.Rmd”.</p>
+<pre><code>tutorials/[^/]*/(?!(data|images|.*Rmd))</code></pre>
+<p>This excludes everything in any subdirectory of the tutorials directory except an <code>images</code> directory (a file named images would also be included) or a <code>data</code> directory or a file suffixed with “.Rmd”.</p>
 <p>This entire document is in Perl-like Regex. The only significant difference from Perl in this document is that “/” do not need to be escaped with a “". The regex below, in plain English, matches (and so excludes) a path which begins with the characters”tutorials/"“, and after those has any number (<em>) of characters except a "/" ([^/]), and after those has a "/", and after those does not have (?!…) either the characters "images" or (|) any number (</em>) of any character (.) followed by the characters”Rmd". If we used .* instead of defining the character class in [^/]*, the regex would evaluate the negative lookahead after the last “/” in the path. The files within the images directory would then be excluded, because they do neither the characters “images” or a string ending in “Rmd” after their last “/”.</p>
+</div>
+<div id="adding-more-libraries" class="section level3">
+<h3 class="hasAnchor">
+<a href="#adding-more-libraries" class="anchor" aria-hidden="true"></a>Adding more libraries</h3>
+<p>If you are using a new library, there are several things you need to check. First, most obviously, you should install the package within the <code>primer.tutorials</code> directory. Second, you must use library(X) in the setup chunk within the tutorial.Rmd itself. Third, you need to run <code><a href="https://rstudio.github.io/renv/reference/status.html" class="external-link">renv::status()</a></code>. This should report that there is a new package which is not part of renv.lock. Then, you will need to run <code><a href="https://rstudio.github.io/renv/reference/snapshot.html" class="external-link">renv::snapshot()</a></code> so that the renv.lock file is updated. Fourth, you need to add the package to the DESCRIPTION file, in the Imports: section. (And don’t forget the comma when you do so.) If you don’t do this, then R CMD check might work on your computer, where library X is already installed, but won’t work in Github actions since R relies on the DESCRIPTION file to know which packages to install.</p>
+</div>
+<div id="revisit-use-of-functions-from-learnr" class="section level3">
+<h3 class="hasAnchor">
+<a href="#revisit-use-of-functions-from-learnr" class="anchor" aria-hidden="true"></a>Revisit use of functions from <strong>learnr</strong>
+</h3>
+<p>Unexported objects imported by ‘:::’ calls: ‘learnr:::get_all_state_objects’ ‘learnr:::read_request’ ‘learnr:::submissions_from_state_objects’</p>
+<p>Because learnr will not export the three functions which we use in submission_functions.R, we have no choice but to use ::: in order to access them. Doing do produces a NOTE when we run R CMD check. I find that annoying. I tried just providing my own copies in submission_functions.R, but that did not work. (Perhaps the problem is that they themselves use other learnr functions which I don’t have access to?)</p>
 </div>
 </div>
   </div>
