@@ -2,15 +2,27 @@ library(learnr)
 library(primer.tutorials)
 library(tidyverse)
 
-format_tutorial_paths <- Sys.glob("addin_test_inputs/format*")
+# This test is created to test the formatting addin.
+#
+# It cycles through all the test cases added in www/addin_test_inputs
+# and checks if the formatted output matches with the outputs in
+# www/addin_test_outputs
+
+format_tutorial_paths <- Sys.glob(file.path(system.file("www/addin_test_inputs", package = "primer.tutorials"), "format*"))
 
 for (i in seq_along(format_tutorial_paths)){
 
-  test_doc <- primer.tutorials::format_tutorial(paste0("addin_test_inputs/format_input_", i, ".Rmd"))
+  test_doc <- primer.tutorials::format_tutorial(paste0(
+    file.path(system.file("www/addin_test_inputs", package = "primer.tutorials"), "format_input_"),
+    i,
+    ".Rmd"))
 
-  output_doc <- readr::read_file(paste0("addin_test_outputs/format_output_", i, ".Rmd"))
+  output_doc <- readr::read_file(paste0(file.path(system.file(
+    "www/addin_test_outputs", package = "primer.tutorials"), "format_output_"),
+    i,
+    ".Rmd"))
 
-  if (trimws(test_doc) != trimws(output_doc)){
+  if (stringr::str_trim(test_doc) != stringr::str_trim(output_doc)){
 
     stop("From test-addins.R. Format Chunk Label addin failed on test ", i, "\n")
 
