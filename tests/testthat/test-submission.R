@@ -50,6 +50,8 @@ if (!identical(label_list_test, label_list_output)){
 }
 
 
+# DK: Turn this into a paragraph discussion about how we might tackle this in
+# the future.
 
 # Test get_submissions_from_learnr_session()
 

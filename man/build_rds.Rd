@@ -14,7 +14,7 @@ build_rds(file, session, is_test = FALSE)
 \item{is_test}{check if testing function}
 }
 \value{
-
+location of the rds file
 }
 \description{
 Build RDS Submission Object

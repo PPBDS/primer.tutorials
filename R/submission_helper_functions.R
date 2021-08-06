@@ -66,7 +66,7 @@ build_html <- function(file, session, is_test = FALSE){
 #' @param session session object from shiny with learnr
 #' @param is_test check if testing function
 #'
-#' @return
+#' @return location of the rds file
 #' @export
 
 build_rds <- function(file, session, is_test = FALSE){
