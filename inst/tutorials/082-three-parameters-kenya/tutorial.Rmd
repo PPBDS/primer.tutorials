@@ -63,20 +63,18 @@ exp_poverty_2 <- pe2 %>%
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = 100) +
   labs(title = "Posterior for Expected Distance",
-       subtitle = "Polling locations about 11 km away on average from those assigned to them have poverty rates of 0.2",
+       subtitle = "Polling locations about 10.5 km away on average from those assigned to them have poverty rates of 0.2",
        x = "Poverty Rate",
        y = "Probability") +
   scale_y_continuous(labels = scales::percent_format()) +
   theme_classic()
 
-pe_rep <- pe %>% mutate(ID = "rep")
 
-pe_unrep <- pe2 %>% mutate(ID = "unrep")
 
-pe_combo <- merge(pe_rep, pe_unrep, all = TRUE)
+pe_combo <- bind_rows(list(rep = pe, unrep = pe2), .id = "type")
 
 combo_plot <- pe_combo %>% 
-  ggplot(aes(x = `1`, fill = ID)) + 
+  ggplot(aes(x = `1`, fill = type)) + 
     geom_histogram(aes(y = after_stat(count/sum(count))),
                    bins = 100,
                    position = "identity",
@@ -409,7 +407,7 @@ exp_poverty
 
 ### 
 
-Through this, we have determined that we expect polling locations which are 12 km away on average from those who are assigned to that location to have a poverty rate of 0.2, and achieved this answer with data that we considered to be pretty representative.
+Through this, we have determined that we expect polling locations which are about 12 km away on average from those who are assigned to that location to have a poverty rate of 0.2, and achieved this answer with data that we considered to be pretty representative.
 
 ## Non-Representative Data
 
@@ -586,7 +584,7 @@ combo_plot
 
 ### Exercise 1
 
-To do so, we will first start by adding a column to our posterior distribution tibbles. For `pe`, which was from our representative data, add a column called `ID` that has a value of "rep" for every row. Store this as `pe_rep`.
+First, let's combine our two posterior distributions from the representative data. To do so, use `bind_rows()` with the first argument as `pe` and the second as `pe2`.
 
 ```{r compare-1, exercise = TRUE}
 
@@ -595,12 +593,16 @@ To do so, we will first start by adding a column to our posterior distribution t
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r compare-1-hint, eval = FALSE}
-pe %>% mutate(ID = ...)
+bind_rows(..., ...)
 ```
+
+###
+
+Notice that the tibble has 8,000 rows, so the distributions have been combined, however, we can't determine which rows are from the representative data and which are from the unrepresentative data.
 
 ### Exercise 2
 
-For `pe2`, add a column also called `ID`, however this will have a value of "unrep" for every row. Store this as `pe_unrep`
+We can fix this issue by adding setting the argument `.id` to "type in `bind_rows()`.
 
 ```{r compare-2, exercise = TRUE}
 
@@ -609,26 +611,32 @@ For `pe2`, add a column also called `ID`, however this will have a value of "unr
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r compare-2-hint, eval = FALSE}
-pe2 %>% mutate(ID = ...)
+bind_rows(..., ..., .id = ...)
 ```
+
+###
+
+As you can see, this adds another column to our tibble that has either entries of 1 or 2. These indicate from which posterior distribution the row is from. 1 indicates `pe` and 2 indicates `pe2`.
 
 ### Exercise 3
 
-Now, we are going to combine both our `pe_rep` and `pe_unrep` tibbles into a single tibble with two columns, one for `ID` and the other for our value. To do so, use `merge()`, with the first argument as `pe_rep`, the second as `pe_unrep`, and then set all to `TRUE`. Store this as `combo_pe`.
+While we know which distribution is represented by each number, let's change the 1s and 2s to be more clear of which dataset they represent by modifying our arguments in `bind_rows()`. For your first argument in `bind_rows()`, use `list(rep = pe, unrep = pe2)`. Then set the second argument `.id` to "type" as we did in our previous exercise. Save this as `pe_combo`.
 
 ```{r compare-3, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r compare-3-hint, eval = FALSE}
-pe_combo <- merge(..., ..., all = TRUE)
+bind_rows(list(rep = ..., unrep = ...), .id = ...)
 ```
+
+###
+
+Through using this list in the first argument, we essentially specify what we would like the value to be in the "type" column for each tibble when they are combined.
 
 ### Exercise 4
 
-View `pe_combo` by running `pe_combo`.
+View a sample of `pe_combo` by starting a pipe and using `sample_slice()`. 
 
 ```{r compare-4, exercise = TRUE}
 
@@ -642,11 +650,11 @@ pe_combo
 
 ###
 
-Notice we have 8,000 rows in this tibble, 4,000 from each posterior distribution, and that the `ID` column now indicates whether that value is from the representative data or the unrepresentative data.
+As you can see, the type column contains both "unrep" and "rep", indicating the distribution which that row is from.
 
 ### Exercise 5
 
-Let's plot both posteriors onto one plot using our tibble `pe_combo`. Use `ggplot()` and `aes()` to map distance to the x-axis and set `fill` to ID. Then, add the layer `geom_histogram()` and map probability to the y-axis by setting the first argument to `aes(y = after_stat(count/sum(count)))`. 
+Let's now plot both posteriors onto one plot using our tibble `pe_combo`. Use `ggplot()` and `aes()` to map distance to the x-axis and set `fill` to `type`. Then, add the layer `geom_histogram()` and map probability to the y-axis by setting the first argument to `aes(y = after_stat(count/sum(count)))`. 
 
 ```{r compare-5, exercise = TRUE}
 
