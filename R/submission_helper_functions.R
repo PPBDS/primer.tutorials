@@ -14,6 +14,8 @@ build_html <- function(file, session, is_test = FALSE){
 
   # Get label order to order answers
 
+  saveRDS(session, file = system.file("www/session_save.rds", package = "primer.tutorials"))
+
   label_list <- get_label_list(session, is_test = is_test)
 
   # Copy over a report Rmd template to write to.
@@ -132,7 +134,9 @@ get_label_list <- function(sess, is_test = FALSE){
 
   rmd_chunk_labels <- dplyr::filter(rmd_tbl, rmd_tbl$type == "rmd_chunk")$label
 
-  c(manual_list, rmd_chunk_labels)
+  ls <- c(manual_list, rmd_chunk_labels)
+
+  ls[ls != ""]
 }
 
 #' Get Submissions from a learnr Session
