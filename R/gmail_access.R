@@ -34,6 +34,10 @@
 
 # Full pipeline:
 #
+# gmailr::gm_auth_configure(key = "KEY", secret = "SECRET_KEY")
+#
+# gmailr::gm_auth()
+#
 # for each message_id in gmailr::gm_messages("some filter options"):
 #
 #   msg = gmailr::gm_message(message_id)
@@ -44,5 +48,8 @@
 #
 #   gmailr::gm_save_attachment(attachment_obj, filename)
 #
+#
+# gmailr::gm_deauth()
+
 
 
