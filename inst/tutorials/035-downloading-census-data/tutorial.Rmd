@@ -21,6 +21,7 @@ library(tidycensus)
 library(ipumsr)
 library(ggthemes)
 library(knitr)
+library(stringr)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
@@ -159,17 +160,6 @@ The geography argument determines the scope of the data (such as `us` for the en
 
 ### 
 
-<!-- I think that the Primer is incorrect here. It shows a method for finding table
-IDs rather than variable names by going through data.census.gov. However, this
-seems to provide a table ID instead of a variable ID, and you can see their
-differences here:
-https://www.census.gov/content/dam/Census/library/publications/2019/acs/acs_summary-file_handbook_2019_ch03.pdf.
-As of right now, it seems like the only method to access variable names is
-through an API request.
--->
-
-<!-- DK: Please fix the Primer. -->
-
 Let's try to find the total American population. First of all, we need to access the variable containing that population. We can do this by using the `load_variables()` function.
 
 ### 
@@ -196,6 +186,8 @@ As you can see, the first row of the table is the "UNWEIGHTED SAMPLE COUNT OF TH
 Now that we have our variable name, we need to use it in our code.
 
 ### 
+
+<!-- AG: I'm not planning on breaking up API requests into different exercises since there is a limit. Plus a bad API request will make you load gigabytes onto your computer and take forever. -->
 
 Run the `get_acs()` function below and set the `geography` argument to `"us"`, the `year` argument to `2010`, and the `variables` argument to a string containing the variable that we just found.
 
@@ -274,25 +266,50 @@ We can do this by using a standard `filter()` command like we did with tidyverse
 
 ### 
 
-Pipe the `load_variables()` function into a `filter()` command that filters the `concept` so that it is only `"URBAN AND RURAL"` and filters the `name` so that it contains the letter `"P"`.
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
+Pipe the `load_variables()` function into a `filter()` command that filters the `concept` so that it equals `"URBAN AND RURAL"`.
 
 ```{r graphing-census-data-2, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r graphing-census-data-2-hint-1, eval = FALSE}
 load_variables(year    = ...,
                dataset = ...) %>%
-  filter(context == ... & grepl(..., ...))
+  filter(concept == ... & stringr::str_detect(..., ...))
 ```
 
 ### 
 
-This filters the variables so that it only has data about the urban and rural populations. Since we want the amount of the population that's rural, we're variable `P002005` since it's named `Total!!Rural` and as such describes the rural populations.
+This filters the variables so that it only has data about the urban and rural populations, but it's absolutely massive and contains almost 9,000 variables, almost none of which are actually intelligible.
 
 ### Exercise 3
+
+Let's filter out the variables so that they're only part of the "P" group and don't contain any unnecessary information.
+
+### 
+
+Continue the pipe and use the `filter()` command to filter the `name` column so that it only displays entries containing the string `"P"` using `"string::str_detect()"`.
+
+```{r graphing-census-data-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r graphing-census-data-3-hint-1, eval = FALSE}
+load_variables(year    = ...,
+               dataset = ...) %>%
+  filter(concept == ...) %>%
+  filter(stringr::str_detect(name, ...))
+```
+
+### 
+
+The reason we chose the `"P"` variable group is because it also contains race data, making it useful later on in this tutorial. If you also wanted to find household data, you can use the `"H"` group. If you want to find information about the different variables and their groups, please visit [the Census API documentation](https://api.census.gov/data/2010/dec/sf1/variables.html).
+
+### Exercise 4
 
 Now that we have our variable names, let's actually load in our data. We can do this using the `get_decennial()` function, which is very similar to the `get_acs()` function that we used earlier.
 
@@ -304,11 +321,35 @@ This time, we need to get data from 2 variables: The total population ("P001001"
 
 Run the `get_decennial()` function, setting the `geography` argument to `"state"`, the `year` argument to `2010`, the `variables` argument to a vector containing these two variable IDs, and the `output` argument to `"wide"`. 
 
-```{r graphing-census-data-3, exercise = TRUE}
+```{r graphing-census-data-4, exercise = TRUE}
 
 ```
 
-```{r graphing-census-data-3-hint-1, eval = FALSE}
+```{r graphing-census-data-4-hint-1, eval = FALSE}
+get_decennial(geography = ...,
+              variables = c(..., ...),
+              year      = ...)
+```
+
+### 
+
+This gets all of the 2010 data from the P001001 and P002005 variables and their value for each state.
+
+### Exercise 5
+
+The thing is, this is really unhelpful! The variable names are stored in a column next to their values rather than in their own columns, making it really hard to just access one value without breaking your back.
+
+### 
+
+Luckily, there's an easy way to fix this. Repeat the same code as before, but this time setting the `output` argument to `"wide"`.
+
+```{r graphing-census-data-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r graphing-census-data-5-hint-1, eval = FALSE}
 get_decennial(geography = ...,
               variables = c(..., ...),
               year      = ...,
@@ -317,9 +358,9 @@ get_decennial(geography = ...,
 
 ### 
 
-By setting the `output` argument to wide, we make the variables their own columns, much like the `pivot_wider()` function. If you don't set the `output` argument to wide, a `variable` column containing the variable name will be created instead.
+By setting the `output` argument to wide, we make the variables their own columns, much like the `pivot_wider()` function. This puts each variable into their own column, making it much easier to access each variable value individually.
 
-### Exercise 4
+### Exercise 6
 
 Let's create the following plot using this data.
 
@@ -346,37 +387,6 @@ rural_graph
 Save the previous output to a variable named `rural` so that we can start out graph.
 
 
-```{r graphing-census-data-4, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r graphing-census-data-4-hint-1, eval = FALSE}
-rural <- ...
-```
-
-### 
-
-We'll be using this tibble to create a graph and save our data.
-
-### Exercise 5
-
-Start a new pipe using `rural` and, using `mutate()`, add a column  named `prop_rural` which equals `P002005` divided by `P001001`.
-
-```{r graphing-census-data-5, exercise = TRUE}
-
-```
-
-```{r graphing-census-data-5-hint-1, eval = FALSE}
-rural %>%
-  mutate(prop_rural = P002005 / P001001)
-```
-
-### Exercise 6
-
-Continue the pipe, adding `ggplot()` and, within  `aes()`, setting `x` equal to to `prop_rural` and the `y` argument to `NAME`.
-
 ```{r graphing-census-data-6, exercise = TRUE}
 
 ```
@@ -384,23 +394,68 @@ Continue the pipe, adding `ggplot()` and, within  `aes()`, setting `x` equal to 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r graphing-census-data-6-hint-1, eval = FALSE}
-... %>%
-  ggplot(aes(x = ..., y = ...))
+rural <- ...
 ```
 
 ### 
 
+We'll be using this tibble to create a graph and save our data.
+
 ### Exercise 7
 
-Add a `geom_point()` layer to the pipe.
+First we need to get the proportion of the rural population: the x axis for our graph.
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
+### 
+
+Start a new pipe using `rural` and, using `mutate()`, add a column named `prop_rural` which equals `P002005` divided by `P001001`.
 
 ```{r graphing-census-data-7, exercise = TRUE}
 
 ```
 
 ```{r graphing-census-data-7-hint-1, eval = FALSE}
+rural %>%
+  mutate(prop_rural = P002005 / P001001)
+```
+
+### 
+
+Remember that the P002005 variable represents the population that lives in rural areas while the P001001 variable represents the total population in a state. This way, we can get the proportion of the rural population with ease.
+
+### Exercise 8
+
+Let's start our graph. First, we have to map out our axes to the correct data.
+
+### 
+
+Continue the pipe, adding `ggplot()` and, within `aes()`, setting `x` equal to to `prop_rural` and the `y` argument to `NAME`.
+
+```{r graphing-census-data-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r graphing-census-data-8-hint-1, eval = FALSE}
+... %>%
+  ggplot(aes(x = ..., y = ...))
+```
+
+### 
+
+While this does technically graph our data, it doesn't show anything since we didn't tell it how we wanted to structure our graph.
+
+### Exercise 9
+
+Add a `geom_point()` layer to the pipe.
+
+```{r graphing-census-data-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r graphing-census-data-9-hint-1, eval = FALSE}
 ... %>%
   ggplot(aes(x = ..., y = ...)) +
     geom_point()
@@ -408,25 +463,25 @@ Add a `geom_point()` layer to the pipe.
 
 ### 
 
-This should show all of the states and their rural population proportion in alphabetical order.
+This should show all of the states and their rural population proportion in alphabetical order. However, that's not very helpful for actually finding any trends in the data.
 
-### Exercise 8
+### Exercise 10
 
 Let's sort the states by their rural population. Change the `y` argument to reorder the names based on the rural population ratio.
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r graphing-census-data-8, exercise = TRUE}
+```{r graphing-census-data-10, exercise = TRUE}
 
 ```
 
-```{r graphing-census-data-8-hint-1, eval = FALSE}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r graphing-census-data-10-hint-1, eval = FALSE}
 ... %>%
   ggplot(aes(x = ..., y = fct_reorder(..., ...))) +
     geom_point()
 ```
 
-### Exercise 9
+### Exercise 11
 
 Now let's add the labels to the graph.
 
@@ -442,13 +497,13 @@ Additionally, continue the pipe and add the function `theme(axis.text.y = elemen
 
 ### 
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r graphing-census-data-9, exercise = TRUE}
+```{r graphing-census-data-11, exercise = TRUE}
 
 ```
 
-```{r graphing-census-data-9-hint-1, eval = FALSE}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r graphing-census-data-11-hint-1, eval = FALSE}
 ... +
   labs(title    = ...,
        subtitle = ...,
@@ -514,9 +569,9 @@ The `recode` argument transforms numerical ID codes into human-readable strings,
 
 ### Exercise 3
 
-Let's try graphing the percent of PUMS participants below the poverty line in Illinois.
+Let's try graphing the percent of PUMS participants below the poverty line in your state.
 
-Here's what your graph should look like.
+Here's what an Illinois graph should look like.
 
 <!-- All of these hide stuff so I'm using them all. It's lazy but it works. -->
 
@@ -529,7 +584,7 @@ il_graph <- il_pums %>%
               ggplot(aes(x = pct_income, y = fct_reorder(PUMA, pct_income))) +
               geom_point() +
               labs(title    = "Poverty in Illinois PUMA Zones in 2019",
-                   subtitle = "PUMA zones in Will County and Kane County have the lowest poverty rates.",
+                   subtitle = "PUMA zones in Will County and Kane County have the highest poverty rates.",
                    x        = "Poverty Population Percentage",
                    y        = "PUMA Zone Code") +
               theme(axis.text.y = element_text(size = 3))
@@ -539,14 +594,14 @@ il_graph
 
 ### 
 
-First we need to load our data. Run `get_pums()`, setting the `variables` argument to `"PUMA"` and `"FINCP"`, the `state` to Illinois, `recode` to `TRUE`, the `survey` to `"acs1"`, and the year to 2019. Save this to the `il_pums` variable.
+First we need to load our data. Run `get_pums()`, setting the `variables` argument to `"PUMA"` and `"FINCP"`, the `state` to your state's name, `recode` to `TRUE`, the `survey` to `"acs1"`, and the year to 2019. Save this to the `st_pums` variable.
 
 ```{r pums-data-3, exercise = TRUE}
 
 ```
 
 ```{r pums-data-3-hint-1, eval = FALSE}
-il_pums <- get_pums(variables = c(..., ...),
+st_pums <- get_pums(variables = c(..., ...),
                     state     = ...,
                     recode    = TRUE,
                     survey    = "acs1",
@@ -559,16 +614,16 @@ Second, we need to filter and group the different people by their PUMA zones so 
 
 ### 
 
-Start a new pipe with `il_pums` and group it by the `PUMA` column.
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
+Start a new pipe with `st_pums` and group it by the `PUMA` column.
 
 ```{r pums-data-4, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r pums-data-4-hint-1, eval = FALSE}
-il_pums %>%
+st_pums %>%
   group_by(PUMA)
 ```
 
@@ -580,11 +635,11 @@ Now let's use those groups and summarize the entire population by their income.
 
 Continue the pipe with the `summarize()` function, creating a column named `total_pop` that contains the sum of `PWGTP`.
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r pums-data-5, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r pums-data-5-hint-1, eval = FALSE}
 ... %>%
@@ -603,11 +658,11 @@ We just totaled the population, but now we need to add the income information.
 
 Within the `summarize()` function, add a new column called `pct_income`. This column should include the sum of all the elements of `PWGTP` that have a `FINCP` less than `12880`, then divide it by the total population.
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r pums-data-6, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r pums-data-6-hint-1, eval = FALSE}
 ... %>%
@@ -623,11 +678,11 @@ This gets the percentage of people below the poverty line. It's also advisable t
 
 Continue the pipe with a `ggplot()`, mapping the `x` to `pct_income` and the `y` to `PUMA`. Then add a `geom_point()` layer in order to display the point graph.
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r pums-data-7, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r pums-data-7-hint-1, eval = FALSE}
 ... %>%
@@ -637,13 +692,13 @@ Continue the pipe with a `ggplot()`, mapping the `x` to `pct_income` and the `y`
 
 ### Exercise 8
 
-Let's sort the zones by their poverty rates. Change the `y` argument to reorder the names based on the rural population ratio.
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
+Let's sort the zones by their poverty rates. Change the `y` argument to reorder the names based on the rural population ratio using `fct_reorder()`.
 
 ```{r pums-data-8, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r pums-data-8-hint-1, eval = FALSE}
 ... %>%
@@ -661,17 +716,19 @@ As a reminder, here's what the graph should look like:
 rural_graph
 ```
 
+Make sure to change the labels for your state's graph.
+
 ### 
 
 Additionally, continue the pipe and add the function `theme(axis.text.y = element_text(size = 3))` in order to shrink the size of the labels and let them all fit onto the graph.
 
 ### 
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r pums-data-9, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r pums-data-9-hint-1, eval = FALSE}
 ... +
@@ -684,11 +741,9 @@ Additionally, continue the pipe and add the function `theme(axis.text.y = elemen
 
 ### 
 
-If you want to see what PUMA zones correlate to what counties, you can visit the [interactive map](https://iecam.illinois.edu/maps/public-use-microdata-areas-pumas/) or the [Census Bureau documentation](https://www.census.gov/geographies/reference-maps/2010/geo/2010-pumas/illinois.html).
+If you want to see what PUMA zones correlate to what counties, you can visit the [Census Bureau documentation](https://www.census.gov/geographies/reference-maps/2010/geo/2010-pumas.html).
 
 ## IPUMS data
-
-<!-- With the introduction of IPUMS, there's a small conundrum. You need to download absolutely massive files if you want to use IPUMS (3199967 rows! 280.8 MB! 13 columns!), which makes it fundamentally incompatible with the tutorials. As such, I'm making this a separate project that they then publish, kind of like a final project. This is also a great time to walk them through dealing with large files through .gitignore.-->
 
 IPUMS, or the **I**ntegrated **P**ublic **U**se **M**icrodata **S**eries, is a great source for big data. 
 
@@ -807,7 +862,7 @@ Once you receive the email confirmation and logged in properly, you'll be able t
 
 Let's try to recreate the following graph:
 
-<!-- AG: This is a poor imitation of the graph in the Primer, I would like the source code for it since this graph is hacky and stupid, plus I'm not sure if I used the right theme. -->
+<!-- This is a poor imitation of the graph in the Primer, I would like the source code for it since this graph is hacky and stupid, plus I'm not sure if I used the right theme. Contacting Beau Meche about the issue. -->
 
 ```{r out.width = "875px"}
 include_graphics("images/ipums_plot.png")
@@ -1257,6 +1312,22 @@ question_text(NULL,
 ### 
 
 We're finally done! Finish formatting your R Markdown file and add descriptions or headers with whatever you want to do. 
+
+### Exercise 20
+
+Now we need to commit and push our file.
+
+```{r ipums-data-20}
+question_text(NULL,
+	message = "answer here",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
 
 ## Publishing
 
