@@ -11,7 +11,28 @@ vignette: >
 library(tidyverse)
 ```
 
-This document reviews some of the technical details behind the special modifications we have made to the basic tutorial technology. It is only of interest to those thinking of modifying the current approach.
+This document reviews some of the technical details behind the special modifications we have made to the basic tutorial technology. It is only of interest to those thinking of modifying the current approach. It also includes some items worth investigating and/or fixing.
+
+## Showing R code chunks
+
+It is strongly discouraged for tutorial makers to use `r ''` in tutorials to show code chunks. Instead, as of now, we encourage just including photos.
+
+This is because **parsermd** --- which is used in `primer.tutorials::submission_server()` and `primer.tutorials::format_tutorial()` to read and parse tutorial Rmd documents --- fails if `r ''` appears.
+
+[An issue is raised on github](https://github.com/rundel/parsermd/issues/27) for the **parsermd** package creator, Colin Rundel, to fix this. It is, however, not top priority. He instead offered a workaround other than using an image.
+
+The workaround uses a zero-width space to stop the knitr from knitting that code chunk. The example Professor Rundel pointed to is [an Rmd document written by Yihui](https://github.com/yihui/knitr-examples/blob/master/065-rmd-chunk.Rmd). It includes more details about how zero-width space works and how to implement it. When it's used in RStudio, it does highlight the existence of zero-width spaces with a red dot in the editor.
+
+```{r, echo = FALSE, out.width = "50%"}
+knitr::include_graphics("images/zero_width_space_1.png")
+```
+
+With that being said, I still encourage including images of the code chunks with `knitr::include_graphics()` like below:
+
+```{r, out.width = "100%"}
+knitr::include_graphics("images/rmd_chunk_1.png")
+```
+
 
 ## Package locations
 
@@ -46,7 +67,7 @@ runtime: shiny_prerendered
 description: "Working with APIs (application programming interfaces) to download data."
 ---
 
-`r ''````{r setup, include = FALSE}
+```{r setup, include = FALSE}`r ''`
 library(learnr)
 library(primer.tutorials)
 library(tidyverse)
@@ -55,7 +76,7 @@ options(tutorial.exercise.timelimit = 60,
         tutorial.storage = "local") 
 ```
 
-`r ''````{js change-code, echo = FALSE}
+```{js change-code, echo = FALSE}`r ''`
 
 function transfer_code(elem){
   Shiny.setInputValue("js_to_server", elem.previousElementSibling.dataset.label);
@@ -70,7 +91,7 @@ Shiny.addCustomMessageHandler('set-exercise-code', function(x) {
 })
 ```
 
-`r ''````{r observe-transfers, context = "server"}
+```{r observe-transfers, context = "server"}`r ''`
 
 observeEvent(input$js_to_server, {
   ex_next = input$js_to_server
@@ -155,19 +176,31 @@ And finish with a sentence that tells the student to notice that the value has c
 </div>
 ````
 
-* Why do we handle images differently from files? The key is the difference between something (like images) which is only needed when the tutorial is being knit and other things (like csv files) which must be accessible during run-time.
 
 ### Comments on .Rbuildignore
 
-For some reason, it is impossible to include comments in the .Rbuildignore. Here are some comments on the current version.
+For some reason, it is impossible to include comments in the .Rbuildignore, at least by using the "#" symbol. I think the key issue is that using `*` (or maybe a parenthesis) in a line which begins with `#` causes trouble. Regardless, here are some thoughts on the current version.
+
+We would like to ensure that all the junk files which end up in the `tutorials/*` directories are not included in the build. Such files are often large. They also run the risk of messing things up in that they might cause certain tests to pass for us but which would fail for anyone who downloads from Github. (The .gitignore file does a reasonable ensuring that such files do not end up on Github.)
 
 The key line is:
 
 ````
-tutorials/[^/]*/(?!(images|.*Rmd))
+tutorials/[^/]*/(?!(data|images|.*Rmd))
 ````
 
-This excludes everything in any subdirectory of the tutorials directory except an images directory (a file named images would also be included) or a file suffixed with ".Rmd". 
+This excludes everything in any subdirectory of the tutorials directory except an `images` directory (a file named images would also be included) or a `data` directory or a file suffixed with ".Rmd". 
 
 This entire document is in Perl-like Regex. The only significant difference from Perl in this document is that "/" do not need to be escaped with a "\". The regex below, in plain English, matches (and so excludes) a path which begins with the characters "tutorials/"", and after those has any number (*) of characters except a "/" ([^/]), and after those has a "/", and after those does not have (?!...) either the characters "images" or (|) any number (*) of any character (.) followed by the characters "Rmd". If we used .* instead of defining the character class in [^/]*, the regex would evaluate the negative lookahead after the last "/" in the path. The files within the images directory would then be excluded, because they do neither the characters "images" or a string ending in "Rmd" after their last "/".
 
+### Adding more libraries
+
+If you are using a new library, there are several things you need to check. First, most obviously, you should install the package within the `primer.tutorials` directory. Second, you must use library(X) in the setup chunk within the tutorial.Rmd itself. Third, you need to run `renv::status()`. This should report that there is a new package which is not part of renv.lock. Then, you will need to run `renv::snapshot()` so that the renv.lock file is updated. Fourth, you need to add the package to the DESCRIPTION file, in the Imports: section. (And don't forget the comma when you do so.) If you don't do this, then R CMD check might work on your computer, where library X is already installed, but won't work in Github actions since R relies on the DESCRIPTION file to know which packages to install.
+
+### Revisit use of functions from **learnr**
+
+Unexported objects imported by ':::' calls:
+  ‘learnr:::get_all_state_objects’ ‘learnr:::read_request’
+  ‘learnr:::submissions_from_state_objects’
+
+Because learnr will not export the three functions which we use in submission_functions.R, we have no choice but to use ::: in order to access them. Doing do produces a NOTE when we run R CMD check. I find that annoying. I tried just providing my own copies in submission_functions.R, but that did not work. (Perhaps the problem is that they themselves use other learnr functions which I don't have access to?)
