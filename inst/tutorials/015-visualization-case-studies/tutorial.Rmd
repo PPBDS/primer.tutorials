@@ -19,11 +19,28 @@ library(tidyverse)
 library(primer.data)
 library(socviz)
 library(ggthemes)
-library(systemfonts)
-library(ggforce)
+library(scales)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
+
+# Portland heatwave. Source:  https://projects.oregonlive.com/weather/pdx_temps.csv -
+
+portland_data <- 
+  read_csv("data/portlandtemp.csv",
+           col_types = cols(date = col_date(format = ""),
+                   tmax = col_double(),
+                   tmin = col_double())) %>% 
+  filter(date >= as.Date("1979-01-01")) %>% 
+  mutate(yday = lubridate::yday(date),
+         year = lubridate::year(date),
+         recent_high = if_else(tmax > 100 & year == 2021, 
+                              TRUE, FALSE))
+
+months <- 
+  tibble(yday = c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335),
+                 label = c("Jan.", "Feb.", "March", "April", "May", "June", 
+                           "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."))
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -32,20 +49,24 @@ options(tutorial.exercise.timelimit = 60,
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
+<!-- Use scale_x_date() to make the x-axis labels in Portland heatwave.  -->
+
+<!-- Takes almost two minutes to build.Too long! -->
+
 <!-- Maybe use 5 or 6 of these plots: -->
 
 <!-- https://www.cedricscherer.com/slides/RLadiesTunis-2021-favorite-ggplot-extensions.pdf -->
 
 <!-- Although we may need to simplify them so that they don't require 30 Exercises. You will often need to find the code elsewhere, often at the Github repo for the package. Example: https://github.com/davidsjoberg/ggstream. I think the movie type graphic works well. -->
 
-<!-- Create Portland temperature example. Place a screen shot from the NY Times in the images/ directory. Show them the plot we will make, which does not need to be identical, and then make it. Add the portland data to the data/ directory. No need to make it identical to Cedric's. Probably don't have time to do all his magic. See: https://gist.github.com/z3tt/275e6cffa5933c85332bacfad717eb88.  -->
 
 <!-- Also, maybe stuff from: https://www.cedricscherer.com/2019/08/05/a-ggplot2-tutorial-for-beautiful-plotting-in-r/.  -->
 
 ## The US Life Expectancy Gap
+
 ### 
 
-We will be making this plot here. 
+We will be making this plot here. This section will be 23 exercises long.
 
 ```{r fig.width = 10}
 final_plot <- 
@@ -238,7 +259,7 @@ This is part of the ggplot2 package. Explore the themes on the ggplot2 package [
 
 ### Exercise 9
 
-Add the labs() layer to give your plot the appropriate title, subtitle, captions, etc. Reminder: this is the plot we are trying to create:
+Add the `labs()` layer to give your plot the appropriate `title`, `subtitle`, `caption`, etc. Reminder: this is the plot we are trying to create:
 
 ```{r}
 final_plot
@@ -282,7 +303,7 @@ question_text(NULL,
 
 ### 
 
-We will primarily be using element_text().
+We will primarily be using `element_text()`.
 
 ### Exercise 11
 
@@ -316,7 +337,7 @@ We will now use `theme(plot.title = ...)` to change the plot title. Set the argu
 
 ### Exercise 13
 
-Add the `size` argument within element_text(). Set the size to 20.
+Add the `size` argument within `element_text()`. Set the size to 20.
 
 ```{r the-us-life-expectan-13, exercise = TRUE}
 
@@ -524,32 +545,12 @@ Reminder: your final graph should look like this.
 final_plot
 ```
 
+
+## Portland Heatwave in 2021
 ### 
 
-## Portland heatwave in 2021
 
-### 
-
-<!-- Data taken from https://projects.oregonlive.com/weather/pdx_temps.csv -->
 <!-- HL: I also have no idea why the colour of the dots won't change -->
-
-```{r}
-portland_data <- 
-  read_csv("data/portlandtemp.csv",
-           col_types = cols(date = col_date(format = ""),
-                   tmax = col_double(),
-                   tmin = col_double())) %>% 
-  filter(date >= as.Date("1979-01-01")) %>% 
-  mutate(yday = lubridate::yday(date),
-         year = lubridate::year(date),
-         new_record = if_else(tmax > 100 & year == 2021, 
-                              "Last 3 Days in Portland", ""))
-
-months <- 
-  tibble(yday = c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335),
-                 label = c("Jan.", "Feb.", "March", "April", "May", "June", 
-                           "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."))
-```
 
 In July 2021, the US Pacific Northwest and some of Canada's west coast faced some of the most devastating heat they'd seen in history. Over 200 people died (as of July 9th) due to the extreme heat. You can read more about it in [this Guardian article.](https://www.theguardian.com/us-news/2021/jul/08/pacific-northwest-heatwave-deaths)
 
@@ -561,7 +562,11 @@ The inspiration for this exercise was taken from [this New York Times article](h
 include_graphics("images/nyt-plot.png")
 ```
 
-Credits to Cédric Scherer on Twitter for providing the code breakdown of a slightly modified graph. You can find the GitHub code [here.](https://gist.github.com/z3tt/275e6cffa5933c85332bacfad717eb88)
+Credits to Cédric Scherer on Twitter for providing the code breakdown of a slightly modified graph. You can find the GitHub code [here](https://gist.github.com/z3tt/275e6cffa5933c85332bacfad717eb88).
+
+###
+
+This section will be 31 exercises long.
 
 ### 
 
@@ -573,13 +578,13 @@ portland_1 <- ggplot(data = portland_data,
                        y = tmax)) +
   geom_point(alpha = .05, size = .9) +
   geom_point(data = filter(portland_data, 
-                    new_record != ""), 
+                    recent_high != FALSE), 
              mapping = aes(color = "#C1392B"),
              alpha = 1,
              size = 2.3) +
   guides(color = "none") +
   scale_x_continuous(breaks = months$yday,
-                     labels = months$label, 
+                     labels = months$label,
                      expand = c(.01, .01)) +
   scale_y_continuous(labels = function(x) paste0(x, "°F"), 
                      breaks = seq(from = 20, 
@@ -637,18 +642,36 @@ glimpse(portland_data)
 
 ### 
 
-Take note of the column specifications (date, dbl, chr, etc).
-
+Take a look at the `recent_high` column. It's a logical column that we will later use to filter the data to get the three dots.
 
 ### Exercise 3
 
-Let's start building the plot! First, let's use the function `ggplot()`. Within the function, set the argument `data` equal to `portland_data`.
+Take a look at the `months` tibble, we will use it to create breaks on the x-axis. Run `months` in the code chunk below. 
 
 ```{r portland-heatwave-in-3, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r portland-heatwave-in-3-hint-1, eval = FALSE}
+months
+```
+
+### 
+
+This `months` tibble contains column `yday`, which indicates what day of the year the months change. The `label` column contains the month name, which we will use to create the breaks in the x-axis. We will use this later on to change the breaks from numbers to months.
+
+
+### Exercise 4
+
+Let's start building the plot! First, let's use the function `ggplot()`. Within the function, set the argument `data` equal to `portland_data`.
+
+```{r portland-heatwave-in-4, exercise = TRUE}
+
+```
+
+```{r portland-heatwave-in-4-hint-1, eval = FALSE}
 ggplot(data = portland_data)
 ```
 
@@ -656,29 +679,9 @@ ggplot(data = portland_data)
 
 Good! This merely tells the plot what dataset to use. We have not told it what to plot yet.
 
-### Exercise 4
-
-Next, let's assign the `x` and `y` variables. Within ggplot, set the `x` variable to `yday` and the `y` variable to `tmax`. Remember to set this within `mapping = aes()` in ggplot. 
-
-```{r portland-heatwave-in-4, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r portland-heatwave-in-4-hint-1, eval = FALSE}
-ggplot(data = portland_data,
-       mapping = aes(x = yday,
-                     y = tmax))
-```
-
-### 
-
-Good! The original plot by the New York Times mapped maximum temperature, so we will use the `tmax` column.
-
 ### Exercise 5
 
-Next, we will start adding the scatterplot. Add the layer `geom_point`. Remember to use a `+` sign after the `ggplot` layer.
+Next, let's assign the `x` and `y` variables. Within ggplot, set the `x` variable to `yday` and the `y` variable to `tmax`. Remember to set this within `mapping = aes()` in ggplot. 
 
 ```{r portland-heatwave-in-5, exercise = TRUE}
 
@@ -689,17 +692,16 @@ Next, we will start adding the scatterplot. Add the layer `geom_point`. Remember
 ```{r portland-heatwave-in-5-hint-1, eval = FALSE}
 ggplot(data = portland_data,
        mapping = aes(x = yday,
-                     y = tmax)) +
-  geom_point()
+                     y = tmax))
 ```
 
 ### 
 
-You may notice there's a significant degree of overplotting. We will rectify this in the next exercise. 
+Good! The original plot by the New York Times mapped maximum temperature, so we will use the `tmax` column.
 
 ### Exercise 6
 
-Within `geom_point`, add the argument alpha and set it to .05. Furthermore, set the argument `size` (still within geom_point) to .9. 
+Next, we will start adding the scatterplot. Add the layer `geom_point`. Remember to use a `+` sign after the `ggplot` layer.
 
 ```{r portland-heatwave-in-6, exercise = TRUE}
 
@@ -708,18 +710,17 @@ Within `geom_point`, add the argument alpha and set it to .05. Furthermore, set 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-6-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(alpha = .05,
-             size = .9)
+...+
+  geom_point()
 ```
 
 ### 
 
-Since there is around 40 years of data, there will be a significant degree of overplotting. We fixed this by reducing the size of each point and changing the alpha.
+You may notice there's a significant degree of overplotting. We will rectify this in the next exercise. 
 
 ### Exercise 7
 
-Now, we want to get the 3 dots that the NYT graphic highlights. We will add another geom_point layer to create those three dots. 
+Within `geom_point`, add the argument alpha and set it to .05. Furthermore, set the argument `size` (still within geom_point) to .9. 
 
 ```{r portland-heatwave-in-7, exercise = TRUE}
 
@@ -728,19 +729,18 @@ Now, we want to get the 3 dots that the NYT graphic highlights. We will add anot
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-7-hint-1, eval = FALSE}
-ggplot(...) +
+...+
   geom_point(alpha = .05,
-             size = .9) +
-  geom_point()
+             size = .9)
 ```
 
 ### 
 
-Right now, we have simply added another layer which was the exact same as the layer in Exercise 6. We will filter the data specifically for those 3 dots.
+Since there is around 40 years of data, there will be a significant degree of overplotting. We fixed this by reducing the size of each point and changing the alpha.
 
 ### Exercise 8
 
-Within the second `geom_point`, we must filter the data. First, use the argument `data = ...`. Next, within that argument, use `filter()`. The first argument should be `portland_data` (since we are filtering that data set), and then the second argument should be `new_record != ""`.
+Now, we want to get the 3 dots that the NYT graphic highlights. We will add another geom_point layer to create those three dots. 
 
 ```{r portland-heatwave-in-8, exercise = TRUE}
 
@@ -749,19 +749,17 @@ Within the second `geom_point`, we must filter the data. First, use the argument
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-8-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(data = filter(portland_data, 
-                    new_record != ""))
+... +
+  geom_point()
 ```
 
 ### 
 
-The `new_record` column has been modified to include "Last 3 Days" for the three dots that are the ones we want to highlight. Therefore, we use != to filter out the rows that have nothing.
+Right now, we have simply added another layer which was the exact same as the layer in Exercise 6. We will filter the data specifically for those 3 dots.
 
 ### Exercise 9
 
-We will now change the colour of those three dots. Open a new mapping argument (outside of the data argument), and set `mapping = aes()`. Within that, set `color` to "#C1392B". 
+Within the second `geom_point`, we must filter the data. First, use the argument `data = ...`. Next, within that argument, use `filter()`. The first argument should be `portland_data` (since we are filtering that data set), and then the second argument should be `recent_high != FALSE``.
 
 ```{r portland-heatwave-in-9, exercise = TRUE}
 
@@ -770,20 +768,18 @@ We will now change the colour of those three dots. Open a new mapping argument (
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-9-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
+...+
   geom_point(data = filter(portland_data, 
-                    new_record != ""),
-             mapping = aes(color = "#C1392B"))
+                    recent_high != FALSE))
 ```
 
 ### 
 
-You can use HEX codes in the `color` argument to change it to whatever colour you would like.
+The `recent_high` column has been modified so that `TRUE` columns are true for the recent three temperatures we want to highlight. Therefore, we use != to filter out the rows that have nothing.
 
 ### Exercise 10
 
-Next, we'll change the size of these dots to make them stand out more. Set the argument `size` to 2.3.
+We will now change the colour of those three dots. Open a new mapping argument (outside of the data argument), and set `mapping = aes()`. Within that, set `color` to "#C1392B". 
 
 ```{r portland-heatwave-in-10, exercise = TRUE}
 
@@ -792,21 +788,19 @@ Next, we'll change the size of these dots to make them stand out more. Set the a
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-10-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
+...+
   geom_point(data = filter(portland_data, 
-                    new_record != ""),
-             mapping = aes(color = "#C1392B"),
-             size = 2.3)
+                    recent_high != FALSE),
+             mapping = aes(color = "#C1392B"))
 ```
 
 ### 
 
-Good! Now you can clearly see these three dots distinct from the other dots in the graph.
+You can use HEX codes in the `color` argument to change it to whatever colour you would like.
 
 ### Exercise 11
 
-You may have noticed a legend popping up on the side of your graph. We don't need it, since these three dots don't indicate anything in particular. Add a new layer, `guides()`. Within `guides()`, set `color = "none"`.
+Next, we'll change the size of these dots to make them stand out more. Set the argument `size` to 2.3.
 
 ```{r portland-heatwave-in-11, exercise = TRUE}
 
@@ -815,17 +809,20 @@ You may have noticed a legend popping up on the side of your graph. We don't nee
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-11-hint-1, eval = FALSE}
-... +
-  guides(color = "none")
+...+
+  geom_point(data = filter(portland_data, 
+                    recent_high != FALSE),
+             mapping = aes(color = "#C1392B"),
+             size = 2.3)
 ```
 
 ### 
 
-The `guides` function allows you to get rid of legends just like an argument within `theme()` would as well.
+Good! Now you can clearly see these three dots distinct from the other dots in the graph.
 
 ### Exercise 12
 
-Next, we will create breaks on the x-axis. You may notice now they simply are numbers. We want to change this to show monthly breaks. However, before we do so, run `months` in the code chunk below. 
+You may have noticed a legend popping up on the side of your graph. We don't need it, since these three dots don't indicate anything in particular. Add a new layer, `guides()`. Within `guides()`, set `color = "none"`.
 
 ```{r portland-heatwave-in-12, exercise = TRUE}
 
@@ -834,12 +831,14 @@ Next, we will create breaks on the x-axis. You may notice now they simply are nu
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-12-hint-1, eval = FALSE}
-months
+... +
+  guides(color = "none")
 ```
 
 ### 
 
-This `months` tibble contains column `yday`, which indicates what day of the year the months change. The `label` column contains the month name, which we will use to create the breaks in the x-axis.
+The `guides` function allows you to get rid of legends just like an argument within `theme()` would as well.
+
 
 ### Exercise 13
 
@@ -852,10 +851,7 @@ Copy and paste your code from Exercise 12. Add another layer, `scale_x_continuou
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-13-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
+...+
   scale_x_continuous(breaks = months$yday)
 ```
 
@@ -894,10 +890,7 @@ Still within `scale_x_continuous`, add the argument `expand =`. Set it equal to 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-15-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
+...+
   scale_x_continuous(breaks = months$yday,
                      labels = months$label,
                      expand = c(.01, .01))
@@ -918,11 +911,7 @@ Now let's fix the y-axis. In the NYT graphic, there are breaks every 20 degrees.
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-16-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
-  scale_x_continuous() +
+...+
   scale_y_continuous(breaks = seq(from = 20, to = 120, by = 20))
 ```
 
@@ -941,11 +930,7 @@ Next, we want to add °F to each of the breaks. Including units is important! Wi
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-17-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
-  scale_x_continuous(...) +
+... +
   scale_y_continuous(breaks = seq(from = 20, to = 120, by = 20),
                      labels = function(x) paste0(x, "°F"))
 ```
@@ -965,12 +950,7 @@ To simplify the plot, add the layer `theme_minimal()`.
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-18-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
-  scale_x_continuous(...) +
-  scale_y_continuous(...) +
+...+
   theme_minimal()
 ```
 
@@ -993,13 +973,7 @@ portland_final
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-19-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
-  scale_x_continuous(...) +
-  scale_y_continuous(...) +
-  theme_minimal() +
+... +
   labs(title = ...,
        subtitle = ...,
        y = ...,
@@ -1021,14 +995,7 @@ The first thing to fix is the title. We should make it bold, just like we did in
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-20-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
-  scale_x_continuous(...) +
-  scale_y_continuous(...) +
-  theme_minimal() +
-  labs(...) +
+...+
   theme(plot.title = element_text(face = "bold"))
 ```
 
@@ -1047,14 +1014,7 @@ Next, let's get rid of some grid lines to make it much cleaner. Within theme() s
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-21-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
-  scale_x_continuous(...) +
-  scale_y_continuous(...) +
-  theme_minimal() +
-  labs(...) +
+... +
   theme(plot.title = element_text(face = "bold"),
         panel.grid.minor = element_blank())
 ```
@@ -1074,14 +1034,7 @@ You may also have noticed that there are no vertical lines running across the gr
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-22-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
-  scale_x_continuous(...) +
-  scale_y_continuous(...) +
-  theme_minimal() +
-  labs(...) +
+...+
   theme(plot.title = element_text(face = "bold"),
         panel.grid.minor = element_blank(),
         panel.grid.major.x = element_blank()) 
@@ -1102,14 +1055,7 @@ You may have noticed that when we set `panel.grid.minor` to `element_blank()` th
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-23-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
-  scale_x_continuous(...) +
-  scale_y_continuous(...) +
-  theme_minimal() +
-  labs(...) +
+... +
   theme(plot.title = element_text(face = "bold"),
         panel.grid.minor = element_blank(),
         panel.grid.major.x = element_blank(),
@@ -1131,14 +1077,7 @@ The x-axis is a bit too thick and bold. We can reduce the size of the line. With
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-24-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
-  scale_x_continuous(...) +
-  scale_y_continuous(...) +
-  theme_minimal() +
-  labs(...) +
+...+
   theme(plot.title = element_text(face = "bold"),
         panel.grid.minor = element_blank(),
         panel.grid.major.x = element_blank(),
@@ -1160,14 +1099,7 @@ In the NYT graphic, each month has a little tick on the x-axis. Let's create tho
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-25-hint-1, eval = FALSE}
-ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
-  scale_x_continuous(...) +
-  scale_y_continuous(...) +
-  theme_minimal() +
-  labs(...) +
+...+
   theme(plot.title = element_text(face = "bold"),
         panel.grid.minor = element_blank(),
         panel.grid.major.x = element_blank(),
@@ -1190,15 +1122,7 @@ You may notice there is one key element missing, that being the annotation on th
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r portland-heatwave-in-26-hint-1, eval = FALSE}
-portland_graph <- ggplot(...) +
-  geom_point(...) +
-  geom_point(...) +
-  guides(...) +
-  scale_x_continuous(...) +
-  scale_y_continuous(...) +
-  theme_minimal() +
-  labs(...) +
-  theme(...) 
+portland_graph <- ggplot(...)
 ```
 
 ### 
