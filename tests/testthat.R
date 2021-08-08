@@ -19,15 +19,16 @@ library(primer.tutorials)
 # as we do it this way, then the `learnr:available_tutorials()` trick will work
 # correctly, and then we build the path by hand.
 
+session_path <- system.file("www/session_save.rds", package = "primer.tutorials")
 
 package_location <- system.file("tutorials", package = "primer.tutorials")
-  
-tutorial_paths <- available_tutorials("primer.tutorials") |> 
+
+tutorial_paths <- available_tutorials("primer.tutorials") |>
   mutate(path = paste0(package_location, "/", name, "/tutorial.Rmd")) |>
   pull(path)
-  
+
 stopifnot(length(tutorial_paths) > 15)
 
-# We use the tutorial_paths vector in the testing functions which now get run. 
+# We use the tutorial_paths vector in the testing functions which now get run.
 
 test_check("primer.tutorials")
