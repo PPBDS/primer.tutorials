@@ -15,19 +15,29 @@ This document reviews some of the technical details behind the special modificat
 
 ## Showing R code chunks
 
-It is strongly discouraged for tutorial makers to use `r ''` in tutorials to show code chunks. Instead, as of now, we encourage just including photos.
+Sometimes in tutorials, you might want to show the entire r code chunk. An example is in the "Rstudio and Friends" tutorial.
 
-This is because **parsermd** --- which is used in `primer.tutorials::submission_server()` and `primer.tutorials::format_tutorial()` to read and parse tutorial Rmd documents --- fails if `r ''` appears.
+Before, we had a trick of adding an empty r string after a code chunk definition to display the chunk as a whole. The way to display chunks that way is discussed [here](https://bookdown.org/yihui/rmarkdown-cookbook/verbatim-code-chunks.html) in more detail.
+
+Below is an example of using the empty r string.
+
+```{r, echo = FALSE, out.width = "50%"}
+knitr::include_graphics("images/empty_string_1.png")
+```
+
+It is strongly discouraged for tutorial makers to use \`r''\` in tutorials to show code chunks. Instead, as of now, we encourage just including photos.
+
+This is because **parsermd** --- which is used in `primer.tutorials::submission_server()` and `primer.tutorials::format_tutorial()` to read and parse tutorial Rmd documents --- fails if \`r''\` appears.
 
 [An issue is raised on github](https://github.com/rundel/parsermd/issues/27) for the **parsermd** package creator, Colin Rundel, to fix this. It is, however, not top priority. He instead offered a workaround other than using an image.
 
-The workaround uses a zero-width space to stop the knitr from knitting that code chunk. The example Professor Rundel pointed to is [an Rmd document written by Yihui](https://github.com/yihui/knitr-examples/blob/master/065-rmd-chunk.Rmd). It includes more details about how zero-width space works and how to implement it. When it's used in RStudio, it does highlight the existence of zero-width spaces with a red dot in the editor.
+The workaround uses a zero-width space to stop the knitr from knitting that code chunk. The example Professor Rundel pointed to is [an Rmd document written by Yihui](https://github.com/yihui/knitr-examples/blob/master/065-rmd-chunk.Rmd). The example includes more details about how zero-width space works and how to implement the space When it's used in RStudio, the editor does highlight the existence of zero-width spaces with a red dot.
 
 ```{r, echo = FALSE, out.width = "50%"}
 knitr::include_graphics("images/zero_width_space_1.png")
 ```
 
-With that being said, I still encourage including images of the code chunks with `knitr::include_graphics()` like below:
+With that being said, we still encourage including images of the code chunks with `knitr::include_graphics()` like below:
 
 ```{r, out.width = "100%"}
 knitr::include_graphics("images/rmd_chunk_1.png")
@@ -204,3 +214,47 @@ Unexported objects imported by ':::' calls:
   ‘learnr:::submissions_from_state_objects’
 
 Because learnr will not export the three functions which we use in submission_functions.R, we have no choice but to use ::: in order to access them. Doing do produces a NOTE when we run R CMD check. I find that annoying. I tried just providing my own copies in submission_functions.R, but that did not work. (Perhaps the problem is that they themselves use other learnr functions which I don't have access to?)
+
+## Tour of the Package Functions
+
+### Submission Functions
+
+**submission_ui** is an HTML structure defined through shiny, which is inserted to the end of every tutorial. It creates buttons to download submission reports in the forms of RDS and HTML.
+
+**submission_server()** is a function that communicates with the shiny server during a tutorial. It provides the download functions, **downloadHtml** and **downloadRds**, for the user interface to call when downloading submission reports.
+
+### Submission Helper Functions
+
+**build_html** is a function that creates and downloads a tibble report of tutorial submissions in HTML.
+
+**build_rds** is a function that creates and downloads an tibble report of tutorial submissions in RDS.
+
+**create_tibble_from_submissions** is a function that takes in tutorial submissions and creates a formatted tibble with the columns: id, submission type, and answer. The submissions are arranged by the order these questions appear in the tutorial
+
+**get_label_list** is a function that gets the appearance order of questions in a tutorial.
+
+**get_submissions_from_learnr_session** is a function that gets submissions of the current tutorial session through learnr functions, specifically `learnr:::get_all_state_objects()` and `learnr::submissions_from_state_objects()`. It returns a list of submission objects, each containing details about the question and answer.
+
+### Submission Processing Functions
+
+**gmail_access** is a function that establish a connection with the submission gmail account and downloads submission attachments based on a provided filter.
+
+### Add-in Functions
+
+**format_tutorial** is a function that takes a tutorial path and formats the code chunk labels into a standardized format.
+
+**check_current_tutorial** is an add-in function that runs `format_tutorial()` on the current opened tutorial. It is a handy add-in for tutorial makers who want to make sure their chunk labels are correct.
+
+**make_new_exercise** is an add-in function that creates a code exercise with correctly formatted labels and general structure.
+
+**make_new_q_no_answer** is an add-in function that creates a question exercise that does not have an answer to display with correctly formatted labels and general structure.
+
+**make_new_q_with_answer** is an add-in function that creates a question exercise that does have an answer to display with correctly formatted labels and general structure.
+
+### Miscellaneous Functions
+
+**install_only_binary_packages** is a function that updates the user's .Rprofile file to only download the binary version of packages. The reason of this function is that students are often prompted to download from the source of the packages, which we do not want to happen. Therefore, by changing the .Rprofile to only downloading binary packages, students can only download from CRAN.
+
+
+
+
