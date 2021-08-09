@@ -14,8 +14,6 @@ build_html <- function(file, session, is_test = FALSE){
 
   # Get label order to order answers
 
-  saveRDS(session, file = system.file("www/session_save.rds", package = "primer.tutorials"))
-
   label_list <- get_label_list(session, is_test = is_test)
 
   # Copy over a report Rmd template to write to.
@@ -33,7 +31,7 @@ build_html <- function(file, session, is_test = FALSE){
   # obj$id[[1]] "id"
 
   if(is_test){
-    objs <- readRDS(system.file("www/submission_test_outputs/learnr_submissions_output.rds", package = "primer.tutorials"))
+    objs <- readRDS("test-data/submission_test_outputs/learnr_submissions_output.rds")
   }
   else{
     objs <- get_submissions_from_learnr_session(session)
@@ -83,7 +81,7 @@ build_rds <- function(file, session, is_test = FALSE){
   # obj$id[[1]] "id"
 
   if(is_test){
-    objs <- readRDS(system.file("www/submission_test_outputs/learnr_submissions_output.rds", package = "primer.tutorials"))
+    objs <- readRDS("test-data/submission_test_outputs/learnr_submissions_output.rds")
   }
   else{
     objs <- get_submissions_from_learnr_session(session)
@@ -124,8 +122,7 @@ get_label_list <- function(sess, is_test = FALSE){
 
   manual_list <- list("information-name", "information-email", "download-answers-1")
 
-  rmd_path <- ifelse(is_test, system.file("www/session_check_tutorial.Rmd",
-                                          package = "primer.tutorials"),
+  rmd_path <- ifelse(is_test, "test-data/session_check_tutorial.Rmd",
                      file.path(sess$options$appDir, "tutorial.Rmd"))
 
   rmd <- parsermd::parse_rmd(rmd_path)
