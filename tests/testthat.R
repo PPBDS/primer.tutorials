@@ -19,8 +19,6 @@ library(primer.tutorials)
 # as we do it this way, then the `learnr:available_tutorials()` trick will work
 # correctly, and then we build the path by hand.
 
-session_path <- system.file("www/session_save.rds", package = "primer.tutorials")
-
 package_location <- system.file("tutorials", package = "primer.tutorials")
 
 tutorial_paths <- available_tutorials("primer.tutorials") |>

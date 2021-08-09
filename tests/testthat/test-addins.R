@@ -13,12 +13,11 @@ format_tutorial_paths <- Sys.glob(file.path(system.file("www/addin_test_inputs",
 for (i in seq_along(format_tutorial_paths)){
 
   test_doc <- primer.tutorials::format_tutorial(paste0(
-    file.path(system.file("www/addin_test_inputs", package = "primer.tutorials"), "format_input_"),
+    file.path("test-data/addin_test_inputs", "format_input_"),
     i,
     ".Rmd"))
 
-  output_doc <- readr::read_file(paste0(file.path(system.file(
-    "www/addin_test_outputs", package = "primer.tutorials"), "format_output_"),
+  output_doc <- readr::read_file(paste0(file.path("test-data/addin_test_outputs", "format_output_"),
     i,
     ".Rmd"))
 
