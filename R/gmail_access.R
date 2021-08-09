@@ -1,25 +1,27 @@
+#
+#
+# gmail_access <- function(filter){
+#   gmailr::gm_auth_configure(key = "",
+#                             secret = "")
+#
+#   gmailr::gm_auth()
+#
+#   messages <- gmailr::gm_messages(filter)
+#
+#   for (message_id in messages){
+#     msg <- gmailr::gm_message(message_id)
+#
+#     fn <-
+#
+#     attach_id = gmailr::gm_attachments(msg)$id[[1]]
+#
+#     attach_obj <- gmailr::gm_attachment(attach_id, message_id)
+#
+#     gmailr::gm_save_attachment(attach_obj, fn)
+#   }
+# }
 
 
-gmail_access <- function(filter){
-  gmailr::gm_auth_configure(key = "",
-                            secret = "")
-
-  gmailr::gm_auth()
-
-  messages <- gmailr::gm_messages(filter)
-
-  for (message_id in messages){
-    msg <- gmailr::gm_message(message_id)
-
-    fn <-
-
-    attach_id = gmailr::gm_attachments(msg)$id[[1]]
-
-    attach_obj <- gmailr::gm_attachment(attach_id, message_id)
-
-    gmailr::gm_save_attachment(attach_obj, fn)
-  }
-}
 # Access Gmail with gmailr::gm_auth_configure(key = "", secret = "") and
 # gm_auth()
 #
