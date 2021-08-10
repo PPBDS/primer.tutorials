@@ -39,6 +39,7 @@ library(plotly)
 library(dplyr)
 library(gghighlight)
 library(scales)
+library(ggpubr)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
@@ -49,6 +50,28 @@ options(tutorial.exercise.timelimit = 60,
 library(ggthemes)
 
 covid <- read_csv('data/owid-covid-data.csv')
+
+
+shaming_p <- shaming %>%
+  select(primary_04, primary_06, treatment) %>%
+  mutate(primary_04 = if_else(condition = 
+                                str_detect(primary_04, "Yes"),
+                                true = 1,
+                                false = 0)) %>%
+  pivot_longer(cols = c(primary_04, primary_06), 
+               names_to = "year", 
+               values_to = "voted") %>%
+  group_by(treatment, year, voted) %>%
+  summarize(num_voters = n(), 
+            .groups = "drop") %>%
+  mutate(voted = if_else(condition = voted == 1,
+                         true = "did_vote",
+                         false = "did_not_vote")) %>%
+  pivot_wider(names_from = voted, values_from = num_voters)  %>%
+  mutate(pct_voted = did_vote / (did_vote + did_not_vote)) %>%
+  mutate(year = if_else(condition = year == "primary_04",
+                        true = "2004",
+                        false = "2006"))
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -61,7 +84,8 @@ covid <- read_csv('data/owid-covid-data.csv')
 
 ### 
 
-`nhanes` includes data from the "National Health and Nutrition Examination Survey," which contains the personal and physical information of 10,000 Americans from two surveys in 2009 and 2011.
+National Health and Nutrition Examination Survey (NHANES) is a survey distributed to adults and children in the United States. 
+This research survey aimed to examine health and nutritional status worldwide. 
 
 ### 
 
@@ -101,6 +125,10 @@ To view all columns and some of the respective values, `glimpse()` the `nhanes` 
 glimpse(...)
 ```
 
+### 
+
+`nhanes` includes data from the "National Health and Nutrition Examination Survey," which contains the personal and physical information of 10,000 Americans from two surveys in 2009 and 2011.
+
 ### Exercise 2
 
 In the tibble above, `weight` and `height` is measured in kg and cm, respectively. Using `mutate()`, multiply `weight` by 2.2 and divide `height` by 30.48 to convert units into pounds and feet. 
@@ -122,7 +150,7 @@ Use * to multiply and / to divide.
 ```{r national-health-and--2-hint-3, eval = FALSE}
 nhanes %>%
   mutate(weight = ... * ..., 
-         height = .../ ...)
+         height = ... / ...)
 ```
 
 ### Exercise 3
@@ -140,6 +168,10 @@ Now `select()` the `gender`, `weight`, `height`, and `bmi` columns.
   select(..., ..., ..., ...)
 ```
 
+### 
+
+Because there may be differences in heights and weights due to biological factors, we wanted to analyse the results gender-wise. 
+
 ### Exercise 4
 
 `nhanes` contains NA values in some rows. Start a pipe with `nhanes`. Use `drop_na()` with the arguments `weight`and `height` to remove all rows with NA value in these columns.
@@ -154,6 +186,10 @@ Now `select()` the `gender`, `weight`, `height`, and `bmi` columns.
 ... %>%
   drop_na(..., ...)
 ```
+
+### 
+
+For some cases, there are columns where more than 60% of data is NA. In those cases, we would consider dropping the column. 
 
 ### Exercise 5
 
@@ -173,6 +209,10 @@ Continue your pipe with `ggplot()`. Furthermore, add the layer `geom_jitter()` t
   geom_jitter()
 ```
 
+### 
+
+Instead of `geom_jitter()`, we also can use `geom_pointdensity()` function from `ggpointdensity` package, which would color datapoints by how often they appear. 
+
 ### Exercise 6
 
 A trend line will help you visualize the general association between variables. Add one with the layer `geom_smooth()`. Set the argument `se` to FALSE and set `method` to "loess".
@@ -187,6 +227,10 @@ A trend line will help you visualize the general association between variables. 
 ... + 
   geom_smooth(se = ..., method = ...)
 ```
+
+### 
+
+`se` argument specifies whether the confidence interval should be displayed. If we set this true, we should also specify the `level` argument. `level` specifices the confidence level of the interval, 0.95 by default.
 
 ### Exercise 7
 
@@ -205,6 +249,10 @@ Notice the raised message. Within `geom_smooth()` set the `formula` argument to 
              formula = ...)
 ```
 
+### 
+
+Although there is no warning, the output smoothed line is the same as before. This is because the reason of the warning is to remind us that we should specify the formula, even though by default ggplot uses `y ~ x` formula.
+
 ### Exercise 8
 
 It's more insightful to separate the plot by gender , the process known as *faceting*, and displaying data of both genders as individual plots. Use `facet_wrap()` to facet the graph by `gender`.
@@ -219,6 +267,10 @@ It's more insightful to separate the plot by gender , the process known as *face
 ... +
   facet_wrap( ~ ...) 
 ```
+
+### 
+
+In some cases, such as the case of graphing by one variable, we can use `facet_wrap()` and `facet_grid()` interchangeably. However, in general, the use of these two functions is different. `facet_grid()` produces a 2d grid of panels defined by variables, whereas `facet_wrap()` "wraps a 1d ribbon of panels into 2d. To learn more about this issue see [this thread](https://stackoverflow.com/questions/20457905/whats-the-difference-between-facet-wrap-and-facet-grid-in-ggplot2).
 
 ### Exercise 9
 
@@ -238,6 +290,10 @@ Recall that when you add a theme, you add a layer! Use the + operator.
 ... +
   theme_clean()
 ```
+
+### 
+
+Alternatively, we also can use similar themes such as `theme_light()` and `theme_classic()`.
 
 ### Exercise 10
 
@@ -326,6 +382,10 @@ covid %>%
   select(..., ..., ..., ...))
 ```
 
+### 
+
+Because our graph will be interactive, we can easily analyse more variables than standard `ggplot` graphs. 
+
 ### Exercise 3
 
 Because we do not want to include rows where there are no Covid-19 cases, drop NA values in the `new_cases` column. 
@@ -362,7 +422,7 @@ To make our further country-based calculations easer, Now group by `location`.
 
 ### 
 
-Our dataset includes rows where the continent is "world". However, we only want to analyse by country.
+In our dataset, there is a continent value `world` that contains the summation of data of individual countries. For example, new cases of `world` is the total new cases recorded that day. 
 
 ### Exercise 5
 
@@ -382,6 +442,10 @@ Our dataset includes rows where the continent is "world". However, we only want 
 ```{r covid19-5-hint-2, eval = FALSE}
 To exclude a value, use `!=`.
 ```
+
+### 
+
+Because `world` is not  a continent and we want to make country-wise and country-wise analysis, we excluded the rows where the continent is equal to world.
 
 ### Exercise 6
 
@@ -413,6 +477,8 @@ Furthermore, to avoid any errors NA values might cause, set `na.rm` argument to 
               continent = first(...),
               na.rm = ...)
 ```
+
+### 
 
 Did you receive a warning message? 
 
@@ -755,8 +821,7 @@ Use `%>%` to add `ggplot()`.
 
 ### 
 
-Now we see that `ggplot()` gives us a blank sheet. Let's specify aesthetics to change this. 
-
+We see that `ggplot()` gives us a blank sheet. Now, we should specify aesthetics to change this. 
 
 
 ### Exercise 9
@@ -778,9 +843,7 @@ Within `aes` within `ggplot` object from previous exercise, map `education` to x
 
 ### 
 
-Because we haven't specified the plot type yet, we don't see concrete results. Let's change that. 
-
-
+Because we haven't specified the plot type yet, we don't see concrete results. We need to change that. 
 
 ### Exercise 10
 
@@ -804,8 +867,6 @@ Add the layer `geom_col()`.
 
 When you set the `fill` argument in the `ggplot` equal to a variable, ggplot by default sets a color set.
 
-### 
-
 ### Exercise 11
 
 To make the bar charts color of your choice, you can use `scale_fill_manual` function. This function takes on values as a vector. Within this argument, set `values` equal to a vector of two colors: `cornflowerblue` and `darkturquoise`.
@@ -826,8 +887,6 @@ To make the bar charts color of your choice, you can use `scale_fill_manual` fun
 
 If we had more categories of data, we also could have made use of `RColorBrewer` package. This package provides a function named `scale_fill_brewer()`. With this function, you can specify a color palette of your choice. 
 
-### 
-
 ### Exercise 12
 
 Within `geom_col()`, set the `position` argument equal to `"dodge"`. Moreover, you can also set the transparency of the bars with the argument `alpha`, where the default value of 1.0 is opaque. For our graph in this section, we set the `alpha` equal to 0.9. 
@@ -844,6 +903,8 @@ Within `geom_col()`, set the `position` argument equal to `"dodge"`. Moreover, y
 ```
 
 ### 
+
+Alternatively, we could have not specified position argument. In that case, we would see stacked bars, rather than side-by-side bars.
 
 ### Exercise 13
 
@@ -867,7 +928,7 @@ We can achieve this by setting `limits` argument of `scale_x_discrete()` equal t
 
 ### 
 
-<!-- Why not mention scale_x_binned()? -->
+We also could have other scaling methods. For instance, if we used `scale_x_reverse()`, our bars would be in reverse order, and x-axis labels would be in decreasing order.
 
 ### Exercise 14
 
@@ -892,7 +953,6 @@ We can achieve this with `scale_y_continuous()` function. Within this function, 
 ### 
 
 `scale_y_continuous` have formatting values to dollar feature. However, it does not have it for other currencies. In those cases, we have to specify the currency sign by using `dollar_format()` argument and pass it to `labels`. 
-
 
 
 ### Exercise 15
@@ -924,6 +984,7 @@ sps_p
 ```
 
 ## Shaming 
+
 ### 
 
 The `shaming` data set measures the impact of social pressure on voting. Nearly 350,000 people in Michigan were randomly assigned to 1 of 5 treatment groups before the 2006 Michigan primary. All 5 groups were sent mail before the primary: the "Civic Duty" group had an extra reminder that voting was a civic responsibility, the "Hawthorne" group was told that whether or not they voted would be in the public record, the "Self" group was actually *sent* the public record of whether or not they voted in 2004, and the "Neighbors" group was sent both their voting record and their neighbors' voting record from 2004. 
@@ -931,40 +992,33 @@ The `shaming` data set measures the impact of social pressure on voting. Nearly 
 ### 
 
 Let's create the following plot.
-
+Change the exercises. Knowledges
 ```{r sh_goal}
-shaming_p <- shaming %>%
-  select(primary_04, primary_06, treatment) %>%
-  mutate(primary_04 = if_else(condition = 
-                                str_detect(primary_04, "Yes"),
-                                true = 1,
-                                false = 0)) %>%
-  pivot_longer(cols = c(primary_04, primary_06), 
-               names_to = "year", 
-               values_to = "voted") %>%
-  group_by(treatment, year, voted) %>%
-  summarize(num_voters = n(), 
-            .groups = "drop") %>%
-  mutate(voted = if_else(condition = voted == 1,
-                         true = "did_vote",
-                         false = "did_not_vote")) %>%
-  pivot_wider(names_from = voted, values_from = num_voters)  %>%
-  mutate(pct_voted = did_vote / (did_vote + did_not_vote)) %>% 
-  ggplot(mapping = aes(x = fct_reorder(treatment, pct_voted), 
-                       y = pct_voted, fill = year)) +
-    geom_col(position = "dodge") +
-    geom_text(aes(label = sprintf("%0.2f", 
-                                  round(pct_voted, digits = 2))), 
-              vjust = 1.5,   position = position_dodge(0.9)) +
+
+graph <- 
+  ggdotchart(data = shaming_p, 
+             x = "treatment",
+               y = "pct_voted",
+               color = "year",                           # Color by groups
+           palette = "jco",            # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "year",                               # Order by groups
+           dot.size = 10,                                 # Large dot size
+           label = round(shaming_p$pct_voted, digits = 3),       # Add mpg values as dot labels
+           font.label = list(color = "white", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubclean()                        # ggplot2 theme
+           ) +
     labs(x = "Treatment",
          y = "Voting Percentage",
          title = "Voting Rates Based on Mailings",
          subtitle = "Shaming people makes them more likely to vote",
          fill = "Year",
-         caption = "Source: Gerber, Green, and Larimer (2008).") +
-    theme_fivethirtyeight()
+         caption = "Source: Gerber, Green, and Larimer (2008).") 
 
-shaming_p
+graph
 ```
 
 ### Exercise 1
@@ -1004,6 +1058,7 @@ mutate(primary_04 = if_else(str_detect(primary_04, "..."), 1, 0))
 
 ### Exercise 4
 
+    
 A long data set is the dataset where there are more rows and less columns, every row representing an observation belonging to a category. Use `pivot_longer()` to map the *names* of the `primary_04` and `primary_06` columns to a new column, "year,". Map the  *values* of the two columns to a new column, "voted."
 
 
@@ -1070,7 +1125,7 @@ The `voted` column is a bit difficult to understand because the numerical value 
 
 ### Exercise 8
 
-Widening a data set means the process of increasing the number of columns and decreasing the number of rows, which may prove to make the analysis part easier. Let's transform `did_vote` and `did_not_vote` into their own columns. Call `pivot_wider()` that gets its column `names_from` `voted` and its `values_from` `num_voters`.
+Widening a data set means the process of increasing the number of columns and decreasing the number of rows, which may prove to make the analysis part easier. We should transform `did_vote` and `did_not_vote` into their own columns. Call `pivot_wider()` that gets its column `names_from` `voted` and its `values_from` `num_voters`.
 
 
 ```{r shaming-8, exercise = TRUE}
@@ -1108,29 +1163,48 @@ Note that the total number of people is equal to (did_vote + did_not_vote). Also
   mutate(... = ... / (did_vote + did_not_vote))
 ```
 
+### 
+
+Data wrangling process is done!
+
 ### Exercise 10
 
-Use `%>%` to add `ggplot()`. Use `fct_reorder()` to reorder the `treatment` variable by `pct_voted` and map this to x-axis. Map `pct_voted` to the y-axis, and `year` to the `fill`. Also add the layer `geom_col()`.
+Current version of function we will use to create the graph is not adaptable to continue the pipe. Therefore, your previous pipe has been stored to a variable named `shaming_p`.
 
+### 
+
+For our graph, we will use `ggdotchart` function from `ggpubr` package. 
+Within this function, set `data` argument equal to `shaming_p`, `x` argument to `"treatment"`, y argument to `"pct_voted"`, and `color` to `"year"`.
 
 ```{r shaming-10, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r shaming-10-hint-1, eval = FALSE}
-... %>% 
-  ggplot(mapping = aes(x = fct_reorder(treatment, pct_voted), 
-                       y = ..., 
-                       fill = ...)) +
-  geom_col()
+ggdotchart(data = ..., 
+             x = "...",
+               y = "...",
+               color = "...",                          
+           palette = "jco",            # Custom color palette
+           sorting = "descending",                       # Sort value in descending order
+           add = "segments",                             # Add segments from y = 0 to dots
+           rotate = TRUE,                                # Rotate vertically
+           group = "year",                               # Order by groups
+           dot.size = 10,                                 # Large dot size
+           label = round(shaming_p$pct_voted, digits = 3),       # Add mpg values as dot labels
+           font.label = list(color = "white", size = 9, 
+                             vjust = 0.5),               # Adjust label parameters
+           ggtheme = theme_pubclean()                        # ggplot2 theme
+           ) +
 ```
+
+### 
+
+Although our graph shows the results, it is not appealing. 
 
 ### Exercise 11
 
-Within `geom_col()`, set the position argument `position` equal to "dodge"`. 
-
+Copy the code from previous function, and add the `rotate` argument and set it equal to `TRUE`. 
 ```{r shaming-11, exercise = TRUE}
 
 ```
@@ -1139,12 +1213,17 @@ Within `geom_col()`, set the position argument `position` equal to "dodge"`.
 
 ```{r shaming-11-hint-1, eval = FALSE}
 ... +
-  geom_col(position = "dodge")
+  ggdotchart(..., 
+             rotate = ...)
 ```
+
+### 
+
+This argument changes the axes, making it easier to visualize the results. 
 
 ### Exercise 12
 
-When observed bar values are close, it's better to have the values on top of bars. To do this, we have to use `geom_text()` function. Call `geom_text()`, and within this function, set `label` within `aes` equal to the `pct_voted`. Next, for vertical adjustment- where each text should appear- set the `vjust` argument of the `geom_text()` to the value of your choice. We decided on the `vjust` value of 1.5. Furthermore, because we are creating a dodged bar chart, set `position` argument equal to `position_dodge(0.9)`.
+copy the code from previous chunk, and specfiy following arguments within the `ggdotchart()` function: set `palette` argument to `"jco"`, `sorting` argument to `"descending"`, and `add` argument to `"segments"`. 
 
 ```{r shaming-12, exercise = TRUE}
 
@@ -1153,18 +1232,23 @@ When observed bar values are close, it's better to have the values on top of bar
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r shaming-12-hint-1, eval = FALSE}
-... +
-  geom_text(aes(label = ...), vjust = ..., position = position_dodge(0.9))
+ggdotchart(..., 
+           palette = "jco", 
+           sorting = "descending",
+           add = "segments")
 ```
-
-### Exercise 13
-
-If you did the above exercise, you may have got texts on top of bars with too many decimal places. To avoid this chaos, you have to set the number of decimal places. 
 
 ### 
 
-You can set the number of decimal places using `sprintf()` function. For 2 decimal places, within the `aes` argument of `geom_text()` function, set the `label` equal to 
-`sprintf("%0.2f", round(pct_voted, digits = 2))`. This will round the `pct_voted` to two decimal places. 
+`sorting` is used to change the order of dots such as "ascending" and "descending". 
+`add` argument is used for adding another plot element such as "error bars". When we set `add` equal to "segments", we add segments from the 0 point of the axis that dots are on to dots.  
+`palette` is used to specify the color set to use. You could have used other palettes such as "npg" and "lancet".
+
+
+### Exercise 13
+
+To clarify the differences between close values of dots, we have to display the exact dot values. 
+Copy the code from previous chunk and within `ggdotchart()`, set `label` equal to `round`ed `pct_voted` displaying 3 `digits`
 
 ```{r shaming-13, exercise = TRUE}
 
@@ -1173,13 +1257,21 @@ You can set the number of decimal places using `sprintf()` function. For 2 decim
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r shaming-13-hint-1, eval = FALSE}
-... +
-  geom_text(aes(label = ...), vjust = 1.5, position = position_dodge(0.9))
+ggdotchart(...,
+           ... = round(shaming_p$..., digits = 3))
 ```
+
+### 
+
+Because our values are continuous, if we did not specify the `digits` argument, we would get the results with too many decimal places. 
 
 ### Exercise 14
 
-Add the theme `theme_fivethirtyeight()` to your plot. 
+As we see, labels we created in the previous exercise overlaps. Therefore, we need to change `dot.size` and `font.label` to deal with this. 
+
+### 
+
+Copy the code from previous chunk and within the `ggdotchart()`, set `dot.size` equal to 10 and set `font.label` equal to `list` inside which the following arguments are specified as follows: `color` to "white", `size` to 9, and `vjust` to 0.5.
 
 ```{r shaming-14, exercise = TRUE}
 
@@ -1188,28 +1280,61 @@ Add the theme `theme_fivethirtyeight()` to your plot.
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r shaming-14-hint-1, eval = FALSE}
-Remember when you add a theme, you add a layer. Use +.
+ggodtchart(...,
+           font.label = list(color = "...",
+                             size = ...,
+                             vjust = ...))
 ```
+
+### 
+
+`vjust` is used to specify the where the labels are centered. `vjust` of 0.5 means that labels are perfectly in the middle of dots. 
 
 ### Exercise 15
 
-To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, legend labels, and caption of your choice.
+Copy the code from previous chunk, and within the `ggdotchart()` function, set `ggtheme` argument to `theme_pubclean()`. 
+
+```{r shaming-15, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r shaming-15-hint-1, eval = FALSE}
+ggodtchart(...,
+           ggtheme = theme_pubclean())
+```
+
+### 
+
+`ggtheme` argument is used to specify the theme. Alternatively, we could use official themes such as `theme_bw()` and `theme_gray()`. 
+
+### Exercise 16
+
+Copy the code from previous chunk, and to finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, legend labels, and caption of your choice.
 
 Reminder: This is what your plot should look like. 
 
-```{r shaming-15}
-shaming_p
+```{r shaming-16}
+graph
 ```
 
 ```{r shaming15, exercise = TRUE}
 
 ```
 
+```{r shaming-16-hint-1, eval = FALSE}
+... + 
+  labs(...)
+```
+
 ## Last letter of boy names
+
+Library `babynames` contains data about baby names through many years. 
 
 ### 
 
-Library `babynames` contains data about baby names through many years. Using this data, let's create the folllowing graph.
+Using this data, let's create the folllowing graph.
 
 ```{r baby-lastnames}
 boys_p <- babynames %>%
@@ -1279,7 +1404,7 @@ babynames %>%
 
 ### Exercise 4
 
-Our graph is associated with names of the baby names and their popularity over the years, which are their proportions. Therefore, extract only `name`, `year`, and `prop` columns. 
+Extract only `name`, `year`, and `prop` columns. 
 
 ```{r last-letter-of-boy-n-4, exercise = TRUE}
 
@@ -1294,7 +1419,7 @@ Our graph is associated with names of the baby names and their popularity over t
 
 ### 
 
-Great job!
+Our graph is associated with names of the baby names and their popularity over the years, which are their proportions among all baby boy names given in that period.
 
 ### Exercise 5
 
@@ -1337,13 +1462,9 @@ Moreover, to avoid warning and since we are done with groups, pass in the `.grou
    summarize(frequency = sum(prop), .groups = 'drop') 
 ```
 
-### 
-
-Our data processing steps are done. Great job! 
-
 ### Exercise 7
 
-Now, create a ggplot object and within `ggplot(aes())`, set x-axis values to `year`, y-axis values to `frequencies`, and colour to `last_letter.` 
+Now, create a ggplot object, and within `ggplot(aes())`, set x-axis values to `year`, y-axis values to `frequencies`, and colour to `last_letter.` 
 
 
 ```{r last-letter-of-boy-n-7, exercise = TRUE}
@@ -1375,7 +1496,7 @@ Add `geom_line()` to the ggplot object from previous exercise.
 
 ### 
 
-Alternatively, we could have used other chart types such as scatter chart. However, for our goal, line plot is a agreat option. 
+Alternatively, we could have used other chart types such as scatter chart. However, for our goal, line plot is a great option. 
 
 ### Exercise 9
 
@@ -1403,7 +1524,7 @@ We will utilize `gghighlight` library for this purpose. Add `gghighlight()` to t
 
 ### 
 
-We don't think current x-axis ticks are informative enough. Therefore, let's set custom x-axis ticks.
+We don't think current x-axis ticks are informative enough. Therefore, we should set custom x-axis ticks.
 
 ### Exercise 10
 
@@ -1423,7 +1544,7 @@ Add `scale_x_continuous`, and within this function, set `breaks` argument equal 
 
 ### 
 
-A rule of thumb, however,  isto include ending and beginning years so that whoever sees your plot could understand the range of years that data is collected.
+A rule of thumb, however, is to include ending and beginning years so that whoever sees your plot could understand the range of years that data is collected.
 
 ### Exercise 11
 
@@ -1439,6 +1560,10 @@ Moreover, we want to visualize y-axis as percentage instead of proportion. There
 ... +
   scale_y_continuous(... = scales::...()) 
 ```
+
+### 
+
+`scale` library provides many functions to assist the scaling of axes. For example, `scale_y_binned()` can be used to discretize continuous position data.
 
 ### Exercise 12
 
@@ -1457,7 +1582,7 @@ Add `theme_minimal()`.
 
 ### 
 
-We also could have used themes such as `theme_gray()`, `theme_classic()`, and`theme_bw()`.
+We also could have used themes such as `theme_gray()`, `theme_void()`, and`theme_bw()`.
 
 ### Exercise 13
 
