@@ -50,28 +50,7 @@ options(tutorial.exercise.timelimit = 60,
 library(ggthemes)
 
 covid <- read_csv('data/owid-covid-data.csv')
-
-
-shaming_p <- shaming %>%
-  select(primary_04, primary_06, treatment) %>%
-  mutate(primary_04 = if_else(condition = 
-                                str_detect(primary_04, "Yes"),
-                                true = 1,
-                                false = 0)) %>%
-  pivot_longer(cols = c(primary_04, primary_06), 
-               names_to = "year", 
-               values_to = "voted") %>%
-  group_by(treatment, year, voted) %>%
-  summarize(num_voters = n(), 
-            .groups = "drop") %>%
-  mutate(voted = if_else(condition = voted == 1,
-                         true = "did_vote",
-                         false = "did_not_vote")) %>%
-  pivot_wider(names_from = voted, values_from = num_voters)  %>%
-  mutate(pct_voted = did_vote / (did_vote + did_not_vote)) %>%
-  mutate(year = if_else(condition = year == "primary_04",
-                        true = "2004",
-                        false = "2006"))
+income <- read_csv("data/inc_occ_gender.csv")
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -983,347 +962,361 @@ Reminder: This is what your plot should look like.
 sps_p
 ```
 
-## Shaming 
+## Gender Inequality 
 
 ### 
 
-The `shaming` data set measures the impact of social pressure on voting. Nearly 350,000 people in Michigan were randomly assigned to 1 of 5 treatment groups before the 2006 Michigan primary. All 5 groups were sent mail before the primary: the "Civic Duty" group had an extra reminder that voting was a civic responsibility, the "Hawthorne" group was told that whether or not they voted would be in the public record, the "Self" group was actually *sent* the public record of whether or not they voted in 2004, and the "Neighbors" group was sent both their voting record and their neighbors' voting record from 2004. 
+This dataset shows the median weekly incomes for 535 different occupations. The data encompasses information for all working American citizens as of January 2015. The incomes are broken into male and female statistics, preceded by the total median income when including both genders.
 
 ### 
 
 Let's create the following plot.
-Change the exercises. Knowledges
-```{r sh_goal}
 
-graph <- 
-  ggdotchart(data = shaming_p, 
-             x = "treatment",
-               y = "pct_voted",
-               color = "year",                           # Color by groups
-           palette = "jco",            # Custom color palette
-           sorting = "descending",                       # Sort value in descending order
-           add = "segments",                             # Add segments from y = 0 to dots
-           rotate = TRUE,                                # Rotate vertically
-           group = "year",                               # Order by groups
-           dot.size = 10,                                 # Large dot size
-           label = round(shaming_p$pct_voted, digits = 3),       # Add mpg values as dot labels
-           font.label = list(color = "white", size = 9, 
-                             vjust = 0.5),               # Adjust label parameters
-           ggtheme = theme_pubclean()                        # ggplot2 theme
-           ) +
-    labs(x = "Treatment",
-         y = "Voting Percentage",
-         title = "Voting Rates Based on Mailings",
-         subtitle = "Shaming people makes them more likely to vote",
-         fill = "Year",
-         caption = "Source: Gerber, Green, and Larimer (2008).") 
+```{r gender-inequality}
+
+graph <- income %>%
+  filter(M_weekly != "Na" & 
+         F_weekly != 'Na' & 
+         All_weekly != "Na") %>%
+  mutate(All_weekly = as.numeric(All_weekly)) %>%
+  mutate(Occupation = tolower(Occupation)) %>%
+  drop_na() %>%
+  arrange(desc(All_weekly)) %>%
+  head(25) %>%
+  select(Occupation, M_weekly, F_weekly, M_workers, F_workers) %>%
+  mutate(difference_in_earning = as.numeric(M_weekly) - as.numeric(F_weekly)) %>%
+  mutate(workers = M_workers - F_workers) %>%
+  ggplot(aes(y=reorder(Occupation,difference_in_earning) , 
+             x = difference_in_earning, 
+             color = workers)) +
+  geom_point() + 
+  scale_x_continuous(labels = dollar_format()) +
+  theme_bw() + 
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(colour = "grey85", linetype = "dashed")
+  ) +
+  labs(y=NULL,
+       color = 'Difference in workers (in thousands)',
+       x='Difference in earning', 
+       subtitle='There is significant gender inequality in many areas.',
+       title='Gender Inequality in 25 most paying jobs',
+       caption = 'Source: Bureau of Labor Statistics')
 
 graph
+  
 ```
 
 ### Exercise 1
 
-`skim()` the `shaming` data set. Pay close attention to the data type of each variable.
+`glimpse()` the `income` data set. Pay close attention to the data type of each variable.
 
-```{r shaming-1, exercise = TRUE}
+```{r gender-inequality-1, exercise = TRUE}
 
 ```
+
+We see that many character columns have `Na` values, but they are written as characters instead of NA format. 
+
+###
+
+In cases where missing values are written as characters, we cannot use `drop_na()` since there are no NA types. 
 
 ### Exercise 2
 
-`select()` the columns `treatment`, `primary_04`, and `primary_06` of the `shaming` dataset.
+`filter()` the columns `M_weekly`, `F_weekly`, and `All_weekly` so that they don't include columns where the values are `"Na"`.
 
-```{r shaming-2, exercise = TRUE}
+```{r gender-inequality-2, exercise = TRUE}
 
 ```
 
-```{r shaming-2-hint-1, eval = FALSE}
-shaming %>% 
-  select(..., ..., ..., ...)
+```{r gender-inequality-2-hint-1, eval = FALSE}
+income %>%
+   filter(... =  != 'Na' & 
+          F_weekly != '...' & 
+          All_weekly != "...") 
 ```
+
+###
+
+`All_weekly`, `M_weekly`, and `F_weekly` are median weekly including male and female workers, meian weekly income of only male workers, and median weekly income of only female workers in USD, respectively.
 
 ### Exercise 3
 
-Use `mutate()` to change the `primary_04` column into binary. Set `primary_04` to an `if_else()` statement. Within `if_else()`, set `condition` to `str_detect()`, with arguments to detect the string "Yes" in `primary_04`. If the condition is true, the function should return `1`, and if false, `0`.
+Because we want to get the highest-paying jobs, we need to arrange the tibble by `All_weekly`. 
 
-```{r shaming-3, exercise = TRUE}
+###
+
+However, because this column is in character format, we have to convert it to numeric. 
+
+Using `mutate`, overwrite the `All_weekly` column `as.numeric()`. 
+
+```{r gender-inequality-3, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r shaming-3-hint-1, eval = FALSE}
-mutate(primary_04 = if_else(str_detect(primary_04, "..."), 1, 0))
+```{r gender-inequality-3-hint-1, eval = FALSE}
+... %>%
+  mutate(All_weekly = as.numeric(...))
 ```
+
+###
+
+Alternatively, we coul have used `as.double()`.
 
 ### Exercise 4
 
     
-A long data set is the dataset where there are more rows and less columns, every row representing an observation belonging to a category. Use `pivot_longer()` to map the *names* of the `primary_04` and `primary_06` columns to a new column, "year,". Map the  *values* of the two columns to a new column, "voted."
+For interpretability of results, it would be helpful if we converted `Occupation`s to lowercase. We can do this by overwriting `Occupation` column with `tolower` function.
 
 
-```{r shaming-4, exercise = TRUE}
+```{r gender-inequality-4, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r shaming-4-hint-1, eval = FALSE}
-...  %>%
-  pivot_longer(cols = c(..., ...), 
-               names_to = ...,
-               values_to = ...)
+```{r gender-inequality-4-hint-1, eval = FALSE}
+... %>%
+  mutate(Occupation = tolower(...)) %>%
 ```
+
+###
+
+Alternatively, we coul have used `casefold()` function. This function is especially useful because we can change the conversion method with one argument: `upper`. If upper is `FALSE`, the result will be lowercase.
 
 ### Exercise 5
 
-Great job! Now group the data by `treatment`, `year`, and `voted`. For clarification purposes, use `ielse` function
+Now, although we have dropped the missing values in character columns, we have to use `drop_na()` to drop `NA`s in double columns that we will use. 
 
-```{r shaming-5, exercise = TRUE}
+```{r gender-inequality-5, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r shaming-5-hint-1, eval = FALSE}
-Use the group_by() function.
+```{r gender-inequality-5-hint-1, eval = FALSE}
+... %>%
+  drop_na()
 ```
 
 ### Exercise 6
 
-Use `summarize()` to create the variable `num_voters`, which is set to the function `n()`. Then, set the `.groups` argument equal to `"drop"`.
+To get the highest-paying jobs, we have to order the tibble in decreasing order by `All_weekly` column.
 
-**Note:** `n()` simply counts the number of rows in each group. 
-
-```{r shaming-6, exercise = TRUE}
+```{r gender-inequality-6, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r shaming-6-hint-1, eval = FALSE}
+```{r gender-inequality-6-hint-1, eval = FALSE}
 ... %>% 
-  summarize(num_voters = n(), 
-            .groups = "...")
+  arrange(desc(...)) 
 ```
+
+###
+
+Alternatively, we could have used `order()` function to sort rows. 
 
 ### Exercise 7
 
-The `voted` column is a bit difficult to understand because the numerical value (0 or 1) is used to represent an idea (the person did or did not vote). Use `mutate()` to set `voted` to an `if_else()` statement. Within `if_else()`, set the condition to where `voted` is equal to 1. Set the result for true to "did_vote," and the result for false to "did_not_vote."
+Now that we have ordered the tibble, we have to get 25 most-paying jobs. We can do this with `head()` function. 
 
 
-```{r shaming-7, exercise = TRUE}
+```{r gender-inequality-7, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r shaming-7-hint-1, eval = FALSE}
+```{r gender-inequality-7-hint-1, eval = FALSE}
 ...%>%
-  mutate(voted = if_else(voted == ..., "...", "..."))
+  head(...)
 ```
+
+###
+
+Instead of `head()` function, we can make data frame manipulation like the following: `income[1:25,]`
 
 ### Exercise 8
 
-Widening a data set means the process of increasing the number of columns and decreasing the number of rows, which may prove to make the analysis part easier. We should transform `did_vote` and `did_not_vote` into their own columns. Call `pivot_wider()` that gets its column `names_from` `voted` and its `values_from` `num_voters`.
+Select `Occupation`, `M_weekly`, `F_weekly`, `M_workers`, and `F_workers` columns. 
 
 
-```{r shaming-8, exercise = TRUE}
+```{r gender-inequality-8, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r shaming-8-hint-1, eval = FALSE}
+```{r gender-inequality-8-hint-1, eval = FALSE}
 ...  %>%
-  pivot_wider(names_from = ..., 
-              values_from = ...)
+   select(..., M_weekly, ..., ..., F_workers)
 ```
 
 ### 
 
-In this case, we converted `did_vote` and `did_not_vote` into their own columns because we will calculate the proportion of people who voted. 
+`F_workers` and `M_workers` columns are the number of female workers, in thousands and the number of male workers, in thousands, respectively. 
 
 ### Exercise 9
 
-Use `mutate()` to create a new variable `pct_voted`, which is equal to the number of people who `did_vote` divided by the total number of people.
+One of the variable we will use in this graph is the difference between median incomes of female workers and male workers in an occupation. 
 
-```{r shaming-9, exercise = TRUE}
+###
+
+Create a variable `difference_in_earning` that is  `M_weekly - F_weekly`. Don't forget to convert these columns to numeric first. 
+
+```{r gender-inequality-9, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r shaming-9-hint-1, eval = FALSE}
-Note that the total number of people is equal to (did_vote + did_not_vote). Also, use / to divide. 
-```
-
-```{r shaming-9-hint-2, eval = FALSE}
+```{r gender-inequality-9-hint-1, eval = FALSE}
 ... %>% 
-  mutate(... = ... / (did_vote + did_not_vote))
+  mutate(difference_in_earning = as.numeric(M_weekly) - as.numeric(...)) 
 ```
 
 ### 
 
-Data wrangling process is done!
+The reason we subtracted `F_weekly` from `M_weekly` and no the other way around is because gender inequality is a common problem and may cause, on average, men having higher wages than women. 
 
 ### Exercise 10
 
-Current version of function we will use to create the graph is not adaptable to continue the pipe. Therefore, your previous pipe has been stored to a variable named `shaming_p`.
+Create a new variable `workers` that is `M_workers - F_workers`.
 
-### 
-
-For our graph, we will use `ggdotchart` function from `ggpubr` package. 
-Within this function, set `data` argument equal to `shaming_p`, `x` argument to `"treatment"`, y argument to `"pct_voted"`, and `color` to `"year"`.
-
-```{r shaming-10, exercise = TRUE}
+```{r gender-inequality-10, exercise = TRUE}
 
 ```
 
-```{r shaming-10-hint-1, eval = FALSE}
-ggdotchart(data = ..., 
-             x = "...",
-               y = "...",
-               color = "...",                          
-           palette = "jco",            # Custom color palette
-           sorting = "descending",                       # Sort value in descending order
-           add = "segments",                             # Add segments from y = 0 to dots
-           rotate = TRUE,                                # Rotate vertically
-           group = "year",                               # Order by groups
-           dot.size = 10,                                 # Large dot size
-           label = round(shaming_p$pct_voted, digits = 3),       # Add mpg values as dot labels
-           font.label = list(color = "white", size = 9, 
-                             vjust = 0.5),               # Adjust label parameters
-           ggtheme = theme_pubclean()                        # ggplot2 theme
-           ) +
+```{r gender-inequality-10-hint-1, eval = FALSE}
+... %>%
+  mutate(workers = M_workers - F_workers) 
 ```
 
 ### 
 
-Although our graph shows the results, it is not appealing. 
+The difference in the quantity of female and male workers may also be a useful indicator of gender inequality. 
 
 ### Exercise 11
 
-Copy the code from previous function, and add the `rotate` argument and set it equal to `TRUE`. 
-```{r shaming-11, exercise = TRUE}
+Create the `ggplot()` object. Within `aes`argument, set`y` equal to`Occupation` that is decreasing-ordered based on `difference_in_training` column, set `x` equal to `difference_in_earning`, and `color` to `workers`.
+
+```{r gender-inequality-11, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r shaming-11-hint-1, eval = FALSE}
-... +
-  ggdotchart(..., 
-             rotate = ...)
+```{r gender-inequality-11-hint-1, eval = FALSE}
+... %>%
+  ggplot(aes(y = reorder(..., difference_in_earning), 
+             x = difference_in_earning, 
+             color = ...)) 
 ```
 
-### 
+###
 
-This argument changes the axes, making it easier to visualize the results. 
+Because we didn't speficy the `geom`, we only see the empty figure. 
 
 ### Exercise 12
 
-copy the code from previous chunk, and specfiy following arguments within the `ggdotchart()` function: set `palette` argument to `"jco"`, `sorting` argument to `"descending"`, and `add` argument to `"segments"`. 
+Add `geom_point()`.
 
-```{r shaming-12, exercise = TRUE}
+```{r gender-inequality-12, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r shaming-12-hint-1, eval = FALSE}
-ggdotchart(..., 
-           palette = "jco", 
-           sorting = "descending",
-           add = "segments")
+```{r gender-inequality-12-hint-1, eval = FALSE}
+... + 
+  geom_point()
 ```
 
 ### 
 
-`sorting` is used to change the order of dots such as "ascending" and "descending". 
-`add` argument is used for adding another plot element such as "error bars". When we set `add` equal to "segments", we add segments from the 0 point of the axis that dots are on to dots.  
-`palette` is used to specify the color set to use. You could have used other palettes such as "npg" and "lancet".
-
+Alternatively, we could have used `geom_col()`. However, with many categorical values, `geom_point()` provides a more insightful graph.
 
 ### Exercise 13
 
-To clarify the differences between close values of dots, we have to display the exact dot values. 
-Copy the code from previous chunk and within `ggdotchart()`, set `label` equal to `round`ed `pct_voted` displaying 3 `digits`
+Because the wages are in USD, within `scale_x_continuous`, add dollar sign to x-axis `labels`.
 
-```{r shaming-13, exercise = TRUE}
+```{r gender-inequality-13, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r shaming-13-hint-1, eval = FALSE}
-ggdotchart(...,
-           ... = round(shaming_p$..., digits = 3))
+```{r gender-inequality-13-hint-1, eval = FALSE}
+... + 
+  scale_x_continuous(... = dollar_format()) 
 ```
-
-### 
-
-Because our values are continuous, if we did not specify the `digits` argument, we would get the results with too many decimal places. 
 
 ### Exercise 14
 
-As we see, labels we created in the previous exercise overlaps. Therefore, we need to change `dot.size` and `font.label` to deal with this. 
+Add `theme_bw()`. 
 
-### 
-
-Copy the code from previous chunk and within the `ggdotchart()`, set `dot.size` equal to 10 and set `font.label` equal to `list` inside which the following arguments are specified as follows: `color` to "white", `size` to 9, and `vjust` to 0.5.
-
-```{r shaming-14, exercise = TRUE}
+```{r gender-inequality-14, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r shaming-14-hint-1, eval = FALSE}
-ggodtchart(...,
-           font.label = list(color = "...",
-                             size = ...,
-                             vjust = ...))
+```{r gender-inequality-14-hint-1, eval = FALSE}
+... + 
+  theme_bw() 
 ```
 
 ### 
 
-`vjust` is used to specify the where the labels are centered. `vjust` of 0.5 means that labels are perfectly in the middle of dots. 
+Using packge `ggthemes`, we can access many more themes such as `theme_tufte` and `theme_calc`. 
 
 ### Exercise 15
 
-Copy the code from previous chunk, and within the `ggdotchart()` function, set `ggtheme` argument to `theme_pubclean()`. 
+Because we want to analyse general trends, grid lines do not provide very much information. Therefore, we can eliminate them. 
 
-```{r shaming-15, exercise = TRUE}
+###
+
+Within `theme()`, set `panel.grid.major.x` to `element_blank()`, `panel.grid.minor.x` to `element_blank()`, and `panel.grid.major.y`to `element_line(colour = "grey85", linetype = "dashed)`. 
+
+```{r gender-inequality-15, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r shaming-15-hint-1, eval = FALSE}
-ggodtchart(...,
-           ggtheme = theme_pubclean())
+```{r gender-inequality-15-hint-1, eval = FALSE}
+... + 
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(colour = "grey85", linetype = "dashed")
+  ) 
 ```
 
 ### 
 
-`ggtheme` argument is used to specify the theme. Alternatively, we could use official themes such as `theme_bw()` and `theme_gray()`. 
+One of the arguments of `theme`, `panel.background`,  is used to change the elements of the background of the plotting area.
 
 ### Exercise 16
 
-Copy the code from previous chunk, and to finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, legend labels, and caption of your choice.
+To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, legend labels, and caption of your choice.
 
 Reminder: This is what your plot should look like. 
 
-```{r shaming-16}
+```{r gender-inequality-16}
 graph
 ```
 
-```{r shaming15, exercise = TRUE}
+```{r gender-inequality-16, exercise = TRUE}
 
 ```
 
-```{r shaming-16-hint-1, eval = FALSE}
+```{r gender-inequality-16-hint-1, eval = FALSE}
 ... + 
   labs(...)
 ```
