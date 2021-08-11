@@ -37,7 +37,7 @@ create_tibble_from_submissions <- function(objs, label_list){
                         .default = NA),
     submission_type = purrr::map_chr(objs, "type",
                                      .default = NA),
-    answer = purrr::map(objs, question_or_exercise,
+    answer = purrr::map_chr(objs, question_or_exercise,
                         .default = NA)
   )
 
