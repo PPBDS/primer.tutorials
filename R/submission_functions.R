@@ -101,9 +101,8 @@ submission_ui <- shiny::div(
 
   shiny::tags$br(),
   shiny::tags$ol(
-    shiny::tags$li("Click the Download button below to download a file containing your answer. A window will pop up."),
-    shiny::tags$li("Save the file onto your computer in a convenient location. It should have an 'rds' suffix. Do not open it."),
-    shiny::tags$li("Submit the file which you just downloaded as instructed.")),
+    shiny::tags$li("Click a button to download a file containing your answers. A window will pop up."),
+    shiny::tags$li("Save the file onto your computer in a convenient location.")),
   shiny::fluidPage(
     shiny::mainPanel(
       shiny::div(id = "form",
