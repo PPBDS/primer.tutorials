@@ -15,7 +15,7 @@ get_label_list <- function(sess, is_test = FALSE){
   # are part of the child documents, which remain constant. Therefore, they are
   # added in manually.
 
-  manual_list <- list("information-name", "information-email", "download-answers-1")
+  manual_list <- list("tutorial-id", "information-name", "information-email", "download-answers-1")
 
   rmd_path <- ifelse(is_test, "test-data/session_check_tutorial.Rmd",
                      file.path(sess$options$appDir, "tutorial.Rmd"))

@@ -32,21 +32,22 @@ build_html <- function(file, session, is_test = FALSE){
 
   if(is_test){
     objs <- readRDS("test-data/submission_test_outputs/learnr_submissions_output.rds")
+    tutorial_id <- "data-webscraping"
   }
   else{
     objs <- get_submissions_from_learnr_session(session)
+    tutorial_id <- learnr:::read_request(session, "tutorial.tutorial_id")
   }
 
   # Create tibble that is ordered by code chunk appearance
 
-  out <- create_tibble_from_submissions(objs, label_list)
+  out <- create_tibble_from_submissions(objs, label_list, tutorial_id)
 
   # Pass tibble and title as parameters into the report template, then render
   # template as an html document.
 
   params <- list(output = out,
-                 title = paste0(learnr:::read_request(session,
-                                                      "tutorial.tutorial_id"),
+                 title = paste0(tutorial_id,
                                 " submissions"))
 
   rmarkdown::render(tempReport,
