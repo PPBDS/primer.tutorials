@@ -15,7 +15,7 @@ description: Chapter 6 tutorial
 
 <!-- Need one more section which using the posterior to, for example, create the posterior of number red which will be drawn with a shovel of size 20. Use a posterior to create a new posterior. Turtles all the way down. Could also create the plot of the joint distribution. Try to teach again just what a joint distribution. -->
 
-<!-- Maybe make the shovels_100 have 100 shovel sizes again? We cut that down to make it quicker, but maybe having 100 reps instead of a 1,000 was enough to solve our speed problem. -->
+<!-- Maybe make the shovels_100 have 100 shovel sizes again? We cut that down to make it quicker, but maybe having 100 reps instead of a 1,000 was enough to solve our speed problem. Done -->
 
 <!-- Should we do something with stan_glm? Probably. -->
 
@@ -23,13 +23,12 @@ description: Chapter 6 tutorial
 
 <!-- RS: Add to 100 shovels graph to overlay theoretical standard deviation using equations. (Call this section standard deviation). -->
 
-<!-- RS: Create box and whisker confidence intervals to demonstrate the connection between confidence intervals and standard error. (Call this section standard error). -->
-
-
 ```{r setup, include = FALSE}
 library(learnr)
 library(primer.tutorials)
 library(tidyverse)
+library(rstanarm)
+library(gt)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
@@ -48,6 +47,34 @@ virtual_samples <- tibble(trial_ID = 1:1000) %>%
   mutate(numb_beads = map_int(shovel, ~ length(.$color))) %>% 
   mutate(prop_red = numb_red / numb_beads)
 
+shovels_100 <- expand_grid(trial_ID = 1:100, shovel_size = 1:100) %>% 
+  mutate(shovel = map(shovel_size, ~ slice_sample(urn, n = .))) %>% 
+  mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) %>% 
+  mutate(prop_red = numb_red / shovel_size) %>% 
+  group_by(shovel_size) %>% 
+  summarize(st_dev_p_hat = sd(prop_red)) 
+
+#rstanarm stuff:
+
+urn_data <- tibble(red = c(rep(1, 17), rep(0, 33)))
+
+fit_1 <- stan_glm(formula = red ~ 1, 
+                  data = tibble(red = c(rep(1, 17), 
+                                        rep(0, 33))),
+                  family = binomial,
+                  refresh = 0,
+                  seed = 10) 
+
+ppd_for_p <-posterior_epred(fit_1, 
+            newdata = tibble(constant = 1)) %>% 
+  as_tibble() %>%
+  rename(p = `1`)  
+
+ppd_reds_in_20 <- posterior_predict(fit_1, 
+  newdata = tibble(constant = rep(1, 20))) %>% 
+  as_tibble() %>% 
+  mutate(total = rowSums(across(`1`:`20`))) %>% 
+  select(total) 
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -237,13 +264,6 @@ Within labs(), set x to expression(hat(p))
 Let's create the following plot that displays different standard deviations of red bead proportions for 100 different shovel sizes.
 
 ```{r}
-shovels_100 <- expand_grid(trial_ID = 1:1000, shovel_size = 1:100) %>% 
-  mutate(shovel = map(shovel_size, ~ slice_sample(urn, n = .))) %>% 
-  mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) %>% 
-  mutate(prop_red = numb_red / shovel_size) %>% 
-  group_by(shovel_size) %>% 
-  summarize(st_dev_p_hat = sd(prop_red))
-
 shovel_p <- shovels_100 %>%
  ggplot(aes(x = shovel_size, y = st_dev_p_hat)) +
  geom_point() +
@@ -412,7 +432,626 @@ shovel_p
       y = "Standard deviation of the proportion red")
 ```
 
+## Wisdom
 
+### 
+
+Consider the following question: 
+
+*If we get 17 red beads in a random sample of size 50 taken from a mixed urn, what proportion $\rho$ of the beads in the urn are red?*
+
+Using *Wisdom*, write a paragraph explaining the relationship between the Preceptor Table and the data we have in our urn problem. See *The Primer* for guidance.
+
+```{r wisdom-1}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    rows = 6)
+```
+
+## Justice
+
+### Exercise 1
+
+Let's take a look at a Population Table to analyze our urn problem:
+
+```{r}
+tibble(source = c("Preceptor Table", "Preceptor Table", "...",
+                  "Actual Data", "Actual Data", "Actual Data", "...",
+                  "Population", "Population", "Population"),
+       location = c("Known, specific urn", "Known, specific urn", "...",
+                  "Known, specific urn", "Known, specific urn", "Known, specific urn", "...",
+                  "Known, specific urn", "Known, specific urn", "Known, specific urn"),
+       time = c("Now", "Now", "...",
+                "Time of sample", "Time of sample", "Time of sample", "...",
+                "?", "?", "?"),
+       id = c("?", "?", "...",
+                 "2", "200", "2079", "...",
+                 "?", "?", "?"),
+       color = c("?", "?", "...",
+                 "white", "red", "white", "...",
+                 "?", "?", "?")) %>%
+
+  # Then, we use the gt function to make it pretty
+
+  gt() %>%
+  cols_label(source = md("Source"),
+             location = md("Location"),
+             time = md("Time"),
+             id = md("ID"),
+             color = md("Color")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = c(source))) %>%
+  tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"),
+            locations = cells_column_labels(columns = c(source))) %>%
+  cols_align(align = "center", columns = everything()) %>%
+  cols_align(align = "left", columns = c(source)) 
+```
+
+###
+
+Using the Population Table, explain in a paragraph some of the uknowns denoted by ?s, referncing the Preceptor Table and Population categories. Refer to *Justice* in *The Primer* for guidance. 
+
+```{r justice-1}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    rows = 6)
+```
+
+### Exercise 2
+
+Good. Now let's turn our attention to the Data Generating Mechanism (DGM). Should our urn problem be modeled by a normal or binomial distribution? Explain your reasoning in 2 sentences.  
+
+```{r justice-2}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    rows = 6)
+```
+
+### Exercise 3
+
+$$ T_i  \sim B(\rho, n = 50) $$
+
+&nbsp;
+
+Refer to the mathematical expression above. In 2 sentences define the meaning of $T_i$, $B$, $\rho$, and $n$. You do not need to figure out how to display the symbols in your answer, just write their names, like "T," B," "p," and "n".
+
+```{r justice-3}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    rows = 6)
+```
+
+## Courage
+
+###
+
+Consider our question:  
+
+*If we get 17 red beads in a random sample of size 50 taken from a mixed urn, what proportion $\rho$ of the beads in the urn are red?*
+
+Let's create the posterior probability distribution of $\rho$ using **rstanarm** 
+
+```{r}
+ppd_for_p %>%
+  ggplot(aes(x = p)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 50) + 
+    labs(title = "Posterior Probability Distribution",
+         subtitle = "Distribution is centered at .34",
+         x = "Proportion p of Red Beads in Urn",
+         y = "Probability") + 
+  
+    scale_x_continuous(labels = scales::number_format()) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+```
+
+### Exercise 1
+
+Our urn problem can be represented by a binomial model, so we structure our data in a binomial format:  1's represent the number of successes (red beads drawn), and the 0's represent the number of failures (white beads drawn). 
+
+Type `urn_data` below to inspect the data we will be using to create our model. 
+
+```{r courage-1, exercise = TRUE}
+library(rstanarm)
+urn_data <- tibble(red = c(rep(1, 17), rep(0, 33)))
+```
+
+### Exercise 2
+
+Next we'll use `stan_glm()` to create a simple Bayesian model. When using `stan_glm()`, there are always four arguments that should be specified:
+
+* The `data` argument tells `stan_glm()` what data frame to work with. Set `data` to `urn_data`. 
+* The `family` argument tells `stan_glm()` what mathematical formula should be used to create our model. Set `family` to `binomial`.
+* The `formula` argument tells `stan_glm()` what model is to be fitted. Because we have no predictors, we use the argument `formula = red ~ 1`, which means that we only model the outcome based on the unknown proportion of red beads in the urn. 
+* Set `refresh` to 0 in order to suppress the behavior of printing to the console, and `seed` to 10 so that we get the same output every time we run the code.
+
+```{r courage-2, exercise = TRUE}
+
+
+```
+
+```{r courage-2-hint-1, eval = FALSE}
+stan_glm(data = ...,
+         family = ...,
+         formula = ..., 
+         refresh = ...,
+         seed = ...)
+```
+
+###
+
+You do not need to understand what the printed model means. 
+
+### Exercise 3
+
+Next, we should save our model to be able to work with it in later questions.
+
+Copy your code from the previous exercise, and assign it to an object called `fit_1`.  
+
+```{r courage-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-3-hint-1, eval = FALSE}
+Use the assignment operator <-  to do so.
+```
+
+### Exercise 4
+
+Let's recreate our posterior distribution using `posterior_epred()`, assigning our code to a variable called `ppd_for_p`. Pass in `fit_1` as the first argument, and then set the argument `newdata` equal to a `tibble()`. Within the `tibble()`, include `constant = 1`. 
+
+```{r courage-4, exercise = TRUE}
+
+```
+
+```{r courage-4-hint-1, eval = FALSE}
+ppd_for_p <- posterior_epred(..., 
+                 newdata = ...)
+```
+
+###
+
+We use `constant = 1` as junk data to make sure our tibble has just 1 row. 
+
+### Exercise 5
+
+Copy your code from above. First pipe `as_tibble()` to your code, and then rename the column of the resulting tibble from `1` to `p` by using `p = 1` within `rename()`. **Remember to include backticks around 1**. 
+
+```{r courage-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-5-hint-1, eval = FALSE}
+... %>%
+  ... %>%
+  rename(...)
+```
+
+```{r courage-5-hint-2, eval = FALSE}
+Within rename, set p equal to `1`. Make sure to include backticks around 1!
+```
+
+### Exercise 6
+
+Type `ppd_for_p` below to view 4,000 draws from our posterior. 
+
+```{r courage-6, exercise = TRUE}
+
+```
+
+### Exercise 7
+
+Awesome! Now let's graph the draws from the posterior. First, start a pipe with `ppd_for_p`, and using `ggplot()` map `p` to the x axis. 
+
+```{r courage-7, exercise = TRUE}
+
+```
+
+
+```{r courage-7-hint-1, eval = FALSE}
+ppd_for_p %>%
+  ggplot(aes(x = ...))
+```
+
+
+### Exercise 8
+
+Copy your code from the previous question and add the layer `geom_histogram()`. Within `geom_histogram()`, use `aes()` to set `y` equal to `after_stat(count/sum(count))` in order to convert the y-axis to percent values. Also set `bins` to 50. 
+
+
+```{r courage-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-8-hint-1, eval = FALSE}
+... +
+  geom_histogram(aes(y = ...),
+                 bins = ...)
+```
+
+### Exercise 9
+
+Add the layer `scale_x_continuous()` with the argument `labels` set to `scales::number_format()`.
+    
+```{r courage-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-9-hint-1, eval = FALSE}
+... +
+  scale_x_continuous(labels = ...)
+```
+
+### Exercise 10
+
+Great. Now add the layer `scale_y_continuous()` with the argument `labels` set to `scales::percent_format()`.
+
+```{r courage-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-10-hint-1, eval = FALSE}
+... +
+   scale_y_continuous(labels = ...)
+```
+
+### Exercise 11
+
+To finish, use `labs()` to give your graph the appropriate title, subtitle, and axis labels. Also add the layer `theme_classic()`. 
+
+```{r courage-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+Reminder: Your plot should look something like this:
+
+```{r}
+ppd_for_p %>% 
+    ggplot(aes(x = p)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 50) + 
+    labs(title = "Posterior Probability Distribution",
+         subtitle = "Distribution is centered at .34",
+         x = "Proportion p of Red Beads in Urn",
+         y = "Probability") + 
+  
+    scale_x_continuous(labels = scales::number_format()) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+```
+
+## Temperance 
+
+### 
+
+Recall our second question: 
+
+*What is the probability, using the same urn, that we will draw more than 8 red beads if we use a shovel of size 20?*
+
+In order to answer our question we need the probability of drawing one red bead from the urn. Because we do not know this probability exactly, we will use our `fit_1` posterior from *Courage*. 
+
+The easiest way to calculate the probability of drawing more than 8 red beads out of 20 is to predict future samples using our new shovel size, and calculate the number of samples that yield more than 8 red beads. 
+
+
+### Exercise 1
+
+The two functions to predict future outcomes in **rstanarm** are `posterior_epred()` and `posterior_predict()` Let's compare the two to determine which one we should use. 
+
+### 
+
+First let's use `posterior_predict()`. 
+
+```{r}
+ppd_reds_in_20 %>% 
+  ggplot(aes(x = total)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 50) +
+    labs(title = "Posterior Probability Distribution",
+         subtitle = "Created with posterior_predict()",
+         x = "Number of Red Beads",
+         y = "Probability") +  
+    scale_x_continuous(labels = scales::number_format(accuracy = 1)) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+    theme_classic()
+```
+
+###
+
+Next `posterior_epred()`.
+
+```{r}
+# Create posterior_epred() model
+posterior_epred(fit_1, 
+  newdata = tibble(constant = rep(1, 20))) %>% 
+  as_tibble() %>% 
+  mutate(total = rowSums(across(`1`:`20`))) %>% 
+  select(total) %>% 
+#Graph it
+  ggplot(aes(x = total)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 50) +
+    labs(title = "Posterior Probability Distribution",
+         subtitle = "Created with posterior_epred()",
+         x = "Number of red beads",
+         y = "Probability") + 
+    scale_x_continuous(labels = scales::number_format(accuracy = 1)) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+    theme_classic()
+```
+
+###
+
+In a paragraph, compare the results of using `posterior_predict()` and `posterior_epred()`. Which one do you think we should use to answer our question and why? Refer to *Temperance* in the *Primer* for reference. Make sure to use the terms "individuals" and "population". 
+
+```{r temperance-1}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    rows = 6)
+```
+
+### Exercise 2
+
+The correct answer is that we should use `posterior_predict()`. Let's assign `posterior_predict()` to a variable called `ppd_reds_in_20`. Pass in `fit_1` as the first argument, and then set the argument `newdata` equal to a `tibble()`. Within the `tibble()`, set `constant` to a vector that repeats the number 1, 20 times. Hint: use the function `rep()` to repeat, passing what you want to repeat as the first argument, and the number of times you want to repeat it as the second argument. 
+
+```{r temperance-2, exercise = TRUE}
+
+```
+
+```{r temperance-2-hint-1, eval = FALSE}
+ppd_reds_in_20 <- posterior_predict(...,
+                  newdata = tibble(constant = ...))
+```
+
+```{r temperance-2-hint-2, eval = FALSE}
+ppd_reds_in_20 <- posterior_predict(...,
+                  newdata = tibble(constant = rep(..., ...)))
+```
+
+###
+
+We use pass a tibble with 20 rows into `newdata` because we want to estimate the number of red draws with a shovel size of 20. 
+
+### Exercise 3
+
+Copy your code from above and pipe on `as_tibble()`. Then type `ppd_reds_in_20` to view the results. 
+
+```{r temperance-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-3-hint-1, eval = FALSE}
+... %>%
+  ...
+```
+
+###
+
+Each of our 4,000 rows represent one instance of us predicting a future sample from the urn, and each column represents the color bead in a shovel slot. 
+
+### Exercise 4
+
+Let's find the total number of red beads drawn. Copy your code from above and create a column named `total` using `mutate()`. Set `total` to `rowSums(across(1:20))`, making sure to surround both the 1 and 20 in back ticks! Then continue your pipe and select the `total` column. 
+
+```{r temperance-4, exercise = TRUE }
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-4-hint-1, eval = FALSE}
+... %>%
+  mutate(total = ...) %>%
+  select(...)
+```
+
+### Exercise 5
+
+Great work! We have created the posterior probability distribution for sampling  red beads out of urn with a shovel size of 20, which is where the name `ppd_reds_in_20` comes from. 
+
+###
+
+Now let's answer our question: 
+
+*What is the probability, using the same urn, that we will draw more than 8 red beads if we use a shovel of size 20?*
+
+To calculate the probability, we want to know the number of draws **above** 8, and divide by the total number of draws. 
+
+*The number of draws above 8 can be calculated by using the `sum()` function, passing in a Boolean expression to evaluate the number of times `ppd_reds_in_20$total` is greater than 8. 
+
+*The total number of draws can be calculated by using the `length()` function to find the length of the `total` column in `ppd_reds_in_20`
+
+
+```{r temperance-5, exercise = TRUE}
+
+```
+
+```{r temperance-5-hint-1, eval = FALSE}
+... / ...
+```
+
+```{r temperance-5-hint-2, eval = FALSE}
+sum(ppd_reds_in_20$total > ...) / length(...)
+```
+### 
+
+If your code doesn't output `r sum(ppd_reds_in_20$total > 8)/length(ppd_reds_in_20$total)`, go back and try again. 
+
+### Exercise 6
+
+The answer to our question is: there is approximately a `r round(100 *sum(ppd_reds_in_20$total > 8)/length(ppd_reds_in_20$total))`% chance that we will draw more than 8 red beads out of a sample size of 20. 
+
+Let's visualize this graphically. To do so, first and add a new column called `above_eight`, and use `ifelse()` to set `above_eight` to `TRUE` if `total > 8`, and `FALSE` if not. 
+
+<!-- RS: Are we concerned about students skipping to this exercise and copying the code? -->
+
+```{r temperance-6, exercise = TRUE}
+ppd_reds_in_20 <- posterior_predict(fit_1, 
+                  newdata = tibble(constant = rep(1, 20))) %>% 
+  as_tibble() %>% 
+  mutate(total = rowSums(across(`1`:`20`))) %>% 
+  select(total)
+```
+
+```{r temperance-6-hint-1, eval = FALSE}
+... %>%
+  mutate(above_eight = ...)
+```
+
+```{r temperance-6-hint-2, eval = FALSE}
+... %>%
+  mutate(above_eight = ifelse(..., ..., ...))
+```
+
+### Exercise 7
+
+Awesome! Now let's graph our distribution. Start a new pipe with `ppd_reds_in_20`, and use `ggplot()` to map `new_reds` to the x axis, and fill to `above_eight`. 
+
+```{r temperance-7, exercise = TRUE}
+
+```
+
+```{r temperance-7-hint-1, eval = FALSE}
+prob_dist %>%
+  ggplot(aes(x = ..., fill = ...))
+```
+
+### Exercise 8
+
+Copy your code from the previous question and add the layer `geom_histogram()`. Within `geom_histogram()`, use `aes()` to set `y` equal to `after_stat(count/sum(count))` in order to convert the y-axis to percent values. Also set `bins` to 50. 
+
+```{r temperance-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-8-hint-1, eval = FALSE}
+... +
+  geom_histogram(aes(y = ...),
+                 bins = ...)
+```
+
+### Exercise 9
+
+Now add a layer with `scale_fill_manual()` to change the color of our bars. Inside `scale_fill_manual()`, set `values` to a vector that combines 'grey50' and 'red'.
+
+```{r temperance-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-9-hint-1, eval = FALSE}
+... +
+  scale_fill_manual(values = c(..., ...))
+```
+
+### Exercise 10
+
+Add the layer `scale_x_continuous()` with the argument `labels` set to `scales::number_format()`.
+
+```{r temperance-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-10-hint-1, eval = FALSE}
+... +
+  scale_x_continuous(labels = ...)
+```
+
+### Exercise 11
+
+Great. Now add the layer `scale_y_continuous()` with the argument `labels` set to `scales::percent_format()`.
+
+```{r temperance-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-11-hint-1, eval = FALSE}
+... +
+   scale_y_continuous(labels = ...)
+```
+
+### Exercise 12
+
+To finish, use `labs()` to give your graph the appropriate title, subtitle, and axis labels. Also add the layer `theme_classic()`.
+
+```{r probability_dist-12, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+Reminder: Your plot should look something like this:
+
+```{r}
+ppd_reds_in_20 <- posterior_predict(fit_1, 
+                    newdata = tibble(constant = rep(1, 20))) %>% 
+  as_tibble() %>% 
+  mutate(total = rowSums(across(`1`:`20`))) %>%
+  select(total) %>%
+  mutate(above_eight = ifelse(total > 8, TRUE, FALSE))
+
+ppd_reds_in_20   %>% 
+  
+  # Set fill as above_eight. 
+  
+  ggplot(aes(x = total, fill = above_eight)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 50) +
+  
+  # Scale_fill_manual()  is calling grey for the first color and red for the
+  # second color. This is going to highlight the portion of the curve that we
+  # want to highlight in red.
+
+  scale_fill_manual(values = c('grey50', 'red')) +
+    labs(title = "Posterior Probability Distribution",
+         subtitle = "Number of red beads in 20-slot shovel",
+         x = "Number of Red Beads",
+         y = "Probability",
+         fill = "More than 8 Red Beads Drawn?") +  
+    scale_x_continuous(labels = scales::number_format(accuracy = 1)) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+    theme_classic()
+```
+
+###
+
+We sum the red area under the graph to calculate the cumalitive probability of drawing more than 8 red beads. 
 
 ```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
 ```
