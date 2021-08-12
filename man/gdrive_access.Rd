@@ -19,9 +19,6 @@ gdrive_access(tutorial_id, year, month, day, temp_path, rds_paths)
 
 \item{rds_paths}{paths of saved rds files from gmail}
 }
-\value{
-success status
-}
 \description{
 Google Drive Submission Processing
 }

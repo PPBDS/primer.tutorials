@@ -23,9 +23,6 @@ google_submission_collection(
 
 \item{before_date}{(Optional) keep only mails before this date: use YYYY/MM/DD}
 }
-\value{
-succss status
-}
 \description{
 Google Submission Collection
 }
