@@ -8,7 +8,6 @@
 #' @param temp_path path of tempdir()
 #' @param rds_paths paths of saved rds files from gmail
 #'
-#' @return success status
 #' @export
 #'
 gdrive_access <- function(tutorial_id, year, month, day, temp_path, rds_paths){
@@ -31,7 +30,7 @@ gdrive_access <- function(tutorial_id, year, month, day, temp_path, rds_paths){
     googledrive::drive_upload(
       rds_paths[[i]],
       path = new_dir,
-      name = basename(submission_info$file_path[[i]])
+      name = submission_info$filename[[i]]
     )
   }
 

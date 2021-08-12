@@ -7,7 +7,6 @@
 #' @param after_date keep only mails after this date: use YYYY/MM/DD
 #' @param before_date (Optional) keep only mails before this date: use YYYY/MM/DD
 #'
-#' @return succss status
 #' @export
 #'
 google_submission_collection <- function(key, secret, tutorial_id, after_date, before_date=NULL){
@@ -17,7 +16,11 @@ google_submission_collection <- function(key, secret, tutorial_id, after_date, b
     filter <- paste0(filter , " before:", before_date)
   }
 
+  message("Accessing Gmail...")
+
   rds_paths <- gmail_access(filter, key, secret)
+
+  message("Finished Downloading Files from Gmail")
 
   parsed_date <- readr::parse_date(after_date, "%Y%.%m%.%d")
 
@@ -26,6 +29,8 @@ google_submission_collection <- function(key, secret, tutorial_id, after_date, b
   month <- format(parsed_date, "%m")
 
   day <- format(parsed_date, "%d")
+
+  message("Accessing Google Drive")
 
   gdrive_access(tutorial_id, year, month, day, tempdir(), rds_paths)
 }
