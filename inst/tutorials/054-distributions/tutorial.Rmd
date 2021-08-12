@@ -18,19 +18,6 @@ library(primer.data)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
-
-# Key Data
-
-set.seed(56)
-games <- 1000 
-
-tibble(A_heads = rbinom(n = games, size = 2, prob = 0.5),
-       B_heads = rbinom(n = games, size = 4, prob = 0.5)) %>% 
-  mutate(A_wins = ifelse(A_heads > B_heads, 1, 0)) %>% 
-  summarize(A_chances = mean(A_wins))
-
-rolls <- c(5, 5, 1, 5, 4, 2, 6, 2, 1, 5)
-draws <- rnorm(n = 40, mean = 0, sd = 3)
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -43,42 +30,77 @@ draws <- rnorm(n = 40, mean = 0, sd = 3)
 
 <!-- Re-read first page or two of Instructions. -->
 
+<!-- Read Chapter 7 closely! Think about what it means. Your job in Chapter 5, and in this tutorial, is to ensure that students, when they get to chapter 7, understand it thoughly. In particular, questions 3 and 4 are solved by create, in each row, a draw from a joint distribution, and then manipulating that draw each time. And then (magically!), the results of that manipulation are also a posterior! Would a guided tour of rvar variable types in this chapter help to set the stage for that? Should we use rvar types in later chapters? -->
+
+<!-- Define a distribution. A mathematical object with two components: a list of possible outcomes and a corresponding frequency for each outcome. In a normalized distribution, the sum of the frequencies is 1.  -->
+<!-- Note that this is a sloppy definition because it does not apply to continuous distributions. Need to mention this and then wave our hands. -->
+
+<!-- Define a random variable is "a variable whose values depend on outcomes of a random phenomenon." Example: Result of one coin flip. -->
+
+<!-- Consider the posterior package: https://mc-stan.org/posterior/index.html. Need a new random variable object type: https://mc-stan.org/posterior/articles/rvar.html -->
+
+
 <!-- Add to chapter 5 a tutorial whose sole focus is distributions. First part of this is going slowly through the process by which counts can be turned into percentages. Do this in, at least, five ways. First, with geom_bar() which (I think) does the counting for us. Second, with geom_col(), in which we need to create the counts ourselves. Third with geom_histogram(). Fourth then maybe create a histogram by hand, using cut() and then counting up the elements in each range. -->
 
 <!-- Put the Appendix-distribution questions somewhere here. -->
 
 <!-- Maybe have a section explaining how the distribution of the error term is what motivates the selection of the appropriate family argument in stan_glm(). -->
 
-<!-- CHECKLIST BEFORE STARTING: -->
-<!-- * Load necessary libraries for tutorial in the first code chunk -->
-<!-- * Edit yaml at the START OF THIS FILE -->
-<!-- * Review: https://ppbds.github.io/primer.tutorials/articles/instructions.html -->
+Need a section titled "Random variables". Purpose is to connect the concept/use of random variables to the concept/use of a distribution. 
+
+## Introduction
+###
+
+This tutorial has three missions:
+1. Review key concepts and commands which frequently use in creating distributions.
+2. Identify how statistics alter with different distributions.
+3. 
 
 
-<!-- ## First section (use sentence case) -->
-<!-- ### -->
 
 ## Review
 ### 
 
 Let's quickly review some of the key concepts and commands which were covered earlier in the *Primer*.
 
+###
+
+Let's create this normal distribution at the end of the section.
+
+```{r}
+shoesize_p <- tibble(Wshoes = rnorm(n = 100000, mean = 8, sd = 1.5),
+       Mshoes = rnorm(n = 100000, mean = 10.5, sd = 1.5)) %>% 
+  pivot_longer(cols = everything(), 
+               names_to = "distribution", 
+               values_to = "value") %>%  
+   ggplot(aes(x = value, fill = distribution)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = 0.5, 
+                   bins = 100, 
+                   position = "identity") +
+    labs(title = "Normal Distributions of shoe sizes",
+         x = "Value",
+         y = "Probability")
+
+shoesize_p
+```
 
 ### Exercise 1
 
-Create a `tibble`, with one variable `numbers`, and set `numbers` equal to the consecutive integers from 1 to 100 inclusive.
+Create a `tibble`, with one variable `numbers`, and set `numbers` equal to the consecutive integers from 1 to 101 inclusive.
 
 ```{r review-1, exercise = TRUE}
 
 ```
 
 ```{r review-1-hint-1, eval = FALSE}
-tibble(numbers = 1:100)
+tibble(numbers = 1:101)
 ```
 
 ### 
 
-<!-- tibble(numbers = c(1, 2)) %>% glimpse() -->
+Note that the vector of `numbers` is integers, if you try putting c around the two numbers, and
+replace `:` with comma, the two numbers become `double` instead.
 
 ### Exercise 2
 
@@ -101,12 +123,12 @@ Pipe the results and then use `summarise()`, create a new column name `avg` whic
 
 ### Exercise 3
 
-Within the `summarise()`, add a new argument seperate by comma, `Median`, and set Median equal to the median of `numbers` using median().
+Within the `summarise()`, add a new argument separate by comma, `middle`, and set Median equal to the median of `numbers` using `median()`.
 
 ```{r review-3, exercise = TRUE}
-tibble(numbers = 1:100) %>% 
-  summarise(Mean = mean(numbers),
-            Median = median(numbers))
+tibble(numbers = 1:101) %>% 
+  summarise(avg = mean(numbers),
+            middle = median(numbers))
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
@@ -116,12 +138,13 @@ tibble(numbers = 1:100) %>%
 ```
 
 ### 
+Both `mean()` and `median()` have `na.rm` value which default is `FALSE`, the `na.rm` means the function does not consider NA value in the tibble.
 
-As you expected the median and mean is the same.
+
 
 ### Exercise 4
 
-Within the `summarise()`, add a new argument seperate by comma, `sd`, and set sd equal to the standard deviation of `numbers` using sd().Recall standard deviation is measuing how spread out our numbers were.
+Within the `summarise()`, add a new argument separate by comma, `stan_dev`, and set `stan_dev` equal to the standard deviation of `numbers` using sd().Recall standard deviation is measuring how spread out our numbers were.
 
 ```{r review-4, exercise = TRUE}
 
@@ -130,15 +153,15 @@ Within the `summarise()`, add a new argument seperate by comma, `sd`, and set sd
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r review-4-hint-1, eval = FALSE}
-tibble(numbers = 1:100) %>% 
-  summarise(Mean = mean(...),
-            Median = median(...),
-            sd = sd(...))
+tibble(numbers = 1:101) %>% 
+  summarise(avg = mean(...),
+            middle = median(...),
+            stan_dev = sd(...))
 ```
 
 ### Exercise 5
 
-Within the `summarise()`, add a new argument seperated by comma, `mad`, and set mad equal to the standard deviation of `numbers` using `mad()`. mad stands for median absolute deviation, essentially is how spread out around the median, note that the number should be different in this case. sd is looking for the square of difference, yet mad is looking at the absolute difference.
+Within the `summarise()`, add a new argument seperated by comma, `med_dev`, and set mad equal to the standard deviation of `numbers` using `mad()`. mad stands for median absolute deviation, essentially is how spread out around the median, note that the number should be different in this case. sd is looking for the square of difference, yet mad is looking at the absolute difference.
 
 ```{r review-5, exercise = TRUE}
 
@@ -148,10 +171,10 @@ Within the `summarise()`, add a new argument seperated by comma, `mad`, and set 
 
 ```{r review-5-hint-1, eval = FALSE}
 tibble(numbers = 1:100) %>% 
-  summarise(Mean = mean(...),
-            Median = median(...),
-            sd = sd(...),
-            mad = mad(...))
+  summarise(avg = mean(...),
+            middle = median(...),
+            stan_dev = sd(...),
+            med_dev = mad(...))
 ```
 
 ### Exercise 6
@@ -370,22 +393,69 @@ Finally, use `labs()` to title your graph "Normal Distributions of shoe sizes". 
 Reminder: This is what your plot should look like. 
 
 ```{r}
-tibble(Wshoes = rnorm(n = 100000, mean = 8, sd = 1.5),
-       Mshoes = rnorm(n = 100000, mean = 10.5, sd = 1.5)) %>% 
-  pivot_longer(cols = everything(), 
-               names_to = "distribution", 
-               values_to = "value") %>%  
-   ggplot(aes(x = value, fill = distribution)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   alpha = 0.5, 
-                   bins = 100, 
-                   position = "identity") +
-    labs(title = "Normal Distributions of shoe sizes",
-         x = "Value",
-         y = "Probability")
+shoesize_p
+```
+
+## Statistics in Distributions
+
+###
+
+The position of statistics measures alter as the shape of the distributions different.
+
+```{r}
+kenya %>%
+  select(mean_age) %>%
+  drop_na(.) %>%
+  mutate(mean_age = as.numeric(mean_age)) %>%
+  ggplot(aes(x=mean_age)) +
+  geom_histogram(binwidth = 1, fill = "white", color = "black", show.legend = FALSE) +
+  geom_vline(aes(xintercept = mean(mean_age)),        
+             col = "red",
+             lwd = 1) +
+  geom_vline(aes(xintercept = median(mean_age)),        
+             col = "blue",
+             lwd = 1) +
+  geom_vline(aes(xintercept = sd(mean_age)),        
+             col = "black",
+             lwd = 3) +
+
+  coord_cartesian(xlim=c(20,60))
 ```
 
 
+### Exercise 1
+
+
+```{r statistics-in-distri-1, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r statistics-in-distri-1-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 2
+
+
+```{r statistics-in-distri-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r statistics-in-distri-2-hint, eval = FALSE}
+
+```
+
+###
+
+## Summary
+
+###
 
 
 ```{r download-answers, child = "../../child_documents/download_answers.Rmd"}

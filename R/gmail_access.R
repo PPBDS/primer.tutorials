@@ -6,9 +6,9 @@
 #
 #   gmailr::gm_auth()
 #
-#   messages <- gmailr::gm_messages(filter)
+#   messages <- gmailr::gm_messages(filter)[[1]]
 #
-#   for (message_id in messages){
+#   for (message_id in purrr::map_chr(messages, "id")){
 #     msg <- gmailr::gm_message(message_id)
 #
 #     fn <-
