@@ -1,25 +1,42 @@
-#
-#
-# gmail_access <- function(filter){
-#   gmailr::gm_auth_configure(key = "",
-#                             secret = "")
-#
-#   gmailr::gm_auth()
-#
-#   messages <- gmailr::gm_messages(filter)[[1]]
-#
-#   for (message_id in purrr::map_chr(messages, "id")){
-#     msg <- gmailr::gm_message(message_id)
-#
-#     fn <-
-#
-#     attach_id = gmailr::gm_attachments(msg)$id[[1]]
-#
-#     attach_obj <- gmailr::gm_attachment(attach_id, message_id)
-#
-#     gmailr::gm_save_attachment(attach_obj, fn)
-#   }
-# }
+#' Gmail Access and Submission Processing
+#'
+#' @param filter used to filter mails to find submissions
+#' @param key client id obtained from oauth credentials
+#' @param secret client secret obtained from oauth credentials
+#'
+#' @return rds_paths paths of locally saved rds files from gmail
+#' @export
+#'
+gmail_access <- function(filter, key, secret){
+  gmailr::gm_auth_configure(key = key,
+                            secret = secret)
+
+  gmailr::gm_auth()
+
+  temp_path <- tempdir()
+
+  messages <- gmailr::gm_messages(filter)[[1]][[1]]
+
+  rds_paths <- list()
+
+  for (message_id in purrr::map_chr(messages, "id")){
+    msg <- gmailr::gm_message(message_id)
+
+    fn <- paste0("submission_", message_id, ".rds")
+
+    attach_id <- gmailr::gm_attachments(msg)$id[[1]]
+
+    attach_obj <- gmailr::gm_attachment(attach_id, message_id)
+
+    new_path <- file.path(temp_path, fn)
+
+    gmailr::gm_save_attachment(attach_obj, new_path)
+
+    rds_paths <- append(rds_paths, new_path)
+  }
+
+  rds_paths
+}
 
 
 # Access Gmail with gmailr::gm_auth_configure(key = "", secret = "") and

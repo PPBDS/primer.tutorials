@@ -20,9 +20,11 @@ build_rds <- function(file, session, is_test = FALSE){
 
   if(is_test){
     objs <- readRDS("test-data/submission_test_outputs/learnr_submissions_output.rds")
+    tutorial_id <- "data-webscraping"
   }
   else{
     objs <- get_submissions_from_learnr_session(session)
+    tutorial_id <- learnr:::read_request(session, "tutorial.tutorial_id")
   }
 
   # Get label order to order answers
@@ -31,7 +33,7 @@ build_rds <- function(file, session, is_test = FALSE){
 
   # Create tibble that is ordered by code chunk appearance
 
-  out <- create_tibble_from_submissions(objs, label_list)
+  out <- create_tibble_from_submissions(objs, label_list, tutorial_id)
 
   # save tibble object in destination
 

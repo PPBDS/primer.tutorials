@@ -2,11 +2,12 @@
 #'
 #' @param objs learnr session submissions
 #' @param label_list order of code chunks
+#' @param tutorial_id id of tutorial
 #'
 #' @return tibble with ordered answers based on label_list
 #' @export
 
-create_tibble_from_submissions <- function(objs, label_list){
+create_tibble_from_submissions <- function(objs, label_list, tutorial_id){
 
   # Create function to map objects over that will
   # return different results based on if it is a
@@ -40,6 +41,8 @@ create_tibble_from_submissions <- function(objs, label_list){
     answer = purrr::map_chr(objs, question_or_exercise,
                         .default = NA)
   )
+
+  out <- rbind(out, c(id = "tutorial-id", submission_type = "none", answer = tutorial_id))
 
   # reorder tibble rows based on label_list.
 
