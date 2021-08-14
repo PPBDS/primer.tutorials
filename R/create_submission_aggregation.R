@@ -51,7 +51,7 @@ create_submission_aggregation <- function(paths, tutorial_id, new_dir){
                                  "questions_answered",
                                  "filename")
 
-  write.table(submission_info,
+  utils::write.table(submission_info,
               file = file.path(tempdir(), "submission_aggregation.csv"),
               sep = ",",
               row.names=FALSE)
