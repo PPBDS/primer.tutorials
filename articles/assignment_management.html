@@ -131,29 +131,6 @@
 <!-- First script: Give me all the rds files submitted since Day X and containing a string like "000-getting-started" and Gdrive path in which to place results. (Script can check to make sure that path exists.) Create a folder on the Gdrive named "path/000-getting-started-YYYY-MM-DD" with all the rds files there.  -->
 <!-- Second scrip: Takes Gdrive path, like "tutorials/000-getting-started-2021-08-23", confirms that it exists and has a bunch of rds files in it, and then creates, in that same location, the final csv. -->
 </div>
-<div id="google-apps-script-with-callable-api" class="section level3">
-<h3 class="hasAnchor">
-<a href="#google-apps-script-with-callable-api" class="anchor" aria-hidden="true"></a>Google Apps Script with Callable API</h3>
-<p>Google Apps Script is an often under-appreciated service provided by Google. It allows communication between almost all of Gdrive and its various applications.</p>
-<p>Here it will serve as the connector between Gmail, Gdrive, and the local R script. The purpose of this component is to receive an API call, which will include a few parameters:</p>
-<ul>
-<li>name of tutorial/assignment to collect</li>
-<li>date cutoffs (deadlines)</li>
-<li>other additional filters</li>
-</ul>
-<p>Based on the parameters of the API call from an R script, the Apps Script will filter the Gmail attachments received and sort and download the submissions into the desired Gdrive folders.</p>
-<p>Pseudo-code:</p>
-<ul>
-<li>get all received email names from Gmail</li>
-<li>filter by tutorial name, date received, number of attachments</li>
-<li>create new tutorial folder at correct location with the name of the tutorial</li>
-<li>fetch all relevant attachments from Gmail</li>
-<li>rename all attachments by tutorial name and student name</li>
-<li>save all attachments in new Gdrive tutorial folder</li>
-<li>return new tutorial folder name as success status to local script</li>
-</ul>
-<p>The following link is <a href="http://www.googleappsscript.org/home/fetch-gmail-attachment-to-google-drive-using-google-apps-script" class="external-link">my source of inspiration for this component</a>.</p>
-</div>
 <div id="r-scripts" class="section level3">
 <h3 class="hasAnchor">
 <a href="#r-scripts" class="anchor" aria-hidden="true"></a>R Scripts</h3>
@@ -162,69 +139,37 @@
 <h4 class="hasAnchor">
 <a href="#main-script" class="anchor" aria-hidden="true"></a>Main Script</h4>
 <p>This is the ONLY script that will be ran manually. Hopefully, the teacher can just run this and everything will work.</p>
-<p>The output should be the <code>Submission_Aggregation_for_Entire_Class.csv</code> file for a specific tutorial</p>
+<p>The output should be the <code>Submission_Aggregation_for_Entire_Class.csv</code> file for a specific tutorial.</p>
+<p>See in <a href="details.html#submission-processing-functions-1">Technical Details</a> <code>google_submission_collection(...)</code> for detail.</p>
 </div>
 <div id="helper-script" class="section level4">
 <h4 class="hasAnchor">
 <a href="#helper-script" class="anchor" aria-hidden="true"></a>Helper Script</h4>
 <p>This will store all the components/functions that will be called in the main R script.</p>
-<p>The functions will be:</p>
-<ul>
-<li>
-<p><code>collect_submissions_to_gdrive(tutorial_name, submission_start_date, submission_end_date)</code></p>
-<ul>
-<li>This function will call the Google Apps Script API, which will organize all the submissions and put it into Gdrive.</li>
-</ul>
-</li>
-<li>
-<p><code>create_submission_aggregation(tutorial_name)</code></p>
-<ul>
-<li>This function will connect to the Gdrive account, process all the RDS files, and create and store the <code>Submission_Aggregation_for_Entire_Class.csv</code> into Gdrive while also storing a copy locally.</li>
-</ul>
-</li>
-</ul>
+<p>See in <a href="details.html#submission-processing-functions-1">Technical Details</a> <code>gdrive_access(...)</code>, <code>gmail_access(...)</code>, <code>create_submission_aggregation(...)</code> for detail.</p>
 </div>
 </div>
 </div>
 <div id="pipeline" class="section level2">
 <h2 class="hasAnchor">
 <a href="#pipeline" class="anchor" aria-hidden="true"></a>Pipeline</h2>
-<div id="step-1-run-main-r-script" class="section level5">
-<h5 class="hasAnchor">
-<a href="#step-1-run-main-r-script" class="anchor" aria-hidden="true"></a>Step 1: Run Main R Script</h5>
-<p>This should be the only thing done manually.</p>
+<div id="gmail_access" class="section level3">
+<h3 class="hasAnchor">
+<a href="#gmail_access" class="anchor" aria-hidden="true"></a><code>gmail_access()</code>
+</h3>
+<p>This function uses the <code>gmailr</code> library to access and download all relevant tutorial submissions to the local machine.</p>
 </div>
-<div id="step-2-call-r-helper-function---collect_submissions_to_gdrive" class="section level5">
-<h5 class="hasAnchor">
-<a href="#step-2-call-r-helper-function---collect_submissions_to_gdrive" class="anchor" aria-hidden="true"></a>Step 2: Call R Helper function - <code>collect_submissions_to_gdrive()</code>
-</h5>
-<p>This is part 1 of the Main R Script.</p>
+<div id="create_submission_aggregation" class="section level3">
+<h3 class="hasAnchor">
+<a href="#create_submission_aggregation" class="anchor" aria-hidden="true"></a><code>create_submission_aggregation()</code>
+</h3>
+<p>This function creates a tibble with the student name, count of how many questions were answered, total time spent and link to the submitted file of each submission downloaded.</p>
 </div>
-<div id="step-3-call-google-apps-script-api" class="section level5">
-<h5 class="hasAnchor">
-<a href="#step-3-call-google-apps-script-api" class="anchor" aria-hidden="true"></a>Step 3: Call Google Apps Script API</h5>
-<p>This will organize and transfer the filtered tutorial submissions from Gmail to Gdrive.</p>
-</div>
-<div id="step-4-call-r-helper-function---create_submission_aggregation" class="section level5">
-<h5 class="hasAnchor">
-<a href="#step-4-call-r-helper-function---create_submission_aggregation" class="anchor" aria-hidden="true"></a>Step 4: Call R Helper function - <code>create_submission_aggregation()</code>
-</h5>
-<p>This is part 2 of the Main R Script.</p>
-</div>
-<div id="step-5-connect-local-device-to-gdrive" class="section level5">
-<h5 class="hasAnchor">
-<a href="#step-5-connect-local-device-to-gdrive" class="anchor" aria-hidden="true"></a>Step 5: Connect local device to Gdrive</h5>
-<p>This will allow access to the newly downloaded submissions and tutorial folder.</p>
-</div>
-<div id="step-6-read-all-relevant-rds-files-from-gdrive-and-generate-class-aggregated-submission-dataframe" class="section level5">
-<h5 class="hasAnchor">
-<a href="#step-6-read-all-relevant-rds-files-from-gdrive-and-generate-class-aggregated-submission-dataframe" class="anchor" aria-hidden="true"></a>Step 6: Read all relevant RDS files from Gdrive and Generate Class-Aggregated Submission DataFrame</h5>
-<p>The dataframe is the desired result of the pipeline</p>
-</div>
-<div id="step-7-save-dataframe-in-appropriate-gdrive-location-and-locally" class="section level5">
-<h5 class="hasAnchor">
-<a href="#step-7-save-dataframe-in-appropriate-gdrive-location-and-locally" class="anchor" aria-hidden="true"></a>Step 7: Save DataFrame in Appropriate Gdrive location and locally</h5>
-<p>Done!</p>
+<div id="gdrive_access" class="section level3">
+<h3 class="hasAnchor">
+<a href="#gdrive_access" class="anchor" aria-hidden="true"></a><code>gdrive_access()</code>
+</h3>
+<p>This function uses the <code>googledrive</code> library to create a new directory based on search date and uploads all submissions plus the aggregated tibble into the new directory.</p>
 </div>
 </div>
   </div>
