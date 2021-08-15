@@ -36,7 +36,7 @@ build_html <- function(file, session, is_test = FALSE){
   }
   else{
     objs <- get_submissions_from_learnr_session(session)
-    tutorial_id <- learnr:::read_request(session, "tutorial.tutorial_id")
+    tutorial_id <- learnr::get_tutorial_info()$tutorial_id
   }
 
   # Create tibble that is ordered by code chunk appearance
