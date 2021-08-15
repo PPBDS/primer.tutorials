@@ -41,7 +41,7 @@ exp_poverty <- pe %>%
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = 100) +
   labs(title = "Posterior for Expected Distance",
-       subtitle = "Polling locations that are on average 12 km from those assigned to them have poverty rates of 0.2",
+       subtitle = "Polling locations that are on average 12 km from those assigned to them have\npoverty rates of 0.2",
        x = "Poverty Rate",
        y = "Probability") +
   scale_y_continuous(labels = scales::percent_format()) +
@@ -63,26 +63,24 @@ exp_poverty_2 <- pe2 %>%
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = 100) +
   labs(title = "Posterior for Expected Distance",
-       subtitle = "Polling locations about 11 km away on average from those assigned to them have poverty rates of 0.2",
+       subtitle = "Polling locations about 10.5 km away on average from those assigned to them\nhave poverty rates of 0.2",
        x = "Poverty Rate",
        y = "Probability") +
   scale_y_continuous(labels = scales::percent_format()) +
   theme_classic()
 
-pe_rep <- pe %>% mutate(ID = "rep")
 
-pe_unrep <- pe2 %>% mutate(ID = "unrep")
 
-pe_combo <- merge(pe_rep, pe_unrep, all = TRUE)
+pe_combo <- bind_rows(list(rep = pe, unrep = pe2), .id = "type")
 
 combo_plot <- pe_combo %>% 
-  ggplot(aes(x = `1`, fill = ID)) + 
+  ggplot(aes(x = `1`, fill = type)) + 
     geom_histogram(aes(y = after_stat(count/sum(count))),
                    bins = 100,
                    position = "identity",
                    alpha = 0.5) + 
     labs(title = "Posterior for Expected Distance",
-         subtitle = "The expected distance for polling locations with a poverty rate of 0.2\n is about 1.5 km higher in our representative data than in our unrepresentative data.",
+         subtitle = "The expected distance for polling locations with a poverty rate of 0.2 is about\n1.5 km higher in our representative data than in our unrepresentative data.",
          x = "Poverty Rate",
          y = "Probability",
          fill = "Type of Data") +
@@ -97,7 +95,7 @@ combo_plot <- pe_combo %>%
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
-<!-- bind_rows(list(rep = pe, unrep = pe2), .id = "type") %>% slice_sample(n = 10) -->
+<!-- bind_rows(list(rep = pe, unrep = pe2), .id = "type") %>% slice_sample(n = 10) Done. -->
 
 <!-- Four different ways to mess up representative data. First, remove rows on the basis of a variable which is not in your model. Second, remove rows on the basis of an independent variable in the model. Third, remove rows on the basis of the dependent variable. Four, remove rows on the basis of potential outcomes.  -->
 
@@ -123,8 +121,6 @@ First, run `?kenya` to take a closer look at the data.
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r representative-data-1-hint-1, eval = FALSE}
 ?kenya
 ```
@@ -141,15 +137,13 @@ Now, call `skim(kenya)`.
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r representative-data-2-hint-1, eval = FALSE}
 skim(kenya)
 ```
 
 ### 
 
-Notice that there are 1.672 rows in this data set, so we have data for 1,672 polling locations in Kenya. If you were to read the study, you would also find out the total number of polling locations in the Kenyan counties being studies was 3,828.
+Notice that there are 1.672 rows in this data set, so we have data for 1,672 polling locations in Kenya.
 
 ### Exercise 3
 
@@ -281,8 +275,9 @@ question_text(NULL,
 
 ### 
 
-If we were to take a deeper dive into our study, we would actually see that we can consider this data to be very representative of its population as the polling locations that were selected were chosen randomly and, as stated in the study, "[followed] a strategy that minimized the chances of spillovers, and blocked on poverty, distance and population
-density."
+<!-- MM: possibly edit/add representative questions on only 7 counties, then explain -->
+
+If we were to take a deeper dive into our study, we would actually see that the data is from 7 counties that were deemed to be fairly similar, which could bring issues into our representativeness because that might reduce certain populations of Kenya from being studied. However, we will consider this data to be representative as the polling locations that were selected from those counties were chosen randomly and, as stated in the study, "[followed] a strategy that minimized the chances of spillovers, and blocked on poverty, distance and population density." 
 
 ### Exercise 8
 
@@ -300,19 +295,56 @@ question_text(NULL,
 
 ### Exercise 9
 
-Having completed Justice, we will now move onto Courage. Let's make our posterior distribution using 'stan_glm()'. Set your outcome variable as `distance`and your explanatory variable as `poverty` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `poverty` so we do not get an intercept.  Set `data` to `kenya`, and `refresh` to 0. Store this as `fit_1`.
+Having completed Justice, we will now move onto Courage. Let's make our posterior distribution using 'stan_glm()'. Set your outcome variable as `distance`and your explanatory variable as `poverty` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `poverty` so we do not get an intercept.  Set `data` to `kenya`.
 
 ```{r representative-data-9, exercise = TRUE}
 
 ```
 
 ```{r representative-data-9-hint-1, eval = FALSE}
-fit_1 <- stan_glm(distance ~ poverty -1,
-                  data = ...,
-                  refresh = ...)
+stan_glm(distance ~ poverty -1,
+         data = ...)
 ```
 
 ### Exercise 10
+
+As you can see, the result we get for stan_glm() is fairly messy with a lot of information we don't need. To get rid of that, set the argument `refresh` to 0.
+
+```{r representative-data-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r representative-data-10-hint-1, eval = FALSE}
+stan_glm(distance ~ poverty - 1,
+         data = ...,
+         refresh = ...)
+```
+
+### Exercise 11
+
+Lastly, since the model is linear, we will specify the `family` argument to be "gaussian". 
+Store this as `fit_1` and then return `fit_1` to take a look at the results.
+
+```{r representative-data-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r representative-data-11-hint-1, eval = FALSE}
+stan_glm(distance ~ poverty - 1,
+         data = ...,
+         refresh = ...,
+         family = ...)
+```
+
+### 
+
+As you may notice, the output of our model is not significantly different when we specify that the `family` is "gaussian". This is because the default family argument for `stan_glm()` is "gaussian". However, if you notice minor differences, this is because we haven't specified a seed to make draws from both exercises the same.
+
+### Exercise 12
 
 With our fitted model, we can answer our question. Recall:
 
@@ -320,78 +352,76 @@ With our fitted model, we can answer our question. Recall:
 
 To do so, first make a new tibble with the observations we would like. In this case, we are looking at locations where the poverty rate is 0.2. Set this new tibble to `newobs`.
 
-```{r representative-data-10, exercise = TRUE}
-
-```
-
-```{r representative-data-10-hint-1, eval = FALSE}
-newobs <- tibble(poverty = ...)
-```
-
-### Exercise 11
-
-Recall that `posterior_epred()` is used when looking for expected values such as in this case. Therefore, use `posterior_epred()` with the first argument as our fitted model `fit_1` and the `newdata` argument as `newobs`. Continue this pipe with `as_tibble()`. Store this as `pe`.
-
-```{r representative-data-11, exercise = TRUE}
-
-```
-
-```{r representative-data-11-hint-1, eval = FALSE}
-pe <- posterior_epred(..., newdata = ...) %>% 
-  as_tibble()
-```
-
-### Exercise 12
-
-With our posterior distribution, we can now seek to answer our question. To do so, make a new pipe and map `distance` to the x-axis. Then add the layer `geom_histogram()` and map the probability to the y-axis. Set the bins argument to 100.
-
 ```{r representative-data-12, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r representative-data-12-hint-1, eval = FALSE}
+newobs <- tibble(poverty = ...)
+```
+
+### Exercise 13
+
+Recall that `posterior_epred()` is used when looking for expected values such as in this case. Therefore, use `posterior_epred()` with the first argument as our fitted model `fit_1` and the `newdata` argument as `newobs`. Continue this pipe with `as_tibble()`. Store this as `pe`.
+
+```{r representative-data-13, exercise = TRUE}
+
+```
+
+```{r representative-data-13-hint-1, eval = FALSE}
+pe <- posterior_epred(..., newdata = ...) %>% 
+  as_tibble()
+```
+
+### Exercise 14
+
+With our posterior distribution, we can now seek to answer our question. To do so, make a new pipe and map `distance` to the x-axis. Then add the layer `geom_histogram()` and map the probability to the y-axis. Set the bins argument to 100.
+
+```{r representative-data-14, exercise = TRUE}
+
+```
+
+```{r representative-data-14-hint-1, eval = FALSE}
 Remember that the columns aren't named when `posterior_epred()` is used, but rather numbered. To call the first column, you should use the format `1`.
 ```
 
-```{r representative-data-12-hint-2, eval = FALSE}
+```{r representative-data-14-hint-2, eval = FALSE}
 To map the probability to the y-axis, set the first argument of `geom_histogram()` to `aes(y = after_stat(count/sum(count)))`.
 ```
 
-```{r representative-data-12-hint-3, eval = FALSE}
+```{r representative-data-14-hint-3, eval = FALSE}
 pe %>% 
   ggplot(mapping = aes(x = ...)) + 
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = ...)
 ```
 
-### Exercise 13
+### Exercise 15
 
 Now add a title, subtitle, and axis labels to your graph.
 
-```{r representative-data-13, exercise = TRUE}
+```{r representative-data-15, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r representative-data-13-hint-1, eval = FALSE}
+```{r representative-data-15-hint-1, eval = FALSE}
 +
   labs(...)
 ```
 
-### Exercise 14
+### Exercise 16
 
 Lastly, use `scale_y_continuous()` to format the y-axis to be formatted as a percentage. To do so, Set the first argument of `scale_y_continuous` to `scales::percent_format()`. To finish the plot, add `theme_classic()`.
 
-```{r representative-data-14, exercise = TRUE}
+```{r representative-data-16, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r representative-data-14-hint-1, eval = FALSE}
+```{r representative-data-16-hint-1, eval = FALSE}
 + 
   scale_y_continuous(...) +
   theme_classic()
@@ -399,7 +429,7 @@ Lastly, use `scale_y_continuous()` to format the y-axis to be formatted as a per
 
 ### 
 
-Recall that your plot should appear similar to the following:
+Recall that your plot should appear similar to the following plot:
 
 ```{r}
 exp_poverty
@@ -407,7 +437,7 @@ exp_poverty
 
 ### 
 
-Through this, we have determined that we expect polling locations which are 12 km away on average from those who are assigned to that location to have a poverty rate of 0.2, and achieved this answer with data that we considered to be pretty representative.
+Through this, we have determined that we expect polling locations which are about 12 km away on average from those who are assigned to that location to have a poverty rate of 0.2, and achieved this answer with data that we considered to be pretty representative.
 
 ## Non-Representative Data
 
@@ -427,7 +457,7 @@ Recall our question.
 
 Consider that more rural communities far away from the locations where those conducting the study were staying also tended to have polling locations which spanned larger areas and people had to travel more on average to reach. Given this piece of information, let's also say that our researchers were kind of lazy and wanted to get back home more quickly. So, they decided that places further away from where they were staying were too far to study and would take too much time to reach. This caused them to not travel to any polling locations that were more than 25 km away from those who were assigned to it.
 
-With this scenario, write two sentences discussing representativeness and whether we can consider data from this scenario in that same year to be representative of Kenya that year.
+With this scenario, write two sentences discussing representativeness and whether we can consider data from this scenario (2014-2016) to be representative of Kenya during that timespan. Explain a possible reason why not.
 
 ```{r nonrepresentative-da-1}
 question_text(NULL,
@@ -441,7 +471,7 @@ question_text(NULL,
 
 ### 
 
-Although we might not be able to consider this data very representative of Kenya, if this were the data we had, we could acknowledge the problems with it and consider it representative enough to continue.
+Although we might not be able to consider this data very representative of Kenya, if this were the data we had, we would probably want to think about stopping here. However, we will continue and acknowledge that the data is not very representative.
 
 ### Exercise 2
 
@@ -450,8 +480,6 @@ Let's mimic this scenario with our data `kenya` and answer our question with non
 ```{r nonrepresentative-da-2, exercise = TRUE}
 
 ```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r nonrepresentative-da-2-hint-1, eval = FALSE}
 kenya_2 %>% 
@@ -464,19 +492,18 @@ With this, we have essentially created a data set that could possible come from 
 
 ### Exercise 3
 
-Now, let's make the fitted model. As we did before, use `stan_glm()` and set your outcome variable as `distance`and your explanatory variable as `poverty` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `poverty` so we do not get an intercept.  Set `data` to `kenya_2`, and `refresh` to 0. Store this as `fit_2`.
+Now, let's make the fitted model. As we did before, use `stan_glm()` and set your outcome variable as `distance`and your explanatory variable as `poverty` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `poverty` so we do not get an intercept.  Set `data` to `kenya_2`, and `refresh` to 0, as well as `family` to "gaussian" since it's a linear model. Store this as `fit_2`.
 
 ```{r nonrepresentative-da-3, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r nonrepresentative-da-3-hint-1, eval = FALSE}
 fit_2 <-
   stan_glm(distance ~ poverty - 1,
            data = ...,
-           refresh = ...)
+           refresh = ...,
+           family = ...)
 ```
 
 ### Exercise 4
@@ -486,8 +513,6 @@ Now, make a new tibble with the observations we would like. As before, we are lo
 ```{r nonrepresentative-da-4, exercise = TRUE}
 
 ```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r nonrepresentative-da-4-hint-1, eval = FALSE}
 
@@ -500,8 +525,6 @@ Now, use `posterior_epred()` to make our posterior distribution. Set the first a
 ```{r nonrepresentative-da-5, exercise = TRUE}
 
 ```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r nonrepresentative-da-5-hint-1, eval = FALSE}
 pe2 <- posterior_epred(...,
@@ -516,8 +539,6 @@ Let's plot our posterior distribution. To do so, make a new pipe and map `distan
 ```{r nonrepresentative-da-6, exercise = TRUE}
 
 ```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r nonrepresentative-da-6-hint-1, eval = FALSE}
 Remember that the columns aren't named when `posterior_epred()` is used, but rather numbered. To call the first column, you should use the format `1`.
@@ -582,23 +603,27 @@ Through the past two sections, we answered the same question with what we would 
 combo_plot
 ```
 
+### 
+
 ### Exercise 1
 
-To do so, we will first start by adding a column to our posterior distribution tibbles. For `pe`, which was from our representative data, add a column called `ID` that has a value of "rep" for every row. Store this as `pe_rep`.
+First, let's combine our two posterior distributions from the representative data. To do so, use `bind_rows()` with the first argument as `pe` and the second as `pe2`.
 
 ```{r compare-1, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r compare-1-hint, eval = FALSE}
-pe %>% mutate(ID = ...)
+```{r compare-1-hint-1, eval = FALSE}
+bind_rows(..., ...)
 ```
+
+### 
+
+Notice that the tibble has 8,000 rows, so the distributions have been combined, however, we can't determine which rows are from the representative data and which are from the unrepresentative data.
 
 ### Exercise 2
 
-For `pe2`, add a column also called `ID`, however this will have a value of "unrep" for every row. Store this as `pe_unrep`
+We can fix this issue by adding setting the argument `.id` to "type in `bind_rows()`.
 
 ```{r compare-2, exercise = TRUE}
 
@@ -606,51 +631,53 @@ For `pe2`, add a column also called `ID`, however this will have a value of "unr
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r compare-2-hint, eval = FALSE}
-pe2 %>% mutate(ID = ...)
+```{r compare-2-hint-1, eval = FALSE}
+bind_rows(..., ..., .id = ...)
 ```
+
+### 
+
+As you can see, this adds another column to our tibble that has either entries of 1 or 2. These indicate from which posterior distribution the row is from. 1 indicates `pe` and 2 indicates `pe2`.
 
 ### Exercise 3
 
-Now, we are going to combine both our `pe_rep` and `pe_unrep` tibbles into a single tibble with two columns, one for `ID` and the other for our value. To do so, use `merge()`, with the first argument as `pe_rep`, the second as `pe_unrep`, and then set all to `TRUE`. Store this as `combo_pe`.
+While we know which distribution is represented by each number, let's change the 1s and 2s to be more clear of which dataset they represent by modifying our arguments in `bind_rows()`. For your first argument in `bind_rows()`, use `list(rep = pe, unrep = pe2)`. Then set the second argument `.id` to "type" as we did in our previous exercise. Save this as `pe_combo`.
 
 ```{r compare-3, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r compare-3-hint, eval = FALSE}
-pe_combo <- merge(..., ..., all = TRUE)
+```{r compare-3-hint-1, eval = FALSE}
+bind_rows(list(rep = ..., unrep = ...), .id = ...)
 ```
+
+### 
+
+Through using this list in the first argument, we essentially specify what we would like the value to be in the "type" column for each tibble when they are combined.
 
 ### Exercise 4
 
-View `pe_combo` by running `pe_combo`.
+View a sample of `pe_combo` by starting a pipe and using `slice_sample()` with the first argument `n` set equal to 10.
 
 ```{r compare-4, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r compare-4-hint, eval = FALSE}
-pe_combo
+```{r compare-4-hint-1, eval = FALSE}
+pe_combo %>% slice_sample(n = ...)
 ```
 
-###
+### 
 
-Notice we have 8,000 rows in this tibble, 4,000 from each posterior distribution, and that the `ID` column now indicates whether that value is from the representative data or the unrepresentative data.
+As you can see, the type column contains both "unrep" and "rep", indicating the distribution which that row is from.
 
 ### Exercise 5
 
-Let's plot both posteriors onto one plot using our tibble `pe_combo`. Use `ggplot()` and `aes()` to map distance to the x-axis and set `fill` to ID. Then, add the layer `geom_histogram()` and map probability to the y-axis by setting the first argument to `aes(y = after_stat(count/sum(count)))`. 
+Let's now plot both posteriors onto one plot using our tibble `pe_combo`. Use `ggplot()` and `aes()` to map distance to the x-axis and set `fill` to `type`. Then, add the layer `geom_histogram()` and map probability to the y-axis by setting the first argument to `aes(y = after_stat(count/sum(count)))`. 
 
 ```{r compare-5, exercise = TRUE}
 
 ```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r compare-5-hint-1, eval = FALSE}
 Recall that the column with our distances is still unlabeled, but rather numbered. So, to call the column, use `1`.
@@ -662,7 +689,7 @@ pe_combo %>%
   geom_histogram(aes(y = after_stat(count/sum(count))))
 ```
 
-###
+### 
 
 Right now, the bars for representative and unrepresentative data are stacked on top of one another, and we haven't specified the width of `bins`. 
 
@@ -676,7 +703,7 @@ In `geom_histogram()`, set the `bins` argument to 100. Additionally, set `positi
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r compare-6-hint, eval = FALSE}
+```{r compare-6-hint-1, eval = FALSE}
 ... + 
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = ...,
@@ -694,7 +721,7 @@ Now, add a title, subtitle, and labels.
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r compare-7-hint, eval = FALSE}
+```{r compare-7-hint-1, eval = FALSE}
 ... +
   labs(...)
 ```
@@ -719,7 +746,7 @@ To format the y-axis as a percentage, use the argument `scales::percent_format()
   theme_classic()
 ```
 
-###
+### 
 
 Reminder, your graph should appear similar to the following:
 
@@ -727,9 +754,9 @@ Reminder, your graph should appear similar to the following:
 combo_plot
 ```
 
-###
+### 
 
-As can be seen by the above plot, the two distributions are fairly different, with the expected distance being a bit more than 12 for our representative data and about 10.5 for our unrepresentative data. Additionally, the representative data has a much larger range while the unrepresentative data is narrower.
+As can be seen by the above plot, the two distributions are fairly different, with the expected distance being a bit more than 12 for our representative data and about 10.5 for our unrepresentative data. Additionally, the representative data has a much larger range while the unrepresentative data is narrower. This is why having representative data is so important, because with our unrepresentative data, we would not have considered the a distance of 12 km being very likely at all to have a poverty rate of 0.2, however in our representative data we can see that this our expected distance.
 
 ```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
 ```
