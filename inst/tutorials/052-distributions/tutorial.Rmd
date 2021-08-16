@@ -469,8 +469,46 @@ kenya %>%
 
 <!-- First column is the random location of the goat. "1", "2" or "3". Second column is your random guess. Third column is which door Monte opens. (He can't open your door, nor can he open the door with the goat.) Then, two more columns: one with what happens if you switch (possible values "Goat" or "Car"), one with what happens if you don't switch. (Same possible values.)  -->
 
-```{r}
+<!-- Create monte_p object. -->
 
+<!-- Teach at beginning some simple vector manipulation like: -->
+
+<!-- c(1, 2, 3)[! c(1,2,3) %in% 2] -->
+
+<!-- Also teach them about doubles for versus integer and 3 versus 3L. -->
+
+<!-- First show them door_with_car == 1 & door_chosen == 2 ~ 3 -->
+
+<!-- Second, show them two lines: -->
+
+<!--                   door_with_car == 1 & door_chosen == 2 ~ 3, -->
+<!--                   door_with_car == 2 & door_chosen == 1 ~ 3, -->
+
+<!-- Third, combine the two lines with: -->
+
+<!-- all(c(door_with_car, door_choosen) %in% c(2, 1)) ~ 3 -->
+
+<!-- Fouth, add other two cases like this: -->
+
+<!-- all(c(door_with_car, door_choosen) %in% c(1, 3)) ~ 2 -->
+<!-- all(c(door_with_car, door_choosen) %in% c(2, 13) ~ 1 -->
+
+<!-- Fifth, show -->
+
+<!-- door_with_car == 1 & door_chosen == 1 ~ sample(c(2, 3), size = 1)) -->
+
+<!-- Six, show all three. And that completes the problem!  -->
+
+<!-- Seventh (maybe), show how them something like: -->
+
+<!-- door_with_car == door_chosen ~ sample(c(1, 2, 3)[! c(1,2,3) %in% door_choosen], size = 1)) -->
+
+Replace "if_else(switch,
+                          case_when(" with just case_when().
+
+
+```{r}
+library(tidyverse)
 tibble(ID = 1:10000) %>%
   mutate(door_with_car =
            map_int(ID, ~ sample(1:3,  size = 1, replace = FALSE))) %>%
@@ -479,46 +517,54 @@ tibble(ID = 1:10000) %>%
   mutate(doors_match = if_else(door_with_car == door_chosen,
                        TRUE, FALSE)) %>%
   mutate(door_open = case_when(
-                  door_with_car == 1 & door_chosen == 1 ~ sample(c(2,3), size =1),
-                  door_with_car == 2 & door_chosen == 2 ~ sample(c(1,3), size =1),
-                  door_with_car == 3 & door_chosen == 3 ~ sample(c(1,2), size =1),
-                  door_with_car == 1 & door_chosen == 2 ~ 3,
-                  door_with_car == 2 & door_chosen == 1 ~ 3,
-                  door_with_car == 2 & door_chosen == 3 ~ 1,
-                  door_with_car == 3 & door_chosen == 2 ~ 1,
-                  door_with_car == 1 & door_chosen == 3 ~ 2,
-                  door_with_car == 3 & door_chosen == 1 ~ 2 )) %>%
-  mutate(switch = map_lgl(ID, ~ sample(c(TRUE, FALSE), 1))) %>%
-  mutate(door_chosen = as.double(door_chosen)) %>%
-  mutate(contestent = if_else(switch,
-                          case_when(
-                            door_with_car == 1 & door_chosen == 1 & door_open == 2 ~ 3,
-                            door_with_car == 1 & door_chosen == 1 & door_open == 3 ~ 2,
-                            door_with_car == 2 & door_chosen == 2 & door_open == 1 ~ 3,
-                            door_with_car == 2 & door_chosen == 2 & door_open == 3 ~ 1,
-                            door_with_car == 3 & door_chosen == 3 & door_open == 1 ~ 2,
-                            door_with_car == 3 & door_chosen == 3 & door_open == 2 ~ 1,
-                            door_with_car == 1 & door_chosen == 2 & door_open == 3 ~ 1,
-                            door_with_car == 2 & door_chosen == 1 & door_open == 3 ~ 2,
-                            door_with_car == 2 & door_chosen == 3 & door_open == 1 ~ 2,
-                            door_with_car == 3 & door_chosen == 2 & door_open == 1 ~ 3,
-                            door_with_car == 1 & door_chosen == 3 & door_open == 2 ~ 1,
-                            door_with_car == 3 & door_chosen == 1 & door_open == 2 ~ 3),
-                          door_chosen)) %>%
+            door_with_car == 2 & door_chosen == 2 ~ sample(c(1,3), size =1),
+            door_with_car == 3 & door_chosen == 3 ~ sample(c(1,2), size =1),
+            door_with_car == 1 & door_chosen == 1 ~ sample(c(2,3), size =1),
+            door_with_car == 1 & door_chosen == 2 | door_with_car == 2 & door_chosen == 1 ~ 3,
+            door_with_car == 1 & door_chosen == 3 | door_with_car == 3 & door_chosen == 1 ~ 2,
+            door_with_car == 2 & door_chosen == 3 | door_with_car == 3 & door_chosen == 2 ~ 1)) %>%
+  mutate(change_doors = map_lgl(ID, ~ sample(c(TRUE, FALSE), 1))) %>% 
+
+  # Add column door_final. If no switch, door_final is door_chosen. If switch,
+  # slightly more complex. Only need to know door_chosen and door_open. You go
+  # to the door that is not one of those two.
+
+  # All the results which you are going to use with case_when() need to be of
+  # the same type. Since one of the results is door_chosen (for cases when the
+  # player does not switch) and since door_chosen is an integer, all the other
+  # possible answers for case_when need to be integers. Adding an "L" to the end
+  # of a number is the standard computer science way to say, "Make this an
+  # integer.
+
+  # mutate(door_final = if_else(change_doors,
+  #          case_when(all(c(door_chosen, door_open) %in% c(1L, 2L)) ~ 3L,
+  #                    all(c(door_chosen, door_open) %in% c(1, 3L)) ~ 2L,
+  #                    all(c(door_chosen, door_open) %in% c(2, 3)) ~ 1L),
+  #                    door_chosen)) %>%
+
+
+
+mutate(door_final = if_else(change_doors,
+           case_when(
+             door_chosen == 1 & door_open == 2 | door_chosen == 2 & door_open == 1 ~ 3L,
+             door_chosen == 1 & door_open == 3 | door_chosen == 3 & door_open == 1 ~ 2L,
+             door_chosen == 2 & door_open == 3 | door_chosen == 3 & door_open == 2 ~ 1L),
+                     door_chosen)) %>%
+  
   mutate(result = case_when(
-    contestent == door_with_car ~ "Win",
-    contestent != door_with_car ~ "Lose",
-  )) %>%
-  ggplot(aes(x = as.factor(result), 
-             y = as.factor(switch))) +
-  geom_point() +
-  geom_jitter(alpha = .3)+
-  scale_y_discrete(breaks = c(TRUE,FALSE), 
+            door_final == door_with_car ~ "Win",
+            door_final != door_with_car ~ "Lose")) %>% 
+
+  ggplot(aes(x = change_doors, fill = result))+
+ geom_bar(aes(y = after_stat(count/sum(count))), position = 'dodge')+
+  scale_x_discrete(breaks = c(TRUE , FALSE),
                    labels = c("Switch", "Stay"))+
+  scale_y_continuous(labels = 
+                         scales::percent_format(accuracy = 1))+
   labs(title = "Joint distribution of Monty Hall Problem",
        subtitle = "One will have better change of winning if switching door",
-       x = "Result",
-       y = "Door Switch")
+       x = "Decision",
+       y = "Probability")
 
 ```
 
