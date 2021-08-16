@@ -508,7 +508,7 @@ Replace "if_else(switch,
 
 
 ```{r}
-
+library(tidyverse)
 tibble(ID = 1:10000) %>%
   mutate(door_with_car =
            map_int(ID, ~ sample(1:3,  size = 1, replace = FALSE))) %>%
@@ -517,15 +517,12 @@ tibble(ID = 1:10000) %>%
   mutate(doors_match = if_else(door_with_car == door_chosen,
                        TRUE, FALSE)) %>%
   mutate(door_open = case_when(
-                  door_with_car == 1 & door_chosen == 1 ~ sample(c(2,3), size =1),
-                  door_with_car == 2 & door_chosen == 2 ~ sample(c(1,3), size =1),
-                  door_with_car == 3 & door_chosen == 3 ~ sample(c(1,2), size =1),
-                  door_with_car == 1 & door_chosen == 2 ~ 3,
-                  door_with_car == 2 & door_chosen == 1 ~ 3,
-                  door_with_car == 2 & door_chosen == 3 ~ 1,
-                  door_with_car == 3 & door_chosen == 2 ~ 1,
-                  door_with_car == 1 & door_chosen == 3 ~ 2,
-                  door_with_car == 3 & door_chosen == 1 ~ 2 )) %>%
+            door_with_car == 2 & door_chosen == 2 ~ sample(c(1,3), size =1),
+            door_with_car == 3 & door_chosen == 3 ~ sample(c(1,2), size =1),
+            door_with_car == 1 & door_chosen == 1 ~ sample(c(2,3), size =1),
+            door_with_car == 1 & door_chosen == 2 | door_with_car == 2 & door_chosen == 1 ~ 3,
+            door_with_car == 1 & door_chosen == 3 | door_with_car == 3 & door_chosen == 1 ~ 2,
+            door_with_car == 2 & door_chosen == 3 | door_with_car == 3 & door_chosen == 2 ~ 1)) %>%
   mutate(change_doors = map_lgl(ID, ~ sample(c(TRUE, FALSE), 1))) %>% 
 
   # Add column door_final. If no switch, door_final is door_chosen. If switch,
@@ -539,25 +536,35 @@ tibble(ID = 1:10000) %>%
   # of a number is the standard computer science way to say, "Make this an
   # integer.
 
-  mutate(door_final = 
-           case_when(all(change_doors, c(c(door_chosen, door_open) %in% c(1, 2))) ~ 3L,
-                     all(change_doors, c(c(door_chosen, door_open) %in% c(1, 3))) ~ 2L,
-                     all(change_doors, c(c(door_chosen, door_open) %in% c(2, 3))) ~ 1L,
-                     TRUE ~ door_chosen)) %>%
+  # mutate(door_final = if_else(change_doors,
+  #          case_when(all(c(door_chosen, door_open) %in% c(1L, 2L)) ~ 3L,
+  #                    all(c(door_chosen, door_open) %in% c(1, 3L)) ~ 2L,
+  #                    all(c(door_chosen, door_open) %in% c(2, 3)) ~ 1L),
+  #                    door_chosen)) %>%
+
+
+
+mutate(door_final = if_else(change_doors,
+           case_when(
+             door_chosen == 1 & door_open == 2 | door_chosen == 2 & door_open == 1 ~ 3L,
+             door_chosen == 1 & door_open == 3 | door_chosen == 3 & door_open == 1 ~ 2L,
+             door_chosen == 2 & door_open == 3 | door_chosen == 3 & door_open == 2 ~ 1L),
+                     door_chosen)) %>%
+  
   mutate(result = case_when(
             door_final == door_with_car ~ "Win",
             door_final != door_with_car ~ "Lose")) %>% 
 
-  ggplot(aes(x = as.factor(result), 
-             y = as.factor(change_doors))) +
-  geom_point() +
-  geom_jitter(alpha = .3)+
-  scale_y_discrete(breaks = c(TRUE,FALSE), 
+  ggplot(aes(x = change_doors, fill = result))+
+ geom_bar(aes(y = after_stat(count/sum(count))), position = 'dodge')+
+  scale_x_discrete(breaks = c(TRUE , FALSE),
                    labels = c("Switch", "Stay"))+
+  scale_y_continuous(labels = 
+                         scales::percent_format(accuracy = 1))+
   labs(title = "Joint distribution of Monty Hall Problem",
        subtitle = "One will have better change of winning if switching door",
-       x = "Result",
-       y = "Door Switch")
+       x = "Decision",
+       y = "Probability")
 
 ```
 
