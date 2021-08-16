@@ -16,6 +16,10 @@ google_submission_collection <- function(key, secret, tutorial_id, after_date, b
     filter <- paste0(filter , " before:", before_date)
   }
 
+  message("Clearing TempDir")
+
+  unlink(file.path(normalizePath(tempdir()), dir(tempdir())), recursive = TRUE)
+
   message("Accessing Gmail...")
 
   rds_paths <- gmail_access(filter, key, secret)
@@ -32,5 +36,7 @@ google_submission_collection <- function(key, secret, tutorial_id, after_date, b
 
   message("Accessing Google Drive")
 
-  gdrive_access(tutorial_id, year, month, day, tempdir(), rds_paths)
+  new_sub <- gdrive_access(tutorial_id, year, month, day, tempdir(), rds_paths)
+
+  message("Submissions of query ", new_sub, " successfully collected!")
 }
