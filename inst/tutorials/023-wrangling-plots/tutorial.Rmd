@@ -1,6 +1,6 @@
 ---
 title: 'Wrangling: Plots'
-author: Atilla Colak
+author: Ahmet Atilla Colak
 tutorial:
   id: wrangling-plots
 output:
@@ -10,20 +10,6 @@ output:
 runtime: shiny_prerendered
 description: Complex pipes leading to plots.
 ---
-
-<!-- Make shaming yours. -->
-
-<!-- The below links should be dropped at least once, if not twice. -->
-
-<!-- Select a new plot. -->
-
-<!-- Claus Wilke: https://clauswilke.com/ -->
-
-<!-- https://ggplot2.tidyverse.org/ -->
-<!-- https://ggplot2-book.org/ -->
-<!-- https://socviz.co/ -->
-<!-- https://clauswilke.com/dataviz/ -->
-
 
 ```{r setup, include = FALSE}
 library(learnr)
@@ -50,7 +36,8 @@ options(tutorial.exercise.timelimit = 60,
 library(ggthemes)
 
 covid <- read_csv('data/owid-covid-data.csv')
-income <- read_csv("data/inc_occ_gender.csv") 
+income <- read_csv("data/inc_occ_gender.csv", show_col_types = FALSE) 
+names(income) <- tolower(names(income))
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -58,8 +45,6 @@ income <- read_csv("data/inc_occ_gender.csv")
 
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
-
-<!-- Start using all lower case names for income. -->
 
 
 ## National Health and Nutrition Survey
@@ -211,7 +196,7 @@ A trend line will help you visualize the general association between variables. 
 
 ### 
 
-`se` argument specifies whether the confidence interval should be displayed. If we set this true, we should also specify the `level` argument. `level` specifices the confidence level of the interval, 0.95 by default.
+`se` argument specifies whether the confidence interval should be displayed. If `se` is true, which is the default setting, we should also specify the `level` argument. `level` specifices the confidence level of the interval, 0.95 by default.
 
 ### Exercise 7
 
@@ -365,7 +350,9 @@ covid %>%
 
 ### 
 
-Because our graph will be interactive, we can easily analyse more variables than standard `ggplot` graphs. 
+Alternatively, we could use `ends_with` helper to select columns that ends with a certain suffix. For example, in this case,  we could use the following code: 
+`select(ends_with(c("ent","cation","new_cases","median_age")))`.
+Although this code would be inefficient in for this variables, it would be helpful if we were to select all `cases` related columns, all of which would end with `_cases`. 
 
 ### Exercise 3
 
@@ -558,7 +545,7 @@ final_graph
 
 Now, although our graph looks like the desired graph, it is not interactive, and unlike expected, nothing happens if you hover your mouse over the plot.
 
-This is beacuse, we have to make use of ` plotly()` package to create interactive graphs.
+This is beacuse, we have to make use of **[plotly](https://plotly.com/r/getting-started/)** package to create interactive graphs.
 
 ### Exercise 11
 
@@ -696,7 +683,7 @@ you only need one -.
 
 ### 
 
-These two columns were the health-related spending in the last month for 2005 initial and 2006 follow-up survey 10 months later.
+For columns following a certain name and a sequence of numbers, we can use `num_range()` helper. For more information about `num_range()`, see [this link](https://tidyselect.r-lib.org/reference/starts_with.html)
 
 ### Exercise 4
 
@@ -781,7 +768,7 @@ Use `ifelse()` for this. Within `ifelse()`, set condition where `treatment == "1
 
 ### 
 
-Alternatively, we could have used `if_else()` function from `dplyr` package. The difference between these two functions is that `if_else()` function is somewhat faster than base package function `ifelse()`.
+Alternatively, we could have used `if_else()` function from **[dplyr](https://www.rdocumentation.org/packages/dplyr/versions/0.7.8)** package. The difference between these two functions is that `if_else()` function is somewhat faster than base package function `ifelse()`.
 
 
 ### Exercise 8
@@ -866,7 +853,7 @@ To make the bar charts color of your choice, you can use `scale_fill_manual` fun
 
 ### 
 
-If we had more categories of data, we also could have made use of `RColorBrewer` package. This package provides a function named `scale_fill_brewer()`. With this function, you can specify a color palette of your choice. 
+If we had more categories of data, we also could have made use of   **[RColorBrewer](https://www.datanovia.com/en/blog/the-a-z-of-rcolorbrewer-palette/)** package. This package provides a function named `scale_fill_brewer()`. With this function, you can specify a color palette of your choice. 
 
 ### Exercise 12
 
@@ -976,18 +963,18 @@ Let's create the following plot.
 ```{r gender-inequality}
 
 income_p <- income %>%
-  filter(M_weekly != "Na" & 
-         F_weekly != 'Na' & 
-         All_weekly != "Na") %>%
-  mutate(All_weekly = as.numeric(All_weekly)) %>%
-  mutate(Occupation = tolower(Occupation)) %>%
+  filter(f_weekly != "Na" & 
+         m_weekly != 'Na' & 
+         all_weekly != "Na") %>%
+  mutate(all_weekly = as.numeric(all_weekly)) %>%
+  mutate(occupation = tolower(occupation)) %>%
   drop_na() %>%
-  arrange(desc(All_weekly)) %>%
+  arrange(desc(all_weekly)) %>%
   head(25) %>%
-  select(Occupation, M_weekly, F_weekly, M_workers, F_workers) %>%
-  mutate(difference_in_earning = as.numeric(M_weekly) - as.numeric(F_weekly)) %>%
-  mutate(workers = M_workers - F_workers) %>%
-  ggplot(aes(y = reorder(Occupation, difference_in_earning) , 
+  select(occupation, m_weekly, f_weekly, m_workers, f_workers) %>%
+  mutate(difference_in_earning = as.numeric(m_weekly) - as.numeric(f_weekly)) %>%
+  mutate(workers = m_workers - f_workers) %>%
+  ggplot(aes(y = reorder(occupation, difference_in_earning) , 
              x = difference_in_earning, 
              color = workers)) +
     geom_point() + 
@@ -1033,23 +1020,23 @@ In cases where missing values are written as characters, we cannot use `drop_na(
 ```{r gender-inequality-2-hint-1, eval = FALSE}
 income %>%
    filter(... =  != 'Na' & 
-          F_weekly != '...' & 
-          All_weekly != "...") 
+          f_weekly != '...' & 
+          all_weekly != "...") 
 ```
 
 ###
 
-`All_weekly`, `M_weekly`, and `F_weekly` are median weekly including male and female workers, meian weekly income of only male workers, and median weekly income of only female workers in USD, respectively.
+`all_weekly`, `m_weekly`, and `f_weekly` are median weekly including male and female workers, meian weekly income of only male workers, and median weekly income of only female workers in USD, respectively.
 
 ### Exercise 3
 
-Because we want to get the highest-paying jobs, we need to arrange the tibble by `All_weekly`. 
+Because we want to get the highest-paying jobs, we need to arrange the tibble by `all_weekly`. 
 
 ###
 
 However, because this column is in character format, we have to convert it to numeric. 
 
-Using `mutate`, overwrite the `All_weekly` column `as.numeric()`. 
+Using `mutate`, overwrite the `all_weekly` column `as.numeric()`. 
 
 ```{r gender-inequality-3, exercise = TRUE}
 
@@ -1064,12 +1051,12 @@ Using `mutate`, overwrite the `All_weekly` column `as.numeric()`.
 
 ###
 
-Alternatively, we coul have used `as.double()`.
+Alternatively, we could have used `as.double()`.
 
 ### Exercise 4
 
     
-For interpretability of results, it would be helpful if we converted `Occupation`s to lowercase. We can do this by overwriting `Occupation` column with `tolower` function.
+For interpretability of results, it would be helpful if we converted `occupation`s to lowercase. We can do this by overwriting `occupation` column with `tolower` function.
 
 
 ```{r gender-inequality-4, exercise = TRUE}
@@ -1080,7 +1067,7 @@ For interpretability of results, it would be helpful if we converted `Occupation
 
 ```{r gender-inequality-4-hint-1, eval = FALSE}
 ... %>%
-  mutate(Occupation = tolower(...)) %>%
+  mutate(occupation = tolower(...)) %>%
 ```
 
 ###
@@ -1102,9 +1089,11 @@ Now, although we have dropped the missing values in character columns, we have t
   drop_na()
 ```
 
+###
+
 ### Exercise 6
 
-To get the highest-paying jobs, we have to order the tibble in decreasing order by `All_weekly` column.
+To get the highest-paying jobs, we have to order the tibble in decreasing order by `all_weekly` column.
 
 ```{r gender-inequality-6, exercise = TRUE}
 
@@ -1143,7 +1132,7 @@ Instead of `head()` function, we can make data frame manipulation like the follo
 
 ### Exercise 8
 
-Select `Occupation`, `M_weekly`, `F_weekly`, `M_workers`, and `F_workers` columns. 
+Select `occupation`, `m_weekly`, `f_weekly`, `m_workers`, and `f_workers` columns. 
 
 
 ```{r gender-inequality-8, exercise = TRUE}
@@ -1154,12 +1143,12 @@ Select `Occupation`, `M_weekly`, `F_weekly`, `M_workers`, and `F_workers` column
 
 ```{r gender-inequality-8-hint-1, eval = FALSE}
 ...  %>%
-   select(..., M_weekly, ..., ..., F_workers)
+   select(..., m_weekly, ..., ..., f_workers)
 ```
 
 ### 
 
-`F_workers` and `M_workers` columns are the number of female workers, in thousands and the number of male workers, in thousands, respectively. 
+Alternatively, we could have used select helpers to select columns. For example, to get the columns about only male, we would use `starts_with()`, as shown like the following: `select(starts_with("m_))`. 
 
 ### Exercise 9
 
@@ -1167,7 +1156,7 @@ One of the variable we will use in this graph is the difference between median i
 
 ###
 
-Create a variable `difference_in_earning` that is  `M_weekly - F_weekly`. Don't forget to convert these columns to numeric first. 
+Create a variable `difference_in_earning` that is  `m_weekly - f_weekly`. Don't forget to convert these columns to numeric first. 
 
 ```{r gender-inequality-9, exercise = TRUE}
 
@@ -1203,7 +1192,7 @@ The difference in the quantity of female and male workers may also be a useful i
 
 ### Exercise 11
 
-Create the `ggplot()` object. Within `aes`argument, set`y` equal to`Occupation` that is decreasing-ordered based on `difference_in_training` column, set `x` equal to `difference_in_earning`, and `color` to `workers`.
+Create the `ggplot()` object. Within `aes`argument, set`y` equal to`occupation` that is decreasing-ordered based on `difference_in_training` column, set `x` equal to `difference_in_earning`, and `color` to `workers`.
 
 ```{r gender-inequality-11, exercise = TRUE}
 
@@ -1273,7 +1262,7 @@ Add `theme_bw()`.
 
 ### 
 
-Using packge `ggthemes`, we can access many more themes such as `theme_tufte` and `theme_calc`. 
+Using package **[ggthemes](https://jrnold.github.io/ggthemes/)**, we can access many more themes such as `theme_tufte` and `theme_calc`. 
 
 ### Exercise 15
 
@@ -1412,11 +1401,13 @@ Extract only `name`, `year`, and `prop` columns.
 
 ### 
 
-Our graph is associated with names of the baby names and their popularity over the years, which are their proportions among all baby boy names given in that period.
+When selecting columns, we can also combine multiple select helpers. For example,
+when selecting `name` and `year` columns, we can use the following code: 
+`select(starts_with("na") | ends_with("ar")) `.
 
 ### Exercise 5
 
-We want the last letters of boy names. Therefore, create a new variable names `last_letters` that should be equal to last letter of each boy name.To get the last letter of each boy name, we will make use of `str_sub()` function of `stringr` package. 
+We want the last letters of boy names. Therefore, create a new variable names `last_letters` that should be equal to last letter of each boy name.To get the last letter of each boy name, we will make use of `str_sub()` function of **[stringr](https://stringr.tidyverse.org/)** package. 
 
 ### 
 
