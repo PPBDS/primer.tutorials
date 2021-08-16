@@ -32,6 +32,8 @@ gmail_access <- function(filter, key, secret){
 
     gmailr::gm_save_attachment(attach_obj, new_path)
 
+    print(paste0("Saved Attachment in TempDir:\n", new_path))
+
     rds_paths <- append(rds_paths, new_path)
   }
 
