@@ -53,7 +53,7 @@ submission_server <- function(session) {
   local({
 
     output$downloadHtml <- shiny::downloadHandler(
-      filename = paste0(learnr:::read_request(session, "tutorial.tutorial_id"),
+      filename = paste0(learnr::get_tutorial_info()$tutorial_id,
                         "_answers.html"),
       content = function(file){
         build_html(file, session)
@@ -70,7 +70,7 @@ submission_server <- function(session) {
       # the call to session only seems to work within a reactive function like
       # this.)
 
-      filename = paste0(learnr:::read_request(session, "tutorial.tutorial_id"),
+      filename = paste0(learnr::get_tutorial_info()$tutorial_id,
                         "_answers.rds"),
 
       content = function(file){
