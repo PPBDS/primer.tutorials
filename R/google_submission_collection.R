@@ -13,7 +13,7 @@ google_submission_collection <- function(key,
                                          tutorial_id,
                                          after_date,
                                          before_date = NULL){
-  gmail.filter <- paste0("has:attachment after:", after_date)
+  gmail.filter <- paste0("in:inbox has:attachment after:", after_date)
 
   if (!is.null(before_date)){
     gmail.filter <- paste0(gmail.filter , " before:", before_date)
@@ -32,6 +32,11 @@ google_submission_collection <- function(key,
   rds_paths <- gmail_access(gmail.filter, key, secret)
 
   message("Finished downloading files from Gmail")
+
+  # The format used in readr::parse_date() works with any separator between the
+  # digits, which allows this function to handle possible weird inputs. This
+  # separation of dates is used solely to create the folder name in Google Drive
+  # in gdrive_access().
 
   parsed_date <- readr::parse_date(after_date, "%Y%.%m%.%d")
 
