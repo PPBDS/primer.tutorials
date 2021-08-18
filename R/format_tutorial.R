@@ -228,6 +228,11 @@ format_tutorial <- function(file_path){
     if (tbl$type[i] == "rmd_markdown"){
       new_txt <- substr(new_txt, 0, nchar(new_txt)-1)
     }
+
+    if (tbl$type[i] == "rmd_heading" & is.na(tbl$sec_h3[i])){
+      new_txt <- substr(new_txt, 0, nchar(new_txt)-1)
+    }
+
     new_doc <- paste(new_doc, new_txt, sep = "\n")
   }
 

@@ -19,9 +19,9 @@ google_submission_collection(
 
 \item{tutorial_id}{id of tutorial to save and process}
 
-\item{after_date}{keep only mails after this date: use YYYY/MM/DD}
+\item{after_date}{keep only mails after this date: use YYYY-MM-DD}
 
-\item{before_date}{(Optional) keep only mails before this date: use YYYY/MM/DD}
+\item{before_date}{(Optional) keep only mails before this date: use YYYY-MM-DD}
 }
 \description{
 Google Submission Collection
