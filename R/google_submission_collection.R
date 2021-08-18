@@ -1,30 +1,37 @@
-
 #' Google Submission Collection
 #'
 #' @param key client id obtained from oauth credentials
 #' @param secret client secret obtained from oauth credentials
 #' @param tutorial_id id of tutorial to save and process
-#' @param after_date keep only mails after this date: use YYYY/MM/DD
-#' @param before_date (Optional) keep only mails before this date: use YYYY/MM/DD
+#' @param after_date keep only mails after this date: use YYYY-MM-DD
+#' @param before_date (Optional) keep only mails before this date: use YYYY-MM-DD
 #'
 #' @export
-#'
-google_submission_collection <- function(key, secret, tutorial_id, after_date, before_date=NULL){
-  filter <- paste0("has:attachment after:", after_date)
+
+google_submission_collection <- function(key,
+                                         secret,
+                                         tutorial_id,
+                                         after_date,
+                                         before_date = NULL){
+  gmail.filter <- paste0("has:attachment after:", after_date)
 
   if (!is.null(before_date)){
-    filter <- paste0(filter , " before:", before_date)
+    gmail.filter <- paste0(gmail.filter , " before:", before_date)
   }
 
-  message("Clearing TempDir")
+  message("Clearing tempory directory")
+
+  # Note that tempdir() produces the same directory string however many times
+  # you call it with a single R session. So, there is nothing wrong with making
+  # sure that it is empty at the start of this script.
 
   unlink(file.path(normalizePath(tempdir()), dir(tempdir())), recursive = TRUE)
 
-  message("Accessing Gmail...")
+  message("Accessing Gmail")
 
-  rds_paths <- gmail_access(filter, key, secret)
+  rds_paths <- gmail_access(gmail.filter, key, secret)
 
-  message("Finished Downloading Files from Gmail")
+  message("Finished downloading files from Gmail")
 
   parsed_date <- readr::parse_date(after_date, "%Y%.%m%.%d")
 
