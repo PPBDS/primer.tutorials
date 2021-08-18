@@ -1,28 +1,53 @@
 #' Gmail Access and Submission Processing
 #'
-#' @param filter used to filter mails to find submissions
+#' @param query used to filter mails to find submissions
 #' @param key client id obtained from oauth credentials
 #' @param secret client secret obtained from oauth credentials
 #'
 #' @return rds_paths paths of locally saved rds files from gmail
 #' @export
-#'
-gmail_access <- function(filter, key, secret){
+
+gmail_access <- function(query, key, secret){
+
+  # In order to get the full Gmail authentication needed to read emails and
+  # download attachments, we have to manually configure and call authentication
+  # for Gmailr.
+
   gmailr::gm_auth_configure(key = key,
                             secret = secret)
 
   gmailr::gm_auth()
 
+  # We don't want to download all the attachments ever received, so we filter
+  # the gmail messages with the query we received.
+
   temp_path <- tempdir()
 
-  messages <- gmailr::gm_messages(filter)[[1]][[1]]
+  messages <- gmailr::gm_messages(query)[[1]][[1]]
 
   rds_paths <- list()
 
   for (message_id in purrr::map_chr(messages, "id")){
+
+    # We had a couple of errors in which we downloaded all kinds of attachments,
+    # so we also need to only keep rds files. If a message doesn't have an
+    # attachment on the starting message of the thread, it's also skipped.
+
     msg <- gmailr::gm_message(message_id)
 
     fn <- paste0("submission_", message_id, ".rds")
+
+    print(gmailr::gm_attachments(msg))
+
+    attached <- gmailr::gm_attachments(msg)
+
+    if (length(attached) < 1){
+      next
+    }
+
+    if (!stringr::str_detect(attached$filename[[1]], "\\.rds$")){
+      next
+    }
 
     attach_id <- gmailr::gm_attachments(msg)$id[[1]]
 
@@ -32,7 +57,7 @@ gmail_access <- function(filter, key, secret){
 
     gmailr::gm_save_attachment(attach_obj, new_path)
 
-    print(paste0("Saved Attachment in TempDir:\n", new_path))
+    print(paste0("Saved attachment in tempdir:\n", new_path))
 
     rds_paths <- append(rds_paths, new_path)
   }
