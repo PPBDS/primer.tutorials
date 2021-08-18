@@ -13,7 +13,15 @@
 #'
 gdrive_access <- function(tutorial_id, year, month, day, temp_path, rds_paths){
 
+  # gmailr and googledrive use the same configurations, so we don't need to
+  # configure again.
+
   googledrive::drive_auth()
+
+  # For the best user experience, we try not to require the user to set up
+  # anything for this other than the service account. Therefore, we check and
+  # handle everything from if they have a submission_folder/ to if they have
+  # already done this query, etc.
 
   new_sub <- paste0(tutorial_id,
                     "-",
@@ -40,6 +48,9 @@ gdrive_access <- function(tutorial_id, year, month, day, temp_path, rds_paths){
   }
 
   googledrive::drive_mkdir(new_dir)
+
+  # create_submission_aggregation() should return a tibble, we are iterating
+  # over it to uplaod the relevant files onto Google Drive.
 
   submission_info <- create_submission_aggregation(rds_paths, tutorial_id, new_dir)
 
