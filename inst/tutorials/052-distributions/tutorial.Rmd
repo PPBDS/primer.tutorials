@@ -77,41 +77,7 @@ Ways to map the outcomes of random processes to quantifiable numbers.
 
 <!-- First column is the random location of the goat. "1", "2" or "3". Second column is your random guess. Third column is which door Monte opens. (He can't open your door, nor can he open the door with the goat.) Then, two more columns: one with what happens if you switch (possible values "Goat" or "Car"), one with what happens if you don't switch. (Same possible values.)  -->
 
-<!-- Create monte_p object. -->
 
-<!-- Teach at beginning some simple vector manipulation like: -->
-
-<!-- c(1, 2, 3)[! c(1,2,3) %in% 2] -->
-
-<!-- Also teach them about doubles for versus integer and 3 versus 3L. -->
-
-<!-- First show them door_with_car == 1 & door_chosen == 2 ~ 3 -->
-
-<!-- Second, show them two lines: -->
-
-<!--                   door_with_car == 1 & door_chosen == 2 ~ 3, -->
-<!--                   door_with_car == 2 & door_chosen == 1 ~ 3, -->
-
-<!-- Third, combine the two lines with: -->
-
-<!-- all(c(door_with_car, door_choosen) %in% c(2, 1)) ~ 3 -->
-
-<!-- Fouth, add other two cases like this: -->
-
-<!-- all(c(door_with_car, door_choosen) %in% c(1, 3)) ~ 2 -->
-<!-- all(c(door_with_car, door_choosen) %in% c(2, 13) ~ 1 -->
-
-<!-- Fifth, show -->
-
-<!-- door_with_car == 1 & door_chosen == 1 ~ sample(c(2, 3), size = 1)) -->
-
-<!-- Six, show all three. And that completes the problem!  -->
-
-<!-- Seventh (maybe), show how them something like: -->
-
-<!-- door_with_car == door_chosen ~ sample(c(1, 2, 3)[! c(1,2,3) %in% door_choosen], size = 1)) -->
-
-<!-- Replace "if_else(switch, ... case_when(" with just case_when(). -->
                           
 
 ```{r, echo = FALSE}
@@ -191,7 +157,7 @@ monte_p
 
 ### Exercise 1
 
-
+Use `expand_grid()`,create the first variable `sim` and set it equal to the consecutive integer from 1 to 10, create the second variable door, and set it equal to 1,2 and 3.
 ```{r monte-hall-1, exercise = TRUE}
 
 ```
@@ -200,13 +166,16 @@ monte_p
 
 ```{r monte-hall-1-hint, eval = FALSE}
 
+expand_grid(sim = 1:10000, door = 1:3)
 ```
 
 ###
 
+The reason we create this `sim` value is because later we can switch around the size value, making observation when we increase the simulation size. 
+
 ### Exercise 2
 
-
+Use `group_by()` include the variable `sim`.
 ```{r monte-hall-2, exercise = TRUE}
 
 ```
@@ -214,14 +183,15 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-2-hint, eval = FALSE}
-
+ group_by(sim)
 ```
 
 ###
+This is an important step as we are dealing with this group several times later.
 
 ### Exercise 3
 
-
+Use `mutate()` create a new variable `car` and set it equal to `sample()` which includes 3 values `FALSE`,`FALSE`,`TRUE`wrap around by `c()`
 ```{r monte-hall-3, exercise = TRUE}
 
 ```
@@ -230,14 +200,16 @@ monte_p
 
 ```{r monte-hall-3-hint, eval = FALSE}
 
+mutate(car = sample(c(FALSE, FALSE, TRUE)))
 ```
 
 ###
+Note that if you just run the `sample()` part several time, it will create the same three value but in different order. Also note that we have the `sim` repeat 3 times for every `car` value.
 
 ### Exercise 4
 
 
-
+Use `mutate()` create a new variable `guess` and set it equal to `sample()` which includes 3 values `FALSE`,`FALSE`,`TRUE`wrap around by `c()`
 ```{r monte-hall-4, exercise = TRUE}
 
 ```
@@ -245,15 +217,16 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-4-hint, eval = FALSE}
-
+mutate(guess = sample(c(FALSE, FALSE, TRUE))) %>% 
 ```
 
 ###
 
-
+The reason we don't have an single `sim` correspond to an list in `car` is because we include the `group_by()` statement before.
 
 ### Exercise 5
 
+Use `arrange()` which has three arguments, the first is `sim`, the second is `-guess`, and third is `car`.
 
 ```{r monte-hall-5, exercise = TRUE}
 
@@ -262,14 +235,15 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-5-hint, eval = FALSE}
-
+ arrange(sim, -guess, car)
 ```
 
 ###
+This is one of the core step we first arrange `sim` by ascending order, putting the 1s and 2s together and at the top, then we put `guess` in descending order, means a `TRUE` value is always on the first row of every `sim`, then we put car in ascending order, means that we have the TRUE for car at the bottom of each `sim` if possible.
 
 ### Exercise 6
 
-
+Use `mutate()` create a variable `now_n` and set it equal to `row_number(sim)`.
 ```{r monte-hall-6, exercise = TRUE}
 
 ```
@@ -277,14 +251,15 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-6-hint, eval = FALSE}
-
+mutate(row_n = row_number(sim)) %>%
 ```
 
 ###
+`row_number(sim)` creates the order within each `sim`, for the three rows of each `sim`, generate the rank from top to bottom.
 
 ### Exercise 7
 
-
+Use `mutate()` create a new variable `switch_to` and set it equal to the logical if `row_n` is equal to `3`.
 ```{r monte-hall-7, exercise = TRUE}
 
 ```
@@ -292,14 +267,15 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-7-hint, eval = FALSE}
-
+mutate(switch_to = row_n == 3)
 ```
 
 ###
+What this step does is if the contestant decided to switch door, he/she/they is going to switch the third door in order for each `sim`. This is true because for the first scenario when the contestant guess is not the same as the car door, we arrange the `guess` door to be the first row for each `sim`, and `car` door for the last row for each `sim`. For this case Monty can only choose the second door in order for each `sim`, when contestant is going to switch they only can switch to the third door. For second scenario when contestant choose the door with the car, then the other two doors is completely identical, it doesn't really matter which door the contestant choose.
 
 ### Exercise 8
 
-
+Use `mutate()` create a variable `stay_win`, and set it equal to `if_else()` which has three arguments, the first being `guess & car`, the second being `TRUE`, and the third is `FALSE`.
 ```{r monte-hall-8, exercise = TRUE}
 
 ```
@@ -307,14 +283,15 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-8-hint, eval = FALSE}
-
+mutate(stay_win = if_else(guess & car, TRUE, FALSE))
 ```
 
 ###
+The `if_else()` statement here means if `guess` and `car` are both `TRUE`, then return `TRUE`, if at least one of `guess` or `car` then returns `FALSE`.
 
 ### Exercise 9
 
-
+Use `mutate()` create a variable `switch_win`, and set it equal to `if_else()` which has three arguments, the first being `switch_to & car`, the second being `TRUE`, and the third is `FALSE`.
 ```{r monte-hall-9, exercise = TRUE}
 
 ```
@@ -322,14 +299,15 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-9-hint, eval = FALSE}
-
+mutate(switch_win = if_else(switch_to & car, TRUE, FALSE))
 ```
 
 ###
+The `if_else()` statement here means if `switch_to` and `car` are both `TRUE`, then return `TRUE`, if at least one of `switch_to` or `car` then returns `FALSE`.
 
 ### Exercise 10
 
-
+Use `summarise()`include two arguments, the first argument create a new variable `stayWin` and set it equal to `max()` of `stay_win`, the second argument create a new variable `switchWin` and set it equal to `max()` of `switch_win`.
 ```{r monte-hall-10, exercise = TRUE}
 
 ```
@@ -337,14 +315,16 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-10-hint, eval = FALSE}
-
+summarise(stayWin = max(stay_win),
+              switchWin = max(switch_win))
 ```
 
 ###
+Now, within each `sim`, we need to see if switch or stay won. They won if there is at least one TRUE value for the` stay_win` (or `switch_win`) variable calculated in the previous steps. So, we just need a max.
 
 ### Exercise 11
 
-
+Now let's `ungroup()`
 ```{r monte-hall-11, exercise = TRUE}
 
 ```
@@ -352,14 +332,13 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-11-hint, eval = FALSE}
-
+ungroup() 
 ```
 
-###
 
 ### Exercise 12
 
-
+Use `summarise()` one last time, include arguments, `stayWin` and `switchWin`.
 ```{r monte-hall-12, exercise = TRUE}
 
 ```
@@ -367,14 +346,16 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-12-hint, eval = FALSE}
-
+summarise(stayWin, switchWin)
 ```
 
 ###
 
+Get rid of `sim`, only keeping the two columns we need to graph.
+
 ### Exercise 13
 
-
+Add the function `pivot_longer()`. Set `cols` to `everything()`, `names_to` to "decision", and `values_to` to  "result".
 ```{r monte-hall-13, exercise = TRUE}
 
 ```
@@ -382,14 +363,18 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-13-hint, eval = FALSE}
-
+pivot_longer(cols = everything(), 
+               names_to = "decision", 
+               values_to = "result")
 ```
 
 ###
 
+This step combine the two columns while giving names for it to fill later.
+
 ### Exercise 14
 
-
+Continue your pipe with `ggplot()` to map `x` to `result` and `fill` to `decision` Add the layer `geom_bar()`. Within `geom_bar()`, . Inside `aes()`,set `y` equal to  `after_stat()` with the argument `count/sum(count)` to put percents on the y-axis, then outside of `aes()`, add another argument set `position` equal to 'dodge'.
 ```{r monte-hall-14, exercise = TRUE}
 
 ```
@@ -397,14 +382,14 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-14-hint, eval = FALSE}
-
+ggplot(aes(x = result, fill = decision)) +
+    geom_bar(aes(y = after_stat(count/sum(count))), position = 'dodge')
 ```
 
-###
 
 ### Exercise 15
 
-
+Now use `scale_x_continuous()` so the x-axis has `breaks` at 0 and 1. Set the `labels` for the breaks as "Lose" and "Win", respectively. 
 ```{r monte-hall-15, exercise = TRUE}
 
 ```
@@ -412,14 +397,14 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-15-hint, eval = FALSE}
-
+scale_x_continuous(breaks = c(0 , 1),
+                   labels = c("Lose", "Win"))
 ```
 
-###
 
 ### Exercise 16
 
-
+Now use `scale_y_continuous()` to put the y-axis in percent format. Within `scale_y_continuous()`, set `labels` to `scales::percent_format()`. Within `percent_format()` set `accuracy` to 1.
 ```{r monte-hall-16, exercise = TRUE}
 
 ```
@@ -427,10 +412,53 @@ monte_p
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monte-hall-16-hint, eval = FALSE}
+... + 
+  scale_y_continuous(labels = scales::percent_format(...))
+```
+
+### Exercise 17
+
+Use `scale_fill_discrete()` , set `labels` to as "Stay" and "Switch".
+```{r monte-hall-17, exercise = TRUE}
 
 ```
 
-###
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r monte-hall-17-hint, eval = FALSE}
+scale_fill_discrete(labels = c("Stay", "Switch"))
+```
+
+### Exercise 18
+
+Finally, use `labs()` to add the appropriate title, subtitle, and axis labels.
+```{r monte-hall-18, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r monte-hall-18-hint, eval = FALSE}
+... +
+  labs(title = "...")
+
+```
+
+Reminder: Your plot should look like the the one below.
+
+```{r}
+monte_p
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
