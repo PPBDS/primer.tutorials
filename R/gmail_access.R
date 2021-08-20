@@ -61,6 +61,9 @@ gmail_access <- function(query, key, secret){
       print(paste0("Saved attachment in tempdir:\n", new_path))
 
       rds_paths <- append(rds_paths, new_path)
+    },
+    error = function(cond){
+      # Leave this empty for skipping errors
     })
 
   }
