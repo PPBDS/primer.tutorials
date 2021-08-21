@@ -21,15 +21,28 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
 
-obama_data <- tibble(approve = c(rep(1, round(.58*2087)), rep(0, round(.39*2087))))
+harvard_data <- tibble(approve = c(rep(1, round(.41*2089)), rep(0, round(.59*2089))))
 
-fit_1 <- stan_glm(data = obama_data,
+harvard <- stan_glm(data = harvard_data,
                     refresh = 0,
                     seed = 2012, 
                     family = binomial,
                     formula = approve ~ 1) 
 
-ob_ppd <- posterior_epred(fit_1, 
+ob_harv_ppd <- posterior_epred(harvard, 
+                          newdata = tibble(constant = 1)) %>%
+  as_tibble() %>%
+  rename(approval = `1`) 
+
+class_data <- tibble(approve = c(rep(1, 53), rep(0, 47)))
+
+class <- stan_glm(data = class_data,
+                    refresh = 0,
+                    seed = 2012, 
+                    family = binomial,
+                    formula = approve ~ 1) 
+
+ob_class_ppd <- posterior_epred(class, 
                           newdata = tibble(constant = 1)) %>%
   as_tibble() %>%
   rename(approval = `1`) 
@@ -56,6 +69,7 @@ ob_ppd <- posterior_epred(fit_1,
 
 
 ## Introduction
+
 ###
 
 <!-- Two to four sentence about the main topics covered in this tutorial. Why are we here? What will students get out of giving you 90 minutes of their lives? How does this tutorial connect to previous tutorials? -->
@@ -63,41 +77,148 @@ ob_ppd <- posterior_epred(fit_1,
 <!-- Each Section will be introduced with a one or two sentence summary of what the point of that Section is. What do we want students to remember? The Introduction and the Conclusion are 4 sentence paragraphs which are a summary of the Sections' summaries. -->
 
 
-## Obama approval
-###
-
-## Study
+## Obama approval 
 
 ###
 
-## Posterior
+Polls are a common application of binomial distributions, as respondents who agree can be represented by `1`, and respondents who disagree as `0`. Historically, presidential approval polls are a very well documented type of poll, where participants respond whether or not they approve of the current president in office. For the remainder of this tutorial, we'll examine the approval of President Obama in 2013.  
+
+### 
+
+The Harvard Kennedy School Institute of Politics [provides polling data for young adults](https://iop.harvard.edu/youth-poll). An excerpt from their website: 
+
+> The Harvard Public Opinion Project conducts a biannual poll examining the political opinions and civic engagement of young Americans ages 18 to 29. Since its conception by two Harvard undergraduate students in 2000, the Harvard Public Opinion Project has provided the most comprehensive look at the political opinions, voting trends, and views on public service held by young Americans.
+
+Between October 29 and November 13 of 2013, a team from Harvard's Institute of Politics [conducted their Fall 2013 poll](https://iop.harvard.edu/sites/default/files_new/Harvard_PressReleaseFall2013%20.pdf) with 2,089 young Americans aged 18 to 29, and concluded the following:   
+
+> Obama Job Approval at Low Point... Roughly four-in-ten (41%) of 18- to 29- year-olds indicated that they approved of Barack Obama’s performance as president (54%: disapprove) – representing the lowest approval rating IOP polling has reported since the beginning of his presidency.
+
+### Exercise 1
+
+In the Harvard IOP poll, 41% of respondents approved of President Obama, and 54% disapproved, which only sums to 95%. The "missing" 5% of respondents can be considered **non-responses**, as they declined to answer the poll question. 
+
+In a paragraph length response, examine *validity* across polls by considering how classifying non-responses as 0's (non-approvals) could cause different mathematical results than removing them all-together.
+
+Refer back to [The Primer](https://ppbds.github.io/primer/probability.html#cardinal-virtues) for discussion on validity, stability, and representativeness.  
+
+```{r obama-overview-1}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    rows = 6)
+```
+
+### Exercise 2
+
+In the Harvard IOP poll was conducted between October 29 and November 13 of 2013. Keeping this in mind, in one paragraph examine the *stability* of this poll across time periods. Do you believe the results could be used to draw conclusions about how young adults aged 18-29 feel about President Obama in the present day? 
+
+Refer back to [The Primer](https://ppbds.github.io/primer/probability.html#cardinal-virtues) for discussion on validity, stability, and representativeness.  
+
+```{r obama-overview-2}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    rows = 6)
+```
+
+### Exercise 3
+
+The [press release revealing the poll results](https://iop.harvard.edu/sites/default/files_new/Harvard_PressReleaseFall2013%20.pdf) included a brief explanation of KnowledgePanel®, which was the platform used to conduct the poll:
+
+>The web-enabled KnowledgePanel® is a probability-based panel designed to be representative of the
+U.S. population. Initially, participants are chosen scientifically by a random selection of 
+telephone numbers and residential addresses. Persons in selected households are then invited by
+telephone or by mail to participate in the web-enabled KnowledgePanel®. For those who agree
+to participate, but do not already have Internet access, GfK provides a laptop and ISP connection
+at no cost. 
+
+With knowledge of the sampling methodology, determine 2 groups the poll may exclude (and explain why it excludes them), which could cause the poll to not be representative of all 18-29 year old Americans.
+
+Refer back to [The Primer](https://ppbds.github.io/primer/probability.html#cardinal-virtues) for discussion on validity, stability, and representativeness.  
+
+```{r obama-overview-3}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    rows = 6)
+```
+
+### Exercise 4
+
+In one sentence, state a wider Population that the Harvard IOP survey may generalize. Include a specific time period as well as demographic qualities that are similar to those of the survey respondents, but also more general so that conclusions can be drawn to a larger group of people for which there is no data for. 
+
+```{r obama-overview-4}
+question_text(NULL,
+    answer(NULL, correct = TRUE),
+    allow_retry = TRUE,
+    try_again_button = "Edit Answer",
+    incorrect = NULL,
+    rows = 6)
+```
+
+## Harvard study 
 
 ###
 
-Let's create the posterior distribution for the proportion $\rho$ of U.S 18-29 year olds who approved of President Obama in 2009,  
+Whenever you want to find the value of a parameter, create a posterior distribution. 
 
+###
 
-<!-- RS: In two different rooms of the same size, one filled with all American adults, and one filled with just 18-29 year olds, what is the probability that the rooms will have a different number of people who approve of Obama? -->
+Let's attempt to answer the following question: 
+
+> In the Fall of 2013, what percentage of young Americans aged 18-29 approved of President Obama's job performance?
+
+###
+
+In order to answer the question, use the Harvard IOP poll to create the posterior distribution for the percentage $\rho$ of U.S 18-29 year olds who approved of President Obama in the Fall of 2013. 
+
+```{r}
+ob_harv_ppd %>%
+  ggplot(aes(x = approval)) +
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 50) +
+  scale_x_continuous(labels = scales::number_format()) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_classic() +
+  labs(title = "Posterior Probability Distribution",
+       x = "Percentage of 18-29 year olds who approved of Obama in fall, 2013",
+       y = "Probability")
+```
 
 
 ### Exercise 1
 
 
-
-```{r posterior-1, exercise = TRUE}
+```{r harvard-1, exercise = TRUE}
 
 ```
 
-```{r posterior-1-hint-1, eval = FALSE}
+```{r harvard-1-hint-1, eval = FALSE}
 
 ```
 
 ###
 
-## Questions
+## Class study
 
 ###
 
+
+
+
+## Predicting probabilities
+
+###
+
+## Summary
+
+###
 
 <!-- Two to four sentences which bring the lessons of the tutorial together for the student. What do they know now that they did not know before? How does this tutorial connect to future tutorials? OK if this is very similar to the Introduction. You made a promise as to what they would learn. You (I hope!) kept that promise.-->
 
