@@ -8,4 +8,5 @@ cook_map <- get_acs(geography = "tract",
                     county = "Cook County",
                     geometry = TRUE,
                     summary_var = "B02001_001")
-write_rds(cook_map, "data/cook-map.rds")
+
+write_rds(cook_map, "inst/tutorials/036-mapping/data/cook-map.rds")
