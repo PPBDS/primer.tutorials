@@ -78,6 +78,19 @@ Although we assigned the treatment to Yao, Emma and Diego when we ran the experi
 
 <!-- Create a tibble which shows the 32 possible assignments of treatment and control. -->
 
+```{r}
+set.seed(100)
+expand_grid(assignment = 1:32, name = c("Yao","Emma","Cassidy","Tahmid","Diego")) %>%
+  mutate(treatment = map_lgl(name, ~sample(c(TRUE, FALSE),size = 1))) %>%
+  mutate(control = case_when(
+    treatment == TRUE ~ FALSE,
+    treatment == FALSE ~ TRUE
+  )) 
+  
+```
+
+
+
 <!-- tibble(assignment number, name, treatment, control) with treatment and control being logical vectors. The tibble has 32 * 5 rows.  -->
 
 ## Null hypothesis
@@ -124,6 +137,37 @@ Need the assignment tibble, from which you are going to take just 5 rows. And yo
 ###
 
 <!-- Do the same thing as previous section, but for all 32 possible assigments. (Note that two of them will drop out because they are everyone gets treatment or everyone gets control.) Results in 30 numbers. Makes a bar chart of those 30 numbers. -->
+
+
+```{r}
+set.seed(100)
+expand_grid(assignment = 1:32, name = c("Yao","Emma","Cassidy","Tahmid","Diego")) %>%
+  mutate(treatment = map_lgl(name, ~sample(c(TRUE, FALSE),size = 1))) %>%
+  mutate(control = case_when(
+    treatment == TRUE ~ FALSE,
+    treatment == FALSE ~ TRUE
+  )) %>%
+  mutate(outcomes = rep(sample(c(13, 14, 6, 12, 3)), 32)) %>%
+  unnest(outcomes)%>%
+  mutate(treatment_outcomes = case_when(
+    treatment == TRUE ~ outcomes,
+    treatment == FALSE ~ 0)) %>%
+  mutate(control_outcomes = case_when(
+    control == TRUE ~ outcomes,
+    control == FALSE ~ 0
+  )) %>%
+  group_by(assignment)%>%
+  summarise(mean_difference = mean(treatment_outcomes)- mean(control_outcomes)) %>%
+  ggplot(aes(x= mean_difference)) +
+  geom_histogram(aes(y = after_stat(count/sum(count))), binwidth = 1,color = "white")+
+  scale_x_continuous(breaks = seq(-7, 12, 1), labels = -7:12)+
+  scale_y_continuous(labels= scales::percent_format(accuracy = 1))
+
+
+  
+  
+```
+
 
 ### 
 
