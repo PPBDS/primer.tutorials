@@ -15,6 +15,7 @@ description: Explain what a permutation test is and give examples of its use.
 library(learnr)
 library(primer.tutorials)
 library(tidyverse)
+library(gt)
 library(primer.data)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
@@ -31,15 +32,98 @@ options(tutorial.exercise.timelimit = 60,
 https://www.youtube.com/watch?v=rJ3AZCQuiLw
 -->
 
-## Permutation tests
 
+## Introduction
 ###
 
-We generally use parametric tests, which required the sample that were used in the test to have approximate normality, no outliers, and a large amount of data; however, sometimes it is difficult to meet the above prerequisites, then it is necessary to use the non-parametric test, which doesn't require any assumptions about the population of the data, but sometimes the non-parametric test cannot handle some cases with a small number of samples. In this case, you can use the *permutation test*.
+Recall from Chapter 4 the stylized example of a Preceptor Table from the experiment which measured the causal effect of exposure to Spanish-speakers on attitudes toward immigration.
 
-*Permutation test* is a computationally intensive method proposed by Fisher for statistical inference using random arrangement of sample data (the core idea of permutation test, hence the name Permutation test). Because of its freedom of population distribution, it is especially suitable for small sample data with unknown population distribution, and some hypothesis testing situations that are difficult to use by conventional methods.
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
 
-Let's construct an small example to show the idea of an *Permutation test*.
+tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("13", "14", "?", "?", "3"),
+       ycontrol = c("?", "?", "6", "12", "?"),
+       ydiff = c("?", "?", "?", "?", "?")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+    tab_header(title = "Preceptor Table") %>% 
+    cols_label(subject = md("ID"),
+                  ytreat = md("$$Y_t(u)$$"),
+                  ycontrol = md("$$Y_c(u)$$"),
+                  ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+    cols_move(columns = c(ytreat, ycontrol), after = c(subject)) %>%
+    tab_style(cell_borders(sides = "right"),
+              location = cells_body(columns = c(subject))) %>%
+    tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
+              locations = cells_column_labels(columns = c(subject))) %>%
+    cols_align(align = "center", columns = everything()) %>%
+    cols_align(align = "left", columns = c(subject)) %>%
+    tab_spanner(label = "$$\\text{Outcomes}$$", c(ytreat, ycontrol)) %>%
+    tab_spanner(label = "$$\\text{Causal Effect}$$", c(ydiff)) %>%
+    fmt_markdown(columns = everything())
+```
+
+Use this data to calculate an average treatment effect of 1. 
+
+A *permutation test* starts with the assumption that the true average treatment effect is zero, and then calculates how "surprising" our estimated average treatment effect is, given that assumption. If the surprise is big enough, we conclude that the average treatment effect is not zero.
+
+
+## Assignments
+###
+
+Although we assigned the treatment to Yao, Emma and Diego when we ran the experiment, this was not pre-ordained. Assignment was random. So, it might have been the case that we assigned the treatment to Emma and Cassidy.
+
+<!-- Create a tibble which shows the 32 possible assignments of treatment and control. -->
+
+<!-- tibble(assignment number, name, treatment, control) with treatment and control being logical vectors. The tibble has 32 * 5 rows.  -->
+
+## Null hypothesis
+###
+
+Let's assume that the causal effect for all units is equal to zero. 
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("13", "14", "6", "12", "3"),
+       ycontrol = c("13", "14", "6", "12", "3"),
+       ydiff = c("0", "0", "0", "0", "0")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+    tab_header(title = "Preceptor Table",
+    subtitle = "Data under the assumption that the causal effect is zero for all units") %>% 
+    cols_label(subject = md("ID"),
+                  ytreat = md("$$Y_t(u)$$"),
+                  ycontrol = md("$$Y_c(u)$$"),
+                  ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+    cols_move(columns = c(ytreat, ycontrol), after = c(subject)) %>%
+    tab_style(cell_borders(sides = "right"),
+              location = cells_body(columns = c(subject))) %>%
+    tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
+              locations = cells_column_labels(columns = c(subject))) %>%
+    cols_align(align = "center", columns = everything()) %>%
+    cols_align(align = "left", columns = c(subject)) %>%
+    tab_spanner(label = "$$\\text{Outcomes}$$", c(ytreat, ycontrol)) %>%
+    tab_spanner(label = "$$\\text{Causal Effect}$$", c(ydiff)) %>%
+    fmt_markdown(columns = everything())
+```
+
+This is our "null hypothesis."
+
+Let's calculate the estimated treatment effect with Assignment Number 7 (or whatever) if the null hypothesis is correct. 
+
+Need the assignment tibble, from which you are going to take just 5 rows. And you need a vector of 5 numbers which is the outcome. A vector is enough because the null hypothesis assumes that Yao's outcome is the same under treatment and control.
+
+## All estimated treatment effects
+###
+
+<!-- Do the same thing as previous section, but for all 32 possible assigments. (Note that two of them will drop out because they are everyone gets treatment or everyone gets control.) Results in 30 numbers. Makes a bar chart of those 30 numbers. -->
 
 ### 
 
@@ -160,6 +244,9 @@ Use `summarise()`
 
 ###
 
+
+## Summary
+###
 
 ```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
 ```
