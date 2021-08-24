@@ -859,7 +859,7 @@ To make the bar charts color of your choice, you can use `scale_fill_manual` fun
 
 ### 
 
-If we had more categories of data, we also could have made use of   **[RColorBrewer](https://www.datanovia.com/en/blog/the-a-z-of-rcolorbrewer-palette/)** package. This package provides a function named `scale_fill_brewer()`. With this function, you can specify a color palette of your choice. 
+If we had more categories of data, we also could have made use of **RColorBrewer** package. This package provides a function named `scale_fill_brewer()`. With this function, you can specify a color palette of your choice. 
 
 ### Exercise 12
 
@@ -958,7 +958,6 @@ sps_p
 ```
 
 ## Gender inequality 
-### 
 
 This dataset shows the median weekly incomes for 535 different occupations. The data encompasses information for all working American citizens as of January 2015. The incomes are broken into male and female statistics, preceded by the total median income when including both genders.
 
@@ -971,30 +970,33 @@ Let's create the following plot.
 income_p <- income %>%
   filter(f_weekly != "Na" & 
          m_weekly != 'Na' & 
-         all_weekly != "Na") %>%
-  mutate(all_weekly = as.numeric(all_weekly)) %>%
-  mutate(occupation = tolower(occupation)) %>%
+         all_weekly != 'Na') %>%
+  mutate(f_weekly = parse_number(f_weekly), 
+         m_weekly = parse_number(m_weekly), 
+         all_weekly = parse_number(all_weekly)) %>%
+  mutate(occupation = str_to_lower(occupation)) %>%
   drop_na() %>%
   arrange(desc(all_weekly)) %>%
-  head(25) %>%
-  select(occupation, m_weekly, f_weekly, m_workers, f_workers) %>%
-  mutate(difference_in_earning = as.numeric(m_weekly) - as.numeric(f_weekly)) %>%
-  mutate(workers = m_workers - f_workers) %>%
-  ggplot(aes(y = reorder(occupation, difference_in_earning) , 
-             x = difference_in_earning, 
-             color = workers)) +
-    geom_point() + 
-    scale_x_continuous(labels = dollar_format()) +
+  slice(1:24) %>%
+  select(occupation, m_weekly, f_weekly) %>%
+  ggplot(aes(y = fct_reorder(occupation, m_weekly), 
+             x = f_weekly, 
+             xend = m_weekly)) +
+  geom_dumbbell(size=1.5, 
+                color="grey", 
+                size_x=3, 
+                size_xend = 3, 
+                colour_x = 'cornflowerblue',
+                colour_xend = 'darkslategray3') +
+  scale_x_continuous(breaks = c(1000, 1250, 1500, 1750, 2000, 2250), 
+                     label = dollar_format(c(1000,1250,1500,1750,2000,2250))) +
     theme_bw() + 
     theme(panel.grid.major.x = element_blank(),
-          panel.grid.minor.x = element_blank(),
-          panel.grid.major.y = element_line(colour = "grey85", 
-                                            linetype = "dashed")) +
+          panel.grid.minor.x = element_blank()) +
     labs(y = NULL,
-         color = 'Difference in workers (in thousands)',
-         x='Difference in earning', 
+         x='Earnings', 
          subtitle='There is significant gender inequality in many areas.',
-         title='Gender Inequality in 25 most paying jobs',
+         title='Gender Inequality in 25  highest-paying jobs',
          caption = 'Source: Bureau of Labor Statistics')
 
 income_p
@@ -1011,7 +1013,7 @@ income_p
 
 We see that many character columns have `Na` values, but they are written as characters instead of NA format. 
 
-###
+### 
 
 In cases where missing values are written as characters, we cannot use `drop_na()` since there are no NA types. 
 
@@ -1027,10 +1029,10 @@ In cases where missing values are written as characters, we cannot use `drop_na(
 income %>%
    filter(... =  != 'Na' & 
           f_weekly != '...' & 
-          all_weekly != "...") 
+          all_weekly != '...') 
 ```
 
-###
+### 
 
 `all_weekly`, `m_weekly`, and `f_weekly` are median weekly including male and female workers, meian weekly income of only male workers, and median weekly income of only female workers in USD, respectively.
 
@@ -1038,11 +1040,11 @@ income %>%
 
 Because we want to get the highest-paying jobs, we need to arrange the tibble by `all_weekly`. 
 
-###
+### 
 
 However, because this column is in character format, we have to convert it to numeric. 
 
-Using `mutate`, overwrite the `all_weekly` column `as.numeric()`. 
+Using `mutate`, overwrite the `all_weekly`, `m_weekly`, and `f_weekly`  columns using `parse_number()`. 
 
 ```{r gender-inequality-3, exercise = TRUE}
 
@@ -1052,17 +1054,17 @@ Using `mutate`, overwrite the `all_weekly` column `as.numeric()`.
 
 ```{r gender-inequality-3-hint-1, eval = FALSE}
 ... %>%
-  mutate(All_weekly = as.numeric(...))
+  mutate(all_weekly = parse_number(...))
 ```
 
-###
+### 
 
-Alternatively, we could have used `as.double()`.
+Alternatively, we could have used the built-in R function `as.numeric()`.
 
 ### Exercise 4
 
     
-For interpretability of results, it would be helpful if we converted `occupation`s to lowercase. We can do this by overwriting `occupation` column with `tolower` function.
+For interpretability of results, it would be helpful if we converted `occupation`s to lowercase. We can do this by overwriting `occupation` column with `str_to_lower()` function.
 
 
 ```{r gender-inequality-4, exercise = TRUE}
@@ -1073,10 +1075,10 @@ For interpretability of results, it would be helpful if we converted `occupation
 
 ```{r gender-inequality-4-hint-1, eval = FALSE}
 ... %>%
-  mutate(occupation = tolower(...)) %>%
+  mutate(occupation = str_to_lower(...)) %>%
 ```
 
-###
+### 
 
 Alternatively, we coul have used `casefold()` function. This function is especially useful because we can change the conversion method with one argument: `upper`. If upper is `FALSE`, the result will be lowercase.
 
@@ -1095,8 +1097,6 @@ Now, although we have dropped the missing values in character columns, we have t
   drop_na()
 ```
 
-###
-
 ### Exercise 6
 
 To get the highest-paying jobs, we have to order the tibble in decreasing order by `all_weekly` column.
@@ -1112,13 +1112,16 @@ To get the highest-paying jobs, we have to order the tibble in decreasing order 
   arrange(desc(...)) 
 ```
 
-###
+### 
 
-Alternatively, we could have used `order()` function to sort rows. 
+Alternatively, we could have used `order()` function to sort rows. We could have used a code like the following: 
 
+```
+income[order(income$all_weekly),]
+```
 ### Exercise 7
 
-Now that we have ordered the tibble, we have to get 25 most-paying jobs. We can do this with `head()` function. 
+Now that we have ordered the tibble, we have to get 25 most-paying jobs. We can do this with `slice()`. 
 
 
 ```{r gender-inequality-7, exercise = TRUE}
@@ -1129,16 +1132,16 @@ Now that we have ordered the tibble, we have to get 25 most-paying jobs. We can 
 
 ```{r gender-inequality-7-hint-1, eval = FALSE}
 ...%>%
-  head(...)
+  slice(1:24)
 ```
 
-###
+### 
 
-Instead of `head()` function, we can make data frame manipulation like the following: `income[1:25,]`
+Instead of `slice()`, we can use the base R function `head()` to get the first 25 rows.
 
 ### Exercise 8
 
-Select `occupation`, `m_weekly`, `f_weekly`, `m_workers`, and `f_workers` columns. 
+Select `occupation`, `m_weekly`, and `f_weekly` columns. 
 
 
 ```{r gender-inequality-8, exercise = TRUE}
@@ -1149,7 +1152,7 @@ Select `occupation`, `m_weekly`, `f_weekly`, `m_workers`, and `f_workers` column
 
 ```{r gender-inequality-8-hint-1, eval = FALSE}
 ...  %>%
-   select(..., m_weekly, ..., ..., f_workers)
+   select(..., m_weekly, ...)
 ```
 
 ### 
@@ -1158,11 +1161,11 @@ Alternatively, we could have used select helpers to select columns. For example,
 
 ### Exercise 9
 
-One of the variable we will use in this graph is the difference between median incomes of female workers and male workers in an occupation. 
+To create our plot, we will use `geom_dumbbell()` object of `ggalt` package.
 
-###
+### 
 
-Create a variable `difference_in_earning` that is  `m_weekly - f_weekly`. Don't forget to convert these columns to numeric first. 
+Create the `ggplot()` object. Within `aes`argument, set`y` equal to`occupation` column, set `x` equal to `f_weekly`, and `xend` to `m_weekly`.
 
 ```{r gender-inequality-9, exercise = TRUE}
 
@@ -1171,34 +1174,38 @@ Create a variable `difference_in_earning` that is  `m_weekly - f_weekly`. Don't 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r gender-inequality-9-hint-1, eval = FALSE}
-... %>% 
-  mutate(difference_in_earning = as.numeric(M_weekly) - as.numeric(...)) 
+... %>%
+  ggplot(aes(y = occupation, 
+             x = f_weekly, 
+             xend = ...)) 
 ```
 
 ### 
 
-The reason we subtracted `F_weekly` from `M_weekly` and no the other way around is because gender inequality is a common problem and may cause, on average, men having higher wages than women. 
+Right now, because we haven't specified the `geom` object, we don't see any graph. 
 
 ### Exercise 10
 
-Create a new variable `workers` that is `M_workers - F_workers`.
+Add `geom_dumbbell()`.
 
 ```{r gender-inequality-10, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r gender-inequality-10-hint-1, eval = FALSE}
-... %>%
-  mutate(workers = M_workers - F_workers) 
+... + 
+  geom_dumbbell()
 ```
 
 ### 
 
-The difference in the quantity of female and male workers may also be a useful indicator of gender inequality. 
+Alternatively, to visualize the earning difference between male and female, we could have created a new variable that is `m_weekly - f_weekly` and use `geom_col()`to graph it. 
 
 ### Exercise 11
 
-Create the `ggplot()` object. Within `aes`argument, set`y` equal to`occupation` that is decreasing-ordered based on `difference_in_training` column, set `x` equal to `difference_in_earning`, and `color` to `workers`.
+Currently, our graph is not easy to read As the first step on the way of making it easy-to-analyse, order values by `m_weekly`. 
 
 ```{r gender-inequality-11, exercise = TRUE}
 
@@ -1208,18 +1215,23 @@ Create the `ggplot()` object. Within `aes`argument, set`y` equal to`occupation` 
 
 ```{r gender-inequality-11-hint-1, eval = FALSE}
 ... %>%
-  ggplot(aes(y = reorder(..., difference_in_earning), 
-             x = difference_in_earning, 
-             color = ...)) 
+  ggplot(aes(y = fct_reorder(occupation, ...), 
+             x = f_weekly, 
+             xend = m_weekly)) + 
+  geom_dumbbell()
 ```
 
-###
+### 
 
-Because we didn't specify the `geom`, we only see the empty figure. 
+Instead of `fct_reorder()`, we could use `reorder()` function. 
 
 ### Exercise 12
 
-Add `geom_point()`.
+Now for color and size selection for the graph, manipulate the `geom_dumbbell()` object's arguments. 
+
+### 
+
+Set `size` to 1.5, `size_x` to 3, and `size_xend` to 3. 
 
 ```{r gender-inequality-12, exercise = TRUE}
 
@@ -1229,16 +1241,18 @@ Add `geom_point()`.
 
 ```{r gender-inequality-12-hint-1, eval = FALSE}
 ... + 
-  geom_point()
+  geom_dumbbell(size=1.5, 
+                size_x=..., 
+                size_xend = ...)
 ```
 
 ### 
 
-Alternatively, we could have used `geom_col()`. But we like `geom_point()` better for this plot.
+`size` argument is used to specify the size of the line connecting points. And `size_x` and `size_xend` are used to change the size of the points corresponding to `x` and `xend` argument values specified in `ggplot()` object, respectively. 
 
 ### Exercise 13
 
-Because the wages are in USD, within `scale_x_continuous`, add dollar sign to x-axis `labels`.
+Within the `geom_dumbbell()` object, change color-related arguments: set `color` equal to `grey`, `colour_x` to `cornflowerblue`, and `colour_xend` to `darkslategray3`. 
 
 ```{r gender-inequality-13, exercise = TRUE}
 
@@ -1248,12 +1262,26 @@ Because the wages are in USD, within `scale_x_continuous`, add dollar sign to x-
 
 ```{r gender-inequality-13-hint-1, eval = FALSE}
 ... + 
-  scale_x_continuous(... = dollar_format()) 
+  geom_dumbbell(size=1.5, 
+                color="grey", 
+                size_x=3, 
+                size_xend = 3, 
+                colour_x = '...', 
+                colour_xend = '...')
 ```
+
+### 
+
+`color` argument is used to specify the color of the line connecting the points.
+
 
 ### Exercise 14
 
-Add `theme_bw()`. 
+Because x-axis ticks overlap, it'd be more readable if we selected only specific ticks.
+
+### 
+
+Within `scale_x_continuous()` function, set `breaks` argument equal to a vector of six values: 1000, 1250, 1500, 1750, 2000, and 2250. 
 
 ```{r gender-inequality-14, exercise = TRUE}
 
@@ -1263,20 +1291,17 @@ Add `theme_bw()`.
 
 ```{r gender-inequality-14-hint-1, eval = FALSE}
 ... + 
-  theme_bw() 
+  scale_x_continuous(... = c(1000, 1250, 1500, 1750, 2000, 2250), 
+                   label = ...(c(1000,1250,1500,1750,2000,2250))) +
 ```
 
 ### 
 
-Using package **[ggthemes](https://jrnold.github.io/ggthemes/)**, we can access many more themes such as `theme_tufte()` and `theme_calc()`. 
+`scale_x_sqrt()` is used to take the square root of x-axis values. 
 
 ### Exercise 15
 
-Because we want to analyse general trends, grid lines do not provide very much information. Therefore, we can eliminate them. 
-
-###
-
-Within `theme()`, set `panel.grid.major.x` to `element_blank()`, `panel.grid.minor.x` to `element_blank()`, and `panel.grid.major.y`to `element_line(colour = "grey85", linetype = "dashed)`. 
+Because the earnings in this dataset is in dollars, we should format x-axis tick labels with dollar sign. Within `scale_x_continuous()` from previous exercise, set `label` argument equal to `dollar_format()` that has used for breaks.   
 
 ```{r gender-inequality-15, exercise = TRUE}
 
@@ -1286,24 +1311,67 @@ Within `theme()`, set `panel.grid.major.x` to `element_blank()`, `panel.grid.min
 
 ```{r gender-inequality-15-hint-1, eval = FALSE}
 ... + 
+scale_x_continuous(breaks = c(1000, 1250, 1500, 1750, 2000, 2250), 
+                   label = ...(c(1000, 1250, 1500, 1750, 2000, 2250))) +
+```
+
+###
+
+`scales::percent_format()` is used to format values in percent format. For example, 40 becomes 40%.
+
+### Exercise 16
+
+Add `theme_bw()`. 
+
+```{r gender-inequality-16, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r gender-inequality-16-hint-1, eval = FALSE}
+... + 
+  theme_bw() 
+```
+
+### 
+
+Using package **[ggthemes](https://jrnold.github.io/ggthemes/)**, we can access many more themes such as `theme_tufte` and `theme_calc`. 
+
+### Exercise 17
+
+Because we want to analyse general trends, grid lines do not provide very much information. Therefore, we can eliminate them. 
+
+### 
+
+Within `theme()`, set `panel.grid.major.x` to `element_blank()`, and `panel.grid.minor.x` to `element_blank()`.
+
+```{r gender-inequality-17, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r gender-inequality-17-hint-1, eval = FALSE}
+... + 
   theme(
     panel.grid.major.x = element_blank(),
-    panel.grid.minor.x = element_blank(),
-    panel.grid.major.y = element_line(colour = "grey85", linetype = "dashed")
-  ) 
+    panel.grid.minor.x = element_blank()) 
 ```
 
 ### 
 
 One of the arguments of `theme`, `panel.background`,  is used to change the elements of the background of the plotting area.
 
-### Exercise 16
+`panel.ontop` is a logical argument used within `theme()` to set whether the grid lines will be over the graph. 
+
+### Exercise 18
 
 To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, legend labels, and caption of your choice.
 
 Reminder: This is what your plot should look like. 
 
-```{r gender-inequality-final}
+```{r gender-inequality-18}
 income_p
 ```
 
@@ -1311,10 +1379,11 @@ income_p
 
 ```
 
-```{r gender-inequality-16-hint-1, eval = FALSE}
+```{r gender-inequality-18-hint-1, eval = FALSE}
 ... + 
   labs(...)
 ```
+
 
 ## Last letter of boy names
 
