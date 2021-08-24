@@ -33,33 +33,39 @@ gmail_access <- function(query, key, secret){
     # so we also need to only keep rds files. If a message doesn't have an
     # attachment on the starting message of the thread, it's also skipped.
 
-    msg <- gmailr::gm_message(message_id)
+    tryCatch({
+      msg <- gmailr::gm_message(message_id)
 
-    fn <- paste0("submission_", message_id, ".rds")
+      fn <- paste0("submission_", message_id, ".rds")
 
-    print(gmailr::gm_attachments(msg))
+      print(gmailr::gm_attachments(msg))
 
-    attached <- gmailr::gm_attachments(msg)
+      attached <- gmailr::gm_attachments(msg)
 
-    if (length(attached) < 1){
-      next
-    }
+      if (length(attached) < 1){
+        next
+      }
 
-    if (!stringr::str_detect(attached$filename[[1]], "\\.rds$")){
-      next
-    }
+      if (!stringr::str_detect(attached$filename[[1]], "\\.rds$")){
+        next
+      }
 
-    attach_id <- gmailr::gm_attachments(msg)$id[[1]]
+      attach_id <- gmailr::gm_attachments(msg)$id[[1]]
 
-    attach_obj <- gmailr::gm_attachment(attach_id, message_id)
+      attach_obj <- gmailr::gm_attachment(attach_id, message_id)
 
-    new_path <- file.path(temp_path, fn)
+      new_path <- file.path(temp_path, fn)
 
-    gmailr::gm_save_attachment(attach_obj, new_path)
+      gmailr::gm_save_attachment(attach_obj, new_path)
 
-    print(paste0("Saved attachment in tempdir:\n", new_path))
+      print(paste0("Saved attachment in tempdir:\n", new_path))
 
-    rds_paths <- append(rds_paths, new_path)
+      rds_paths <- append(rds_paths, new_path)
+    },
+    error = function(cond){
+      # Leave this empty for skipping errors
+    })
+
   }
 
   rds_paths

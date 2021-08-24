@@ -9,4 +9,4 @@ cook_stores <- fromJSON(json_url)
 
 # Write RDS file with the features/attributes table of that object (name, state,
 # county, latitude, and longitude)
-write_rds(cook_stores$features$attributes, "data/cook-stores.rds")
+write_rds(cook_stores$features$attributes, "inst/tutorials/036-mapping/data/cook-stores.rds")
