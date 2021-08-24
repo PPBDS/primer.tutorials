@@ -28,7 +28,7 @@ options(tutorial.exercise.timelimit = 60,
 
 
 ch_11 <- shaming %>% 
-  filter(treatment %in% c("Control", "Neighbors")) %>% 
+  filter(treatment %in% c("No Postcard", "Neighbors")) %>% 
   droplevels() %>% 
   mutate(solo = ifelse(hh_size == 1, TRUE, FALSE)) %>% 
   select(primary_06, treatment, solo, sex, age) %>% 
@@ -43,7 +43,7 @@ sham_2 <- stan_glm(data = ch_11,
                  refresh = 0)
 
 
-treatment = c("Neighbors", "Control")
+treatment = c("Neighbors", "No Postcard")
 solo = c(TRUE,FALSE)
 age = c(30, 45, 60)
 
@@ -57,6 +57,17 @@ newobs <- expand_grid(treatment, solo, age) %>%
 
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
+
+<!-- WARNING! I think this tutorial is broken. Check out the warning message when you knit it: -->
+
+<!-- Warning messages: -->
+<!-- 1: Problem with `mutate()` column `Neighbors`. -->
+<!-- ℹ `Neighbors = soloTRUE + soloTRUE:treatmentNeighbors`. -->
+<!-- ℹ numerical expression has 4000 elements: only the first used  -->
+<!-- 2: Problem with `mutate()` column `Neighbors`. -->
+<!-- ℹ `Neighbors = soloTRUE + soloTRUE:treatmentNeighbors`. -->
+<!-- ℹ numerical expression has 4000 elements: only the first used  -->
+
 
 ## EDA of shaming
 
@@ -72,7 +83,7 @@ First `glimpse()` the `shaming` data to familiarize yourself with the variables.
 
 ### Exercise 2
 
-Let’s focus on a subset of the data to work with. Start a pipe with `shaming`. `filter()` to where treatment is either "Control" or "Neighbors".
+Let’s focus on a subset of the data to work with. Start a pipe with `shaming`. `filter()` to where treatment is either "No Postcard" or "Neighbors".
 
 ```{r eda-of-shaming-2, exercise = TRUE}
 
@@ -106,7 +117,7 @@ Continue the pipe and `select()` the variables `primary_06`, `treatment`, `solo`
 
 ```{r eda-4-hint, eval = FALSE }
 shaming %>% 
-  filter(treatment %in% c("Control", "Neighbors")) %>% 
+  filter(treatment %in% c("No Postcard", "Neighbors")) %>% 
   droplevels() %>% 
   mutate(solo = ifelse(hh_size == 1, TRUE, FALSE)) %>% 
   select(..., ..., ...., ..., ...)
@@ -122,7 +133,7 @@ Finally, let's limit our observations to 10,000 rows. To do so, use `sample_n()`
 
 ```{r eda-5-hint, eval = FALSE }
 ch_11 <- shaming %>% 
-  filter(treatment %in% c("Control", "Neighbors")) %>% 
+  filter(treatment %in% c("No Postcard", "Neighbors")) %>% 
   droplevels() %>% 
   mutate(solo = ifelse(hh_size == 1, TRUE, FALSE)) %>% 
   select(primary_06, treatment, solo, sex, age) %>% 
@@ -215,9 +226,9 @@ Let’s model the following posterior probability distribution for the rates of 
 sham_p <- sham_1 %>% 
   as_tibble() %>% 
   mutate(Neighbors = `(Intercept)` + treatmentNeighbors) %>% 
-  mutate(Control = `(Intercept)`) %>% 
-  select(Neighbors, Control) %>% 
-  pivot_longer(cols = Neighbors:Control,
+  mutate(`No Postcard` = `(Intercept)`) %>% 
+  select(Neighbors, `No Postcard`) %>% 
+  pivot_longer(cols = Neighbors:`No Postcard`,
                names_to = "parameters",
                values_to = "percent_voting") %>% 
   ggplot(aes(percent_voting, fill = parameters)) +
@@ -226,7 +237,7 @@ sham_p <- sham_1 %>%
                    bins = 100, 
                    position = "identity") +
     labs(title = "Posterior Probability Distribution",
-         subtitle = "for Control versus Neighbors voting rates",
+         subtitle = "for No Postcard versus Neighbors voting rates",
          x = "% of group voting",
          y = "Probability") + 
     scale_x_continuous(labels = scales::number_format()) +
@@ -265,7 +276,7 @@ sham_1 %>%
 
 ### Exercise 8
 
-Continue your pipe with `mutate()` to create the variable `Control` which is equal to `(Intercept)`. Make sure you place backticks around (Intercept).
+Continue your pipe with `mutate()` to create the variable `No Postcard` which is equal to `(Intercept)`. Make sure you place backticks around (Intercept).
 
 ```{r i-justice-and-courag-8, exercise = TRUE}
 
@@ -273,12 +284,12 @@ Continue your pipe with `mutate()` to create the variable `Control` which is equ
 
 ```{r i-justice-and-courag-8-hint-1, eval = FALSE}
 ... %>% 
-  mutate(Control = ...)
+  mutate(`No Postcard` = ...)
 ```
 
 ### Exercise 9
 
-Now `select()` the variables `Control` and `Neighbors`.
+Now `select()` the variables `No Postcard` and `Neighbors`.
 
 ```{r i-justice-and-courag-9, exercise = TRUE}
 
@@ -291,7 +302,7 @@ Now `select()` the variables `Control` and `Neighbors`.
 
 ### Exercise 10
 
-Pipe your results to `pivot_longer()`. Within `pivot_longer()`, set `names_to` to "parameters" and set `cols` to`Neighbors:Control`.Also `values_to` should be set to "percent_voting".
+Pipe your results to `pivot_longer()`. Within `pivot_longer()`, set `names_to` to "parameters" and set `cols` to`Neighbors:No Postcard`.Also `values_to` should be set to "percent_voting".
 
 ```{r i-justice-and-courag-10, exercise = TRUE}
 
@@ -426,10 +437,10 @@ Let's create the following posterior distribution for the likeliness of voting f
 ```{r}
 sham2_p <- sham_2 %>% 
   as_tibble() %>% 
-  mutate(Control = soloTRUE) %>% 
+  mutate(`No Postcard` = soloTRUE) %>% 
   mutate(Neighbors = soloTRUE + soloTRUE:treatmentNeighbors) %>% 
-  select(Neighbors, Control) %>% 
-  pivot_longer(cols = Neighbors:Control,
+  select(Neighbors, `No Postcard`) %>% 
+  pivot_longer(cols = Neighbors:`No Postcard`,
                names_to = "parameters",
                values_to = "percent_voting") %>% 
   ggplot(aes(percent_voting, fill = parameters)) +
@@ -463,7 +474,7 @@ sham_2 %>%
 
 ### Exercise 6
 
-Continue the pipe and use `mutate()` to create the variable `Control`, which should be equal to soloTRUE.
+Continue the pipe and use `mutate()` to create the variable `No Postcard`, which should be equal to soloTRUE.
 
 ```{r ii-justice-and-coura-6, exercise = TRUE}
 
@@ -491,7 +502,7 @@ sham_2 %>%
 
 ### Exercise 8
 
-Now `select()` the variables `Control` and `Neighbors`.
+Now `select()` the variables `No Postcard` and `Neighbors`.
 
 ```{r ii-justice-and-coura-8, exercise = TRUE}
 
@@ -504,7 +515,7 @@ Now `select()` the variables `Control` and `Neighbors`.
 
 ### Exercise 9
 
-Pipe your results to `pivot_longer()`. Within `pivot_longer()`, set `cols` to `Neighbors:Control`. Also set `names_to` to "parameters" and `values_to` should be set to "percent_voting".
+Pipe your results to `pivot_longer()`. Within `pivot_longer()`, set `cols` to `Neighbors:No Postcard`. Also set `names_to` to "parameters" and `values_to` should be set to "percent_voting".
 
 ```{r ii-justice-and-coura-9, exercise = TRUE}
 
@@ -587,10 +598,10 @@ Consider:
 
 Let's create the following posterior probability distribution. 
 
-**Note:** The types of people included in this distribution are people who are 30, 45, 60 years old. For every age, each treatment (Neighbors and Control) and living situation (lives alone or not) is accounted for. 
+**Note:** The types of people included in this distribution are people who are 30, 45, 60 years old. For every age, each treatment (Neighbors and No Postcard) and living situation (lives alone or not) is accounted for. 
 
 ```{r}
-treatment <- c("Neighbors", "Control")
+treatment <- c("Neighbors", "No Postcard")
 solo <- c(TRUE,FALSE)
 age <- c(30, 45, 60)
 
@@ -601,12 +612,12 @@ temp_p <- posterior_epred(sham_2,
                       newdata = newobs) %>%
   as_tibble() %>%
   set_names(newobs$names) %>% 
-  mutate(solo_30       = Neighbors_TRUE_30 - Control_TRUE_30,
-         `not-solo_30` = Neighbors_FALSE_30 - Control_FALSE_30,
-         solo_45       = Neighbors_TRUE_45 - Control_TRUE_45,
-         `not-solo_45` = Neighbors_FALSE_45 - Control_FALSE_45,
-         solo_60       = Neighbors_TRUE_60 - Control_TRUE_60,
-         `not-solo_60` = Neighbors_FALSE_60 - Control_FALSE_60) %>% 
+  mutate(solo_30       = Neighbors_TRUE_30 - `No Postcard_TRUE_30`,
+         `not-solo_30` = Neighbors_FALSE_30 - `No Postcard_FALSE_30`,
+         solo_45       = Neighbors_TRUE_45 - `No Postcard_TRUE_45`,
+         `not-solo_45` = Neighbors_FALSE_45 - `No Postcard_FALSE_45`,
+         solo_60       = Neighbors_TRUE_60 - `No Postcard_TRUE_60`,
+         `not-solo_60` = Neighbors_FALSE_60 - `No Postcard_FALSE_60`) %>% 
   select(solo_30:`not-solo_60`) %>% 
   pivot_longer(names_to = "Group",
                values_to = "Treatment_Effect",
@@ -625,14 +636,14 @@ temp_p
 
 ### Exercise 1
 
-We want to make sure our data includes every possible combination. To do so, let's start by creating three separate objects that includes the information what we want to combine. The first object should be `treatment`, which is equal to "Neighbors" and "Control". The second object should be `solo` , which is set to TRUE and FALSE. THe third object should be `age` which is set to 30,45,60.
+We want to make sure our data includes every possible combination. To do so, let's start by creating three separate objects that includes the information what we want to combine. The first object should be `treatment`, which is equal to "Neighbors" and "No Postcard". The second object should be `solo` , which is set to TRUE and FALSE. THe third object should be `age` which is set to 30,45,60.
 
 ```{r temperance-1, exercise = TRUE}
 
 ```
 
 ```{r temperance-1-hint-1, eval = FALSE}
-treatment <- c("Neighbors", "Control")
+treatment <- c("Neighbors", "No Postcard")
 solo <- c(..., ...)
 age <- c(..., ..., ...)
 ```
@@ -702,8 +713,8 @@ Continue the pipe with `mutate()` and create a variable for each treatment effec
 
 ```{r temperance-6-hint-1, eval = FALSE}
 ... %>% 
-    mutate(solo_30 = Neighbors_TRUE_30 - Control_TRUE_30,
-         `not-solo_30` = Neighbors_FALSE_30 - Control_FALSE_30)
+    mutate(solo_30 = Neighbors_TRUE_30 - `No Postcard_TRUE_30`,
+         `not-solo_30` = Neighbors_FALSE_30 - `No Postcard_FALSE_30`)
 ```
 
 ```{r temperance-6-hint-2, eval = FALSE}

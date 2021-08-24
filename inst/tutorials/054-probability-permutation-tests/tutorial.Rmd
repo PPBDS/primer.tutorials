@@ -15,10 +15,17 @@ description: Explain what a permutation test is and give examples of its use.
 library(learnr)
 library(primer.tutorials)
 library(tidyverse)
+library(gt)
 library(primer.data)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
+
+set.seed(100)
+all_assignments <- expand_grid(assignment = 1:32, 
+                               name = c("Yao","Emma","Cassidy","Tahmid","Diego")) %>%
+                      mutate(treatment = map_lgl(name, ~sample(c(TRUE, FALSE),size = 1))) %>%
+                      mutate(control = ! treatment)
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -27,13 +34,265 @@ options(tutorial.exercise.timelimit = 60,
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
-<!-- Create a nice plot which shows the result of a permutation test, and then guide the student to doing it. Use this for background: https://www.youtube.com/watch?v=GmvpsJHGCxQ 
+<!-- Reread Chapter 4. Create a nice plot which shows the result of a permutation test, and then guide the student to doing it. Use this for background: https://www.youtube.com/watch?v=GmvpsJHGCxQ 
 https://www.youtube.com/watch?v=rJ3AZCQuiLw
 -->
 
-## Permutation tests
+
+## Introduction
+###
+
+Recall from Chapter 4 the stylized example of a Preceptor Table from the experiment which measured the causal effect of exposure to Spanish-speakers on attitudes toward immigration.
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("13", "14", "?", "?", "3"),
+       ycontrol = c("?", "?", "6", "12", "?"),
+       ydiff = c("?", "?", "?", "?", "?")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+    tab_header(title = "Preceptor Table") %>% 
+    cols_label(subject = md("ID"),
+                  ytreat = md("$$Y_t(u)$$"),
+                  ycontrol = md("$$Y_c(u)$$"),
+                  ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+    cols_move(columns = c(ytreat, ycontrol), after = c(subject)) %>%
+    tab_style(cell_borders(sides = "right"),
+              location = cells_body(columns = c(subject))) %>%
+    tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
+              locations = cells_column_labels(columns = c(subject))) %>%
+    cols_align(align = "center", columns = everything()) %>%
+    cols_align(align = "left", columns = c(subject)) %>%
+    tab_spanner(label = "$$\\text{Outcomes}$$", c(ytreat, ycontrol)) %>%
+    tab_spanner(label = "$$\\text{Causal Effect}$$", c(ydiff)) %>%
+    fmt_markdown(columns = everything())
+```
+
+Use this data to calculate an average treatment effect of 1. 
+
+A *permutation test* starts with the assumption that the true average treatment effect is zero, and then calculates how "surprising" our estimated average treatment effect is, given that assumption. If the surprise is big enough, we conclude that the average treatment effect is not zero.
+
+
+## Assignments
+###
+
+Although we assigned the treatment to Yao, Emma and Diego when we ran the experiment, this was not pre-ordained. Assignment was random. So, it might have been the case that we assigned the treatment to Emma and Cassidy.
+
+<!-- Create a tibble which shows the 32 possible assignments of treatment and control. Need to ensure that each person has the treatment and control the same number of times.  x %>% filter(name == "Yao") %>% count(treatment, control) -->
+
+<!-- Show how to use a single assigment to, by hand, calculate the estimate causal effect. But use the assignment which actually happened in reality! -->
+
+```{r}
+
+  
+```
+
+
+
+<!-- tibble(assignment number, name, treatment, control) with treatment and control being logical vectors. The tibble has 32 * 5 rows.  -->
+
+## Null hypothesis
+###
+
+Let's assume that the causal effect for all units is equal to zero. 
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("13", "14", "6", "12", "3"),
+       ycontrol = c("13", "14", "6", "12", "3"),
+       ydiff = c("0", "0", "0", "0", "0")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+    tab_header(title = "Preceptor Table",
+    subtitle = "Data under the assumption that the causal effect is zero for all units") %>% 
+    cols_label(subject = md("ID"),
+                  ytreat = md("$$Y_t(u)$$"),
+                  ycontrol = md("$$Y_c(u)$$"),
+                  ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+    cols_move(columns = c(ytreat, ycontrol), after = c(subject)) %>%
+    tab_style(cell_borders(sides = "right"),
+              location = cells_body(columns = c(subject))) %>%
+    tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
+              locations = cells_column_labels(columns = c(subject))) %>%
+    cols_align(align = "center", columns = everything()) %>%
+    cols_align(align = "left", columns = c(subject)) %>%
+    tab_spanner(label = "$$\\text{Outcomes}$$", c(ytreat, ycontrol)) %>%
+    tab_spanner(label = "$$\\text{Causal Effect}$$", c(ydiff)) %>%
+    fmt_markdown(columns = everything())
+```
+
+This is our "null hypothesis."
+
+Let's calculate the estimated treatment effect with Assignment Number 7 (or whatever) if the null hypothesis is correct. 
+
+Need the assignment tibble, from which you are going to take just 5 rows. And you need a vector of 5 numbers which is the outcome. A vector is enough because the null hypothesis assumes that Yao's outcome is the same under treatment and control.
+
+## All estimated treatment effects
+###
+
+<!-- Do the same thing as previous section, but for all 32 possible assigments. (Note that two of them will drop out because they are everyone gets treatment or everyone gets control.) Results in 30 numbers. Makes a bar chart of those 30 numbers. -->
+
+
+```{r}
+set.seed(100)
+expand_grid(assignment = 1:32, name = c("Yao","Emma","Cassidy","Tahmid","Diego")) %>%
+  mutate(treatment = map_lgl(name, ~sample(c(TRUE, FALSE),size = 1))) %>%
+  mutate(control = case_when(
+    treatment == TRUE ~ FALSE,
+    treatment == FALSE ~ TRUE
+  )) %>%
+  mutate(outcomes = rep(sample(c(13, 14, 6, 12, 3)), 32)) %>%
+  unnest(outcomes)%>%
+  mutate(treatment_outcomes = case_when(
+    treatment == TRUE ~ outcomes,
+    treatment == FALSE ~ 0)) %>%
+  mutate(control_outcomes = case_when(
+    control == TRUE ~ outcomes,
+    control == FALSE ~ 0
+  )) %>%
+  group_by(assignment)%>%
+  summarise(mean_difference = mean(treatment_outcomes)- mean(control_outcomes)) %>%
+  ggplot(aes(x= mean_difference)) +
+  geom_histogram(aes(y = after_stat(count/sum(count))), binwidth = 1,color = "white")+
+  scale_x_continuous(breaks = seq(-7, 12, 1), labels = -7:12)+
+  scale_y_continuous(labels= scales::percent_format(accuracy = 1))
+
+
+  
+  
+```
+
 
 ### 
+
+```{r}
+A <- c(17,22,24,25,29)
+B <- c(15,18,21) 
+C <- c(15,16,18,20,25,14,19,23)
+mn_d = mean(A) - mean(B)
+A_2 <- sample(C, size = 5, replace = FALSE)
+B_2 <- subset(C, ! C %in% A_2)
+mn_d2 <- mean(A_2) - mean(B_2)
+mn_d
+mn_d2
+
+# expand_grid(a = A, b = B, c = C) %>%
+#   mutate(mean_d = mean(a) - mean(c)) %>%
+#   mutate(a_2 = map_dbl(a, ~list(sample(.,size = 5, replace = FALSE)))) %>%
+#   mutate(b_2 = map_dblt(a_2, ~list(subset(C, ! C %in% A_2))))
+```
+
+
+### Exercise 1
+
+Suppose we design to verify that the height of Bamboo will increase significantly after adding certain auxin. Group A is the height of bamboos after adding a certain auxin; B is the the height of bamboos without adding auxin (all assumed values).
+
+Group A (12 data in meters): 6, 6, 8, 9, 9, 10, 11, 14, 17, 20, 21, 23  
+Group B (9 data in meters):  6, 8, 10, 11, 13, 15, 16, 17, 19
+
+Use `tibble()` create two variables,the first variable `A` and set it equal to `list()` which include the 12 values above wrap around by `c()`. She second variable B and set it equal to `list()` which include the 9 values above wrap around by `c()`. Your result should only have 1 row.
+```{r permutation-tests-1, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r permutation-tests-1-hint, eval = FALSE}
+tibble(A = list(c(6, 6, 8, 9, 9, 10, 11, 14, 17, 20, 21, 23)),
+       B = list(c(6, 8, 10, 11, 13, 15, 16, 17, 19)))
+```
+
+###
+Our null hypothesis is: the added auxin will not promote the height growth of bamboo. In this test, if the null hypothesis is true, then the distribution of the data in group A and the distribution of data in group B are the same, that is, subject to the same distribution.
+
+### Exercise 2
+
+Next, construct the test statistic - the difference between the mean value of the height of bamboos in group A and the mean value of the height of bamboos in group B. 
+
+Use `summarise()`
+```{r permutation-tests-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r permutation-tests-2-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 3
+
+
+```{r permutation-tests-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r permutation-tests-3-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 4
+
+
+```{r permutation-tests-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r permutation-tests-4-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 5
+
+
+```{r permutation-tests-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r permutation-tests-5-hint, eval = FALSE}
+
+```
+
+###
+
+### Exercise 6
+
+
+```{r permutation-tests-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r permutation-tests-6-hint, eval = FALSE}
+
+```
+
+###
+
+
+## Summary
+###
 
 ```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
 ```

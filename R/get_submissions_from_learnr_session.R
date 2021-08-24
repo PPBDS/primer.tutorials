@@ -21,6 +21,32 @@ get_submissions_from_learnr_session <- function(sess){
   # learnr:::submissions_from_state_objects() then filters the results to only
   # submission-related state objects, which are the student answers.
 
-  objs <- learnr:::get_all_state_objects(sess)
-  learnr:::submissions_from_state_objects(objs)
+  # objs <- learnr:::get_all_state_objects(sess)
+  # learnr:::submissions_from_state_objects(objs)
+
+  # In the commits on August 12th and 14th, the need to use any ::: have been
+  # eliminated as we can read all the tutorial info and state from newly
+  # provided functions:
+  # learnr::get_tutorial_state()
+  # learnr::get_tutorial_info()
+
+  # Unfortunately, the answers in learnr::get_tutorial_state() are not provided
+  # in order of appearance, so we still need get_label_list() to get the label
+  # order
+
+  curr_state <- learnr::get_tutorial_state()
+
+  label_names <- names(curr_state)
+
+  obj_list <- list()
+
+  for (n in label_names){
+    obj_list[[n]] <- list(
+      id = n,
+      type = curr_state[[n]]$type,
+      answer = curr_state[[n]]$answer
+    )
+  }
+
+  obj_list
 }

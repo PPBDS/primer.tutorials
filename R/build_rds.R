@@ -13,8 +13,7 @@ build_rds <- function(file, session, is_test = FALSE){
 
   # Data Structure of a learnr submission object
 
-  # obj$data$answer[[1]] question answer
-  # obj$data$code[[1]] "exercise answer"
+  # obj$answer[[1]] "answer"
   # obj$type[[1]] "exercise_submission"
   # obj$id[[1]] "id"
 
@@ -24,7 +23,7 @@ build_rds <- function(file, session, is_test = FALSE){
   }
   else{
     objs <- get_submissions_from_learnr_session(session)
-    tutorial_id <- learnr:::read_request(session, "tutorial.tutorial_id")
+    tutorial_id <- learnr::get_tutorial_info()$tutorial_id
   }
 
   # Get label order to order answers

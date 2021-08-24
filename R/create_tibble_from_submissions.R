@@ -9,22 +9,6 @@
 
 create_tibble_from_submissions <- function(objs, label_list, tutorial_id){
 
-  # Create function to map objects over that will
-  # return different results based on if it is a
-  # code or question exercise.
-
-  question_or_exercise <- function(obj, ...){
-    options <- list(...)
-    if(obj$type[[1]] == "exercise_submission"){
-      obj$data$code[[1]]
-    }
-    else if(obj$type[[1]] == "question_submission"){
-      obj$data$answer[[1]]
-    }
-    else{
-      options$default
-    }
-  }
 
   # Format objs from learnr into a tibble
   #
@@ -38,7 +22,7 @@ create_tibble_from_submissions <- function(objs, label_list, tutorial_id){
                         .default = NA),
     submission_type = purrr::map_chr(objs, "type",
                                      .default = NA),
-    answer = purrr::map_chr(objs, question_or_exercise,
+    answer = purrr::map_chr(objs, "answer",
                         .default = NA)
   )
 
