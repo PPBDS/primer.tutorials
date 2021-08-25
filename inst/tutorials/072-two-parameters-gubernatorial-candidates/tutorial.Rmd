@@ -19,28 +19,24 @@ library(primer.data)
 library(skimr)
 library(rstanarm)
 library(ggthemes)
+library(gt)
+library(readr)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local")
 
 winners <- governors %>% 
   filter(win_margin > 0) %>% 
-  select(year, first_name, last_name, election_age)
+  select(year, first_name, last_name, state, election_age)
 
 set.seed(1)
 
-tests <- tibble(score = floor(rnorm(100, mean = 90, sd = 4))) %>% 
-  filter(score < 101)
-
-winners_ages <- winners %>% 
-  select(election_age)
-
-winners_model <- stan_glm(data = winners_ages,
+winners_model <- stan_glm(data = winners,
                           formula = election_age ~ 1,
                           refresh = 0,
                           family = gaussian())
 
-winners_model_draws <- posterior_predict(winners_model, newdata = tibble(constant = 1))
+winners_draws <- posterior_predict(winners_model, newdata = tibble(constant = 1))
 
 age_bias_plot <- governors %>% 
   select(year, election_age) %>% 
@@ -57,6 +53,65 @@ age_bias_plot <- governors %>%
        subtitle = "Recently deceased candidates were likely to have been older than those longer deceased",
        x = "Year",
        y = "Average age of candidates")
+
+preceptor_table <- tibble(
+  State = c("Alabama", "Alaska", "Arizona", "⋮"),
+  Year = c("2022", "2022", "2022", "⋮"),
+  `Election Age` = c("?", "?", "?", "⋮")
+) %>% 
+  gt() %>% 
+  tab_header(title = "Preceptor Table")
+
+population_table <- tibble(
+  Source = c(
+    rep("Preceptor Table", 3), "⋮",
+    rep("Actual Data", 3), "⋮",
+    rep("Outstanding Population", 3), "⋮"
+  ),
+  State = c(
+    "Alabama", "Alaska", "Arizona", "⋮",
+    "Virginia", "Connecticut", "Kentucky", "⋮",
+    "Florida", "Montana", "Virginia", "⋮"
+  ),
+  Year = c(
+    rep("2022", 3), "⋮",
+    "1945", "1946", "1947", "⋮",
+    "1990", "2000", "2025", "⋮"
+  ),
+  `Election Age` = c(
+    rep("?", 3), "⋮",
+    "49.1", "59.0", "52.5", "⋮",
+    "60.6", "57.3", "?", "⋮"
+  )
+) %>% 
+  gt() %>% 
+  tab_header(title = "Population Table")
+
+winners_1970 <- winners %>% 
+  filter(year <= 1970)
+
+winners_1970_model <- stan_glm(data = winners_1970,
+                               formula = election_age ~ 1,
+                               refresh = 0,
+                               family = gaussian)
+
+winners_1970_draws <- posterior_predict(winners_1970_model,
+                                        newdata = tibble(constant = 1))
+
+# answer <- function(input) {
+#   winners_year <- winners %>% 
+#     filter(year <= input)
+#   winners_year_model <- stan_glm(data = winners_year,
+#                                  formula = election_age ~ 1,
+#                                  refresh = 0,
+#                                  family = gaussian)
+#   winners_year_draws <- posterior_predict(winners_year_model,
+#                                           newdata = tibble(constant = 1))
+#   return(sum(winners_year_draws > 60) / length(winners_year_draws))
+# }
+# 
+# answer_tibble <- tibble(year = 1946:2003,
+#                         answer = sapply(1946:2003, answer))
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -65,15 +120,7 @@ age_bias_plot <- governors %>%
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
-<!-- First do it stupidly, where you just use all the winners. In the discussion of Justice, you should mention your concerns, but maybe ignore them for now. -->
-
-<!-- Then, do it all again (not Wisdom again, but a bunch of things again).  With winners restricted to just elections before 1970 or whatever. -->
-
-<!-- Then do it all again with only one row per candidate. -->
-
-<!-- Age bias: The ages will tend to be slightly older the greater the year is because we're only sampling from now-deceased candidates. The more we filter our data to only include early years, the more accurate data will be, but the less data points we'll have. So, in other words, we are trading PRECISION for ACCURACY. This is a super cool opportunity to discuss this type of tradeoff, and whether or not making it is worth it (- it is). -->
-
-So, now we have three versions of the anwser, corresponding to three different assumptions. 
+<!-- GP: I decided against having the student make the age bias plot, as it would simply take too much time (it's a deceivingly simple plot to create) and it's not worth it in my opinion. -->
 
 ## Base Case
 
@@ -117,9 +164,7 @@ print(...)
 
 ### 
 
-Notice that James Folsom appears more than once in this data.
-
-Duplicate candidates *could* make this data unsuitable for answering certain questions — another important detail to keep in mind.
+Notice that James Folsom appears more than once in this data. Duplicate candidates *could* make this data unsuitable for answering certain questions — another important detail to keep in mind.
 
 ### Exercise 3
 
@@ -141,7 +186,7 @@ Look at the `election_age` variable. Notice it has zero missing values, and an a
 
 In our case, we are asking a question about the next *elected* candidate, not just the next candidate. We only care about the winners.
 
-Start a new pipe with `governors`. Use `filter()` to choose only rows with a positive win margin (i.e. elected candidates).
+Start a new pipe with `governors`. Use `filter()` to choose only rows with a positive `win_margin` (i.e. elected candidates).
 
 ```{r base-case-4, exercise = TRUE}
 
@@ -159,7 +204,7 @@ governors %>%
 
 ### Exercise 5
 
-Copy your code from above. Continue your pipe by using `select()` to select `year`, `first_name`, `last_name`, and `election_age`.
+Copy your code from above. Continue your pipe by using `select()` to select `year`, `first_name`, `last_name`, `state`, and `election_age`.
 
 ```{r base-case-5, exercise = TRUE}
 
@@ -197,15 +242,15 @@ We'll be using `winners` in later questions in this tutorial.
 
 Recall our question:
 
-_WWhat is the probability of a governor elected in 2022 being over the age of 60?_
+_What is the probability of a governor elected in 2022 being over the age of 60?_
 
 ### 
 
-Our population table has *Preceptor Table* rows, *actual data* rows, and outstanding *population* rows. Describe, in a single short paragraph, what each of these three types of rows look like.
+Our _Preceptor Table_ is a table with minimal rows and columns such that we can perfectly answer our question using it. Describe, in 1-2 sentences, what the Preceptor Table for our question looks like.
 
 ```{r base-case-7}
 question_text(NULL,
-	message = "There are 36 Preceptor Table rows — one for each of the 36 states with gubernatorial elections in 2022. All columns besides year and state have entires that are \"?\" (unknowns). In our actual data rows, all column entires are known. However, we only have data for candidates who ran up until 2011, and who have passed away as of 2012. Our outstanding population rows include data from candiates in all years, as well as data from both currently alive and deceased candidates.",
+	message = "Our Preceptor Table will have 36 rows — one for each of the 36 states with gubernatorial elections in 2022. The table will have a state column, a year column (with all entries being \"2022\"), and an election age column.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -215,19 +260,19 @@ question_text(NULL,
 
 ### 
 
-At this point, you may have some concerns regarding whether or not we can *accurately* answer our question using the given data.
+Here is what our Preceptor Table would look like:
 
-Fortunately, Justice gives us a chance to address those concerns, and refine our data to eliminate those concerns if necessary.
+```{r echo = FALSE}
+preceptor_table
+```
 
 ### Exercise 8
 
-<!-- GP: This is going to be a validity question. -->
-
-<!-- GP: When you described validitiy, you said that "to assume validity is to assume that small changes in treatment do not significantly affect our results". I understand what this means in the context of a casual model, but not in the context of a predictive model such as this one. -->
+When answering our question, we must also consider what our broader _Population Table_ looks like. List the three types of rows in our Population Table.
 
 ```{r base-case-8}
 question_text(NULL,
-	message = "answer here",
+	message = "Our Population Table has Preceptor Table rows, actual data rows, and outstanding Population rows.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -237,7 +282,55 @@ question_text(NULL,
 
 ### 
 
+Remember: the Preceptor Table is a _subset_ of the broader Population Table — meaning that all columns and rows in the Preceptor Table are, by definition, present in the Population Table as well.
+
 ### Exercise 9
+
+What is a reasonable population from which we might consider the Preceptor Table and our actual data to have been drawn?
+
+```{r base-case-9}
+question_text(NULL,
+	message = "Our broader population will closely resemble our actual data column-wise, except our broader population will also include data for more years (perhaps 1945-2025).",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+From the past three exercises, we can deduce that our Population Table will look something like this:
+
+```{r echo = FALSE}
+population_table
+```
+
+### Exercise 10
+
+The first thing we must ask ourselves after we've determined what the rows of our Population Table look like, is whether or not our data demonstrates *validity*.
+
+Validity is a question of whether or not the columns of our Preceptor table mean the same thing as the columns of our actual data. 
+
+### 
+
+In 1-2 sentences, explain why we _can_ assume that our data demonstrates validity as per our above definition.
+
+```{r base-case-10}
+question_text(NULL,
+	message = "In the context of our data, validity is a question of whether the election ages recorded in our data (in 1945-2011) mean the same thing as election ages in our preceptor table (in 2022). Since we can assume that the average lifespan of people hasn't changed all that much in the past 77 years, we can assume that our data demonstrates validity.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+For the rest of this tutorial, we'll assume that our data demonstrates validity.
+
+### Exercise 11
 
 Our two-parameter model will have the following functional form:
 
@@ -251,11 +344,11 @@ Our two parameters are $\mu$ (the mean election age) and $\sigma$ (the standard 
 
 Justice requires us to ask whether or not the relationship among the variables demonstrates *stability*. That is, can we assume that our value of $\mu$ stays constant across different time periods?
 
-In 2-3 sentences, answer the above question for our data:
+In 2-3 sentences, give an argument for why we _cannot_ assume our data demonstrates stability:
 
-```{r base-case-9}
+```{r base-case-11}
 question_text(NULL,
-	message = "For now, we will be assuming that the answer is yes; that is, our data is stable. We have to be careful, though, because this question of stability is a nuanced one. For instance, we could make the argument that the average election age has increased because there may be more candidates now who had previously run for governor when they were younger, and are re-running now at an older age.",
+	message = "Many arguments can be made against the stability of this data. For instance, we could make the argument that the average election age has increased because there may be more candidates now who had previously run for governor when they were younger, and are re-running now at an older age.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -265,21 +358,29 @@ question_text(NULL,
 
 ### 
 
-There's a lot of arguments to be made against stability, but for now, we will assume that our model is stable. We'll discuss the potential age bias later in this tutorial.
+There's a lot of arguments to be made against stability, but for now, we will assume that our model _is_ stable. Do not worry however, we'll discuss this potential age bias later in the tutorial.
 
-### Exercise 10
+### Exercise 12
 
 We have addressed both the *validity*, and the *stability* of our data. All that's left now is to address its *representativeness*. That is, are the rows we have sufficiently representative of the rows we don't have?
 
 ### 
 
-Another way to think about representativeness is that stability has told us we have a $\mu$ which stays constant. The question now is: can we *accurately* compute this $\mu$ using the data we have?
+Another way to think about representativeness is to recall our functional form:
 
-In 2-3 sentences, answer the above question for our data:
+$$ y_i =  \mu + \epsilon_i$$
 
-```{r base-case-10}
+$$\epsilon_i \sim \mathcal{N}(0, \sigma^2)$$
+
+If stability tells us we have a $\mu$ which stays constant, representativeness asks whether or not we can *accurately* compute this $\mu$ using the data we have.
+
+### 
+
+In 2-3 sentences, give an argument for why we _cannot_ assume our data demonstrates representativeness:
+
+```{r base-case-12}
 question_text(NULL,
-	message = "The answer is, generally speaking, no. A key detail that you should remember from earlier is that all of our data comes from gubernatorial candidates who are now deceased. We cannot and should not assume that data coming from now-deceased candidates is sufficiently representative of alive candidates — especially when dealing with a variable such as age.",
+	message = "A key detail you should remember from earlier is that all of our data comes from gubernatorial candidates who are now deceased. We cannot and should not assume that data coming from now-deceased candidates is sufficiently representative of alive candidates — especially when dealing with a variable such as age.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -291,35 +392,19 @@ question_text(NULL,
 
 Although our data is not representative, we'll assume it is for now for the sake of the learning experience. Though rest assured, we'll make sure to discuss and fix this error in a later section of this tutorial.
 
-### Exercise 11
+### Exercise 13
 
 Let's quickly review how to work with the `stan_glm()` function from the **rstanarm** package.
 
 ### 
 
-Print out the `tests` tibble below.
+Run `stan_glm()` and set the `data` argument equal to `winners`, and the `formula` argument equal to `election_age ~ 1`.
 
-```{r base-case-11, exercise = TRUE}
-
-```
-
-```{r base-case-11-hint-1, eval = FALSE}
-print(tests)
-```
-
-### 
-
-Let's use this data to remind ourselves how to create simple Bayesian models.
-
-### Exercise 12
-
-Run `stan_glm()` and set the `data` argument equal to `tests`, and the `formula` argument equal to `score ~ 1`.
-
-```{r base-case-12, exercise = TRUE}
+```{r base-case-13, exercise = TRUE}
 
 ```
 
-```{r base-case-12-hint-1, eval = FALSE}
+```{r base-case-13-hint-1, eval = FALSE}
 stan_glm(data = ...,
          formula = ...)
 ```
@@ -330,33 +415,11 @@ The `data` argument tells `stan_glm()` what data frame to work with.
 
 The `formula` argument tells `stan_glm()` what model is to be fitted.
 
-### Exercise 13
+### Exercise 14
 
 Let's tidy up our output a bit and get rid of the messy garbage lines.
 
 Copy your code from above, and add a new argument called `refresh`. Set this argument to `0`.
-
-```{r base-case-13, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r base-case-13-hint-1, eval = FALSE}
-stan_glm(data = ...,
-         formula = ...,
-         refresh = ...)
-```
-
-### 
-
-The `refresh` argument should usually be set to `0` lest you get R spitting back a bunch of garbage at you.
-
-### Exercise 14
-
-We should also tell `stan_glm()` what error distribution function to use in the model.
-
-Copy your code from above. Insert a new argument called `family` and set it equal to `guassian()`.
 
 ```{r base-case-14, exercise = TRUE}
 
@@ -367,44 +430,26 @@ Copy your code from above. Insert a new argument called `family` and set it equa
 ```{r base-case-14-hint-1, eval = FALSE}
 stan_glm(data = ...,
          formula = ...,
-         refresh = ...,
-         family = ...)
+         refresh = ...)
 ```
 
 ### 
 
-Notice that our output did not change. This is because `family` is set to `gaussian()` by default. Still, it's good practice to always specify it yourself and eliminate some of the guesswork for R.
+The `refresh` argument should usually be set to `0` lest you get R spitting back a bunch of garbage at you.
 
 ### Exercise 15
 
-Now that we've recalled how to use `stan_glm()`, we can begin working with our data.
+We should also tell `stan_glm()` what error distribution function to use in the model.
 
-### 
-
-Start a new pipe with `winners`. Use `select()` to select only the `election_age` variable. Assign this to a new object called `winners_ages`.
+Copy your code from above. Insert a new argument called `family` and set it equal to `guassian`.
 
 ```{r base-case-15, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r base-case-15-hint-1, eval = FALSE}
-... <- winners %>% 
-  select(...)
-```
-
-### 
-
-`winners_ages` is what we'll be using to create our Bayesian model.
-
-### Exercise 16
-
-Use `stan_glm()` to create a Bayesian model of `winners_ages` with the formula `election_age ~ 1`. (Remember the four arguments that should be specified!)
-
-```{r base-case-16, exercise = TRUE}
-
-```
-
-```{r base-case-16-hint-1, eval = FALSE}
 stan_glm(data = ...,
          formula = ...,
          refresh = ...,
@@ -413,26 +458,19 @@ stan_glm(data = ...,
 
 ### 
 
-If you've done everything correctly, your output should look like this:
+Notice that our output did not change. This is because `family` is set to `gaussian` by default. Still, it's good practice to always specify it yourself and eliminate some of the guesswork for R.
 
-```{r stan-glm-output-1, echo = FALSE}
-stan_glm(data = winners_ages,
-         formula = election_age ~ 1,
-         refresh = 0,
-         family = gaussian)
-```
-
-### Exercise 17
+### Exercise 16
 
 Copy your code from above, and assign it to a new object called `winners_model`.
 
-```{r base-case-17, exercise = TRUE}
+```{r base-case-16, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r base-case-17-hint-1, eval = FALSE}
+```{r base-case-16-hint-1, eval = FALSE}
 winners_model <- stan_glm(data = ...,
                           formula = ...,
                           refresh = ...,
@@ -441,7 +479,23 @@ winners_model <- stan_glm(data = ...,
 
 ### 
 
-We can now use this object to create our two-parameter model.
+This is the object we're going to be using later to create our two-parameter model.
+
+### Exercise 17
+
+Use `print()` to print out `winners_model`, and set the `detail` argument equal to `FALSE`.
+
+```{r base-case-17, exercise = TRUE}
+
+```
+
+```{r base-case-17-hint-1, eval = FALSE}
+print(..., detail = ...)
+```
+
+### 
+
+<!-- GP: You told me to explain the output of stan_glm() but I'm unsure how to make it fit. I'm having a hard time explaining it well enough without going off on a tangent. -->
 
 ### Exercise 18
 
@@ -474,7 +528,7 @@ Now copy the code from above and continue your pipe using `rename()` to rename `
 
 ### Exercise 20
 
-Once again, copy the code from above and continue your pipe with `ggplot()`. Map `x` to `mu` in the `aes()` function. Use `geom_histogram()` and map `y` to the  `after_stat()` function. Set its argument to `count` divided by the `sum()` of `count`.
+Once again, copy the code from above and continue your pipe with `ggplot()`. Map `x` to `mu` in the `aes()` function. Use `geom_histogram()` and, within _its_ `aes()` function, map `y` to `after_stat(count/sum(count))`.
 
 ```{r base-case-20, exercise = TRUE}
 
@@ -520,7 +574,7 @@ Copy your code from above. Set the `bins` argument to 200 and the `color` argume
 
 ### Exercise 22
 
-Copy your code from above. Use `labs()` to give your histogram the title "Posterior Probability Distribution" and the subtitle "Average election age of US gubernatorial candidates deceased as of 2012". Rename the x-axis label to "Age" and the y-axis label to "Probability". Add a layer and use `theme_classic()` to make your plot look nice.
+Copy your code from above. Use `scale_y_continuous()` and set its `labels` argument equal to `scales::percent` in order to represent your probabilities as percentages.
 
 ```{r base-case-22, exercise = TRUE}
 
@@ -535,7 +589,29 @@ Copy your code from above. Use `labs()` to give your histogram the title "Poster
   ggplot(aes(x = ...)) + 
   geom_histogram(aes(y = ...),
                  bins = ...,
+                 color = ...) + 
+  scale_y_continuous(...)
+```
+
+### Exercise 23
+
+Copy your code from above. Use `labs()` to give your histogram the title "Posterior Probability Distribution" and the subtitle "Average election age of US gubernatorial candidates deceased as of 2012". Rename the x-axis label to "Age" and the y-axis label to "Probability". Add a layer of `theme_classic()` to make your plot look nice.
+
+```{r base-case-23, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r base-case-23-hint-1, eval = FALSE}
+... %>% 
+  as_tibble() %>% 
+  rename(...) %>% 
+  ggplot(aes(x = ...)) + 
+  geom_histogram(aes(y = ...),
+                 bins = ...,
                  color = ...) +
+  scale_y_continuous(...) +
   labs(title = ...,
        subtitle = ...,
        x = ...,
@@ -554,6 +630,7 @@ winners_model %>%
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = 200,
                  color = "white") +
+  scale_y_continuous(labels = scales::percent) +
   labs(title = "Posterior Probability Distribution",
        subtitle = "Average election age of US gubernatorial candidates deceased as of 2012",
        x = "Age",
@@ -561,7 +638,7 @@ winners_model %>%
   theme_classic()
 ```
 
-### Exercise 23
+### Exercise 24
 
 We have a model of the average election age of US gubernatorial candidates. Temperance allows us to use our model to answer our initial question:
 
@@ -571,60 +648,73 @@ _What is the probability of a governor elected in 2022 being over the age of 60?
 
 Use `posterior_predict()` with `winners_model` as the first argument to get some draws from our posterior distribution. Include an argument called `newdata` and set it equal to `tibble(constant = 1)`. 
 
-```{r base-case-23, exercise = TRUE}
+```{r base-case-24, exercise = TRUE}
 
 ```
 
-```{r base-case-23-hint-1, eval = FALSE}
+```{r base-case-24-hint-1, eval = FALSE}
 posterior_predict(...)
 ```
 
-```{r base-case-23-hint-2, eval = FALSE}
+```{r base-case-24-hint-2, eval = FALSE}
 posterior_predict(winners_model, newdata = ...)
 ```
 
 ### 
 
-Super! We now have 4000 estimates for a random gubernatorial candidate's election age.
-
-### Exercise 24
-
-Copy your code from above and assign it to a new object called `winners_model_draws`.
-
-```{r base-case-24, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r base-case-24-hint-1, eval = FALSE}
-... <- posterior_predict(...)
-```
-
-```{r base-case-24-hint-2, eval = FALSE}
-... <- posterior_predict(winners_model, newdata = ...)
-```
+Super! We now have 4000 draws for a random gubernatorial candidate's election age.
 
 ### Exercise 25
 
-Copy your code from Exercise 22 (the exercise with our posterior plot). Replace `winners_model` with `as_tibble(winners_model_draws)`, replace `rename(mu = `(Intercept)`)` with `rename(mu = `1`)`, and retitle the plot "4000 Draws from a Posterior Distribution".
+Copy your code from above and assign it to a new object called `winners_draws`.
 
 ```{r base-case-25, exercise = TRUE}
 
 ```
 
-### 
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-Your plot should look something like this:
+```{r base-case-25-hint-1, eval = FALSE}
+... <- posterior_predict(...)
+```
 
-```{r posterior-draws-plot, echo = FALSE}
-as_tibble(winners_model_draws) %>% 
+```{r base-case-25-hint-2, eval = FALSE}
+... <- posterior_predict(winners_model, newdata = ...)
+```
+
+### Exercise 26
+
+Copy your code from Exercise 23 (the exercise with our posterior plot). Replace `winners_model` with `winners_draws`, replace ``rename(mu = `(Intercept)`)`` with ``rename(mu = `1`)``, and re-title the plot "4000 Draws from a Posterior Distribution".
+
+```{r base-case-26, exercise = TRUE}
+
+```
+
+```{r base-case-26-hint-1, eval = FALSE}
+... %>% 
+  as_tibble() %>% 
+  rename(mu = ...) %>% 
+  ggplot(aes(x = mu)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 200,
+                 color = "white") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = ...,
+       subtitle = "Average election age of US gubernatorial candidates deceased as of 2012",
+       x = "Age",
+       y = "Probability") +
+  theme_classic()
+```
+
+```{r base-case-26-hint-2, eval = FALSE}
+winners_draws %>% 
   as_tibble() %>% 
   rename(mu = `1`) %>% 
   ggplot(aes(x = mu)) + 
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = 200,
                  color = "white") +
+  scale_y_continuous(labels = scales::percent) +
   labs(title = "4000 Draws from a Posterior Distribution",
        subtitle = "Average election age of US gubernatorial candidates deceased as of 2012",
        x = "Age",
@@ -632,33 +722,52 @@ as_tibble(winners_model_draws) %>%
   theme_classic()
 ```
 
-### Exercise 26
+### 
+
+Your plot should look something like this:
+
+```{r posterior-draws-plot, echo = FALSE}
+winners_draws %>% 
+  as.numeric() %>% 
+  as_tibble() %>% 
+  rename(mu = value) %>% 
+  ggplot(aes(x = mu)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 200,
+                 color = "white") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "4000 Draws from a Posterior Distribution",
+       subtitle = "Average election age of US gubernatorial candidates deceased as of 2012",
+       x = "Age",
+       y = "Probability") +
+  theme_classic()
+```
+
+### Exercise 27
 
 Recall our question: _What is the probability of a governor elected in 2022 being over the age of 60?_
 
-Using _a single line of code_, determine the proportion of all candidates in `winners_model_draws` who are over the age of 60.
+Using _a single line of code_, determine the proportion of all candidates in `winners_draws` who are over the age of 60.
 
-```{r base-case-26, exercise = TRUE}
+```{r base-case-27, exercise = TRUE}
 
 ```
 
-```{r base-case-26-hint-1, eval = FALSE}
+```{r base-case-27-hint-1, eval = FALSE}
 sum(... > 60) / length(...)
 ```
 
-```{r base-case-26-hint-2, eval = FALSE}
-sum(winners_model_draws$`1` > 60) / length(winners_model_draws$`1`)
+```{r base-case-27-hint-2, eval = FALSE}
+sum(winners_draws > 60) / length(winners_draws)
 ```
 
 ## Age Bias
 
 ### 
 
-One concern we have about our result is that it is biased towards older candidates.
+The biggest drawback of the `governors` data is that *all of the candidates in the data are now deceased*. This means that the candidates included in this data are likely to be older, since older candidates have a higher likelihood of now being dead than younger candidates.
 
 ### 
-
-This data's biggest drawback is that *all of the candidates in the data are now deceased*. This means that the candidates included in this data are likely to be older, since older candidates have a higher likelihood of now being dead than younger candidates.
 
 This bias is more prevalent for later years, since the less time that passes between a candidate running for governor and a candidate dying, the older that candidate is likely to be.
 
@@ -670,19 +779,334 @@ age_bias_plot
 
 ### Exercise 1
 
-Suppose we try to fix this bias by filtering the data so that it only includes candidates who ran in 1970 or earlier.
+Let's try to fix this bias by filtering the data so that it only includes candidates who ran in 1970 or earlier.
 
-Describe, in one short paragraph, how this would affect the *precision* and the *accuracy* of the data.
+Start a new pipe with `winners` and use `filter()` to select only rows with the `year` less than or equal to 1970.
 
-```{r age-bias-1}
-question_text(NULL,
-	message = "No answer yet",
-	answer(NULL,
-	correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
+```{r age-bias-1, exercise = TRUE}
+
 ```
+
+```{r age-bias-1-hint-1, eval = FALSE}
+winners %>%
+  filter(...)
+```
+
+### 
+
+This tibble has only 421 rows, unlike the original `winners` tibble which has 576 rows.
+
+### Exercise 2
+
+Copy your code from above and assign it to a new object called `winners_1970`.
+
+```{r age-bias-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age-bias-2-hint-1, eval = FALSE}
+... <- winners %>% 
+  filter(...)
+```
+
+### 
+
+We'll use `winners_1970` to create a new model and examine how it differs from our original model.
+
+### Exercise 3
+
+Let's now create our Bayesian model. Use `stan_glm()` as we did before, except this time with `winners_1970` as our data argument. (Recall the four arguments that should be specified: `data`, `formula`, `refresh`, and `family`.)
+
+```{r age-bias-3, exercise = TRUE}
+
+```
+
+```{r age-bias-3-hint-1, eval = FALSE}
+stan_glm(data = ...,
+         formula = ...,
+         refresh = ...,
+         family = ...)
+```
+
+```{r age-bias-3-hint-2, eval = FALSE}
+stan_glm(data = winners_1970,
+         formula = election_age ~ 1,
+         refresh = 0,
+         family = gaussian)
+```
+
+### 
+
+Notice that the median of the `(Intercept)` (the average election age) is significantly lower in this model than in our last model.
+
+### Exercise 4
+
+Copy your code from above and assign it to a new object called `winners_1970_model`.
+
+```{r age-bias-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age-bias-4-hint-1, eval = FALSE}
+... <- stan_glm(data = ...,
+                formula = ...,
+                refresh = ...,
+                family = ...)
+```
+
+### 
+
+We're going to forego making a plot of our posterior distribution this time, and instead skip to getting draws from the posterior distribution.
+
+### Exercise 5
+
+Use `posterior_predict()` with `winners_1970_model` as the first argument to get some draws from our posterior distribution. Include an argument called `newdata` and set it equal to `tibble(constant = 1)`. 
+
+```{r age-bias-5-hint-1, eval = FALSE}
+posterior_predict(...)
+```
+
+```{r age-bias-5-hint-2, eval = FALSE}
+posterior_predict(winners_1970_model, newdata = ...)
+```
+
+### 
+
+Wonderful! We now have 4000 draws for a random gubernatorial candidate's election age using our updated model.
+
+### Exercise 6
+
+Copy your above code and assign it to a new object called `winners_1970_draws`.
+
+```{r age-bias-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age-bias-6-hint-1, eval = FALSE}
+... <- posterior_predict(winners_1970_model, newdata = ...)
+```
+
+### 
+
+We're now going to create a plot using these draws similar to how we created our previous plot. 
+
+### Exercise 7
+
+Start a new pipe with `winners_1970`, and continue it with `as_tibble()`.
+
+```{r age-bias-7, exercise = TRUE}
+
+```
+
+```{r age-bias-7-hint-1, eval = FALSE}
+... %>% 
+  as_tibble()
+```
+
+### Exercise 8
+
+Now copy the code from above and continue your pipe using `rename()` to rename the `1` variable to `mu`.
+
+```{r age-bias-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age-bias-8-hint-1, eval = FALSE}
+... %>% 
+  as_tibble() %>% 
+  rename(...)
+```
+
+### Exercise 9
+
+Once again, copy the code from above and continue your pipe with `ggplot()`. Map `x` to `mu` in the `aes()` function. Use `geom_histogram()` and, within _its_ `aes()` function, map `y` to `after_stat(count/sum(count))`.
+
+```{r age-bias-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age-bias-9-hint-1, eval = FALSE}
+... %>% 
+  as_tibble() %>% 
+  rename(...) %>% 
+  ggplot(...) + 
+  geom_histogram(...)
+```
+
+```{r age-bias-9-hint-2, eval = FALSE}
+... %>% 
+  as_tibble() %>% 
+  rename(...) %>% 
+  ggplot(aes(x = ...)) + 
+  geom_histogram(aes(y = ...))
+```
+
+### Exercise 10
+
+Copy your code from above. Set the `bins` argument to 200 and the `color` argument to "white" within `geom_histogram()`.
+
+```{r age-bias-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age-bias-10-hint-1, eval = FALSE}
+... %>% 
+  as_tibble() %>% 
+  rename(...) %>% 
+  ggplot(aes(x = ...)) + 
+  geom_histogram(aes(y = ...),
+                 bins = ...,
+                 color = ...)
+```
+
+### Exercise 11
+
+Copy your code from above. Use `scale_y_continuous()` and set its `labels` argument equal to `scales::percent` in order to represent your probabilities as percentages.
+
+```{r age-bias-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age-bias-11-hint-1, eval = FALSE}
+... %>% 
+  as_tibble() %>% 
+  rename(...) %>% 
+  ggplot(aes(x = ...)) + 
+  geom_histogram(aes(y = ...),
+                 bins = ...,
+                 color = ...) + 
+  scale_y_continuous(...)
+```
+
+### Exercise 12
+
+Copy your code from above. Use `labs()` to give your histogram the title "Posterior Probability Distribution" and the subtitle "Average election age of US gubernatorial candidates up to 1970 deceased as of 2012". Rename the x-axis label to "Age" and the y-axis label to "Probability". Add a layer of `theme_classic()` to make your plot look nice.
+
+```{r age-bias-12, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age-bias-12-hint-1, eval = FALSE}
+... %>% 
+  as_tibble() %>% 
+  rename(...) %>% 
+  ggplot(aes(x = ...)) + 
+  geom_histogram(aes(y = ...),
+                 bins = ...,
+                 color = ...) +
+  scale_y_continuous(...) +
+  labs(title = ...,
+       subtitle = ...,
+       x = ...,
+       y = ...)
+```
+
+### 
+
+Your plot should look something like this:
+
+```{r 1970-posterior-draws-plot, echo = FALSE}
+as.numeric(winners_1970_draws) %>% 
+  as_tibble() %>% 
+  rename(mu = value) %>% 
+  ggplot(aes(x = mu)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                 bins = 200,
+                 color = "white") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "Posterior Probability Distribution",
+       subtitle = "Average election age of US gubernatorial candidates up to 1970 deceased as of 2012",
+       x = "Age",
+       y = "Probability") +
+  theme_classic()
+```
+
+### 
+
+Let's take a look at this new plot (in blue) compared to our previous plot (in red):
+
+```{r regular-vs-1970, echo = FALSE}
+tibble(a = as.numeric(winners_1970_draws), b = as.numeric(winners_draws)) %>% 
+  ggplot() + 
+  geom_histogram(aes(x = b, y = after_stat(count/sum(count))),
+                 bins = 200,
+                 fill = "red",
+                 alpha = .5) +
+  geom_histogram(aes(x = a, y = after_stat(count/sum(count))),
+                 bins = 200,
+                 fill = "blue",
+                 alpha = .5) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "Posterior Probability Distribution",
+       subtitle = "Average election age of US gubernatorial candidates up to 1970 deceased as of 2012",
+       x = "Age",
+       y = "Probability") +
+  theme_classic()
+```
+
+### 
+
+We can see that our new distribution (in blue) is shifted leftward from our original distribution. Therefore, we can expect the new answer to our question to be lower than our original answer.
+
+### Exercise 13
+
+Recall our question: _What is the probability of a governor elected in 2022 being over the age of 60?_
+
+Using _a single line of code_, determine the proportion of all candidates in `winners_1970_draws` who are over the age of 60.
+
+```{r age-bias-13, exercise = TRUE}
+
+```
+
+```{r age-bias-13-hint-1, eval = FALSE}
+sum(... > 60) / length(...)
+```
+
+```{r age-bias-13-hint-2, eval = FALSE}
+sum(winners_1970_draws > 60) / length(winners_1970_draws)
+```
+
+###
+
+Our new answer is closer to 9% as opposed to our original answer which was closer to 15%. This is quite the difference!
+
+### Exercise 14
+
+We definitely did a good job of (at least partially) eliminating the age bias in our original answer by filtering only for candidates who ran in the year 1970 or earlier. But... _why 1970?_
+
+###
+
+To be completely honest, 1970 was an arbitrary choice. We just as easily could have chosen any other year $n$. In fact, here's a plot showing what different answers we would have gotten had we chosen different values of $n$:
+
+```{r answer-plot, echo=FALSE}
+answer_tibble <- read_rds(file = "data/answer_tibble.rds")
+
+answer_tibble %>% 
+  ggplot(aes(x = year, y = answer)) + 
+  geom_point() + 
+  geom_smooth(se = FALSE, formula = y ~ x) +
+  labs(title = "Answer to our question using different filtrations",
+       x = "n",
+       y = "Answer when filtering for year ≤ n")
+```
+
+###
 
 ## Duplicate Candidates
 
