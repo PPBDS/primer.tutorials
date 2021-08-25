@@ -21,7 +21,7 @@ create_tibble_from_submissions <- function(objs, tutorial_id, label_list = NULL)
     # With new version of learnr, exercises are automatically arranged by order
     # of appearance
     label_list <- purrr::map_chr(objs, "id", .default = NA)
-    label_list <- label_list[1:length(label_list)-1]
+    label_list <- label_list[label_list != "download-answers-1"]
     label_list <- append(label_list, "tutorial-id", 0)
     label_list <- append(label_list, "download-answers-1", 3)
   }
