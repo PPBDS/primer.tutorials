@@ -24,5 +24,6 @@ google_submission_collection(
 \item{before_date}{(Optional) keep only mails before this date: use YYYY-MM-DD}
 }
 \description{
-Google Submission Collection
+Always answer \code{0} when gmailr asks you: "Select a pre-authorised
+account or enter '0' to obtain a new token." Hope to fix this hack in the future.
 }
