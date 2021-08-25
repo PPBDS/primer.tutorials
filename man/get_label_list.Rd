@@ -2,7 +2,7 @@
 % Please edit documentation in R/get_label_list.R
 \name{get_label_list}
 \alias{get_label_list}
-\title{Get Label Order}
+\title{Get Label Order (Deprecated with learnr version 0.10.1.9012)}
 \usage{
 get_label_list(sess, is_test = FALSE)
 }
@@ -15,5 +15,5 @@ get_label_list(sess, is_test = FALSE)
 list of labels in the correct order
 }
 \description{
-Get Label Order
+Get Label Order (Deprecated with learnr version 0.10.1.9012)
 }
