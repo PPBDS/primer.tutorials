@@ -29,7 +29,7 @@ all_assignments <- expand.grid(
             Tahmid = c(TRUE,FALSE),
             Diego = c(TRUE,FALSE)
             ) %>%
-pivot_longer(cols = c(Yao,Emma,Cassidy,Tahmid,Diego),
+pivot_longer(cols = everything(),
              values_to = "treatment") %>%
   mutate(control = ! treatment) %>%
   mutate(assignment = rep(1:32, each = 5)) %>%
@@ -173,7 +173,7 @@ Now we have an complete 32*5 tibble, which each 32 rwos representing an differen
 
 ### Exercise 5
 
-
+Use `pivot_longer()` which include two arguments, first set `cols` equal to `everything()`, then set `values_to` equal to `"treatment"`
 ```{r assignments-5, exercise = TRUE}
 
 ```
@@ -181,14 +181,16 @@ Now we have an complete 32*5 tibble, which each 32 rwos representing an differen
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r assignments-5-hint, eval = FALSE}
-
+pivot_longer(cols = everything(),
+             values_to = "treatment")
 ```
 
 ###
+This step allow us to combine the 5 columns in to one, `cols` means combine how many colums, `everything()` means select every columns in the tibble, but if we have 6 columns while only wants to select 5 of them we can use `c(Yao,Emma,Cassidy,Tahmid,Diego)` where we manually select which columns using `c()`.
 
 ### Exercise 6
 
-
+Use `mutate()` creates a new variable `control` which is equal to `! treatment `.
 ```{r assignments-6, exercise = TRUE}
 
 ```
@@ -196,14 +198,16 @@ Now we have an complete 32*5 tibble, which each 32 rwos representing an differen
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r assignments-6-hint, eval = FALSE}
-
+mutate(control = ! treatment) 
 ```
 
 ###
 
+`!` operator means "not", but since treatment is a logical vector not `TRUE` basically means `FALSE` and vice versa.
+
 ### Exercise 7
 
-
+Use `mutate()` create a new variable `assignment` equal to `rep()` which has two arguments, with first being `1:32` and then set `each` to 5.
 ```{r assignments-7, exercise = TRUE}
 
 ```
@@ -211,13 +215,16 @@ Now we have an complete 32*5 tibble, which each 32 rwos representing an differen
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r assignments-7-hint, eval = FALSE}
-
+mutate(assignment = rep(1:32, each = 5)) 
 ```
 
 ###
+The `rep()` function here is alittle different than the `rep()` we use before where the two arguments is the value and it's repeat times, with `each` we generate each number in the value certain amount of time.
+
 
 ### Exercise 8
 
+Use `relocate()` which has two arguments, the first being `assignment`, then set `.befire` equal to `name`.
 
 ```{r assignments-8, exercise = TRUE}
 
@@ -226,14 +233,18 @@ Now we have an complete 32*5 tibble, which each 32 rwos representing an differen
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r assignments-8-hint, eval = FALSE}
-
+relocate(assignment, .before = name)
 ```
 
-###
+Now you have creates a tibble like this.
+```{r}
+all_assignments
+```
+
 
 ### Exercise 9
 
-
+Assign everything above in a variable `all_assignments`.
 ```{r assignments-9, exercise = TRUE}
 
 ```
@@ -241,14 +252,46 @@ Now we have an complete 32*5 tibble, which each 32 rwos representing an differen
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r assignments-9-hint, eval = FALSE}
-
+all_assignments <-
+  ...
 ```
 
 ###
 
+
 ### Exercise 10
 
+Now let's pull up the the `real world` data or the preceptor table from the 32 possible combinations. 
 
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("13", "14", "?", "?", "3"),
+       ycontrol = c("?", "?", "6", "12", "?"),
+       ydiff = c("?", "?", "?", "?", "?")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+    tab_header(title = "Preceptor Table") %>% 
+    cols_label(subject = md("ID"),
+                  ytreat = md("$$Y_t(u)$$"),
+                  ycontrol = md("$$Y_c(u)$$"),
+                  ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+    cols_move(columns = c(ytreat, ycontrol), after = c(subject)) %>%
+    tab_style(cell_borders(sides = "right"),
+              location = cells_body(columns = c(subject))) %>%
+    tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
+              locations = cells_column_labels(columns = c(subject))) %>%
+    cols_align(align = "center", columns = everything()) %>%
+    cols_align(align = "left", columns = c(subject)) %>%
+    tab_spanner(label = "$$\\text{Outcomes}$$", c(ytreat, ycontrol)) %>%
+    tab_spanner(label = "$$\\text{Causal Effect}$$", c(ydiff)) %>%
+    fmt_markdown(columns = everything())
+```
+
+Start a pipe with `all_assignments`, use `filter()` to filter out `assignment` number 13, Which Yao, Emma, and Diego gets treatment (returns `TRUE` under `treatment` column), Cassidy and Tahmid gets control (returns `FALSE` under `treatment` column).
 ```{r assignments-10, exercise = TRUE}
 
 ```
@@ -256,16 +299,136 @@ Now we have an complete 32*5 tibble, which each 32 rwos representing an differen
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r assignments-10-hint, eval = FALSE}
-
+all_assignments %>%
+  filter(assignment == 13)
 ```
 
 ###
 
+### Exercise 11
 
+Now use `mutate()` create a new variable `outcomes` set it equal to `c(13, 14, 6, 12, 3)`.
+```{r assignments-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r assignments-11-hint, eval = FALSE}
+all_assignments %>%
+  filter(assignment == 13) %>%
+  mutate(outcomes = c(13, 14, 6, 12, 3))
+```
+
+
+### Exercise 12
+
+Use `mutate()` create a variable `treatment_outcomes` and set it equal to `case_when()`, which hass two arguments, first when `treatment == TRUE` use `~` returns `outcomes`, then when `treatment == FALSE` use `~` returns `0`.
+```{r assignments-12, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r assignments-12-hint, eval = FALSE}
+all_assignments %>%
+  filter(assignment == 13) %>%
+  mutate(outcomes = c(13, 14, 6, 12, 3)) %>%
+  mutate(treatment_outcomes = case_when(
+   treatment == TRUE ~ outcomes,
+   treatment == FALSE ~ 0)) 
+```
+
+###
+This will generate a list only including values for Yao, Emma and Diego, we replace the question mark in the preceptor table with 0, as a person cannot have treatment or control the same time.
+
+### Exercise 13
+
+Use `mutate()` create a variable `control_outcomes` and set it equal to `case_when()`, which hass two arguments, first when `control == TRUE` use `~` returns `outcomes`, then when `control == FALSE` use `~` returns `0`.
+```{r assignments-13, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r assignments-13-hint, eval = FALSE}
+all_assignments %>%
+  filter(assignment == 13) %>%
+  mutate(outcomes = c(13, 14, 6, 12, 3)) %>%
+  mutate(treatment_outcomes = case_when(
+   treatment == TRUE ~ outcomes,
+   treatment == FALSE ~ 0)) %>%
+   mutate(control_outcomes = case_when(
+   control == TRUE ~ outcomes,
+   control == FALSE ~ 0
+   ))
+```
+
+###
+Same idea, if the column `control` returns `TRUE` then that person gets the control group, and if it returns `FALSE`, that person gets the treatment group.
+
+### Exercise 14
+
+Use `group_by()` to group `assignment`,
+```{r assignments-14, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r assignments-14-hint, eval = FALSE}
+... %>%
+  group_by()
+```
+
+###
+
+### Exercise 15
+
+Use `summairse()` to creates variable `mean_difference` and set it equal to the the `mean()` of `treatment_outcomes` minus the `mean()` of `control_outcomes`.
+```{r assignments-15, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r assignments-15-hint, eval = FALSE}
+... %>%
+  summarise(mean_difference = mean(treatment_outcomes)- mean(control_outcomes)) 
+```
+
+###
+You should have something like this. With two columns one is `assignment` and one is `mean_difference`.
+
+```{r}
+all_assignments %>%
+  filter(assignment == 13) %>%
+  mutate(outcomes = c(13, 14, 6, 12, 3)) %>%
+  mutate(treatment_outcomes = case_when(
+   treatment == TRUE ~ outcomes,
+   treatment == FALSE ~ 0)) %>%
+   mutate(control_outcomes = case_when(
+   control == TRUE ~ outcomes,
+   control == FALSE ~ 0
+   )) %>%
+  mutate(treatment_outcomes = case_when(
+    treatment == TRUE ~ outcomes,
+    treatment == FALSE ~ 0)) %>%
+  mutate(control_outcomes = case_when(
+    control == TRUE ~ outcomes,
+    control == FALSE ~ 0
+  )) %>%
+  group_by(assignment)%>%
+  summarise(mean_difference = mean(treatment_outcomes)- mean(control_outcomes))
+```
+
+###
+What does this means? Essentially we assume that the preceptor table is the real world data we get from some experiment, and then we calculate the *average treatment effect* which is +2.4. Now you might wonder, what we we do for the other 31 possibilities, in fact with only limited information we know, we cannot calculate the average treatment effect of other possible outcomes, because we don't know the values of the question marks in the preceptor table. So now we are stuck, what do we do? There is one ingenious method to get around with this, and that is *Null hypothesis*.
 
 <!-- tibble(assignment number, name, treatment, control) with treatment and control being logical vectors. The tibble has 32 * 5 rows.  -->
 
 ## Null hypothesis
+
 ###
 
 Let's assume that the causal effect for all units is equal to zero. 
@@ -301,6 +464,8 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
 
 This is our "null hypothesis."
 
+We are assuming that the average treatment effect is 0 and that for example, the value 13 for Yao can be applied to both treatment and control. With this null hypothesis in place we eleminate all the question marks in the preceptor table, and be able to calculate all other 31 possible outcomes of the `assignment` tibble. Essentially, we are proposing an hypothesis, that there is no difference between treatment or effect, we can prove this hypothesis by calculating all possible outcomes of the experiment, and if the average treatment effect of the `real` data appears frequently during all 32 outcomes, this means that our hypothesis is correct which also means that the treatment we give is ineffective.
+
 Let's calculate the estimated treatment effect with Assignment Number 7 (or whatever) if the null hypothesis is correct. 
 
 Need the assignment tibble, from which you are going to take just 5 rows. And you need a vector of 5 numbers which is the outcome. A vector is enough because the null hypothesis assumes that Yao's outcome is the same under treatment and control.
@@ -313,13 +478,19 @@ Need the assignment tibble, from which you are going to take just 5 rows. And yo
 
 ```{r}
 set.seed(100)
-expand_grid(assignment = 1:32, name = c("Yao","Emma","Cassidy","Tahmid","Diego")) %>%
-  mutate(treatment = map_lgl(name, ~sample(c(TRUE, FALSE),size = 1))) %>%
-  mutate(control = case_when(
-    treatment == TRUE ~ FALSE,
-    treatment == FALSE ~ TRUE
-  )) %>%
-  mutate(outcomes = rep(sample(c(13, 14, 6, 12, 3)), 32)) %>%
+expand.grid(
+            Yao = c(TRUE,FALSE),
+            Emma = c(TRUE,FALSE),
+            Cassidy = c(TRUE,FALSE),
+            Tahmid = c(TRUE,FALSE),
+            Diego = c(TRUE,FALSE)
+            ) %>%
+  pivot_longer(cols = everything(),
+             values_to = "treatment") %>%
+  mutate(control = ! treatment) %>%
+  mutate(assignment = rep(1:32, each = 5)) %>%
+  relocate(assignment, .before = name) %>%
+  mutate(outcomes = rep(c(13, 14, 6, 12, 3), 32)) %>%
   unnest(outcomes)%>%
   mutate(treatment_outcomes = case_when(
     treatment == TRUE ~ outcomes,
