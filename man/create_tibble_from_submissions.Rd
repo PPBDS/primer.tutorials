@@ -4,14 +4,14 @@
 \alias{create_tibble_from_submissions}
 \title{Create Ordered Tibble from Submissions}
 \usage{
-create_tibble_from_submissions(objs, label_list, tutorial_id)
+create_tibble_from_submissions(objs, tutorial_id, label_list = NULL)
 }
 \arguments{
 \item{objs}{learnr session submissions}
 
-\item{label_list}{order of code chunks}
-
 \item{tutorial_id}{id of tutorial}
+
+\item{label_list}{order of code chunks (Optional with learnr version 0.10.1.9012)}
 }
 \value{
 tibble with ordered answers based on label_list
