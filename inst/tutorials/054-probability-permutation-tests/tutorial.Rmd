@@ -53,7 +53,7 @@ https://www.youtube.com/watch?v=rJ3AZCQuiLw
 ## Introduction
 ###
 
-Recall from Chapter 4 the stylized example of a Preceptor Table from the experiment which measured the causal effect of exposure to Spanish-speakers on attitudes toward immigration.
+Recall from Chapter 4 the stylized example of a Preceptor Table from the experiment which measured the causal effect of exposure to Spanish-speakers on attitudes toward immigration. 
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -96,6 +96,190 @@ A *permutation test* starts with the assumption that the true average treatment 
 <!-- DK: Build a three column tibble (with no "assignment column") which represents the assignments in the experiment. Use that tibble (and the experiment results) to calculate an estimated treatment effect. Highlight the assignments could have been different. Explain that, if they were, you can not calculate the estimated treatment effect which would have resulted in that case. Also teach them about expand grid, even if you don't use it here. (Best if you do. Or not! Your call!) -->
 
 <!-- Knowledge to drop in this section: First section builds the assignments tibble. (Should it be assignment or assignment*s*?) Discuss randomization and why it is important. Discuss why we might want "balance."  For example, it is obviously stupid to assign all five units to treatment and zero to control. But it is also suspect to do a 4 and 1 combination. We want to minimize the error in our estimates of both mean(Y_c) and mean(Y_t). To do that, we should seek balance since the marginal reduction in standard error is greater for whichever treatment has fewer observations. -->
+
+Before we start making tibbles and calculating, keep in mind that for our calculation to be unbiased, we need to make sure that the "real" data and the assignment of treatment and control is random because *If the treatment assigned is correlated with the potential outcomes, it is very hard to estimate the true treatment effect. *. For example, it is obviously stupid to assign all five units to treatment and zero to control. But it is also suspect to do a 4 and 1 combination. We want to minimize the error in our estimates of both mean(Y_c) and mean(Y_t). To do that, we should seek balance since the marginal reduction in standard error is greater for whichever treatment has fewer observations. 
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("13", "14", "?", "?", "3"),
+       ycontrol = c("?", "?", "6", "12", "?"),
+       ydiff = c("?", "?", "?", "?", "?")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+    tab_header(title = "Preceptor Table") %>% 
+    cols_label(subject = md("ID"),
+                  ytreat = md("$$Y_t(u)$$"),
+                  ycontrol = md("$$Y_c(u)$$"),
+                  ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+    cols_move(columns = c(ytreat, ycontrol), after = c(subject)) %>%
+    tab_style(cell_borders(sides = "right"),
+              location = cells_body(columns = c(subject))) %>%
+    tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
+              locations = cells_column_labels(columns = c(subject))) %>%
+    cols_align(align = "center", columns = everything()) %>%
+    cols_align(align = "left", columns = c(subject)) %>%
+    tab_spanner(label = "$$\\text{Outcomes}$$", c(ytreat, ycontrol)) %>%
+    tab_spanner(label = "$$\\text{Causal Effect}$$", c(ydiff)) %>%
+    fmt_markdown(columns = everything())
+```
+
+
+
+### Exercise 1
+
+Use `tibble()` create a new variable `name` and set it equal to "Yao", "Emma", "Cassidy", "Tahmid" and "Diego" combine using `c()`.
+
+```{r experiment-assignmen-1, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r experiment-assignmen-1-hint, eval = FALSE}
+tibble(name = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"))
+```
+
+###
+
+
+### Exercise 2
+
+Then, within `tibble()` add another variable which separated by comma `treatment` and set it equal to `c(TRUE, TRUE, FALSE,FALSE,TRUE)` this means that the first person(Yao), second person(Emma), and last person (Diego)gets treatment, and the third(Cassidy) and fourth(Tahmid) don't get treatment.
+
+```{r experiment-assignmen-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r experiment-assignmen-2-hint, eval = FALSE}
+tibble(name = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       treatment = c(TRUE, TRUE, FALSE,FALSE,TRUE)) 
+```
+
+### Exercise 3
+
+Pipe down the result, then use `mutate()` create variable `control` and set it equal to `! treatment`.
+```{r experiment-assignmen-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r experiment-assignmen-3-hint, eval = FALSE}
+... %>%
+  mutate(control = !treatment)
+```
+
+###
+Now we have make our assignment table, which is essentially a table with represented assignment (here we have only 1 assignment), and corresponding combination of treatment and control. Let's now start applieing the numbers to calculate the estimated treatment effect.
+
+### Exercise 4
+
+Use `mutate()` create a new variable `y_t` and set it equal to `c(13, 14, NA, NA, 3)`.
+```{r experiment-assignmen-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r experiment-assignmen-4-hint, eval = FALSE}
+...%>%
+  mutate(y_t = c(13,14,NA , NA , 3))
+```
+
+###
+We replace the question mark with NA, as we don't know what the value that would go in the unnknown box.
+
+### Exercise 5
+
+Similarily use `mutate()` create a new variable `y_c` and set it equal to `c(NA, NA, 6, 12, NA)`.
+```{r experiment-assignmen-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r experiment-assignmen-5-hint, eval = FALSE}
+...%>%
+  mutate(y_c = c(NA, NA, 6, 12, NA))
+```
+
+###
+According to Fundamental Problem of Causal Inference we can only observe one of the possible outcomes for each indivisual. Therefore if we knows the value for y_t we don't know the value for y_c for the same person. And now oberving the 4 columns we can see that the `TRUE` within the treatment column matches the value in column `y_t` and the `FALSE` in treatment column match the `NA`, as well as the control columns vice verse.
+
+### Exercise 6
+
+As a special property of NA anything operation applied NA will result in NA, so we must first maniputate the `y_t` and `y_c` column before we calculate the estimated causal effect. Use `mutate()` create a variable `t_outcome` and set it equal to `if_else()` which has three arguments in order, `treatment`, then `y_t` , then `0`.
+```{r experiment-assignmen-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r experiment-assignmen-6-hint, eval = FALSE}
+tibble(name = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+  treatment = c(TRUE, TRUE, FALSE,FALSE,TRUE)) %>%
+  mutate(control = ! treatment) %>% 
+  mutate(y_t =  c(13, 14, NA ,NA ,3)) %>% 
+  mutate(y_c = c(NA, NA, 6, 12, NA)) %>%
+  mutate(t_outcome = if_else(treatment, y_t, 0)) 
+
+```
+
+###
+The `if_else()` statement has three arguments, the first is an condition statement which has to correspond to an logical vector like the treatment/control column, Then if the condition statement is `TRUE`, returns the second argument, if the condition statement is `FALSE` returns the third arguments. The fact that we are allow to replace NA with 0 is that we infer a person cannot get the treatment and effect the same time, so therefore it doesn't matter which value we give, as it will be taken into consider when we calculate the estimated causal effect.
+
+### Exercise 7
+
+Similarly, use `mutate()` create a variable `c_outcome` and set it equal to `if_else()` which has three arguments in order, `control`, then `y_c` , then `0`. 
+```{r experiment-assignmen-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r experiment-assignmen-7-hint, eval = FALSE}
+tibble(name = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+  treatment = c(TRUE, TRUE, FALSE,FALSE,TRUE)) %>%
+  mutate(control = ! treatment) %>% 
+  mutate(y_t =  c(13, 14, NA ,NA ,3)) %>% 
+  mutate(y_c = c(NA, NA, 6, 12, NA)) %>%
+  mutate(t_outcome = if_else(treatment, y_t, 0)) %>%
+  mutate(c_outcome = if_else(control, y_c, 0)) 
+```
+
+###
+Everything is set for the stage, we are ready to calculate the estimated causal/treatment effect.
+
+### Exercise 8
+
+Use `summarise()` create an variable `est_effect`, and set it equal to the `mean()` of `t_outcomes` minus the `mean()` of `c_outcomes`. You should get an value of + 2.4.
+```{r experiment-assignmen-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r experiment-assignmen-8-hint, eval = FALSE}
+tibble(name = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+  treatment = c(TRUE, TRUE, FALSE,FALSE,TRUE)) %>%
+  mutate(control = ! treatment) %>% 
+  mutate(y_t =  c(13, 14, NA ,NA ,3)) %>% 
+  mutate(y_c = c(NA, NA, 6, 12, NA)) %>%
+  mutate(t_outcome = if_else(treatment, y_t, 0)) %>%
+  mutate(c_outcome = if_else(control, y_c, 0)) %>%
+  summarise(est_effect = mean(t_outcome) - mean(c_outcome))
+```
+
+###
+What does this means? Essentially we assume that the preceptor table is the real world data we get from some experiment, and then we calculate the *estimated treatment effect* which is +2.4. 
+Now is this value (2.4) sufficient to determine the effectiveness of the experiment, or in other word is this result `"surprise" enough to conclude that our treatment work. We don't know unless we tested for all other possible combinations of assignment, and compared all possible outcomes of estimated causal effect to the value +2.4. 
+
 
 
 ## All assignments
@@ -186,7 +370,7 @@ Now we have an complete 32*5 tibble, which each 32 rwos representing an differen
 
 ### Exercise 5
 
-Use `pivot_longer()` which include two arguments, first set `cols` equal to `everything()`, then set `values_to` equal to `"treatment"`
+Use `pivot_longer()` which include two arguments, first set `cols` equal to `everything()`, then set `values_to` equal to `"treatment"`.
 ```{r assignments-5, exercise = TRUE}
 
 ```
@@ -272,173 +456,9 @@ all_assignments <-
 ###
 
 
-### Exercise 10
-
-Now let's pull up the the `real world` data or the preceptor table from the 32 possible combinations. 
-
-```{r, echo = FALSE}
-# First, we create a tibble with the values we want for the table
-
-tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
-       ytreat = c("13", "14", "?", "?", "3"),
-       ycontrol = c("?", "?", "6", "12", "?"),
-       ydiff = c("?", "?", "?", "?", "?")) %>%
-  
-  # Then, we use the gt function to make it pretty
-  
-  gt() %>%
-    tab_header(title = "Preceptor Table") %>% 
-    cols_label(subject = md("ID"),
-                  ytreat = md("$$Y_t(u)$$"),
-                  ycontrol = md("$$Y_c(u)$$"),
-                  ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
-    cols_move(columns = c(ytreat, ycontrol), after = c(subject)) %>%
-    tab_style(cell_borders(sides = "right"),
-              location = cells_body(columns = c(subject))) %>%
-    tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
-              locations = cells_column_labels(columns = c(subject))) %>%
-    cols_align(align = "center", columns = everything()) %>%
-    cols_align(align = "left", columns = c(subject)) %>%
-    tab_spanner(label = "$$\\text{Outcomes}$$", c(ytreat, ycontrol)) %>%
-    tab_spanner(label = "$$\\text{Causal Effect}$$", c(ydiff)) %>%
-    fmt_markdown(columns = everything())
-```
-
-Start a pipe with `all_assignments`, use `filter()` to filter out `assignment` number 13, Which Yao, Emma, and Diego gets treatment (returns `TRUE` under `treatment` column), Cassidy and Tahmid gets control (returns `FALSE` under `treatment` column).
-
-```{r assignments-10, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r assignments-10-hint, eval = FALSE}
-all_assignments %>%
-  filter(assignment == 13)
-```
 
 ###
 
-### Exercise 11
-
-Now use `mutate()` create a new variable `outcomes` set it equal to `c(13, 14, 6, 12, 3)`.
-```{r assignments-11, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r assignments-11-hint, eval = FALSE}
-all_assignments %>%
-  filter(assignment == 13) %>%
-  mutate(outcomes = c(13, 14, 6, 12, 3))
-```
-
-
-### Exercise 12
-
-Use `mutate()` create a variable `treatment_outcomes` and set it equal to `case_when()`, which hass two arguments, first when `treatment == TRUE` use `~` returns `outcomes`, then when `treatment == FALSE` use `~` returns `0`.
-```{r assignments-12, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r assignments-12-hint, eval = FALSE}
-all_assignments %>%
-  filter(assignment == 13) %>%
-  mutate(outcomes = c(13, 14, 6, 12, 3)) %>%
-  mutate(treatment_outcomes = case_when(
-   treatment == TRUE ~ outcomes,
-   treatment == FALSE ~ 0)) 
-```
-
-###
-This will generate a list only including values for Yao, Emma and Diego, we replace the question mark in the preceptor table with 0, as a person cannot have treatment or control the same time.
-
-### Exercise 13
-
-Use `mutate()` create a variable `control_outcomes` and set it equal to `case_when()`, which hass two arguments, first when `control == TRUE` use `~` returns `outcomes`, then when `control == FALSE` use `~` returns `0`.
-```{r assignments-13, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r assignments-13-hint, eval = FALSE}
-all_assignments %>%
-  filter(assignment == 13) %>%
-  mutate(outcomes = c(13, 14, 6, 12, 3)) %>%
-  mutate(treatment_outcomes = case_when(
-   treatment == TRUE ~ outcomes,
-   treatment == FALSE ~ 0)) %>%
-   mutate(control_outcomes = case_when(
-   control == TRUE ~ outcomes,
-   control == FALSE ~ 0
-   ))
-```
-
-###
-Same idea, if the column `control` returns `TRUE` then that person gets the control group, and if it returns `FALSE`, that person gets the treatment group.
-
-### Exercise 14
-
-Use `group_by()` to group `assignment`,
-```{r assignments-14, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r assignments-14-hint, eval = FALSE}
-... %>%
-  group_by()
-```
-
-###
-
-### Exercise 15
-
-Use `summairse()` to creates variable `mean_difference` and set it equal to the the `mean()` of `treatment_outcomes` minus the `mean()` of `control_outcomes`.
-
-```{r assignments-15, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r assignments-15-hint, eval = FALSE}
-... %>%
-  summarise(mean_difference = mean(treatment_outcomes)- mean(control_outcomes)) 
-```
-
-###
-You should have something like this. With two columns one is `assignment` and one is `mean_difference`.
-
-```{r}
-all_assignments %>%
-  filter(assignment == 13) %>%
-  mutate(outcomes = c(13, 14, 6, 12, 3)) %>%
-  mutate(treatment_outcomes = case_when(
-   treatment == TRUE ~ outcomes,
-   treatment == FALSE ~ 0)) %>%
-   mutate(control_outcomes = case_when(
-   control == TRUE ~ outcomes,
-   control == FALSE ~ 0
-   )) %>%
-  mutate(treatment_outcomes = case_when(
-    treatment == TRUE ~ outcomes,
-    treatment == FALSE ~ 0)) %>%
-  mutate(control_outcomes = case_when(
-    control == TRUE ~ outcomes,
-    control == FALSE ~ 0
-  )) %>%
-  group_by(assignment)%>%
-  summarise(mean_difference = mean(treatment_outcomes)- mean(control_outcomes))
-```
-
-###
-What does this means? Essentially we assume that the preceptor table is the real world data we get from some experiment, and then we calculate the *average treatment effect* which is +2.4. Now you might wonder, what we we do for the other 31 possibilities, in fact with only limited information we know, we cannot calculate the average treatment effect of other possible outcomes, because we don't know the values of the question marks in the preceptor table. So now we are stuck, what do we do? There is one ingenious method to get around with this, and that is *Null hypothesis*.
 
 <!-- tibble(assignment number, name, treatment, control) with treatment and control being logical vectors. The tibble has 32 * 5 rows.  -->
 
