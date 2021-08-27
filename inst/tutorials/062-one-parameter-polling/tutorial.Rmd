@@ -8,7 +8,7 @@ output:
     progressive: true
     allow_skip: true
 runtime: shiny_prerendered
-description: "Use polling data from the 2012 election to answer questions about support for President Obama."
+description: "Use polling data from the 2013 election to answer questions about support for President Obama."
 ---
 
 ```{r setup, include = FALSE}
@@ -42,11 +42,15 @@ ob_iop_ppd <- posterior_epred(iop_fit,
 
 class_data <- tibble(approve = c(rep(1, .32*200), rep(0, .52*200)))
 
-class_fit <- stan_glm(data = class_data,
-                    refresh = 0,
-                    seed = 2013, 
-                    family = binomial,
-                    formula = approve ~ 1) 
+# class_fit <- stan_glm(data = class_data,
+#                     refresh = 0,
+#                     seed = 2013, 
+#                     family = binomial,
+#                     formula = approve ~ 1) 
+
+# write_rds(class_fit, "data/class_fit.rds")
+
+class_fit <- read_rds("data/class_fit.rds")
 
 class_ppd <- posterior_epred(class_fit, 
                           newdata = tibble(constant = 1)) %>%
@@ -99,9 +103,15 @@ First, you will examine a Harvard poll to determine wether or not it can answer 
 
 ###
 
-Before creating models, the validity, stability, and representatives of a data set must be determined.
+Before creating models, you must determine wether or not your data can answer your questions. 
 
 ### 
+
+We will use the 2013 Harvard Institute of Politics (IOP) poll as data to answer the following question:
+
+> Between October 26 and November 16 of 2013, what percentage of young Americans aged 18-29 approved of President Obama's job performance?
+
+###
 
 The Harvard Kennedy School Institute of Politics [provides polling data for young adults](https://iop.harvard.edu/youth-poll). An excerpt from their website: 
 
@@ -113,37 +123,55 @@ Between October 29 and November 13 of 2013, a team from Harvard's Institute of P
 
 ### Exercise 1
 
-In the Harvard IOP poll, 41% of respondents approved of President Obama, and 54% disapproved, which only sums to 95%. The "missing" 5% of respondents can be considered **non-responses**, as they declined to answer the poll question. 
+Refer to our question: 
 
-In 2-4 sentences, examine *validity* across polls by considering how classifying non-responses as 0's (disapprovals) could cause different mathematical results compared to excluding them all-together.
+> Between October 26 and November 16 of 2013, what percentage of young Americans aged 18-29 approved of President Obama's job performance?
 
-Refer back to [The Primer](https://ppbds.github.io/primer/probability.html#cardinal-virtues) for discussion on validity, stability, and representativeness.  
+In one paragraph, describe the time column of the Population Table needed to answer our question using the IOP data, the Preceptor Table, and the a wider population. Make sure to use specific dates for the Data and Preceptor Table categories. 
 
 ```{r obama-overview-1}
 question_text(NULL,
-    answer(NULL, correct = TRUE),
-    allow_retry = TRUE,
-    try_again_button = "Edit Answer",
-    incorrect = NULL,
-    rows = 6)
+	message = "Members of the wider Population would exist before the poll was conducted, after the poll was conducted, and well into the future, as the poll could have been conducted at any time. Because the question asks for the approval rating of young Americans between October 26 and November 16, 2013, the Preceptor Table cateogy would be composed of dates from that time range. Subjects from the data would have a time range between October 29 and November 16, 2013, because that was when the poll was conducted.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
 ```
 
 ### Exercise 2
 
-In the Harvard IOP poll was conducted between October 29 and November 13 of 2013. Keeping this in mind, in 2 sentences examine the *stability* of this poll across time periods. Do you believe the results could be used to draw conclusions about how young adults aged 18-29 feel about President Obama in the present day? 
+In the Harvard IOP poll, 41% of respondents approved of President Obama, and 54% disapproved, which only sums to 95%. The "missing" 5% of respondents can be considered **non-responses**, as they declined to answer the poll question. 
 
-Refer back to [The Primer](https://ppbds.github.io/primer/probability.html#cardinal-virtues) for discussion on validity, stability, and representativeness.  
+One poll may measure approvals vs non-approvals: People who approve of Obama are classified as successes (approvals), while **both** disapprovals and non-responses are classified as failures (non-approvals). On the other hand, another poll may classify approvals as successes and dissaprovals as failures, excluding non-response data all-together.  
+
+Using the results of the Harvard IOP poll, calculate the success percentage and failure percentage for both choices of how to classify non-responses in two sentences. Using your calculations, state in one sentence whether or not the method of classification changes the meaning of the "success" column, challenging *validity*. 
 
 ```{r obama-overview-2}
 question_text(NULL,
-    answer(NULL, correct = TRUE),
-    allow_retry = TRUE,
-    try_again_button = "Edit Answer",
-    incorrect = NULL,
-    rows = 6)
+	message = "Classifying non-approvals as failures: .41/1 = 41% success percentage. Excluding non-approvals: .41/(1 - .05) = .41/.95 = 43% success percentage. Yes, the method of classification changes the meaning of the success column because the success percentages differ between the two methods.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
 ```
 
 ### Exercise 3
+
+The Harvard IOP poll was conducted between October 29 and November 13 of 2013. Do you believe the results could be used to draw conclusions about how young adults aged 18-29 feel about President Obama in the present day? Respond in 2 sentences.  
+
+```{r obama-overview-3}
+question_text(NULL,
+	message = "The results of the poll could not be used to draw results about Obama in the present day, because the young Americans today would have been children while the poll was conducted, so they would likely have different perceptions of Obama than the poll respondants. Furthemore, presidential approval polls are not stable by nature, as they are heavily influenced by national events.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 4
 
 The [press release revealing the poll results](https://iop.harvard.edu/sites/default/files_new/Harvard_PressReleaseFall2013%20.pdf) included a brief explanation of KnowledgePanel®, which was the platform used to conduct the poll:
 
@@ -154,17 +182,16 @@ telephone or by mail to participate in the web-enabled KnowledgePanel®. For tho
 to participate, but do not already have Internet access, GfK provides a laptop and ISP connection
 at no cost. 
 
-With knowledge of the sampling methodology, determine 2 groups the poll may exclude (and explain why it excludes them), which could cause the poll to not be representative of all 18-29 year old Americans.
+With knowledge of the sampling methodology, determine 2 groups the poll may exclude (and explain why it excludes them), which could cause the poll to not be *representative* of all 18-29 year old Americans. Respond in 2 sentences. 
 
-Refer back to [The Primer](https://ppbds.github.io/primer/probability.html#cardinal-virtues) for discussion on validity, stability, and representativeness.  
-
-```{r obama-overview-3}
+```{r obama-overview-4}
 question_text(NULL,
-    answer(NULL, correct = TRUE),
-    allow_retry = TRUE,
-    try_again_button = "Edit Answer",
-    incorrect = NULL,
-    rows = 6)
+	message = "The poll would not represent 18-29 year old prisoners, as they could not be selected via random selection of telephone numbers and addresses. The poll may also exclude some college students who live in dorms and do not have a residential address.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
 ```
 
 
@@ -180,9 +207,9 @@ Whenever you want to find the value of a parameter, create a posterior distribut
 
 ###
 
-Let's attempt to answer the following question: 
+Recall our question: 
 
-> In the fall of 2013, what percentage of young Americans aged 18-29 approved of President Obama's job performance?
+> Between October 26 and November 16 of 2013, what percentage of young Americans aged 18-29 approved of President Obama's job performance?
 
 ###
 
@@ -445,7 +472,7 @@ ob_iop_ppd %>%
   scale_y_continuous(labels = scales::percent_format()) +
   theme_light() +
   labs(title = "Posterior Probability Distribution",
-       x = "Percentage of 18-29 year olds who approved of Obama in fall, 2013",
+       x = "Percentage of 18-29 year olds who \n approved of Obama in fall, 2013",
        y = "Probability")
 ```
 
@@ -453,17 +480,18 @@ ob_iop_ppd %>%
 
 Using the posterior, answer the initial question in 2 sentences: 
 
-> In the fall of 2013, what percentage of young Americans aged 18-29 approved of President Obama's job performance?
+> Between October 26 and November 16 of 2013, what percentage of young Americans aged 18-29 approved of President Obama's job performance?
 
 Because the exact value of the parameter (the percentage of young Americans who approved of Obama's performance) is unknown, your answer should not be a single number, but instead a range of values that the true value of the parameter is likely to fall between.  
 
 ```{r iop-14}
 question_text(NULL,
-    answer(NULL, correct = TRUE),
-    allow_retry = TRUE,
-    try_again_button = "Edit Answer",
-    incorrect = NULL,
-    rows = 6)
+	message = "The bulk of the area under the distribution occurs between 42% and 44%, so it's likely that the percentage of all young American adults who approved of President Obama is between this range. However, there is also some chance that the percentage is as low as 40%, and as high as 46.5%.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
 ```
 
 ###
@@ -510,7 +538,7 @@ We will eventually compare the Harvard IOP poll with another poll conducted by a
 
 ###
 
-In the fall of 2013, a high school government class conducted their own Obama approval poll. The class randomly dialed U.S households, requesting to speak to an adult with the most recent birthday, and asked the following question:
+At the exact same time as the Harvard IOP poll, a high school government class conducted their own Obama approval poll. The class randomly dialed U.S households, requesting to speak to an adult with the most recent birthday, and asked the following question:
 
 > In general, do you approve or disapprove of the job performance of Barack Obama as president?
 
@@ -531,21 +559,19 @@ In one sentence, state a wider Population that the class poll may generalize. Ma
 
 ```{r class-poll-1}
 question_text(NULL,
-    answer(NULL, correct = TRUE),
-    allow_retry = FALSE,
-    incorrect = NULL,
-    rows = 6)
+	message = "The poll was given to random U.S households. Assuming the dialing was truly random, and only adults answered the call, then the population of the survey could be all U.S adults a few days before and after the poll (ie between October 26 and November 16 of 2013).  ",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
 ```
-
-###
-
-The poll was given to random U.S households. Assuming the dialing was truly random, and only adults answered the call, then the population of the survey would be all U.S adults in the fall of 2013. 
 
 ###
 
 Using the class poll, we will attempt to answer the following question:
 
-> In the fall of 2013, how does the percentage of U.S young adults aged 18-29 who approved of President Obama compare to the the percentage of all U.S adults who approved of him? 
+> Between October 26 and November 16 of 2013, how does the percentage of U.S young adults aged 18-29 who approved of President Obama compare to the the percentage of all U.S adults who approved of him? 
 
 ### Exercise 2
 
@@ -835,7 +861,7 @@ bind_rows(ob_iop_ppd, class_ppd) %>%
 
 You have successfully created the posteriors for two different Obama approval polls. The next step is to compare them, in order to answer the question: 
 
-> In the fall of 2013, how does the percentage of U.S young adults aged 18-29 who approved of President Obama compare to the the percentage of all U.S adults who approved of him? 
+> Between October 26 and November 16 of 2013, how does the percentage of U.S young adults aged 18-29 who approved of President Obama compare to the the percentage of all U.S adults who approved of him? 
 
 ### Exercise 17
 
@@ -876,7 +902,7 @@ No matter how complex, virtually all probability problems involve finding the ar
 
 Let's attempt to answer the following question: 
 
-> In the fall of 2013, if there were two rooms of the same size, one filled with all American adults, and one filled with just 18-29 year olds, what is the probability that the rooms will have the same number of people who approve of Obama?
+> Between October 26 and November 16 of 2013, if there were two rooms of the same size, one filled with all American adults, and one filled with just 18-29 year olds, what is the probability that the rooms will have the same number of people who approve of Obama?
 
 Because this is a probability question, we can model the probabilities as areas under a curve:
 
@@ -911,11 +937,7 @@ Initialize a `tibble()`, with the column `num_people` equal to a range of intege
 ```
 
 ```{r prob-1-hint-1, eval = FALSE}
-tibble(... = ...)
-```
-
-```{r prob-1-hint-2, eval = FALSE}
-Use : to create a range of integers. 
+tibble(... = ...:...)
 ```
 
 ### Exercise 2
@@ -1043,7 +1065,7 @@ To simulate the predictions for all Americans we can recreate the exact same tib
 
 ###
 
-Copy your code from above, and replace `iop_fit` with `class_fit`. Also change the object name from `young` to `all`.
+Copy your code from above, and replace `iop_fit` with `class_fit`. Also save the object with the name `young` instead of `all`.
 
 ```{r prob-8, exercise = TRUE}
 
@@ -1122,7 +1144,7 @@ both_polls %>%
 
 ###
 
-A mostly purple bar indicates that the room of young Americans and all Americans are likely to have a similar number of Obama approvers designated by the x-axis. Red bars indicate that the room with all Americans is more likely to have the number of Obama supporters designated by the x-axis, while blue bars indicate the same phenomanan with young Americans. 
+A mostly purple bar indicates that the room of young Americans and all Americans are likely to have a similar number of Obama approvers designated by the x-axis. Red bars indicate that the room with all Americans is more likely to have the number of Obama supporters designated by the x-axis, while blue bars indicate the same phenomena with young Americans. 
 
 ###
 
@@ -1245,7 +1267,7 @@ Each bar represents the percent difference for the room of young Americans and a
 
 ### Exercise 18
 
-Copy your code from above, but delete `ggplot()` as well as the `geom_col()` and `facet_wrap()` layers (we no longer wish to visualize the percent differences).  Instead, group your tibble by `num_people` using `group_by()`. 
+Copy your code from above, but delete the `ggplot()`, `geom_col()`, `facet_wrap()`, and `labs()` layers (we no longer wish to visualize the percent differences).  Instead, group your tibble by `num_people` using `group_by()`. 
 
 ```{r prob-18, exercise = TRUE}
 
@@ -1283,7 +1305,9 @@ Continue your pipe with `summarize()`. Within `summarize()`, set `prob_rooms_are
 
 Because the probabilities for each number of Obama approvers in a room are independent from one another, we use the `prod()` function to multiply them, resulting in a final probability that answers our question: 
 
-> In the fall of 2013, if there were two rooms of the same size, one filled with all American adults, and one filled with just 18-29 year olds, what is the probability that the rooms will have the same number of people who approve of Obama?
+> Between October 26 and November 16 of 2013, if there were two rooms of the same size, one filled with all American adults, and one filled with just 18-29 year olds, what is the probability that the rooms will have the same number of people who approve of Obama?
+
+###
 
 Each value of `prob_rooms_are_same` represents the probability that the two rooms are the same for a specific room size!
 
