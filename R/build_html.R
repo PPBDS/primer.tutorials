@@ -12,10 +12,6 @@ build_html <- function(file, session, is_test = FALSE){
   # Inspired by Matt Blackwell's implementation of a similar idea.
   # https://github.com/mattblackwell/qsslearnr/blob/main/R/submission.R
 
-  # Get label order to order answers
-
-  label_list <- get_label_list(session, is_test = is_test)
-
   # Copy over a report Rmd template to write to.
 
   tempReport <- file.path(tempdir(), "submission-temp.Rmd")
@@ -41,7 +37,7 @@ build_html <- function(file, session, is_test = FALSE){
 
   # Create tibble that is ordered by code chunk appearance
 
-  out <- create_tibble_from_submissions(objs, label_list, tutorial_id)
+  out <- create_tibble_from_submissions(objs = objs, tutorial_id = tutorial_id)
 
   # Pass tibble and title as parameters into the report template, then render
   # template as an html document.

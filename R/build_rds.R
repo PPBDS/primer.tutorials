@@ -26,13 +26,9 @@ build_rds <- function(file, session, is_test = FALSE){
     tutorial_id <- learnr::get_tutorial_info()$tutorial_id
   }
 
-  # Get label order to order answers
-
-  label_list <- get_label_list(session, is_test = is_test)
-
   # Create tibble that is ordered by code chunk appearance
 
-  out <- create_tibble_from_submissions(objs, label_list, tutorial_id)
+  out <- create_tibble_from_submissions(objs = objs, tutorial_id = tutorial_id)
 
   # save tibble object in destination
 

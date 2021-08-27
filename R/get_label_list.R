@@ -1,4 +1,4 @@
-#' Get Label Order
+#' Get Label Order (Deprecated with learnr version 0.10.1.9012)
 #'
 #' @param sess session object from shiny with learnr
 #' @param is_test check if testing function
