@@ -58,17 +58,30 @@ class_ppd <- posterior_epred(class_fit,
   rename(approval = `1`) %>%
   mutate(study = "class")
 
-#Probability question:
+# Create a fake data set with polling data.
+
+set.seed(17)
+poll_data <- tibble(response = c(rep("Approve", 855),
+                                 rep("Disapprove", 1124),
+                                 rep(NA, 110))) %>% 
+  sample_frac()
+  
+
+# Probability question:
 
 young <- tibble(num_people = 1:20) %>%
-  mutate(predictions = map(num_people, ~ posterior_predict(iop_fit, newdata = tibble(constant = rep(1, .))))) %>%
+  mutate(predictions = map(num_people, ~ 
+                             posterior_predict(iop_fit, 
+                                               newdata = tibble(constant = rep(1, .))))) %>%
   mutate(total = map(predictions, ~ rowSums(.))) %>%
   unnest(total) %>%
   group_by(num_people, total) %>%
   summarize(num_draws = n(), .groups = "drop")
 
 all <- tibble(num_people = 1:20) %>%
-  mutate(predictions = map(num_people, ~ posterior_predict(class_fit, newdata = tibble(constant = rep(1, .))))) %>%
+  mutate(predictions = map(num_people, ~ 
+                             posterior_predict(class_fit, 
+                                               newdata = tibble(constant = rep(1, .))))) %>%
   mutate(total = map(predictions, ~ rowSums(.))) %>%
   unnest(total) %>%
   group_by(num_people, total) %>%
@@ -99,33 +112,32 @@ Polls are a common application of binomial distributions, as respondents who agr
 
 First, you will examine a Harvard poll to determine wether or not it can answer our questions. Next, you will calculate feasible values for the percentage of young Americans who approved of President Obama in the fall of 2013, by creating a posterior distribution using the professional **rstanarm** statistical library.  You will then create another posterior using a different poll, and learn to compare them using their means and variation. Finally, you will answer a challenging probability question by calculating the area under a graph. 
 
-## Obama approval 
-
+## Wisdom
 ###
 
-Before creating models, you must determine wether or not your data can answer your questions. 
+Imagine that it is November 15, 2013. Our question: What percentage of young people (aged 18 to 29) approve of President Obama's performance?  We will use the 2013 Harvard Institute of Politics (IOP) polling data collected from October 29 and November 13 to answer the question.
 
-### 
 
-We will use the 2013 Harvard Institute of Politics (IOP) poll as data to answer the following question:
-
-> Between October 26 and November 16 of 2013, what percentage of young Americans aged 18-29 approved of President Obama's job performance?
-
-###
-
-The Harvard Kennedy School Institute of Politics [provides polling data for young adults](https://iop.harvard.edu/youth-poll). An excerpt from their website: 
-
-> The Harvard Public Opinion Project conducts a biannual poll examining the political opinions and civic engagement of young Americans ages 18 to 29. Since its conception by two Harvard undergraduate students in 2000, the Harvard Public Opinion Project has provided the most comprehensive look at the political opinions, voting trends, and views on public service held by young Americans.
-
-Between October 29 and November 13 of 2013, a team from Harvard's Institute of Politics [conducted their Fall 2013 Poll](https://iop.harvard.edu/sites/default/files_new/Harvard_PressReleaseFall2013%20.pdf) with 2,089 young Americans aged 18 to 29, and concluded the following:   
-
-> Obama Job Approval at Low Point... Roughly four-in-ten (41%) of 18- to 29- year-olds indicated that they approved of Barack Obama’s performance as president (54%: disapprove) – representing the lowest approval rating IOP polling has reported since the beginning of his presidency.
 
 ### Exercise 1
 
-Refer to our question: 
+<!-- Exercise 1: In two sentences, describe the Preceptor Table which could be used to answer our question. Specify what the rows are. As a hint, there should be two columns.  -->
 
-> Between October 26 and November 16 of 2013, what percentage of young Americans aged 18-29 approved of President Obama's job performance?
+<!-- "The Preceptor Table includes a row for every person in the US who is 18 to 29. It has two columns: an ID column and column which indicates whether or not the person approves, on November 15, of President Obama's performance."  -->
+
+<!-- Exercise 2: In one sentence, explain whether this model is causal or predictive, and why. -->
+
+<!-- "The model is predictive because there is only one potential outcome for each person: their approval (or not), November 15, 2003, of President Obama's performance." -->
+
+<!-- poll_data -> drop knowledge about tricky at least three answers. -->
+<!-- skim(poll_data) -->
+<!-- poll_data %>%  -->
+<!--   count(response) -->
+
+<!-- Write two sentences proposing a reason why we can not consider the Preceptor Table and the data to come from the same population. -->
+
+<!-- "If there was a major news event on November 14th, then the data is from a different population than the Preceptor Table since the later was gathered on the two weeks before and the Preceptor Table requires data from November 15th." -->
+
 
 In one paragraph, describe the time column of the Population Table needed to answer our question using the IOP data, the Preceptor Table, and the a wider population. Make sure to use specific dates for the Data and Preceptor Table categories. 
 
@@ -138,6 +150,13 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+###
+
+The Harvard Kennedy School Institute of Politics [provides polling data for young adults](https://iop.harvard.edu/youth-poll).  
+
+> The Harvard Public Opinion Project conducts a biannual poll examining the political opinions and civic engagement of young Americans ages 18 to 29. Since its conception by two Harvard undergraduate students in 2000, the Harvard Public Opinion Project has provided the most comprehensive look at the political opinions, voting trends, and views on public service held by young Americans.
+
 
 ### Exercise 2
 
@@ -157,6 +176,13 @@ question_text(NULL,
 	rows = 6)
 ```
 
+###
+
+Between October 29 and November 13 of 2013, a team from Harvard's Institute of Politics [conducted their Fall 2013 Poll](https://iop.harvard.edu/sites/default/files_new/Harvard_PressReleaseFall2013%20.pdf) with 2,089 young Americans aged 18 to 29, and concluded the following:   
+
+> Obama Job Approval at Low Point... Roughly four-in-ten (41%) of 18- to 29- year-olds indicated that they approved of Barack Obama’s performance as president (54%: disapprove) – representing the lowest approval rating IOP polling has reported since the beginning of his presidency.
+
+
 ### Exercise 3
 
 The Harvard IOP poll was conducted between October 29 and November 13 of 2013. Do you believe the results could be used to draw conclusions about how young adults aged 18-29 feel about President Obama in the present day? Respond in 2 sentences.  
@@ -175,7 +201,7 @@ question_text(NULL,
 
 The [press release revealing the poll results](https://iop.harvard.edu/sites/default/files_new/Harvard_PressReleaseFall2013%20.pdf) included a brief explanation of KnowledgePanel®, which was the platform used to conduct the poll:
 
->The web-enabled KnowledgePanel® is a probability-based panel designed to be representative of the
+> The web-enabled KnowledgePanel® is a probability-based panel designed to be representative of the
 U.S. population. Initially, participants are chosen scientifically by a random selection of 
 telephone numbers and residential addresses. Persons in selected households are then invited by
 telephone or by mail to participate in the web-enabled KnowledgePanel®. For those who agree
@@ -199,9 +225,24 @@ question_text(NULL,
 
 Before creating models, the validity, stability, and representatives of a data set must be determined.
 
-## Harvard study 
-
+## Justice
 ###
+
+<!-- What are the columns in the Population Table? There should be 4 of them. -->
+
+<!-- "ID, Source, Time, Approval. Your column names might be different, but they should certainly cover the same topics." -->
+
+<!-- Write one sentence describing the rows in the Population Table? -->
+
+<!-- "The is a row in the Population Table for each person in the population at each moment in time." -->
+
+<!-- Write one sentence describing the possible values in the Source column and what they mean. -->
+
+<!-- End this with you showing them the Population. -->
+
+<!-- Then, ask questions about validity, stability and representativeness. Always one sentence providing a reason for why the assumption might not hold. -->
+
+<!-- Write one sentence which provides a reason for why the assumption of validity might not be true.  -->
 
 Whenever you want to find the value of a parameter, create a posterior distribution. 
 
