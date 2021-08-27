@@ -50,6 +50,8 @@ https://www.youtube.com/watch?v=rJ3AZCQuiLw
 -->
 
 
+<!-- Use $y_t$ and so on throughout. -->
+
 ## Introduction
 ###
 
@@ -90,14 +92,15 @@ Recall that the question marks indicate data we would like to have but which is 
 A *permutation test* starts with the assumption that the true average treatment effect is zero, and then calculates how "surprising" our estimated average treatment effect is, given that assumption. If the surprise is big enough, we conclude that the average treatment effect is not zero.
 
 
-## Experiment assignments
+## One assignment
 ###
 
-<!-- DK: Build a three column tibble (with no "assignment column") which represents the assignments in the experiment. Use that tibble (and the experiment results) to calculate an estimated treatment effect. Highlight the assignments could have been different. Explain that, if they were, you can not calculate the estimated treatment effect which would have resulted in that case. Also teach them about expand grid, even if you don't use it here. (Best if you do. Or not! Your call!) -->
 
 <!-- Knowledge to drop in this section: First section builds the assignments tibble. (Should it be assignment or assignment*s*?) Discuss randomization and why it is important. Discuss why we might want "balance."  For example, it is obviously stupid to assign all five units to treatment and zero to control. But it is also suspect to do a 4 and 1 combination. We want to minimize the error in our estimates of both mean(Y_c) and mean(Y_t). To do that, we should seek balance since the marginal reduction in standard error is greater for whichever treatment has fewer observations. -->
 
-Before we start making tibbles and calculating, keep in mind that for our calculation to be unbiased, we need to make sure that the "real" data and the assignment of treatment and control is random because *If the treatment assigned is correlated with the potential outcomes, it is very hard to estimate the true treatment effect. *. For example, it is obviously stupid to assign all five units to treatment and zero to control. But it is also suspect to do a 4 and 1 combination. We want to minimize the error in our estimates of both mean(Y_c) and mean(Y_t). To do that, we should seek balance since the marginal reduction in standard error is greater for whichever treatment has fewer observations. 
+In the experiment, Yao, Emma and Diego received the treatment while Cassidy and Tahmid did not. This "assigment" of treatments to units is only one of many possible assignments which could have, in theory, happened. The "assignment mechanism" is the process or procedure by which treatments are assigned to units. In this case, the assignment mechanism was random. Because of that, we can estimate the treatment effect by subtracting the average outcome for the controls from the average outcome of the treated. 
+
+
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -158,12 +161,13 @@ Then, within `tibble()` add another variable which separated by comma `treatment
 
 ```{r experiment-assignmen-2-hint, eval = FALSE}
 tibble(name = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
-       treatment = c(TRUE, TRUE, FALSE,FALSE,TRUE)) 
+       treatment = c(TRUE, TRUE, FALSE, FALSE, TRUE)) 
 ```
 
 ### Exercise 3
 
 Pipe down the result, then use `mutate()` create variable `control` and set it equal to `! treatment`.
+
 ```{r experiment-assignmen-3, exercise = TRUE}
 
 ```
@@ -176,11 +180,13 @@ Pipe down the result, then use `mutate()` create variable `control` and set it e
 ```
 
 ###
+
 Now we have make our assignment table, which is essentially a table with represented assignment (here we have only 1 assignment), and corresponding combination of treatment and control. Let's now start applieing the numbers to calculate the estimated treatment effect.
 
 ### Exercise 4
 
 Use `mutate()` create a new variable `y_t` and set it equal to `c(13, 14, NA, NA, 3)`.
+
 ```{r experiment-assignmen-4, exercise = TRUE}
 
 ```
@@ -193,11 +199,13 @@ Use `mutate()` create a new variable `y_t` and set it equal to `c(13, 14, NA, NA
 ```
 
 ###
-We replace the question mark with NA, as we don't know what the value that would go in the unnknown box.
+
+We replace the question mark with NA because we do not know the outcome if Cassidy or Tahmid were to be given the treatment.
 
 ### Exercise 5
 
 Similarily use `mutate()` create a new variable `y_c` and set it equal to `c(NA, NA, 6, 12, NA)`.
+
 ```{r experiment-assignmen-5, exercise = TRUE}
 
 ```
@@ -210,7 +218,8 @@ Similarily use `mutate()` create a new variable `y_c` and set it equal to `c(NA,
 ```
 
 ###
-According to Fundamental Problem of Causal Inference we can only observe one of the possible outcomes for each indivisual. Therefore if we knows the value for y_t we don't know the value for y_c for the same person. And now oberving the 4 columns we can see that the `TRUE` within the treatment column matches the value in column `y_t` and the `FALSE` in treatment column match the `NA`, as well as the control columns vice verse.
+
+According to Fundamental Problem of Causal Inference we can only observe one of the possible outcomes for each indivisual. Therefore if we knows the value for $y_t$ we don't know the value for y_c for the same person. And now oberving the 4 columns we can see that the `TRUE` within the treatment column matches the value in column `y_t` and the `FALSE` in treatment column match the `NA`, as well as the control columns vice verse.
 
 ### Exercise 6
 
@@ -287,9 +296,6 @@ Now is this value (2.4) sufficient to determine the effectiveness of the experim
 
 Although we assigned the treatment to Yao, Emma and Diego when we ran the experiment, this was not pre-ordained. Assignment was random. So, it might have been the case that we assigned the treatment to Emma and Cassidy.
 
-<!-- Create a tibble which shows the 32 possible assignments of treatment and control. Need to ensure that each person has the treatment and control the same number of times.  x %>% filter(name == "Yao") %>% count(treatment, control) -->
-
-<!-- Show how to use a single assigment to, by hand, calculate the estimate causal effect. But use the assignment which actually happened in reality! -->
 
 ```{r}
 all_assignments
@@ -652,7 +658,7 @@ expand.grid(
   mutate(assignment = rep(1:32, each = 5)) %>%
   relocate(assignment, .before = name) %>%
   mutate(outcomes = rep(c(13, 14, 6, 12, 3), 32)) %>%
-  unnest(outcomes)%>%
+  unnest(outcomes) %>%
   mutate(treatment_outcomes = case_when(
     treatment == TRUE ~ outcomes,
     treatment == FALSE ~ 0)) %>%
@@ -661,8 +667,8 @@ expand.grid(
     control == FALSE ~ 0
   )) %>%
   group_by(assignment)%>%
-  summarise(mean_difference = mean(treatment_outcomes)- mean(control_outcomes)) %>%
-  ggplot(aes(x= mean_difference)) +
+  summarise(mean_difference = mean(treatment_outcomes) - mean(control_outcomes)) %>%
+  ggplot(aes(x = mean_difference)) +
   geom_histogram(aes(y = after_stat(count/sum(count))), binwidth = 1,color = "white")+
   scale_x_continuous(breaks = seq(-7, 12, 1), labels = -7:12)+
   scale_y_continuous(labels= scales::percent_format(accuracy = 1))
