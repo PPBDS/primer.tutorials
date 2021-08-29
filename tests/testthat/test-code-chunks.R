@@ -1,10 +1,16 @@
+library(tidyverse)
+library(learnr)
+library(stringr)
+library(primer.tutorials)
+library(parsermd)
+
 # * Create new file: test-code-chunks.R. It should use the tutorial_paths object to go through all tutorials, use parsermd to parse them and then check for various problems:
 #
-#   + No duplicated code chunk names.
+#   + No duplicated code chunk names. DONE
 #
-# + Code chunks begin with r, followed by a space. (If you don't have an r at the start of the r code chunk options, the entire tutorial breaks and, at least sometimes, it breaks by creating the tutorial but with only questions and with three columns.)
+# + Code chunks begin with r, followed by a space. (If you don't have an r at the start of the r code chunk options, the entire tutorial breaks and, at least sometimes, it breaks by creating the tutorial but with only questions and with three columns.) DONE
 #
-#   + Check that all hints have eval = FALSE. (In other words, any code chunk with "hint" in the code chunk name should have eval = FALSE.)
+#   + Check that all hints have eval = FALSE. (In other words, any code chunk with "hint" in the code chunk name should have eval = FALSE.) DONE
 #
 #   + No code chunks with no lines. This causes a weird error which is very hard to diagnose.
 #
@@ -14,6 +20,56 @@
 #
 # * Update Technical Details document. It is filled with nonsense!
 
-for(i in tutorial_paths){
+for(i in tutorial_paths) {
+  # Gets the first line (the chunk label) of each code chunk in the file
+  lines <- readLines(i)
+  labels <- lines[grepl("^```\\{", lines)]
 
+  # Gets the labels that don't have r at the beginning.
+  # I'm doing this with a grepl because it's hard to do with anything else
+  no_r_labels <- labels[grepl("```\\{[^r]", labels)]
+  if(length(no_r_labels) > 0){
+    stop("From test-code-chunks.R. Missing `r` at beginning of code chunk labels: ",
+         toString(no_r_labels), " Found in file ", i, "\n")
+  }
+
+  # Gets the labels that don't have a space, a comma, or a }.
+  # This is because labels like {r chunk-name}, {r}, and {r, include = FALSE}
+  # are all valid and used throughout the tutorial.
+  no_space_labels <- labels[grepl("```\\{r[^\ },]", labels)]
+  if(length(no_space_labels) > 0){
+    stop("From test-code-chunks.R. Missing space or comma at beginning of code chunk labels: ",
+         toString(no_space_labels), " Found in file ", i, "\n")
+  }
+
+  # Gets the labels that don't have a } at the end.
+  # This is so that everything parses correctly.
+  no_end_labels <- labels[!grepl("}$", labels)]
+  if(length(no_end_labels) > 0){
+    stop("From test-code-chunks.R. Missing `}` at end of code chunk labels: ",
+         toString(no_end_labels), " Found in file ", i, "\n")
+  }
+
+  doc_structure <- parse_rmd(i)
+  doc_structure_tibble <- doc_structure %>%
+                            as_tibble() %>%
+                            filter(type == "rmd_chunk")
+  dups <- doc_structure_tibble[duplicated(doc_structure_tibble)]
+
+  if(length(dups) != 0){
+    stop("From test-code-chunks.R. Duplicated code chunk labels ", toString(dups), " found in file ", i, "\n")
+  }
+
+  # Check for eval = false in hints
+  hint_labels <- labels[grepl("hint", labels)]
+  for(label in hint_labels){
+    if(!str_detect(label, "eval = FALSE")){
+      stop("From test-code-chunks.R. `eval = false` missing from code chunk ", label, " in file ", i, "\n")
+    }
+  }
+
+  doc_code <- doc_structure %>% rmd_node_code()
+  doc_code[sapply(doc_code, is.null)] <- NULL
+  doc_code
+  doc_structure
 }
