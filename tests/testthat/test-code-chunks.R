@@ -12,7 +12,7 @@ library(parsermd)
 #
 #   + Check that all hints have eval = FALSE. (In other words, any code chunk with "hint" in the code chunk name should have eval = FALSE.) DONE
 #
-#   + No code chunks with no lines. This causes a weird error which is very hard to diagnose.
+#   + No code chunks with no lines. This causes a weird error which is very hard to diagnose. DONE
 #
 # * (Delay for now.) Can we use knitr::purl() to create .R files which might then become part of our testing process? Perhaps to test whether the code in the hints is OK?
 #
@@ -26,7 +26,8 @@ for(i in tutorial_paths) {
   labels <- lines[grepl("^```\\{", lines)]
 
   # Gets the labels that don't have r at the beginning.
-  # I'm doing this with a grepl because it's hard to do with anything else
+  # I'm doing this with a grepl because parsermd doesn't detect code chunks like
+  # this.
   no_r_labels <- labels[grepl("```\\{[^r]", labels)]
   if(length(no_r_labels) > 0){
     stop("From test-code-chunks.R. Missing `r` at beginning of code chunk labels: ",
@@ -36,6 +37,8 @@ for(i in tutorial_paths) {
   # Gets the labels that don't have a space, a comma, or a }.
   # This is because labels like {r chunk-name}, {r}, and {r, include = FALSE}
   # are all valid and used throughout the tutorial.
+  # parsermd also doesn't detect these as chunks (if there's no space) so this
+  # is easier.
   no_space_labels <- labels[grepl("```\\{r[^\ },]", labels)]
   if(length(no_space_labels) > 0){
     stop("From test-code-chunks.R. Missing space or comma at beginning of code chunk labels: ",
@@ -50,12 +53,17 @@ for(i in tutorial_paths) {
          toString(no_end_labels), " Found in file ", i, "\n")
   }
 
+  # Uses parse_rmd to get the structure of the document
   doc_structure <- parse_rmd(i)
-  doc_structure_tibble <- doc_structure %>%
-                            as_tibble() %>%
-                            filter(type == "rmd_chunk")
-  dups <- doc_structure_tibble[duplicated(doc_structure_tibble)]
 
+  # Filters out the document so that we only pull the chunks and their labels
+  doc_labels <- doc_structure %>% rmd_node_label()
+  doc_labels <- doc_labels[!is.na(doc_labels)]
+  doc_labels <- doc_labels[doc_labels != ""]
+
+  # Checks for duplicates then stops it if there's multiple
+  dups <- doc_labels[duplicated(doc_labels)]
+  dups <- dups[!is.na(dups)]
   if(length(dups) != 0){
     stop("From test-code-chunks.R. Duplicated code chunk labels ", toString(dups), " found in file ", i, "\n")
   }
@@ -68,8 +76,18 @@ for(i in tutorial_paths) {
     }
   }
 
+  # Checks for empty chunks by extracting the code from the document
   doc_code <- doc_structure %>% rmd_node_code()
   doc_code[sapply(doc_code, is.null)] <- NULL
-  doc_code
-  doc_structure
+  empty_counter <- 0
+  for(chunk_code in doc_code){
+    if(length(chunk_code) == 0){
+      empty_counter <- empty_counter + 1
+    }
+  }
+
+  # There should be exactly 3 empty chunks: the copycodechunk, info, and the download answers
+  if(empty_counter > 3){
+    warning("From test-code-chunks.R. ", empty_counter, " empty code chunks present in file ", i, "\n")
+  }
 }
