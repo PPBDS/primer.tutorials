@@ -64,72 +64,15 @@ The first is the default location for packages. This is where things go unless y
 
 The top of your file should look like the text below.
 
-````markdown
----
-title: "Data API"
-tutorial:
-  id: "data-api"
-output:
-  learnr::tutorial:
-      progressive: true
-      allow_skip: true
-runtime: shiny_prerendered
-description: "Working with APIs (application programming interfaces) to download data."
----
-
-```{r setup, include = FALSE}`r ''`
-library(learnr)
-library(primer.tutorials)
-library(tidyverse)
-knitr::opts_chunk$set(echo = FALSE)
-options(tutorial.exercise.timelimit = 60, 
-        tutorial.storage = "local") 
+```{r, echo = FALSE}
+knitr::include_graphics("images/tutorial-rmd-beginning.png")
 ```
-
-```{js change-code, echo = FALSE}`r ''`
-
-function transfer_code(elem){
-  Shiny.setInputValue("js_to_server", elem.previousElementSibling.dataset.label);
-  
-}
-
-Shiny.addCustomMessageHandler('set-exercise-code', function(x) {
-  var el = $(`.tutorial-exercise[data-label="${x.label}"] .tutorial-exercise-code-editor`)
-  var exerciseInput = Shiny.inputBindings.bindingNames["tutorial.exerciseInput"].binding
-  exerciseInput.setValue(el, {code: x.code});
-  Shiny.setInputValue("js_to_server", null);
-})
-```
-
-```{r observe-transfers, context = "server"}`r ''`
-
-observeEvent(input$js_to_server, {
-  ex_next = input$js_to_server
-  str_num = parse_integer(gsub("[^0-9]", "", ex_next)) - 1
-  str_head = gsub("[0-9]", "", ex_next)
-  ex_prev = paste0(str_head, str_num)
-  code <- learnr::get_tutorial_state(ex_prev, session) %>% trimws()
-  session$sendCustomMessage("set-exercise-code", list(label = ex_next, code = code))
-})
-```
-````
 
 Every tutorial must load the **learnr** package in order to function. `library(primer.tutorials)` is always included because it contains the file, `submissions_functions.R`, which enables answer downloading. All our tutorials need the **tidyverse**. You may need to add other packages which are used in your tutorial. Any such packages also need to be included in the DESCRIPTION file.
 
 `echo = FALSE` is a handy default because, most of the time, we don't show users the code. Setting the `tutorial.exercise.timelimit` to 60 seconds is safe, but probably not necessary. `tutorial.storage` must be set to `local` to ensure that user work is saved between sessions.
 
-
-For the setup code chunks, the first chunk is written in javascript and the second is written in R.
-
-The pipeline works as such:
-
-1. When a button to transfer code is clicked, it triggers the `"onclick"` event, which calls the function `transfer_code()`, passing the button element itself as an argument.
-
-2. `transfer_code()` is a javascript function defined in the first code chunk that retrieves the current exercise label from an html element after it is compiled. This works by selecting the desired html element relative to the button element passed from the `"onclick"` event. The function then sets a Shiny server input variable called `js_to_server` to the current exercise label.
-
-3. The action of setting `js_to_server` to a new variable triggers a Shiny server event defined in the second code chunk. This event gets the previous exercise's submission and sends that code as well as the current exercise label back to javascript through a custom Shiny message called `"set-exercise-code"`.
-
-4. The message is received in javascript in the first code chunk. Javascript then finds the current code chunk and then **overwrites** the text in the current code chunk with the text from the previous code chunk.
+The other 2 code chunks load in the code for the "Copy Code" button and the Information section. **Do not remove these code chunks**. The information section and the copy code button are crucial infrastructure for the tutorial and these code chunks allow us to implement them easily without taking too much space.
 
 **Process to Current Stage:**
 This function was suggested by Preceptor for simpler user experience in long tutorials that require pipe-building across multiple exercises. There were 2 main options in achieving this.
@@ -144,6 +87,14 @@ Therefore, I created a second version that was a bit "brute-force" by having arg
 
 Here I realized that I don't have to use Shiny's actionButtons and can just use normal html buttons with trigger events that call a javascript function, which can directly communicate with the Shiny server, thus finally reaching the current version. Now no more exercise-specific information needs to be specified, only the exact same button for each exercise.
 
+That means that in order to implement copy-pasting for an exercise, you need to add the line `<button onclick = "transfer_code(this)">Copy previous code</button>` either before or after the exercise that you want to copy-paste to. This will add a button that looks like this:
+
+```{r, echo = FALSE}
+knitr::include_graphics("images/copy-button.png")
+```
+
+The user just needs to click the button in order to copy the code from the previous exercise into the current one.
+
 **Possible Improvements:**
 Personally, I think the current solution is very close to the ideal solution. The only downsides being that 1) tutorial makers still have to include something in the exercises and 2) the button would look much better on the toolbar section of the exercise, next to `"Start Over"` and where the "hint" would be.
 
@@ -152,7 +103,6 @@ However, the possibility of automatically copying code to clipboard when clickin
 ### RStudio setting questions
 
 In many settings, it is natural for a set up question to have three parts. First, run a line of code that reports on the value of something. Example:
-
 
 ```{r, eval = FALSE}
 rstudioapi::readRStudioPreference(name = "load_workspace", default = "Code failed.")
@@ -176,16 +126,78 @@ rstudioapi::readRStudioPreference(name = "load_workspace", default = "Code faile
 
 And finish with a sentence that tells the student to notice that the value has changed and that it is now correct. (Of course, we "monitor" that by making them copy/paste this last command and its return from the Console into the tutorial.)
 
-### Other topics
+### Add ins
 
-* We can use this trick to add hints to those questions: simply add a `<div>` tag with an id attribute that marks it as hint for your exercise. Like this:
+The **primer.tutorials** package has a set of add ins, or functions that can be run through the RStudio IDE.
+
+At the time of writing, there are 4 add ins: the Tutorial Code Exercise, the Tutorial Written Exercise (with answer), the Tutorial Written Exercise (no answer), and the Format Tutorial Chunk Labels add in. Each of these will reformat your file to accomplish a task.
+
+You can run an addin either through a keyboard shortcut (Tools -> Modify Keyboard Shortcuts) or you can go to the Addins menu and run the addin from there.
+
+The Tutorial Code Exercise addin creates a new code exercise by adding to following code at your cursor location:
 
 ````markdown
-`r ''`<div id="filter-hint">
-**Hint:** You may want to use the dplyr `filter` function.
-</div>
+### Exercise 1
+
+
+```{r chunk-name-1, exercise = TRUE}`r ''`
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r chunk-name-1-hint, eval = FALSE}`r ''`
+
+```
+
+###
 ````
 
+This exercise will look like this once it's knitted:
+
+```{r, echo = FALSE}
+knitr::include_graphics("images/tutorial-code-exercise.png")
+```
+
+The Tutorial Written Exercise addins work the same way. The only difference is that they create written prompt boxes rather than code input boxes.
+
+The Tutorial Written Exercise (with answer) addin adds this code to your R Markdown file and creates a prompt box with 6 rows. You can change the number of rows by changing the `rows` argument.
+
+````markdown
+### Exercise 1
+
+```{r definitions-ex-6}`r ''`
+question_text(NULL,
+    message = "answer here",          
+    allow_retry = FALSE,
+    incorrect = NULL,
+    rows = 6)
+```
+````
+
+The Tutorial Written Exercise (no answer) is the same thing, it just doesn't have an `answer` field.
+
+````markdown
+### Exercise 1
+
+```{r definitions-ex-6}`r ''`
+question_text(NULL,
+    message = "answer here",          
+    answer(NULL, 
+           correct = TRUE),
+    allow_retry = FALSE,
+    incorrect = NULL,
+    rows = 6)
+```
+````
+
+However, they look the same once they're knitted.
+
+```{r}
+knitr::include_graphics("images/written-exercise.png")
+```
+
+Finally, the Format Tutorial Chunk Labels add in formats the tutorial so that it automatically has the correct numbering. That means that you can add in a new exercise at the beginning of the tutorial and reformat it without having to manually change every single chunk label or exercise header. It's recommended to place this as a keyboard shortcut due to its usefulness.
 
 ### Comments on .Rbuildignore
 
@@ -260,6 +272,22 @@ NWL Update August 14th: In the last few days, learnr has exported the functions,
 **make_new_q_with_answer** is an add-in function that creates a question exercise that does have an answer to display with correctly formatted labels and general structure.
 
 ### Discussion of tutorial types
+
+Let's discuss the six broad categories of tutorials which we might add, especially to chapters 5 through 11.
+
+First, we can just do more examples. Use different data with a different question, but all the same steps as in the chapter itself. Such examples will generally, like 082, do two analyses: one with all the data (to show the truth) and one in which representativeness fails in a way which we define, thereby showing how we can be led astray. Last step is to compare the answers from these two approaches, thus emphasizing the importance of humility.
+
+Second, stand-alone tutorials on useful topics, like text modeling or networks or rtweet or whatever. These could go in any chapter and would not be restricted to having X number of parameters.
+
+Third, we could cover many other model families, again perhaps not worrying too much about whether or not they have the "right" number of parameters. Simplest here would be other stan_glm families. That is, show a weird data set in which the outcome variable is something that should be fit with poisson or something, and then use family = poisson. Goal would be to emphasize that there are many possible models.
+
+Fourth, expanding on the above, we might have some machine learning examples. After all, a machine-learning model is just a different kind of black box, not different conceptually than a linear or logistic model. We could fit a machine learning model on chapter 8 scenarios. Even though there are way more than three parameters in such models, they still can (I think!) be made to work in cases with just one input variable.
+
+Fifth, real world data science examples which do not hide the messy complexity of the world. I guess that these would be a lot like the overview tutorials, but with 30 minutes of data cleaning first. These might also explicitly assume that you have done all the other tutorials in the chapter and that, therefore, we do not need to walk you through how to estimate a `stan_glm()` with five baby questions. Instead, the questions would be, not really harder, but messier.
+
+Sixth, tutorials about interpreting parameters. We could have one of these in every chapter from 6 onward. These could be short! They would only cover parameter interpretation, perhaps only using the models which were used in the chapter.
+
+Obviously, we could also combine these in various ways. Upon reflection, we should save the machine learning examples for later chapters in which we have several righthand side variables. Indeed, we could have three machine learning tutorials in chapter 11.
 
 ### Later tutorials in later chapters 
 
