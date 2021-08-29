@@ -37,7 +37,7 @@ for(i in tutorial_paths) {
   # Gets the labels that don't have a space, a comma, or a }.
   # This is because labels like {r chunk-name}, {r}, and {r, include = FALSE}
   # are all valid and used throughout the tutorial.
-  # parsermd also doesn't detect these as chunks (if there's no space) so this
+  # parsermd also doesn't detect chunks if there's no space so this
   # is easier.
   no_space_labels <- labels[grepl("```\\{r[^\ },]", labels)]
   if(length(no_space_labels) > 0){
@@ -65,14 +65,16 @@ for(i in tutorial_paths) {
   dups <- doc_labels[duplicated(doc_labels)]
   dups <- dups[!is.na(dups)]
   if(length(dups) != 0){
-    stop("From test-code-chunks.R. Duplicated code chunk labels ", toString(dups), " found in file ", i, "\n")
+    stop("From test-code-chunks.R. Duplicated code chunk labels ",
+         toString(dups), " found in file ", i, "\n")
   }
 
   # Check for eval = false in hints
   hint_labels <- labels[grepl("hint", labels)]
   for(label in hint_labels){
     if(!str_detect(label, "eval = FALSE")){
-      stop("From test-code-chunks.R. `eval = false` missing from code chunk ", label, " in file ", i, "\n")
+      stop("From test-code-chunks.R. `eval = false` missing from code chunk ",
+           label, " in file ", i, "\n")
     }
   }
 
@@ -86,8 +88,10 @@ for(i in tutorial_paths) {
     }
   }
 
-  # There should be exactly 3 empty chunks: the copycodechunk, info, and the download answers
+  # There should be less than 3 empty chunks: the copycodechunk, info, and the
+  # download chunks
   if(empty_counter > 3){
-    warning("From test-code-chunks.R. ", empty_counter, " empty code chunks present in file ", i, "\n")
+    warning("From test-code-chunks.R. ", empty_counter,
+            " empty code chunks present in file ", i, "\n")
   }
 }
