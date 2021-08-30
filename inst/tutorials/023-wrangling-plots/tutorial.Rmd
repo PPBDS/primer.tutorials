@@ -45,9 +45,18 @@ options(tutorial.exercise.timelimit = 60,
 
 library(ggthemes)
 
-covid <- read_csv('data/owid-covid-data.csv')
+covid <- read_csv('data/owid-covid-data.csv', show_col_types = FALSE)
 income <- read_csv("data/inc_occ_gender.csv", show_col_types = FALSE) 
 names(income) <- tolower(names(income))
+
+income$occupation[income$occupation == "Software developers, applications and systems software"] <- "software developers"
+
+income$occupation[income$occupation == "Computer and information systems managers"] <- "Information system managers"
+
+income$occupation[income$occupation == "Market research analysts and marketing specialists"] <- "market research analysts and specialists"
+
+income <- income[!grepl("^[A-Z ]+$",income$occupation),, drop = FALSE]
+
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -56,6 +65,9 @@ names(income) <- tolower(names(income))
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
+## Introduction
+
+In this tutorial, you will learn more about data visualization and wrangling with R and create various graphs. Each section follows a structure so that you will built pipes by adding new layers with each exercise to first wrangle a dataset and then create an appropriate graph for the data. This tutorial is 72-exercises long and is expected to 75 minutes to complete. 
 
 ## National Health and Nutrition Survey
 
@@ -70,7 +82,9 @@ Let's create the following plot.
 
 ```{r}
 nhanes_p <- nhanes %>%
+  # more convenient and widespread to have measures in US system. 
   mutate(weight = weight * 2.2, height = height / 30.48) %>%
+  # BMI (body mass index) is a good measure to show the association of weight and height. Moreover, I chose to analyse by gender, using facet_wrap. Therefore, selected these variables. 
   select(gender, weight, height, bmi) %>%
   drop_na(weight, height) %>% 
   ggplot(mapping = aes(x = weight, y = height, color = bmi)) +
@@ -181,8 +195,8 @@ Continue your pipe with `ggplot()`. Furthermore, add the layer `geom_jitter()` t
 ```{r national-health-and--5-hint-1, eval = FALSE}
 ... %>% 
   ggplot(data = ..., aes(x = ..., 
-                        y = ..., 
-                        color = ...)) +
+                         y = ..., 
+                         color = ...)) +
   geom_jitter()
 ```
 
@@ -290,7 +304,7 @@ nhanes_p
 
 ### 
 
-The `covid` contains data about Covid-19 and factors affecting Covid-19. Source of this data set is [Johns Hopkins University], and we downloaded it from [ourworldindata.org](https://ourworldindata.org/coronavirus-source-data).  
+The `covid` contains data about Covid-19 and factors affecting Covid-19. Source of this data set is Johns Hopkins University, and we downloaded it from [ourworldindata.org](https://ourworldindata.org/coronavirus-source-data).  
 
 
 ### 
@@ -306,9 +320,12 @@ Let's create this plot.
 
 ```{r covid}
 covid_graph <- covid %>%
+  # median_age is the median_age of the country's population and new_cases is the new DAILY cases. Location is the country. 
   select(continent, median_age, new_cases, location, population) %>%
   drop_na(new_cases) %>% 
   group_by(location) %>% 
+  # Besides real continents, there were rows that showed the data of globe, and the continent of those columns were world. I excluded that. 
+  # case_by_pop is the total case divided by population. This number is a better indicator than only the total cases. 
   filter(continent != 'World') %>%
   summarize(case_by_pop = sum(new_cases) / first(population),
             agemed = first(median_age),
@@ -360,7 +377,6 @@ covid %>%
 ```
 
 ### 
-
 
 Alternatively, we could use `ends_with()` helper to select columns that ends with a certain suffix. For example, in this case,  we could use the following code: 
 
@@ -620,10 +636,14 @@ Let's create the following plot.
 sps_p <- sps %>%
   filter(education %in% c("college", "high school", "secondary", "preschool")) %>%
   select(-c(health_exp_1m, t2_health_exp_1m)) %>%
+  # health_exp_3m is the health-related spendings in the last 3 month. t2 prefix states the data collected from July 2006 to August 2006, and variables without t2 are the data collected from August 2005 to September 2005. 
+  # Because mexico saw inflation at 2005-2006, the  difference between t2_health_exp_3m and health_exp_3m measures how did the spending habits of participants change. Small difference indicate that health-related spendings decreased. 
   mutate(change_in_expenses = t2_health_exp_3m - health_exp_3m) %>%
+  # To take into account that each education level would be influenced differently by the experiment, we group by treatment groups and education levels. 
   group_by(treatment, education) %>%
   summarize(mean_change_in_expenses = mean(change_in_expenses),
             .groups = "drop") %>%
+  # treatment and control groups were given the numbers 1 and 0, respectively. More convenient to have them with actual group names. 
   mutate(treatment = ifelse(treatment == "1", "Treatment Group", "Control Group")) %>%
   ggplot(mapping = aes(x = education, 
                        y = mean_change_in_expenses, 
@@ -631,6 +651,7 @@ sps_p <- sps %>%
     scale_fill_manual(values = c("cornflowerblue", "darkturquoise")) +
     geom_col(position = "dodge", alpha = 0.9) + 
     scale_x_discrete(limits = c("preschool", "secondary", "high school", "college")) +
+  # in Mexico, currency is Peso. Specified that with the below code.
     scale_y_continuous(labels = dollar_format(suffix = "₱", prefix = "")) +
     theme_minimal() +
     labs(x = "Education",
@@ -979,35 +1000,42 @@ Let's create the following plot.
 ```{r gender-inequality}
 
 income_p <- income %>%
+  # these columns were character columns, and there were 'Na's as characters rather than `Na` type. Exclude them below. 
   filter(f_weekly != "Na" & 
-         m_weekly != 'Na' & 
-         all_weekly != 'Na') %>%
+         m_weekly != "Na" & 
+         all_weekly != "Na") %>%
+  # convert the character columns that contain numeric values to double. "_weekly" suffices are columns that show median weekly income for each job. 
   mutate(f_weekly = parse_number(f_weekly), 
          m_weekly = parse_number(m_weekly), 
          all_weekly = parse_number(all_weekly)) %>%
   mutate(occupation = str_to_lower(occupation)) %>%
   drop_na() %>%
+  # to get highest-paying jobs, filtered by all_weekly. 
   arrange(desc(all_weekly)) %>%
-  slice(1:24) %>%
+  # select top 25 jobs. 
+  slice(1:25) %>%
   select(occupation, m_weekly, f_weekly) %>%
+  # reorder m_weekly by occupation so that values are in decreasing order.
   ggplot(aes(y = fct_reorder(occupation, m_weekly), 
              x = f_weekly, 
              xend = m_weekly)) +
-  geom_dumbbell(size=1.5, 
-                color="grey", 
-                size_x=3, 
+  geom_dumbbell(size = 1.5, 
+                color = "grey", 
+                size_x = 3, 
                 size_xend = 3, 
-                colour_x = 'cornflowerblue',
-                colour_xend = 'darkslategray3') +
-  scale_x_continuous(breaks = c(1000, 1250, 1500, 1750, 2000, 2250), 
-                     label = dollar_format(c(1000,1250,1500,1750,2000,2250))) +
+                colour_x = "cornflowerblue",
+                colour_xend = "darkslategray3") +
+  scale_x_continuous(breaks = c(1000, 1250, 1500, 1750, 2000, 2250),
+                     label = dollar_format(c(1000, 1250, 1500, 1750, 2000, 2250))) +
     theme_bw() + 
     theme(panel.grid.major.x = element_blank(),
           panel.grid.minor.x = element_blank()) +
+    annotate("text", x = 1990, y = 'lawyers', label = "Male", size = 3.8, color = "darkslategray3") + 
+    annotate("text", x = 1615, y = "lawyers", label = "Female", size = 3.8, color = "cornflowerblue") + 
     labs(y = NULL,
-         x='Earnings', 
-         subtitle='There is significant gender inequality in many areas.',
-         title='Gender Inequality in 25  highest-paying jobs',
+         x = 'Weekly median earnings', 
+         subtitle = 'Men earn higher than women in high-paying jobs',
+         title = 'Gender Inequality in 25  high-paying jobs',
          caption = 'Source: Bureau of Labor Statistics')
 
 income_p
@@ -1022,15 +1050,15 @@ income_p
 
 ```
 
-We see that many character columns have `Na` values, but they are written as characters instead of NA format. 
+We see that many character columns have "Na" values, but they are written as characters instead of `NA` format. 
 
 ### 
 
-In cases where missing values are written as characters, we cannot use `drop_na()` since there are no NA types. 
+In cases where missing values are written as characters, we cannot use `drop_na()` since there are no `NA` types. 
 
 ### Exercise 2
 
-`filter()` the columns `m_weekly`, `f_weekly`, and `all_weekly` so that they don't include columns where the values are `"Na"`.
+`filter()` the columns `m_weekly`, `f_weekly`, and `all_weekly` so that they don't include columns where the values are "Na".
 
 ```{r gender-inequality-2, exercise = TRUE}
 
@@ -1038,9 +1066,9 @@ In cases where missing values are written as characters, we cannot use `drop_na(
 
 ```{r gender-inequality-2-hint-1, eval = FALSE}
 income %>%
-   filter(... =  != 'Na' & 
-          f_weekly != '...' & 
-          all_weekly != '...') 
+   filter(... =  != "Na" & 
+          f_weekly != "..." & 
+          all_weekly != "...") 
 ```
 
 ### 
@@ -1107,8 +1135,6 @@ Now, although we have dropped the missing values in character columns, we have t
   drop_na()
 ```
 
-###
-
 ### Exercise 6
 
 To get the highest-paying jobs, we have to order the tibble in decreasing order by `all_weekly` column.
@@ -1126,7 +1152,7 @@ To get the highest-paying jobs, we have to order the tibble in decreasing order 
 
 ### 
 
-Alternatively, we could have used `order()` function to sort rows. We could have used a code like the following: 
+Alternatively, we could have used `order()` function to sort rows. Although we would not be able to use it in the pipe, a code like the following can be used outside the pipe: 
 
 ````
 income[order(income$all_weekly), ]
@@ -1144,12 +1170,17 @@ Now that we have ordered the tibble, we have to get 25 most-paying jobs. We can 
 
 ```{r gender-inequality-7-hint-1, eval = FALSE}
 ...%>%
-  slice(1:24)
+  slice(1:25)
 ```
 
 ### 
 
-Instead of `slice()`, we can use the base R function `head()` to get the first 25 rows.
+Instead of `slice()`, we can use the base R function `head()` to get the first 25 rows with a code such as the following: 
+
+````
+... %>%
+ head(n = 25)
+````
 
 ### Exercise 8
 
@@ -1168,7 +1199,11 @@ Select `occupation`, `m_weekly`, and `f_weekly` columns.
 
 ### 
 
-Alternatively, we could have used select helpers to select columns. For example, to get the columns about only male, we would use `starts_with()`, as shown like the following: `select(starts_with("m_))`. 
+Alternatively, we could have used select helpers to select columns. For example, to get the columns about only male, we would use `starts_with()`, as shown like the following: 
+
+````
+select(starts_with("m_))
+```` 
 
 ### Exercise 9
 
@@ -1216,7 +1251,7 @@ Alternatively, to visualize the earning difference between male and female, we c
 
 ### Exercise 11
 
-Currently, our graph is not easy to read As the first step on the way of making it easy-to-analyse, order values by `m_weekly`. 
+Currently, our graph is not easy to read. As the first step on making it easy-to-analyse, order values by `m_weekly`. 
 
 ```{r gender-inequality-11, exercise = TRUE}
 
@@ -1235,6 +1270,8 @@ Currently, our graph is not easy to read As the first step on the way of making 
 ### 
 
 Instead of `fct_reorder()`, we could use `reorder()` function. 
+
+???
 
 ### Exercise 12
 
@@ -1277,8 +1314,8 @@ Within the `geom_dumbbell()` object, change color-related arguments: set `color`
                 color = "grey", 
                 size_x = 3, 
                 size_xend = 3, 
-                colour_x = '...', 
-                colour_xend = '...')
+                colour_x = "...", 
+                colour_xend = "...")
 ```
 
 ### 
@@ -1378,6 +1415,82 @@ One of the arguments of `theme`, `panel.background`,  is used to change the elem
 
 ### Exercise 18
 
+To show which colors represent which gender, we will `annotate()` texts. within `annotate()` function, specify "text", set `x` equal to 1990, `y` to "lawyers", and `label` to "Male". 
+
+```{r gender-inequality-18, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r gender-inequality-18-hint-1, eval = FALSE}
+... + 
+  annotate("text", 
+           x = ..., 
+           y = '..', 
+           ... = "Male") 
+```
+
+### 
+
+`x` and `y` arguments are used to specify where the text should be located. `label` is what the text is going to be. 
+
+### Exercise 19
+
+Now, we should change the color and the size of the text for aesthetic reasons. 
+
+### 
+
+Within `annotate()` from previous exercise, set `color` argument equal to "darkslategray3" and `size` argument to 3.8. 
+
+```{r gender-inequality-19, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r gender-inequality-19-hint-1, eval = FALSE}
+... + 
+  annotate("text", 
+           x = 1990, 
+           y = 'lawyers', 
+           label = "Male",
+           color = "...",
+           size = ...) 
+```
+
+### 
+
+Using annotate, we can also add shapes such as an arrow and a rectangle. To add an arrow, for instance, we would specify "segment", set `arrow` argument to `arrow()`, and would set `yend` and `xend` values in addition to `x` and `y` values.
+
+### Exercise 20
+
+Now, again using `annonate()`, we will add a text for "Female".
+Within a new `annotate()` function, specify "text" and set `x` equal to 1615, `y` equal to "lawyers", `label` "Female", `size` to 3.8, and `color` to "cornflowerblue". 
+
+```{r gender-inequality-20, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r gender-inequality-20-hint-1, eval = FALSE}
+... + 
+  annotate("text", 
+           x = 1615,
+           y = "...",
+           label = "Female", 
+           size = ...,
+           color = "...")
+```
+
+### 
+
+In addition to above use of `annotate()`, by specifying "pointrange" and setting `ymax` and `ymin` arguments in addition to `y` and `x`,
+we can add a dot and a segment. To learn more about `annotate()`, see [this page](https://www.r-graph-gallery.com/233-add-annotations-on-ggplot2-chart.html).
+
+### Exercise 21
+
 To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, legend labels, and caption of your choice.
 
 Reminder: This is what your plot should look like. 
@@ -1386,11 +1499,11 @@ Reminder: This is what your plot should look like.
 income_p
 ```
 
-```{r gender-inequality-18, exercise = TRUE}
+```{r gender-inequality-21, exercise = TRUE}
 
 ```
 
-```{r gender-inequality-18-hint-1, eval = FALSE}
+```{r gender-inequality-21-hint-1, eval = FALSE}
 ... + 
   labs(...)
 ```
@@ -1405,12 +1518,17 @@ Using this data, let's create the folllowing graph.
 
 ```{r baby-lastnames}
 boys_p <- babynames %>%
+  # We will only analyse male baby names. 
   filter(sex == 'M') %>%
+  # prop is the proportion of a specific male baby name in all male baby names in that year. 
   select(name, year, prop) %>%
+  # group by year and last letter of baby names. 
   group_by(last_letter = stringr::str_sub(name, -1, -1), year) %>%
+  # frequency is the poroportion of a certain last letter in all male baby names in that year. 
   summarize(frequency = sum(prop), .groups = 'drop') %>%
   ggplot(aes(x = year, y = frequency, colour = last_letter)) +
     geom_line() + 
+  # only color last letters that appears more than 15 % of all boy names in any year. 
     gghighlight(max(frequency) > 0.15,
                 label_key = last_letter) + 
     scale_x_continuous(guide = guide_axis(angle = 70),
@@ -1528,7 +1646,7 @@ Moreover, to avoid warning and since we are done with groups, pass in the `.grou
 
 ```{r last-letter-of-boy-n-6-hint-1, eval = FALSE}
 ... %>% 
-   summarize(frequency = sum(prop), .groups = 'drop') 
+   summarize(frequency = sum(prop), .groups = "drop") 
 ```
 
 ### Exercise 7
