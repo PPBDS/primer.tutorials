@@ -111,7 +111,6 @@ answer <-tibble(name = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego")) %>%
   summarise(est_effect = mean(Y_t, na.rm = TRUE) - mean(Y_c, na.rm = TRUE))
 ```
 
-
 In the experiment, Yao, Emma and Diego received the treatment while Cassidy and Tahmid did not. This "assignment" of treatments to units is only one of many possible assignments which could have, in theory, happened. The "assignment mechanism" is the process or procedure by which treatments are assigned to units. In this case, the assignment mechanism was random. Because of that, we can estimate the treatment effect by subtracting the average outcome for the controls from the average outcome of the treated. 
 
 
@@ -262,7 +261,7 @@ The `if_else()` statement has three arguments, the first is an condition stateme
 
 ### Exercise 7
 
-Similarly, use `mutate()` create a variable `c_outcome` and set it equal to `if_else()` which has three arguments in order, `control`, then `Y_c` , then `NA_real_`. 
+Similarly, use `mutate()` create a variable `c_outcome` and set it equal to `if_else()` which has three arguments in order, `control`, then `Y_c` , then this time use `NA`. Note that this should returns an error.
 
 ```{r one-assignment-7, exercise = TRUE}
 
@@ -277,12 +276,20 @@ tibble(name = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
   mutate(Y_t =  c(13, 14, NA ,NA ,3)) %>% 
   mutate(Y_c = c(NA, NA, 6, 12, NA)) %>%
   mutate(t_outcome = if_else(treatment, Y_t, NA_real_)) %>%
-  mutate(c_outcome = if_else(control, Y_c, NA_real_)) 
+  mutate(c_outcome = if_else(control, Y_c, NA)) 
 ```
 
 ### 
 
-We use `NA_real_` is to match the type of vectors of `Y_c` and `Y_t`, try replace `NA_real_` with `NA` and see what you get. Now you should have two columns that looks exactly like the previous two columns, this is because the TRUE / FALSE matches up with the values in `Y_t` and `Y_c`, in later tutorials you will be able to observe how this might change.
+The error message says "false` must be a double vector, not a logical vector." What this means is that the False statement in in `if_else` should be a double vector instead a logical vector like NA. 
+
+There is two ways to resolve this error, first is to change `if_else` to `ifelse`, but this is not recommended because different than `if_else` which enforce that the vector for `false` must stay align with the vector for `true`. `ifelse` just tries to do the command that is "reasonable" which sometimes results in weird bug.
+
+The second way is to replace `NA` with `NA_real_` if you run `class(NA_real_)` in Console, this would returns numeric vector which is really close to double vector.
+
+### 
+
+Now you should have two columns that looks exactly like the previous two columns, this is because the TRUE / FALSE matches up with the values in `Y_t` and `Y_c`, in later tutorials you will be able to observe how this might change.
 
 ### Exercise 8
 
@@ -316,7 +323,7 @@ Now is this value (+1) sufficient to determine the effectiveness of the experime
 
 Although we assigned the treatment to Yao, Emma and Diego when we ran the experiment, this was not pre-ordained. Assignment was random. So, it might have been the case that we assigned the treatment to Emma and Cassidy. Since there are 5 units, and each unit could have been assignment to treatment or to control, there are a total of $2^5 = 32$ possible assignments. 
 
-###
+### 
 
 In this section, we will create a tibble which specifies all possible assignments. Since each assignment requires 5 rows to specify it, the tibble has $32 * 5 = 160$ rows.
 
@@ -630,12 +637,50 @@ Now, we are stuck. We figure out in section 1 that in order to determine whether
 <!-- tibble(assignment number, name, treatment, control) with treatment and control being logical vectors. The tibble has 32 * 5 rows.  -->
 
 ## Null hypothesis
+
+```{r eval = FALSE}
+all_assignments %>%
+  filter(assignment == 1) %>%
+  mutate(Y_t = c(13, 14, NA, NA, 3)) %>%
+  mutate(Y_c = c(NA, NA, 6, 12, NA)) %>%
+  mutate(combine_outcome = coalesce(Y_t,Y_c)) %>%
+  mutate(treatment_outcome = if_else(treatment, combine_outcome, NA_real_)) %>%
+  mutate(control_outcome =   if_else(control,   combine_outcome, NA_real_)) %>%
+  summarise(mean_difference = mean(treatment_outcome, na.rm = TRUE) - 
+                              mean(control_outcome, na.rm = TRUE))
+  
+
+```
+
 ### 
 
-
-Exercise 1: Write one sentence describing the what the Preceptor Table would look like if the null hypothesis is true. Answer: The two potential ouctomes for each person would be the same and the column of causal effect estimates would all be zero. Drop the knowledge of the Preceptor Table.
-
 *Let's assume that the causal effect for all units is equal to zero. *
+
+This is our "null hypothesis."
+
+We are assuming that the average treatment effect is 0 and that for example, the value 13 for Yao can be applied to both treatment and control. With this null hypothesis in place we eliminate all the question marks in the preceptor table, and be able to calculate all other 31 possible outcomes of the `assignment` tibble. Essentially, we are proposing an hypothesis, that there is no difference between the outcome with treatment and the outcome with control, we can explore this hypothesis by calculating all possible outcomes of the experiment, and if the average treatment effect of the "real" data appears frequently during all 32 outcomes, this means that our hypothesis is correct which also means that the treatment we give is ineffective.
+
+
+Need the assignment tibble, from which you are going to take just 5 rows. And you need a vector of 5 numbers which is the outcome. A vector is enough because the null hypothesis assumes that Yao's outcome is the same under treatment and control.
+
+
+### Exercise 1
+
+Write one sentence describing the what the Preceptor Table would look like if the null hypothesis is true.
+
+```{r null-hypothesis-1}
+question_text(NULL,
+	message = "The two potential outcomes for each person would be the same and the column of causal effect estimates would all be zero. Drop the knowledge of the Preceptor Table.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+This is the preceptor table under null hypothesis.
 
 ```{r echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -666,30 +711,9 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
     fmt_markdown(columns = everything())
 ```
 
-This is our "null hypothesis."
-
-We are assuming that the average treatment effect is 0 and that for example, the value 13 for Yao can be applied to both treatment and control. With this null hypothesis in place we eleminate all the question marks in the preceptor table, and be able to calculate all other 31 possible outcomes of the `assignment` tibble. Essentially, we are proposing an hypothesis, that there is no difference between the outcome with treatment and the outcome with control, we can explore this hypothesis by calculating all possible outcomes of the experiment, and if the average treatment effect of the "real" data appears frequently during all 32 outcomes, this means that our hypothesis is correct which also means that the treatment we give is ineffective.
-
-Let's calculate the estimated treatment effect with Assignment Number 7 (or whatever) if the null hypothesis is correct. 
-
-Need the assignment tibble, from which you are going to take just 5 rows. And you need a vector of 5 numbers which is the outcome. A vector is enough because the null hypothesis assumes that Yao's outcome is the same under treatment and control.
-
-### Exercise 1
-
-```{r null-hypothesis-1, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r null-hypothesis-1-hint-1, eval = FALSE}
-
-```
-
-### 
-
 ### Exercise 2
 
+Let's calculate the estimated treatment effect with Assignment Number 10 again if the null hypothesis is correct. Start a pipe with `all_assignments`, use `filter()` and filter out `assignment` number `10`.
 ```{r null-hypothesis-2, exercise = TRUE}
 
 ```
@@ -697,13 +721,15 @@ Need the assignment tibble, from which you are going to take just 5 rows. And yo
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r null-hypothesis-2-hint-1, eval = FALSE}
-
+all_assignments %>%
+  filter(assignment == 10)
 ```
 
 ### 
 
 ### Exercise 3
 
+Use `mutate()` create a new variable `Y_t` and set it equal to `c(13, 14, NA, NA, 3)`.
 ```{r null-hypothesis-3, exercise = TRUE}
 
 ```
@@ -711,13 +737,14 @@ Need the assignment tibble, from which you are going to take just 5 rows. And yo
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r null-hypothesis-3-hint-1, eval = FALSE}
-
+mutate(Y_t = c(13, 14, NA, NA, 3))
 ```
 
 ### 
 
 ### Exercise 4
 
+Similarly use `mutate()` create a new variable `Y_c` and set it equal to `c(NA, NA, 6, 12, NA)`.
 ```{r null-hypothesis-4, exercise = TRUE}
 
 ```
@@ -725,13 +752,15 @@ Need the assignment tibble, from which you are going to take just 5 rows. And yo
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r null-hypothesis-4-hint-1, eval = FALSE}
-
+mutate(Y_c = c(NA, NA, 6, 12, NA))
 ```
 
 ### 
+Up until now everything is the same. Next, if we assume null hypotheses is true in which the values of treatment is equal to the value of control, we will "combine" the two columns to eliminate the NAs.
 
 ### Exercise 5
 
+Use `mutate()` to create a new variable `combine_outcome` and set it equal to `coalesce()` takes on two arguments, `Y_t` and `Y_c`
 ```{r null-hypothesis-5, exercise = TRUE}
 
 ```
@@ -739,13 +768,15 @@ Need the assignment tibble, from which you are going to take just 5 rows. And yo
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r null-hypothesis-5-hint-1, eval = FALSE}
-
+mutate(combine_outcome = coalesce(Y_t,Y_c))
 ```
 
 ### 
+This `combine_outcome` column is our treatment and control outcomes under null hypothesis, as they are exactly identical we don't need to create a new column (even though we could) to specify treatment or control.
 
 ### Exercise 6
 
+Use `mutate()` create a variable `treatment_outcome` and set it equal to `if_else()` which has three arguments in order, `treatment`, then `combine_outcome` , then `NA_real_`. 
 ```{r null-hypothesis-6, exercise = TRUE}
 
 ```
@@ -753,12 +784,13 @@ Need the assignment tibble, from which you are going to take just 5 rows. And yo
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r null-hypothesis-6-hint-1, eval = FALSE}
-
+mutate(treatment_outcome = if_else(treatment, combine_outcome, NA_real_))
 ```
 
-### 
 
 ### Exercise 7
+
+Use `mutate()` create a variable `control_outcome` and set it equal to `if_else()` which has three arguments in order, `control`, `combine` , then `NA_real_`.
 
 ```{r null-hypothesis-7, exercise = TRUE}
 
@@ -767,13 +799,15 @@ Need the assignment tibble, from which you are going to take just 5 rows. And yo
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r null-hypothesis-7-hint-1, eval = FALSE}
-
+mutate(control_outcome =   if_else(control,   combine_outcome, NA_real_))
 ```
 
 ### 
+Looking at the two columns we just created, it is much nicer than the same one we created in previous sections, for `treatment_outcome` we can see that for every `TRUE` under `treatment` gets an value, same for `control_outcome` . And every `FALSE` gets the corresponding NA.
 
 ### Exercise 8
 
+Use `summarise()` create an variable `mean_difference`, and set it equal to the `mean()` of `treatment_outcome` minus the `mean()` of `control_outcome`.  Within both `mean()` set `na.rm` equals `TRUE`. You should gets a value of + 1.83.
 ```{r null-hypothesis-8, exercise = TRUE}
 
 ```
@@ -781,13 +815,16 @@ Need the assignment tibble, from which you are going to take just 5 rows. And yo
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r null-hypothesis-8-hint-1, eval = FALSE}
-
+summarise(mean_difference = mean(treatment_outcome, na.rm = TRUE) - 
+                              mean(control_outcome, na.rm = TRUE))
 ```
 
 ### 
+Instead of the NaN in previous section where we run this command, this time we actually sees an value, but keep in mind taht this value only exist under nul _hypothesis, as we manually giving values to the unknowns to calculate the results.
 
 ### Exercise 9
 
+Now change the assignment number within `filter()` to 1 or 32, this should returns NaN as your results. 
 ```{r null-hypothesis-9, exercise = TRUE}
 
 ```
@@ -795,13 +832,16 @@ Need the assignment tibble, from which you are going to take just 5 rows. And yo
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r null-hypothesis-9-hint-1, eval = FALSE}
-
+%>%
+  filter(assignment == 1)
 ```
 
 ### 
+For assignment 1 all five values goes to the treatment, and non goes to control, it doesn't make sense to subtract something that don't exist so r returns NA for us. Same thing goes assignment 32 where all five values goes to control. 
 
 ### Exercise 10
 
+Now does other assignment also have the same issue? Change the assignment number to any number between 2 and 31 inclusive, see if you get any NAs as your results. 
 ```{r null-hypothesis-10, exercise = TRUE}
 
 ```
@@ -809,17 +849,20 @@ Need the assignment tibble, from which you are going to take just 5 rows. And yo
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r null-hypothesis-10-hint-1, eval = FALSE}
-
+%>%
+  filter(assignment == ...)
 ```
 
 ### 
+You shouldn't get any NAs here, and this is why the null hypothesis is so powerful because it allow us to calculate the possible outcomes of every different combinations of treatments and controls. 
+
 
 ## All estimated treatment effects
 ### 
 
 <!-- Do the same thing as previous section, but for all 32 possible assigments. (Note that two of them will drop out because they are everyone gets treatment or everyone gets control.) Results in 30 numbers. Makes a bar chart of those 30 numbers. -->
 
-Let's build a plot that calculate the estimated treatment effects for all assignments.
+Let's applied the method we use to calculate the ETE in previous sections to all assignments and build a plot to show the distribution of our ETE and where does our experimental observation be place in the distribution.
 
 ```{r}
 set.seed(100)
@@ -867,8 +910,6 @@ Start a pipe with `all_assignments`, use `mutate()` create a variable `Y_t` whic
 mutate(Y_t = rep(c(13, 14, NA ,NA ,3), 32)) 
 ```
 
-### 
-
 ### Exercise 2
 
 Similarly, use `mutate()` create a variable `Y_c` which repeat `c(NA, NA, 6, 12, NA)` 32 times
@@ -881,8 +922,6 @@ Similarly, use `mutate()` create a variable `Y_c` which repeat `c(NA, NA, 6, 12,
 ```{r all-estimated-treatm-2-hint-1, eval = FALSE}
 mutate(Y_c = rep(c(NA, NA, 6, 12, NA), 32))
 ```
-
-### 
 
 ### Exercise 3
 
@@ -897,7 +936,6 @@ Next, use `mutate()` create a new variable `combine_outcome` which is equal to `
 mutate(combine_outcome = coalesce(Y_t,Y_c))
 ```
 
-### 
 
 ### Exercise 4
 
