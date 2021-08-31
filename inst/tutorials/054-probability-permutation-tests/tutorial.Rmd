@@ -649,7 +649,6 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
     fmt_markdown(columns = everything())
 ```
 
-
 This is our "null hypothesis."
 
 We are assuming that the average treatment effect is 0 and that for example, the value 13 for Yao can be applied to both treatment and control. With this null hypothesis in place we eleminate all the question marks in the preceptor table, and be able to calculate all other 31 possible outcomes of the `assignment` tibble. Essentially, we are proposing an hypothesis, that there is no difference between the outcome with treatment and the outcome with control, we can explore this hypothesis by calculating all possible outcomes of the experiment, and if the average treatment effect of the "real" data appears frequently during all 32 outcomes, this means that our hypothesis is correct which also means that the treatment we give is ineffective.
@@ -803,10 +802,11 @@ Need the assignment tibble, from which you are going to take just 5 rows. And yo
 
 <!-- Do the same thing as previous section, but for all 32 possible assigments. (Note that two of them will drop out because they are everyone gets treatment or everyone gets control.) Results in 30 numbers. Makes a bar chart of those 30 numbers. -->
 
+Let's build a plot that calculate the estimated treatment effects for all assignments.
 
 ```{r}
 set.seed(100)
-all_assignments %>%
+all_est_p <- all_assignments %>%
   mutate(Y_t = rep(c(13, 14, NA ,NA ,3), 32)) %>% 
   mutate(Y_c = rep(c(NA, NA, 6, 12, NA), 32)) %>%
   mutate(combine_outcome = coalesce(Y_t,Y_c)) %>%
@@ -816,11 +816,11 @@ all_assignments %>%
   summarise(mean_difference = mean(treatment_outcome, na.rm = TRUE) - 
                               mean(control_outcome, na.rm = TRUE)) %>%
   drop_na() %>%
-  ggplot(aes(x = mean_difference, fill = mean_difference >= 1)) +
+  ggplot(aes(x = mean_difference, fill = mean_difference == 1)) +
     geom_histogram(aes(y = after_stat(count/sum(count))), 
                    binwidth = 0.15,
                    color = "white")+
-    scale_fill_manual(values = c('grey50', 'red')) +
+   scale_fill_manual(values = c('grey50', 'red')) +
     scale_x_continuous(breaks = seq(-9, 9, 1), labels = -9:9)+
     scale_y_continuous(labels= scales::percent_format(accuracy = 1)) +
   labs(title = "Estimated treatment effect of all assignment",
@@ -828,6 +828,11 @@ all_assignments %>%
        x = "ETE (Estimated Treatment Effect)",
        y = "Occur Frequency",
        fill = "Experiment ETE")
+
+ # fill = mean_difference >= 1
+ # scale_fill_manual(values = c('grey50', 'red')) +
+
+all_est_p
   
 ```
 
@@ -862,6 +867,7 @@ mutate(Y_c = rep(c(NA, NA, 6, 12, NA), 32))
 ### 
 
 ### Exercise 3
+
 Next, use `mutate()` create a new variable `combine_outcome` which is equal to `coalesce()`that takes on two values `Y_t` and `Y_c`.
 ```{r all-estimated-treatm-3, exercise = TRUE}
 
@@ -891,7 +897,8 @@ mutate(treatment_outcome = if_else(treatment, combine_outcome, NA_real_))
 ### 
 
 ### Exercise 5
-Use `mutate()` create a variable `control_outcome` and set it equal to `if_else()` which has three arguments in order, `control`, then `combine` , then `NA_real_`. 
+
+Use `mutate()` create a variable `control_outcome` and set it equal to `if_else()` which has three arguments in order, `control`, `combine` , then `NA_real_`. 
 ```{r all-estimated-treatm-5, exercise = TRUE}
 
 ```
@@ -906,7 +913,7 @@ mutate(control_outcome =   if_else(control,   combine_outcome, NA_real_))
 
 ### Exercise 6
 
-Use to `group_by()` to create a group by `assignmen`
+Use to `group_by()` to create a group by `assignment`
 ```{r all-estimated-treatm-6, exercise = TRUE}
 
 ```
@@ -919,64 +926,139 @@ group_by(assignment)
 
 ### Exercise 7
 
-
+Use `summarise()` create an variable `mean_difference`, and set it equal to the `mean()` of `treatment_outcome` minus the `mean()` of `control_outcome`.  Within both `mean()` set `na.rm` equals `TRUE`. 
 ```{r all-estimated-treatm-7, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r all-estimated-treatm-7-hint, eval = FALSE}
-
+```{r all-estimated-treatm-7-hint-1, eval = FALSE}
+summarise(mean_difference = mean(treatment_outcome, na.rm = TRUE) - 
+                              mean(control_outcome, na.rm = TRUE))
 ```
-
-###
 
 ### Exercise 8
 
-
+Run `drop_na()` to drop the option for 5 treatments and 5 controls, as they all results in NA when calculating the mean.
 ```{r all-estimated-treatm-8, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r all-estimated-treatm-8-hint, eval = FALSE}
-
+```{r all-estimated-treatm-8-hint-1, eval = FALSE}
+drop_na()
 ```
 
-###
+### 
 
 ### Exercise 9
 
-
+Use `ggplot()`, within use `aes()`, which set`x` equal to `mean_difference`, set `fill` equal to whether `mean_difference` is equal to 1, then add the layer of `geom_histogram()`.
 ```{r all-estimated-treatm-9, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r all-estimated-treatm-9-hint, eval = FALSE}
-
+```{r all-estimated-treatm-9-hint-1, eval = FALSE}
+ggplot(aes(x = mean_difference, fill = mean_difference == 1)) +
+  geom_histogram()
 ```
-
-###
 
 ### Exercise 10
 
-
+Within `geom_histogram()`, use `aes()` to add aesthetic with `after_stat()` . Inside `aes()`, set `y` equals to `after_stat()` with `count/sum(count)` to put percents on the y-axis.
 ```{r all-estimated-treatm-10, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r all-estimated-treatm-10-hint, eval = FALSE}
+```{r all-estimated-treatm-10-hint-1, eval = FALSE}
+geom_histogram(aes(y = after_stat(count/sum(count))))
+```
+
+### Exercise 11
+
+Also set `binwidth` to .15 and `color` to "white" within `geom_histrogram()`.
+```{r all-estimated-treatm-11, exercise = TRUE}
 
 ```
 
-###
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
+```{r all-estimated-treatm-11-hint-1, eval = FALSE}
+geom_histogram(aes(y = after_stat(count/sum(count))), 
+                   binwidth = 0.15,
+                   color = "white")
+```
+
+### Exercise 12
+
+Use `scale_fill_manual` to change the fill different colors, set `values` equal to `c('grey50', 'red')`.
+```{r all-estimated-treatm-12, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r all-estimated-treatm-12-hint-1, eval = FALSE}
+scale_fill_manual(values = c('grey50', 'red'))
+```
+
+### Exercise 13
+
+Now use `scale_x_continuous()` so the x-axis has `breaks` to the sequence between -9 and 9 common difference is 1 using `seq()`. Set the `labels` for the breaks as from -9 to 9.
+```{r all-estimated-treatm-13, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r all-estimated-treatm-13-hint-1, eval = FALSE}
+scale_x_continuous(breaks = seq(-9, 9, 1), labels = -9:9)
+```
+
+### Exercise 14
+
+Now use `scale_y_continuous()` to put the x-axis in percent format. Within `scale_y_continuous()`, set `labels` to `scales::percent_format()`. Within `percent_format()` set `accuracy` to 1.
+```{r all-estimated-treatm-14, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r all-estimated-treatm-14-hint-1, eval = FALSE}
+... + 
+  scale_y_continuous(labels = scales::percent_format(...))
+```
+
+### Exercise 15
+
+Finally, use `labs()` to add the appropriate title, subtitle, and axis labels. 
+```{r all-estimated-treatm-15, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r all-estimated-treatm-15-hint-1, eval = FALSE}
+labs(title = "...",
+     subtitle = "...",
+     ...)
+```
+
+Reminder: Your plot should look similar to the the one below. 
+
+```{r}
+all_est_p
+```
+
+### 
+
+Now what does this graph shows? First let's find our experiment observation or the experiment assignment ETE we calculate in the first section, we know that the ETE for the experiment assignment is 1. 
 
 
 ## Full example
@@ -1044,9 +1126,7 @@ outcome <-
 
 ```
 
-
 ### Exercise 1
-
 
 ```{r full-example-1, exercise = TRUE}
 
@@ -1054,14 +1134,13 @@ outcome <-
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r full-example-1-hint, eval = FALSE}
+```{r full-example-1-hint-1, eval = FALSE}
 
 ```
 
-###
+### 
 
 ### Exercise 2
-
 
 ```{r full-example-2, exercise = TRUE}
 
@@ -1069,14 +1148,13 @@ outcome <-
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r full-example-2-hint, eval = FALSE}
+```{r full-example-2-hint-1, eval = FALSE}
 
 ```
 
-###
+### 
 
 ### Exercise 3
-
 
 ```{r full-example-3, exercise = TRUE}
 
@@ -1084,14 +1162,13 @@ outcome <-
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r full-example-3-hint, eval = FALSE}
+```{r full-example-3-hint-1, eval = FALSE}
 
 ```
 
-###
+### 
 
 ### Exercise 4
-
 
 ```{r full-example-4, exercise = TRUE}
 
@@ -1099,14 +1176,13 @@ outcome <-
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r full-example-4-hint, eval = FALSE}
+```{r full-example-4-hint-1, eval = FALSE}
 
 ```
 
-###
+### 
 
 ### Exercise 5
-
 
 ```{r full-example-5, exercise = TRUE}
 
@@ -1114,14 +1190,13 @@ outcome <-
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r full-example-5-hint, eval = FALSE}
+```{r full-example-5-hint-1, eval = FALSE}
 
 ```
 
-###
+### 
 
 ### Exercise 6
-
 
 ```{r full-example-6, exercise = TRUE}
 
@@ -1129,14 +1204,13 @@ outcome <-
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r full-example-6-hint, eval = FALSE}
+```{r full-example-6-hint-1, eval = FALSE}
 
 ```
 
-###
+### 
 
 ### Exercise 7
-
 
 ```{r full-example-7, exercise = TRUE}
 
@@ -1144,14 +1218,13 @@ outcome <-
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r full-example-7-hint, eval = FALSE}
+```{r full-example-7-hint-1, eval = FALSE}
 
 ```
 
-###
+### 
 
 ### Exercise 8
-
 
 ```{r full-example-8, exercise = TRUE}
 
@@ -1159,14 +1232,13 @@ outcome <-
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r full-example-8-hint, eval = FALSE}
+```{r full-example-8-hint-1, eval = FALSE}
 
 ```
 
-###
+### 
 
 ### Exercise 9
-
 
 ```{r full-example-9, exercise = TRUE}
 
@@ -1174,14 +1246,13 @@ outcome <-
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r full-example-9-hint, eval = FALSE}
+```{r full-example-9-hint-1, eval = FALSE}
 
 ```
 
-###
+### 
 
 ### Exercise 10
-
 
 ```{r full-example-10, exercise = TRUE}
 
@@ -1189,13 +1260,11 @@ outcome <-
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r full-example-10-hint, eval = FALSE}
+```{r full-example-10-hint-1, eval = FALSE}
 
 ```
 
-###
-
-
+### 
 
 ## Summary
 ### 
