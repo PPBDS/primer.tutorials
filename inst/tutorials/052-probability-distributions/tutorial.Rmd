@@ -27,31 +27,23 @@ options(tutorial.exercise.timelimit = 60,
 ```
 
 
+<!-- Two other possible exercises to add to this tutorial. First is the game of craps. The shooter rolls. If she gets 7 or 11, she wins. If she gets 2, 3, or 12, she loses. Either way, the round is over. If, however, she gets 4, 5, 6, 8, 9 or 10, then this new value because her "point." She then rolls, over and over again, until she either "hits" or "makes" her point (by rolling it) or until she gets a 7, in which case you loses. Turns out that the odds of the shooter winning is about 49.3%. So, the house wins if you play long enough.  -->
 
-<!-- 2) Split up exercises like  arrange(sim, -guess, car) into 2 or 3 Exercises. -->
+<!-- Second simulation is like the 538 NCAA basketball model. Simplified version of the basketball. Assume 64 teams, single elimination. Use historical performance to give a rough sense of how well different seeds do against each other. Come up with a "strength" measure for each seed.  -->
 
-<!-- 3) Make Exercise 10 two Exercises.  -->
-
-<!-- Read Chapter 7 closely! Think about what it means. Your job in Chapter 5, and in this tutorial, is to ensure that students, when they get to chapter 7, understand it thoughly. In particular, questions 3 and 4 are solved by create, in each row, a draw from a joint distribution, and then manipulating that draw each time. And then (magically!), the results of that manipulation are also a posterior! Would a guided tour of rvar variable types in this chapter help to set the stage for that? Should we use rvar types in later chapters? -->
 
 <!-- Define a distribution. A mathematical object with two components: a list of possible outcomes and a corresponding frequency for each outcome. In a normalized distribution, the sum of the frequencies is 1.  -->
+
 <!-- Note that this is a sloppy definition because it does not apply to continuous distributions. Need to mention this and then wave our hands. -->
 
 <!-- Define a random variable is "a variable whose values depend on outcomes of a random phenomenon." Example: Result of one coin flip. -->
 
-<!-- Consider the posterior package: https://mc-stan.org/posterior/index.html. Need a new random variable object type: https://mc-stan.org/posterior/articles/rvar.html -->
-
-
 <!-- Add to chapter 5 a tutorial whose sole focus is distributions. First part of this is going slowly through the process by which counts can be turned into percentages. Do this in, at least, five ways. First, with geom_bar() which (I think) does the counting for us. Second, with geom_col(), in which we need to create the counts ourselves. Third with geom_histogram(). Fourth then maybe create a histogram by hand, using cut() and then counting up the elements in each range. -->
-
-<!-- Put the Appendix-distribution questions somewhere here. -->
 
 <!-- Maybe have a section explaining how the distribution of the error term is what motivates the selection of the appropriate family argument in stan_glm(). -->
 
-<!-- Need a section titled "Random variables". Purpose is to connect the concept/use of random variables to the concept/use of a distribution.  -->
 
 ## Introduction
-
 ### 
 
 A distribution is a mathematical object with two components: a list of possible outcomes and a corresponding frequency for each outcome or simply *the collection of data on a single variable*. Normalized distribution is essentially turning the frequency into percent, and which sum up equal to 1.
@@ -63,8 +55,7 @@ This tutorial has three missions:
 3. Practice the manipulation of distribution
 
 
-## Vectors and distrubutions and random variables
-
+## Random variables
 ### 
 
 ### Exercise 1
@@ -354,17 +345,12 @@ quantile(..., probs = c(..., ..))
 ## Monty Hall
 ### 
 
-Suppose you're on a game show, and you're given the choice of three doors: Behind one door is a car; behind the others, goats. You pick a door, say No. 1, and the host, who knows what's behind the doors, opens another door, say No. 3, which has a goat. He then says to you, "Do you want to pick door No. 2?" Is it to your advantage to switch your choice? 
-
-[Monty Hall Wiki] (https://en.wikipedia.org/wiki/Monty_Hall_problem)
+Suppose you're on a game show, and you're given the choice of three doors: Behind one door is a car; behind the others, goats. You pick a door, say No. 1, and the host, who knows what's behind the doors, opens another door, say No. 3, which has a goat. He then says to you, "Do you want to pick door No. 2?" Is it to your advantage to switch your choice? This is the (in)famous [Monty Hall problem](https://en.wikipedia.org/wiki/Monty_Hall_problem).
 
 ### 
 
-<!-- Give a description of the problem. Give a link. Then ###. Then, this is the plot we are making. -->
 
-<!-- https://en.wikipedia.org/wiki/Monty_Hall_problem -->
-
-<!-- Make a tibble. First time with just 5 rows so that you can see what is happening each time. Only at the end, do you make the tibble be 4,000 rows and then use summarize to calculate your answer or, maybe better, show a graph.  -->
+<!-- Maybe start with just 5 rows so that you can see what is happening each time. Only at the end, do you make the tibble be 10,000 rows and then use summarize to calculate your answer or, maybe better, show a graph.  -->
 
 
 ```{r echo = FALSE}
@@ -416,8 +402,8 @@ monte_p <- expand_grid(sim = 1:10000, door = 1:3) %>%
     summarise(stayWin, switchWin) %>%
       
     pivot_longer(cols = everything(), 
-               names_to = "decision", 
-               values_to = "result") %>%
+                 names_to = "decision", 
+                 values_to = "result") %>%
     ggplot(aes(x = result, fill = decision)) +
       geom_bar(aes(y = after_stat(count/sum(count))), position = 'dodge')+
       scale_x_continuous(breaks = c(0 , 1),
@@ -438,7 +424,8 @@ monte_p
 
 ### Exercise 1
 
-Use `expand_grid()`,create the first variable `sim` and set it equal to the consecutive integer from 1 to 10, create the second variable door, and set it equal to 1,2 and 3.
+Use `expand_grid()`,create the first variable `sim` and set it equal to the consecutive integer from 1 to 10, create the second variable `door`, and set it equal to 1, 2 and 3.
+
 ```{r monty-hall-1, exercise = TRUE}
 
 ```
@@ -464,16 +451,17 @@ Use `group_by()` include the variable `sim`.
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monty-hall-2-hint-1, eval = FALSE}
+... %>% 
  group_by(sim)
 ```
 
 ### 
 
-This is an important step as we are dealing with this group several times later.
+We will be doing the simulation within each `sim` separately. We can do this because there is no connection between the separate simulations. Each stands on its own. Running `group_by(sim)` at the stage guarantees that all later code --- at least until we `ungroup()` --- will be run for each value of `sim` separately.
 
 ### Exercise 3
 
-Use `mutate()` create a new variable `car` and set it equal to `sample()` which includes 3 values `FALSE`,`FALSE`,`TRUE`wrap around by `c()`.
+Use `mutate()` to create a new variable `car` and set it equal to a call to `sample()` in which which the `x` argument is set to `c(FALSE, FALSE, TRUE)`.
 
 ```{r monty-hall-3, exercise = TRUE}
 
@@ -482,17 +470,19 @@ Use `mutate()` create a new variable `car` and set it equal to `sample()` which 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monty-hall-3-hint-1, eval = FALSE}
-
-mutate(car = sample(c(FALSE, FALSE, TRUE)))
+... %>% 
+  mutate(car = sample(c(FALSE, FALSE, TRUE)))
 ```
 
 ### 
 
-Note that if you just run the `sample()` part several time, it will create the same three value but in different order. Also note that we have the `sim` repeat 3 times for every `car` value.
+`car` is a variable which indicates, for a given `sim`, which door the car is behind. So, within a sim, it must be TRUE once and FALSE the other two times. `sample()`, when called without the `size` argument returns a vector of the same length as the input vector `x`.
+
 
 ### Exercise 4
 
-Use `mutate()` create a new variable `guess` and set it equal to `sample()` which includes 3 values `FALSE`,`FALSE`,`TRUE`wrap around by `c()`.
+Use `mutate()` create a new variable `guess` and set it equal to `sample()` which includes 3 values `FALSE`,`FALSE`,`TRUE` wrap around by `c()`.
+
 
 ```{r monty-hall-4, exercise = TRUE}
 
@@ -511,6 +501,7 @@ The reason we don't have an single `sim` correspond to an list in `car` is becau
 ### Exercise 5
 
 Use `arrange()` which have only one argument `sim`.
+
 ```{r monty-hall-5, exercise = TRUE}
 
 ```
@@ -518,7 +509,8 @@ Use `arrange()` which have only one argument `sim`.
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monty-hall-5-hint-1, eval = FALSE}
-arrange(sim)
+... %>% 
+  arrange(sim)
 ```
 
 ### 
@@ -528,7 +520,7 @@ This should have no difference than the outcome of previous exercises, because w
 
 ### Exercise 6
 
-Add another argument within `arrange()` , after `sim` add `-guess`
+Add another argument within `arrange()`, after `sim` add `-guess`
 
 ```{r monty-hall-6, exercise = TRUE}
 
@@ -537,16 +529,18 @@ Add another argument within `arrange()` , after `sim` add `-guess`
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r monty-hall-6-hint-1, eval = FALSE}
- arrange(sim, -guess)
+... %>% 
+  arrange(sim, -guess)
 ```
 
 ### 
 
-This statement `-guess` means ordering the `guess` column by descending order, normally we would have the `FALSE` (0) infront of the `TRUE`(1), or in random order. This line of code esscenially reorder so that `TRUE` always come first in every single `sim`. So now if you observe the `guess` column, you would find that the order is basically the repeat of `TRUE, FALSE,FALSE` for each `sim `.
+This statement `-guess` means ordering the `guess` column by descending order, normally we would have the `FALSE` (0) in front of the `TRUE` (1), or in random order. This line of code essentially reorder so that `TRUE` always come first in every single `sim`. So now if you observe the `guess` column, you would find that the order is basically the repeat of `TRUE`, `FALSE`, `FALSE` for each `sim`.
 
 ### Exercise 7
 
 Add another argument within `arrange()` , after ``-guess` add `car`
+
 ```{r monty-hall-7, exercise = TRUE}
 
 ```
