@@ -92,6 +92,10 @@ A *permutation test* starts with the assumption that the true average treatment 
 ### 
 
 ```{r echo = FALSE}
+# First section teaches students how to calculate estimated treatment effect for the data in preceptor table. 
+
+# TRUE and value must match, FALSE and NA have to match otherwise would returns error
+
 answer <-tibble(name = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego")) %>%
   mutate(treatment = c(TRUE, TRUE, FALSE, FALSE, TRUE)) %>%
   mutate(control = ! treatment) %>% 
@@ -632,6 +636,13 @@ Now, we are stuck. We figure out in section 1 that in order to determine whether
 
 ## Null hypothesis
 ```{r eval = FALSE}
+
+# Use assignment 10 again to show how null hypothesis replace NAs with values. 
+
+# combine_outcome is the binding of Y_t and Y_c, might considered rename it to someting treatment, then adds a replicates of it to something control to show that the two is the same.
+
+# NA_real_ very important, otherwise would returns error.
+
 all_assignments %>%
   filter(assignment == 10) %>%
   mutate(Y_t = c(13, 14, NA, NA, 3)) %>%
@@ -641,6 +652,8 @@ all_assignments %>%
   mutate(control_outcome =   if_else(control,   combine_outcome, NA_real_)) %>%
   summarise(mean_difference = mean(treatment_outcome, na.rm = TRUE) - 
                               mean(control_outcome, na.rm = TRUE))
+
+
   
 
 ```
@@ -866,6 +879,11 @@ You shouldn't get any NAs here, and this is why the null hypothesis is so powerf
 Let's applied the method we use to calculate the ETE in previous sections to all assignments and build a plot to show the distribution of our ETE and where does our experimental observation be place in the distribution.
 
 ```{r}
+
+# scale_fill_manual(values = c('grey50', 'red')) could be deleted or replace.
+
+# consider theme(legend.position = "none") after labs?
+
 set.seed(100)
 all_est_p <- all_assignments %>%
   mutate(Y_t = rep(c(13, 14, NA ,NA ,3), 32)) %>% 
@@ -873,6 +891,9 @@ all_est_p <- all_assignments %>%
   mutate(combine_outcome = coalesce(Y_t,Y_c)) %>%
   mutate(treatment_outcome = if_else(treatment, combine_outcome, NA_real_)) %>%
   mutate(control_outcome =   if_else(control,   combine_outcome, NA_real_)) %>% 
+  
+  # treatment_outcome and control_outcome is after applying null hypoethsis
+  
   group_by(assignment) %>%
   summarise(mean_difference = mean(treatment_outcome, na.rm = TRUE) - 
                               mean(control_outcome, na.rm = TRUE)) %>%
@@ -881,7 +902,10 @@ all_est_p <- all_assignments %>%
     geom_histogram(aes(y = after_stat(count/sum(count))), 
                    binwidth = 0.15,
                    color = "white")+
-   scale_fill_manual(values = c('grey50', 'red')) +
+  
+  # try to use the same thing over and over again to show how after_stat would work to turn into decimals.
+  
+    scale_fill_manual(values = c('grey50', 'red')) +
     scale_x_continuous(breaks = seq(-9, 9, 1), labels = -9:9)+
     scale_y_continuous(labels= scales::percent_format(accuracy = 1)) +
   theme(legend.position = "none")+
@@ -891,8 +915,7 @@ all_est_p <- all_assignments %>%
        y = "Probability",
        fill = "Experiment ETE")
 
- # fill = mean_difference >= 1
- # scale_fill_manual(values = c('grey50', 'red')) +
+
 
 all_est_p
   
@@ -1184,6 +1207,9 @@ S_obs <-
   summarise(mean_difference = mean(treatment_outcome, na.rm = TRUE) - 
                               mean(control_outcome, na.rm = TRUE)) %>%
   pull(mean_difference)
+
+
+### Is there a way to not have this object created?
   
 
  perm_p <-
@@ -1215,6 +1241,9 @@ S_obs <-
              y = 0.016, 
              size = 3.5, 
              label = 'Experiment Observation') +
+   
+  # Like we only use S_obs for annotate which is kinda useless.
+   
     labs(title = "Permutation distribution of estimated treatment effect",
          subtitle = "Experiment ETE is unlikely to appear under null hypothesis",
          x = "Estimated Treatment Effect",
