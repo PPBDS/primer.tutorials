@@ -1,14 +1,15 @@
 ---
-title: "One Parameter: Polling"
+title: 'One Parameter: Polling'
 author: Ryan Southward
 tutorial:
-  id: "one-parameter-polling"
-output: 
+  id: one-parameter-polling
+output:
   learnr::tutorial:
-    progressive: true
-    allow_skip: true
+    progressive: yes
+    allow_skip: yes
 runtime: shiny_prerendered
-description: "Use polling data from the 2013 election to answer questions about support for President Obama."
+description: Use polling data from the 2013 election to answer questions about support
+  for President Obama.
 ---
 
 ```{r setup, include = FALSE}
@@ -83,6 +84,22 @@ class_ppd <- posterior_epred(class_fit,
   as_tibble() %>%
   rename(approval = `1`) %>%
   mutate(study = "class")
+
+# Predicting outcomes: 
+
+iop_predictions <- posterior_predict(iop_fit, 
+                                     newdata = tibble(constant = rep(1, 20))) %>%
+  as_tibble() %>%
+  mutate(total = rowSums(across(`1`:`20`))) %>%
+  select(total) %>%
+  mutate(poll = "IOP poll")
+
+class_predictions <- posterior_predict(class_fit, 
+                                     newdata = tibble(constant = rep(1, 20))) %>%
+ as_tibble() %>%
+  mutate(total = rowSums(across(`1`:`20`))) %>%
+  select(total) %>%
+  mutate(poll = "Class poll")
   
 
 # Probability question:
@@ -117,26 +134,23 @@ both_polls <- inner_join(all, young, by = c("num_people", "total")) %>%
 
 ```
 
-
 <!-- 3) When comparing two surveys of different sizes, inferences about future samples differ much less than you might expect. Main difference is that smaller survey predicts that outlier events are (very slightly!) more like likely.  -->
 
 <!-- RS: Because the second survey we use in this tutorial has a different value of p, it would be difficult to prove this point. -->
 
 ## Introduction
-
-###
+### 
 
 Polls are a common application of binomial distributions, as respondents who agree can be represented by `1`, and respondents who disagree as `0`. Historically, presidential approval polls are a very well documented type of poll, where participants respond whether or not they approve of the current president in office. For the remainder of this tutorial, you'll examine the approval of President Obama in 2013. 
 
 First, you will examine data from a 2013 approval poll for President Obama conducted by the Harvard Kennedy Institute of Politics, using *Widsom* and *Justice* to determine whether or not it can answer our questions. Next, you will calculate feasible values for the percentage of young Americans who approved of President Obama by creating a posterior distribution using the professional **rstanarm** statistical library. You will then compare the posterior of the Harvard IOP poll with another poll conducted by a government class using their centers and spreads. Finally, you will answer a challenging probability question by calculating the area under a graph. 
 
 ## Wisdom
-
-###
+### 
 
 Before creating models, use *Wisdom* to determine whether or not the data you have is close enough to the data you need to answer your question.
 
-###
+### 
 
 Imagine that it is November 15, 2013. Our question: What percentage of young people (aged 18 to 29) approve of President Obama's performance?  We will use the 2013 Harvard Institute of Politics (IOP) polling data collected from October 29 and November 13 to answer the question.
 
@@ -155,7 +169,7 @@ question_text(NULL,
 	rows = 6)
 ```
 
-###
+### 
 
 Because our question asks us for President Obama's approval rating on *November 15, 2013*, the data to fill in our Preceptor Table should come from that exact day. 
 
@@ -173,7 +187,7 @@ question_text(NULL,
 	rows = 6)
 ```
 
-###
+### 
 
 Because our model is predictive, we must only worry about one column of outcome data. 
 
@@ -186,7 +200,7 @@ Between October 29 and November 13 of 2013, a team from Harvard's Institute of P
 
 ```
 
-###
+### 
 
 The data we use comes from the yearly Harvard Public Opinion Project conducted by the Harvard Kennedy School Institute of Politics: 
 
@@ -201,12 +215,11 @@ In the results we appear to see three possible responses: approve, disapprove, o
 
 ```
 
-
 ```{r wisdom-4-hint-1, eval = FALSE}
 skim(...)
 ```
 
-###
+### 
 
 Looking at n_unique for our single character column, we see that there are only 2 unique values. We also see that there are 110 missing values. This corresponds with our initial belief that there are only 3 possible values: approve, disapprove, or NA. Always take a thorough look at your data to make sure there are not hidden levels that are not visible at first glance. 
 
@@ -219,12 +232,12 @@ Although `skim()` identifies how many levels each column in our data has, it doe
 
 ```
 
-```{r wisdom-5-hint, eval = FALSE}
+```{r wisdom-5-hint-1, eval = FALSE}
 ... %>%
   count(...)
 ```
 
-###
+### 
 
 In effect we have created a summary of the Harvard IOP poll: Out of the 2,089 poll respondents, 855  approved of President Obama, 1124 disapproved, and answers are missing from 110. 
 
@@ -239,7 +252,7 @@ Why are there some NA values? Some respondents of the Harvard IOP declined to an
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-###
+### 
 
 Hopefully people who approve and disapprove of President Obama are equally likely to decline to answer, which would indicate non-responses are more a result of the poll design rather than people's actual beliefs.
 
@@ -257,13 +270,12 @@ question_text(NULL,
 	rows = 6)
 ```
 
-###
+### 
 
 Before creating models, use *Wisdom* to determine whether or not the data you have is close enough to the data you need to answer your question.
 
 ## Justice
-
-###
+### 
 
 Use Justice to further increase your understanding of the situation at hand. Justice always consists of a Population Table, validity, stability, representativeness, and the Data Generating Mechanism.
 
@@ -281,7 +293,7 @@ question_text(NULL,
 	rows = 6)
 ```
 
-###
+### 
 
 People's opinions changed, so someone may not have had the same attitude when they were surveyed as they did a few days prior. As such, it's important to track members of the Population over multiple days. 
 
@@ -299,7 +311,7 @@ question_text(NULL,
 	rows = 6)
 ```
 
-###
+### 
 
 Every Population Table has a source column that identifies if the subject is from the Data, Preceptor Table, or Population, a time column, as well as at least one outcome column. 
 
@@ -344,7 +356,6 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 6)
 ```
-
 
 ### Exercise 6
 
@@ -415,7 +426,7 @@ question_text(NULL,
 	rows = 6)
 ```
 
-###
+### 
 
 To create our models we will use the following binomial model: 
 
@@ -423,23 +434,22 @@ $$ T_a \sim B(\rho , n = 2089)$$
 
 The total number of young Americans aged 18-29 who approve of President Obama, $T_a$, is modeled by a binomial distribution with the probability of one young American approving of President Obama, and 2,089 observations. 
 
-###
+### 
 
 Use Justice to further increase your understanding of the situation at hand. Justice always consists of a Population Table, validity, stability, representativeness, and the Data Generating Mechanism.
 
 ## IOP study
-
-###
+### 
 
 Whenever you want to find the value of a parameter, create a posterior distribution. 
 
-###
+### 
 
 Recall our question: 
 
 > Imagine that it is November 15, 2013. What percentage of young people (aged 18 to 29) approve of President Obama's performance?
 
-###
+### 
 
 In order to answer the question, use the Harvard IOP poll to create the posterior distribution for the percentage of U.S 18-29 year olds who approved of President Obama in the fall of 2013. 
 
@@ -455,7 +465,6 @@ ob_iop_ppd %>%
        x = "Percentage of 18-29 year olds who approved of Obama on Nov 15, 2013",
        y = "Probability")
 ```
-
 
 ### Exercise 1
 
@@ -485,7 +494,7 @@ tibble(... = c(...))
 tibble(... = c(rep(..., ...)))
 ```
 
-###
+### 
 
 Your tibble should have 855 rows, representing 41% of the 2,089 poll respondents who approved of President Obama's performance. 
 
@@ -505,7 +514,7 @@ Copy your code from above. Add another `rep()` function as the second element in
 tibble(... = c(rep(..., ...), rep(..., ...)))
 ```
 
-###
+### 
 
 Your tibble should now have `r 855 + 1124` rows. Rows with 1's represent respondents who approved of President Obama's performance, and 0's represent those who disproved. 
 
@@ -525,7 +534,7 @@ Assign your code from above to an object named `iop_data`.
 Use the assignment operator <-  to do so.
 ```
 
-###
+### 
 
 Excellent work. Now it's time to use the **rstanarm** package to fit a model for the data. 
 
@@ -550,7 +559,7 @@ stan_glm(data = ...,
          seed = ...)
 ```
 
-###
+### 
 
 You do not need to understand what the printed model means. 
 
@@ -581,7 +590,7 @@ ob_iop_ppd <- posterior_epred(...,
                  newdata = ...)
 ```
 
-###
+### 
 
 We use `constant = 1` as junk data to make sure our tibble has just 1 row. 
 
@@ -716,7 +725,7 @@ question_text(NULL,
 	rows = 6)
 ```
 
-###
+### 
 
 Whenever you want to find the value of a parameter, create a posterior distribution. 
 
@@ -751,12 +760,29 @@ Whenever you want to find the value of a parameter, create a posterior distribut
 
 
 ## Class study
-
-###
+### 
 
 The center of a distribution approximates a parameter for an entire population, while the spread of a distribution represents the uncertainty surrounding the estimated parameter. The sample mean or proportion determines the center, while the number of observations in the sample determines the spread. 
 
-###
+We will use this methodology of comparing distributions to evenntually compare the posterior probability distributions of the Harvard IOP poll and a new Gov't class poll:
+
+```{r}
+bind_rows(ob_iop_ppd, class_ppd) %>%
+  ggplot(aes(x = approval, fill = study)) +
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100, alpha = .5, position = "identity") + 
+  scale_x_continuous(labels = scales::number_format()) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_light() +
+  scale_fill_discrete(name = "Study", labels = c("Gov't Class", "Harvard IOP")) +
+  labs(title = "Comparing Posterior Distributions of 2 Studies", 
+       subtitle = "The differences between the studies can be expressed by \n
+       the posterior means and spreads.",
+       x = "Approval Percentage", 
+       y = "Probability")
+```
+
+### 
 
 At the exact same time as the Harvard IOP poll, a high school government class conducted their own Obama approval poll. The class randomly dialed U.S households, requesting to speak to an adult with the most recent birthday, and asked the following question:
 
@@ -778,7 +804,7 @@ question_text(NULL,
 	rows = 6)
 ```
 
-###
+### 
 
 Using the class poll, we will attempt to answer the following question:
 
@@ -792,7 +818,7 @@ Type `class` to review the results of the class poll.
 
 ```
 
-###
+### 
 
 There appear to be 3 possible answers: approve, disapprove, or NA. 
 
@@ -804,11 +830,11 @@ Let's use the **skimr** package to see how many levels there are in the `respons
 
 ```
 
-```{r class-study-3-hint, eval = FALSE}
+```{r class-study-3-hint-1, eval = FALSE}
 skim(...)
 ```
 
-###
+### 
 
 Looking at n_unique for our single character column, we see that there are only 2 unique values. We also see that there are 32 missing values. This corresponds with our initial belief that there are only 3 possible values: approve, disapprove, or NA. Always take a thorough look at your data to make sure there are not hidden levels that are not visible at first glance. 
 
@@ -821,12 +847,12 @@ Although `skim()` identifies how many levels each column in our data has, it doe
 
 ```
 
-```{r class-study-4-hint, eval = FALSE}
+```{r class-study-4-hint-1, eval = FALSE}
 ... %>%
   count(...)
 ```
 
-###
+### 
 
 We can now easily view the results of the class poll: Out of the 200 poll respondents, 64  approved of President Obama, 104 disapproved, and answers are missing from 32.
 
@@ -842,7 +868,7 @@ Pipe on `drop_na()` to your code from above.
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r class-study-5-hint, eval = FALSE}
+```{r class-study-5-hint-1, eval = FALSE}
 ... %>%
   drop_na()
 ```
@@ -869,7 +895,7 @@ tibble(... = c(...))
 tibble(... = c(rep(..., ...)))
 ```
 
-###
+### 
 
 Your tibble should have 64 rows, representing the class poll respondents who approved of President Obama's performance.
 
@@ -877,7 +903,7 @@ Your tibble should have 64 rows, representing the class poll respondents who app
 
 Next, input the 104 respondents who disapproved of President Obama's performance.
 
-###
+### 
 
 Copy your code from above. Add another `rep()` function as the second element in the vector, and repeat the number 0, 104 times.
 
@@ -891,7 +917,7 @@ Copy your code from above. Add another `rep()` function as the second element in
 tibble(... = c(rep(..., ...), rep(..., ...)))
 ```
 
-###
+### 
 
 Your tibble should now have `r 64 + 104` rows. Rows with 1's represent respondents who approved of President Obama's performance, and 0's represent those who disproved. 
 
@@ -911,7 +937,7 @@ Assign your code from above to an object named `class_data`.
 Use the assignment operator <-  to do so.
 ```
 
-###
+### 
 
 Excellent work. Now it's time to use the **rstanarm** package to fit a model for the data. 
 
@@ -936,7 +962,7 @@ stan_glm(data = ...,
          seed = ...)
 ```
 
-###
+### 
 
 You do not need to understand what the printed model means. 
 
@@ -967,7 +993,7 @@ class_ppd <- posterior_epred(...,
                  newdata = ...)
 ```
 
-###
+### 
 
 We use `constant = 1` as junk data to make sure our tibble has just 1 row. 
 
@@ -1021,7 +1047,7 @@ We will now attempt to answer the question we began with:
 
 > Imagine that it is November 15, 2013. How does the percentage of U.S young adults aged 18-29 who approved of President Obama compare to the the percentage of all U.S adults who approved of him? 
 
-###
+### 
 
 In order to compare the two posteriors, combine the Harvard IOP posterior with the class study posterior using `bind_rows()`. Include `ob_iop_ppd` as the first argument, and `class_ppd` as the second argument. 
 
@@ -1130,7 +1156,7 @@ bind_rows(ob_iop_ppd, class_ppd) %>%
        y = "Probability")
 ```
 
-###
+### 
 
 You have successfully created the posteriors for two different Obama approval polls. The next step is to compare them, in order to answer the question: 
 
@@ -1149,7 +1175,7 @@ mean(ob_iop_ppd$...)
 mean(class_ppd$...)
 ```
 
-###
+### 
 
 Although you can determine the centers of each posterior using the graph visually, it's important to understand that the mean of the posterior determines its center. 
 
@@ -1175,12 +1201,12 @@ Next, calculate the variation of each distribution by finding the standard devia
 
 ```
 
-```{r class-study-21-hint, eval = FALSE}
+```{r class-study-23-hint-1, eval = FALSE}
 sd(ob_iop_ppd$...)
 sd(class_ppd$...)
 ```
 
-###
+### 
 
 It is important to realize that the standard deviation quantifies the spread of a distribution, giving its shape. 
 
@@ -1198,20 +1224,328 @@ question_text(NULL,
 	rows = 6)
 ```
 
-###
+### 
 
 Whenever you want to describe a distribution, consider its spread and center. The center of a distribution approximates a parameter for an entire population, while the spread of a distribution represents the uncertainty surrounding the estimated parameter. Use the sample mean or proportion to find the center, and the number of observations in the sample to determine the spread. 
 
-## Probability 
+## Predicting outcomes
+### 
+
+Posterior predictive draws have certain properties: 
+
+- With a large enough sample size, posterior predictive distributions are normally distributed.
+
+- The estimated population parameter determined by the center of the posterior has a large effect on the predictive draws, while the spread of the posterior has a small effect. 
+
+- Two different posterior predictions will be the most similar near the center, and the most different near the extremes. 
+
+### 
+
+To illustrate the above properties, we will answer the following question: 
+
+> Imagine that it is November 15, 2013. For each poll, how many people would approve of President Obama in a room of 20 people? 
+
+To answer this question, we must use `posterior_predict()` for both the IOP and Gov't class polls, using 20 observations, and compare the results:
+
+```{r}
+bind_rows(iop_predictions, class_predictions) %>%
+  ggplot(aes(x = total, fill = poll)) +
+  geom_histogram(aes(y = after_stat(count/sum(count))), position = "identity", alpha = .5, bins = 50) +
+  scale_fill_manual(values = c("#e01919", "#213fd1")) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(title = "Posterior Probability Distribution",
+       subtitle = "Number of Obama approvers in a room of 20 people for 2 different polls",
+       y = "Probability",
+       x = "Number of Obama Approvers in Room")
+```
+
+
+### Exercise 1
+
+First, let's create the posterior predictions for the IOP poll. 
+
+Within the `posterior_predict()` function, pass in `iop_fit` as the first argument, and then set the argument `newdata` equal to a `tibble()`. Within the `tibble()`, set `constant` to a vector that repeats the number 1, 20 times. Hint: use the function `rep()` to repeat, passing what you want to repeat as the first argument, and the number of times you want to repeat it as the second argument. 
+
+Assign your code to a variable named `iop_predictions`. 
+
+```{r predicting-outcomes-1, exercise = TRUE}
+
+```
+
+```{r predicting-outcomes-1-hint-1, eval = FALSE}
+iop_predictions <- posterior_predict(..., 
+                  ... = tibble(constant = ...))
+```
+
+```{r predicting-outcomes-1-hint-2, eval = FALSE}
+iop_predictions <- posterior_predict(..., 
+                  ... = tibble(constant = rep(..., ...)))
+```
+
+### 
+
+We use pass a tibble with 20 rows into `newdata` because we want to estimate the number of red draws with a shovel size of 20. 
+
+### Exercise 2
+
+Copy your code from above and pipe on `as_tibble()`. Then type `iop_predictions` to view the results. 
+
+```{r predicting-outcomes-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r predicting-outcomes-2-hint-1, eval = FALSE}
+... %>%
+  as_tibble()
+```
+
+### 
+
+Each of the 4,000 rows represents one posterior prediction of the number of Obama approvers in a room of size 20. Each column represents the 20 individuals in the room, with 0's representing people who disapprove of President Obama, and 1's representing people who approve of him. 
+
+### Exercise 3
+
+Let's find the total number of people who approve of Obama in each prediction. Copy your code from above and create a column named `total` using `mutate()`. Set `total` to `rowSums(across(1:20))`, making sure to surround both the 1 and 20 in back ticks! Then continue your pipe and select the `total` column.
+
+```{r predicting-outcomes-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r predicting-outcomes-3-hint-1, eval = FALSE}
+... %>%
+  mutate(total = ...) %>%
+  select(...)
+```
+
+### 
+
+Instead of having 20 columns, one for the results of each individual, using `rowSums()` allows us to find the sum across our rows and only with the total number of Obama approvers. 
+
+### Exercise 4
+
+Finally, add another column called `poll`, and assign all rows the value "IOP poll" so we can compare poll predictions later on. 
+
+
+```{r predicting-outcomes-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r predicting-outcomes-4-hint-1, eval = FALSE}
+mutate(poll = ...)
+```
+
+### Exercise 5
+
+Great work! Now let's create the posterior predictions for the Gov't class poll. 
+
+Because most of the code is the same, copy your code from above, making sure to change a few key features. First, change the variable name from `iop_predictions` to `class_predictions`. Next, replace `iop_fit` with `class_fit`. Finally, change the uniformly assigned name in the `poll` column from "IOP poll" to "Class poll". 
+
+Assign your code to a variable named `class_predictions`. 
+
+```{r predicting-outcomes-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+### 
+
+Great work! You now have the posterior predictions for the IOP poll saved as `iop_predictions`, and the predictions from the Gov't class poll saved as `class_predictions`. 
+
+### Exercise 6
+
+Now combine the two polls into one tibble using `bind_rows()`. Pass in `iop_predictions` as the first argument, and `class_predictions` as the second. 
+
+```{r predicting-outcomes-6, exercise = TRUE}
+
+```
+
+```{r predicting-outcomes-6-hint-1, eval = FALSE}
+bind_rows(..., ...)
+```
+
+### 
+
+Our tibble now has 8,000 rows, half from the IOP poll predictions and half from the class poll predictions. Again, each row can be thought of as a simulation of a room of 20 people, with the `total` column displaying the predicted number of Obama approvers in that room. 
+
+### Exercise 7
+
+Now let's graph our results. Use `ggplot()` on your code from above, and map `total` to the x-axis and `poll` to fill. 
+
+```{r predicting-outcomes-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r predicting-outcomes-7-hint, eval = FALSE}
+... %>%
+  ggplot(aes(x = ..., fill = ...))
+```
+
 ###
+
+Because we are using `geom_histogram()`, bar height will be calculated by the number of observations for each value of `total`. 
+
+### Exercise 8
+
+Copy your code from the previous question and add the layer `geom_histogram()`. Within `geom_histogram()`, use `aes()` to set `y` equal to `after_stat(count/sum(count))` in order to convert the y-axis to percent values. Also set `bins` to 50,`alpha` to .5, and `position` to identity. 
+
+```{r predicting-outcomes-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r predicting-outcomes-8-hint, eval = FALSE}
+... +
+  geom_histogram(aes(y = ...),
+                 bins = ...,
+                 alpha = ...,
+                 position = ...)
+```
+
+###
+
+Unfortunately, the default colors are hard to differentiate visually. Instead, let's choose our own custom colors. 
+
+### Exercise 9
+
+Now add a layer with `scale_fill_manual()` to change the color of our bars. Inside `scale_fill_manual()`, set `values` to a vector that combines "#e01919" and #213fd1".
+
+```{r predicting-outcomes-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r predicting-outcomes-9-hint, eval = FALSE}
+... +
+  scale_fill_manual(values = c(..., ...))
+```
+
+###
+
+Another issue is that while we are attempting to create a posterior probability distribution, the y-axis is formatted as decimals instead of percents.
+
+### Exercise 10
+
+Add the layer `scale_y_continuous()` with the argument `labels` set to `scales::percent_format()`.
+
+```{r predicting-outcomes-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r predicting-outcomes-10-hint, eval = FALSE}
+... +
+   scale_y_continuous(labels = ...)
+```
+
+### Exercise 11
+
+To finish, use `labs()` to give your graph the appropriate title, subtitle, and axis labels. 
+
+```{r predicting-outcomes-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+Your plot should look something like this:
+
+```{r}
+bind_rows(iop_predictions, class_predictions) %>%
+  ggplot(aes(x = total, fill = poll)) +
+  geom_histogram(aes(y = after_stat(count/sum(count))), position = "identity", alpha = .5, bins = 50) +
+  scale_fill_manual(values = c("#e01919", "#213fd1")) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(title = "Posterior Probability Distribution",
+       subtitle = "Number of Obama approvers in a room of 20 people for 2 different polls",
+       y = "Probability",
+       x = "Number of Obama Approvers in Room")
+```
+
+
+###
+
+Great work! Look at your graph and begin to examine the trends. Keep in mind that the red bars represent that the class poll has a higher probability for a room to have a given number of Obama approvers designated by the x-axis, the blue bars represent the class poll having a higher probability, and the purple is the overlap. 
+
+### Exercise 12
+
+In 2 sentences, use evidence from your plot to support the following property of posterior predictive distributions: 
+
+> With a large enough sample size, posterior predictive distributions are normally distributed.
+
+
+```{r predicting-outcomes-12}
+question_text(NULL,
+	message = "In the plot there is a low probability for there to be 1-3 Obama approvers, but for each subsequent number of predicted Obama approvers the probabliity increases until it reaches the center, where the graph decreases symetrically to how it increased. This bell shaped distribution is well approximated by the normal distribution.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Note that because we are graphing two different distributions at once, the graph is not as symmetrical as it would be for a single distribution. 
+
+### Exercise 13
+
+In 2 sentences, use evidence from your plot to support the following property of posterior predictive distributions: 
+
+> The estimated population parameter has a large effect on the probability of predictive draws.
+
+
+```{r predicting-outcomes-13}
+question_text(NULL,
+	message = "The graph has more red bars indicating the class poll on the left, because the class poll had a lower approval percentage and as such there are less Obama approvers predicted to be in a room. On the other hand, the higher approval percentage of the Harvard IOP poll causes more blue bars to be shown on the right, as the distribution is shifted over and higher numbers of Obama approvers are more likely.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 14
+
+In 2 sentences, use evidence from your plot to support the following property of posterior predictive distributions: 
+
+> Two different posterior predictions will be the most similar near the center, and the most different near the extremes. 
+
+```{r predicting-outcomes-14}
+question_text(NULL,
+	message = "When there are 8 predicted Obama supporters, the bar is nearly entirely purple because predictions from the IOP poll and class poll have a similar probability of having 8 Obama approvers. However, as the number of Obama approvers become more extreme, the bars become less purple and more blue or red, representing that one poll has a significantly higher probability of acheiving some value of Obama approvers.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Notice the magnitude of the differences between the polls for when the predicted number of Obama approvers is 5 or 11. Seeing these large differences will be crucial to tackle our subsequent probability question that compares the similarity between the two polls, as large differences mean it is less likely for two rooms of the different poll respondents to be identical. 
+
+## Probability 
+### 
 
 No matter how complex, virtually all probability problems involve finding the area under a curve. 
 
-###
+### 
 
 Let's attempt to answer the following question: 
 
-> Imagine that it is November 15, 2013. If there were two rooms of the same size, one filled with all American adults, and one filled with just 18-29 year olds, what is the probability that the rooms will have the same number of people who approve of Obama?
+> Imagine that it is November 15, 2013. What is the probability that a group of IOP poll respondents and a group of the Gov't class poll respondents would have the same number of people who approve of President Obama? 
 
 Because this is a probability question, we can model the probabilities as areas under a curve:
 
@@ -1221,18 +1555,18 @@ both_polls %>%
   ggplot(aes(x = total, y = num_draws, fill = group)) + 
   facet_wrap(~num_people) +
   geom_col(position = "identity", alpha = .5) +
-  scale_fill_manual(values = c("#e01919", "#213fd1"), labels = c("All Americans", "Young Americans"), name = "Group") + 
+  scale_fill_manual(values = c("#e01919", "#213fd1")) + 
   labs(title = "Similarities and Differences for 2 Different Rooms",
        subtitle = "Each frame represents a different room size",
        y = "Number of Posteiror Draws",
        x = "Number of Obama Approvers in Room")
 ```
 
-###
+### 
 
-First let's break down the question. We want to find the probability of two rooms being identical. What we must realize is that the probability is contingent on the size of the room. For example, we'd expect there to be a relatively large chance that 2 rooms with 3 people in them, one filled with young Americans and one filled with all Americans, will have the same number of people who approve of Obama. However, there should be almost no chance that a room of size 300 would have the same number of people who approve of Obama. 
+First let's break down the question. We want to find the probability of two "groups", which we will call rooms, being identical. What we must realize is that the probability is contingent on the size of the room. For example, we'd expect there to be a relatively large chance that 2 rooms with 3 people in them to have the same number of people who approve of President Obama. However, there should be almost no chance that a room of size 300 would have the same number of people who approve of President Obama. 
 
-To answer the question, we will make predictions from draws of the posterior using the **rstanarm** `posterior_predict()` function, and then calculate the differences between the two rooms. To make predictions for the room filled with young Americans we will use the posterior we made earlier using the Harvard IOP poll, and use the class poll to make predictions for the room filled with all Americans. 
+To answer the question, we will make predictions from draws of the posterior using the `posterior_predict()` function, and then calculate the differences between the two rooms. To make predictions for the room filled with IOP poll respondents we will use the posterior we made earlier using the Harvard IOP poll, and use the class poll to make predictions for the room filled with all Americans. 
 
 ### Exercise 1
 
@@ -1274,7 +1608,7 @@ Within map use posterior_predict():
 posterior_predict(..., newdata = tibble(... = rep(..., ...)))
 ```
 
-###
+### 
 
 For each room size we use the `map()` function to pass the room size into `posterior_predict()`, creating posterior predictions for each room size. 
 
@@ -1293,7 +1627,7 @@ Copy your code from above. Create a new column called `total` and set it equal t
   mutate(... = map(..., ~ ...))
 ```
 
-###
+### 
 
 We use `rowSums()` in order to calculate the total number of people who approve of Obama within a room. 
 
@@ -1312,7 +1646,7 @@ Continue your pipe with the function `unnest()`. Pass in `total` as the sole arg
   unnest(...)
 ```
 
-###
+### 
 
 The `unnest()` function expands `total` out of list form into individual integers. 
 
@@ -1346,7 +1680,7 @@ Continue your pipe one last time using the `summarize()` function. Within `summa
   summarize(... = ..., ... = ...)
 ```
 
-###
+### 
 
 In essence, the 4,000 draws from `posterior_predict()` represent 4,000 simulations of one room size. The `n()` function tallies the predicted number of Obama approvers across for each room size across all the simulations.  
 
@@ -1364,7 +1698,7 @@ Assign your code from above to an object named `young`.
 Use the assignment operator <-  to do so.
 ```
 
-###
+### 
 
 The `young` tibble represents the predictions for young Americans aged 18-29. 
 
@@ -1372,7 +1706,7 @@ The `young` tibble represents the predictions for young Americans aged 18-29.
 
 To simulate the predictions for all Americans we can recreate the exact same tibble as above, but using the posterior from the class survey instead of the posterior from the IOP survey. 
 
-###
+### 
 
 Copy your code from above, and replace `iop_fit` with `class_fit`. Also save the object with the name `young` instead of `all`.
 
@@ -1383,7 +1717,7 @@ Copy your code from above, and replace `iop_fit` with `class_fit`. Also save the
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 
-###
+### 
 
 We now have a tibble named `young` with the predictions for young Americans, and a tibble named `all` with the predictions for all Americans. 
 
@@ -1434,7 +1768,7 @@ Remember our statement from the beginning:
 
 No matter how complex, virtually all probability problems involve finding the area under a curve.
 
-###
+### 
 
 Run the following code to visualize the predictions from each room. 
 
@@ -1451,11 +1785,11 @@ both_polls %>%
        x = "Number of Obama Approvers in Room")
 ```
 
-###
+### 
 
 A mostly purple bar indicates that the room of young Americans and all Americans are likely to have a similar number of Obama approvers designated by the x-axis. Red bars indicate that the room with all Americans is more likely to have the number of Obama supporters designated by the x-axis, while blue bars indicate the same phenomena with young Americans. 
 
-###
+### 
 
 Notice how there is more cummilative non-purple area as the room size increases: as room size increases, the room of young Americans and the room of all Americans become more different. 
 
@@ -1487,7 +1821,7 @@ Create a column named `lrg_poll` using `mutate()`, and set it equal to the `max(
   mutate(... = max(c_across(..., ...)))
 ```
 
-###
+### 
 
 `lrg_poll` represents the poll with the greatest number of predictive draws for a specific number of Obama approvers. In the area graph above, `lrg_poll` is the tallest bar for each x value. 
 
@@ -1506,7 +1840,7 @@ Create another column named `sml_poll` using `mutate()`, and set it equal to the
   mutate(... = min(c_across(..., ...)))
 ```
 
-###
+### 
 
 `sml_poll` represents the poll with the lesser number of predictive draws, indicating that it's less likely for that room of Americans to have some number of Obama approvers. In the area graph above, `sml_poll` is represented by the shortest bar. 
 
@@ -1526,7 +1860,7 @@ To finish operations across rows, add `ungroup()` to your pipe. Next, create a n
   mutate(... = .../...)
 ```
 
-###
+### 
 
 The `pct` column quantifies how similar or different the rooms of young Americans and all Americans are. If the two rooms are predicted to have a similar number of Obama approvers (area bar is mostly purple), then `pct` will be closer to 1. If the two rooms are less similar and have drastically different predictions for a number of Obama approvers, `pct` will be closer to 0. 
 
@@ -1569,7 +1903,7 @@ both_polls %>%
        y = ...)
 ```
 
-###
+### 
 
 Each bar represents the percent difference for the room of young Americans and all Americans for the number of predicted Obama approvers designated by the x-axis. For small room sizes the bars are close to 100%, because the rooms are likely to be similar. Notice that for larger room sizes, the bars are tall for moderate numbers of predicted Obama supporters, but short for extreme numbers of Obama supporters. 
 
@@ -1610,7 +1944,7 @@ Continue your pipe with `summarize()`. Within `summarize()`, set `prob_rooms_are
   summarize(... = round(prod(...), ... = ...))
 ```
 
-###
+### 
 
 Because the probabilities for each number of Obama approvers in a room are independent from one another, we use the `prod()` function to multiply them. You can go back to the earlier visualization of `pct` and envision multiplying the bars together. If all the bars are tall then the final probability will be large. Multiplying by shorter bars will cause the final probability to decrease. 
 
@@ -1634,17 +1968,16 @@ question_text(NULL,
 	rows = 6)
 ```
 
-###
+### 
 
 No matter how complex, virtually all probability problems involve finding the area under a curve. 
 
 ## Summary
-
-###
+### 
 
 By completing this tutorial, you have successfully conquered multiple real world problems like a professional. You first analyzed the Data and Preceptor Table in *Wisdom* and the Population Table in *Justice* to determine whether or not the data can answer the questions. Next, you created a posterior for the Harvard IOP survey to quantify your uncertainty about the true value of a population parameter.  You then learned to describe distributions in terms of their means and variations in order to accurately describe their differences. Finally, you hopefully realized that all probability problems, no matter how complex, can be broken down to finding the area under a graph!
 
-###
+### 
 
 Great work!
 
