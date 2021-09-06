@@ -20,7 +20,6 @@ library(knitr)
 library(gt)
 library(skimr)
 library(reactable)
-library(paletteer)
 library(gtsummary)
 library(rstanarm)
 knitr::opts_chunk$set(echo = FALSE)
@@ -39,6 +38,8 @@ options(tutorial.exercise.timelimit = 60,
 
 ## Introduction
 ### 
+
+The key function/packages used to create tables are [`kable()`](https://bookdown.org/yihui/rmarkdown-cookbook/kable.html) (within the **knitr** package), [**gt**](https://gt.rstudio.com), [**gtsummary**](http://www.danieldsjoberg.com/gtsummary/), and [**reactable**](https://glin.github.io/reactable/).
 
 ## kable
 ### 
@@ -96,13 +97,11 @@ glimpse(nominate)
 
 ### Exercise 3
 
-Continue the pipe with `arrange()` to sort the data set alphabetically by `name`
+Start a pipe with `nominate`. Continue it with `arrange()` to sort the data set alphabetically by `name`
 
 ```{r kable-3, exercise = TRUE}
 
 ```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r kable-3-hint-1, eval = FALSE}
 ... %>% 
@@ -178,11 +177,13 @@ nominate %>%
 
 ### Exercise 7
 
-Within `kable()`, assign c("Name", "Year of Birth", "Year of Death", 
-                      "State", "Ideological Position on Economic Matters", 
-                      "Ideological Position on Societal Matters")` to 'col.names'
+Within `kable()`, set the value of the `col.names` argument to:
 
-<!-- Make this question more clear -->
+```
+c("Name", "Year of Birth", "Year of Death", 
+  "State", "Ideological Position on Economic Matters", 
+  "Ideological Position on Societal Matters")
+```
 
 ```{r kable-7, exercise = TRUE}
 
@@ -429,6 +430,7 @@ gt_t
 ### Exercise 8
 
 Add a `title` and `subtitle` to the table by using `tab_header()`.
+
 ```{r gt-8, exercise = TRUE}
 
 ```
@@ -444,6 +446,7 @@ Add a `title` and `subtitle` to the table by using `tab_header()`.
 ### 
 
 What you have at this point should look like this:
+
 ```{r}
 trains %>%
     select(gender, income, att_end) %>%
@@ -559,20 +562,23 @@ The table we will be making will look like this:
 
 ```{r}
 nhanes_t <- nhanes %>% 
-  filter(survey == 2011, gender == "Female", age > 40, race == "Mexican") %>% 
+  # This data was chosen arbitrarily so that the table was of decent size
+  filter(survey == 2011, gender == "Female", age > 50, race == "Mexican") %>% 
   drop_na() %>%
   select(hh_income, age, sleep, general_health) %>% 
   arrange(age) %>% 
   arrange(hh_income) %>% 
   gt() %>%
-  tab_header(title = md("**Relationship between Household Income, Sleep and General Health in Mexican Women who are over 40 years old**"),
+  tab_header(title = md("**Relationship between Household Income, Sleep and General Health in Mexican Women who are over 50 years old**"),
              subtitle = "Those who make over 75,000 seem to have the best General Health") %>% 
   cols_label(hh_income = "Household Income",
              age = "Age",
              sleep = "Sleep (in hours)",
              general_health = "General Health") %>% 
   tab_source_note(md("*National Health and Nutrition Examination Survey, 2011*")) %>% 
-  tab_footnote(footnote = "General Health is ranked on a scale of 1-5 where 1 is \"poor\" health, 2 is \"fair\", 3 is \"good\", 4 is \"very good\", and 5 is \"excellent\".", locations = cells_body(column = general_health))
+  # This is in a footnote because it is needed to understand the table
+  tab_footnote(footnote = "General Health is ranked on a scale of 1-5 where 1 is \"poor\" health, 2 is \"fair\", 3 is \"good\", 4 is \"very good\", and 5 is \"excellent\".", locations = cells_column_labels(column = general_health))
+# Color would be cool to add but seems impossible without functions
 nhanes_t
 ```
 
@@ -610,7 +616,7 @@ From this we learn that `nhanes` contains data from The National Health and Nutr
 
 ### Exercise 3
 
-Start a pipe with `nhanes`. Continue the pipe to `filter()` so that the data only contains rows where `year` is `2011`, `gender` is `"Female"`, `age` is greater than `40`, and `race` is `"Mexican"`.
+Start a pipe with `nhanes`. Continue the pipe to `filter()` so that the data only contains rows where `year` is `2011`, `gender` is `"Female"`, `age` is greater than `50`, and `race` is `"Mexican"`.
 
 ```{r nhanes-3, exercise = TRUE}
 
@@ -706,7 +712,7 @@ What you have at this point should look like this:
 
 ```{r}
 nhanes %>% 
-  filter(survey == 2011, gender == "Female", age > 40, race == "Mexican") %>% 
+  filter(survey == 2011, gender == "Female", age < 50, race == "Mexican") %>% 
   drop_na() %>%
   select(hh_income, age, sleep, general_health) %>% 
   arrange(age) %>% 
@@ -774,7 +780,7 @@ Continue the pipe to add labels for the columns. Use `col_label()` and change th
 
 ### Exercise 11
 
-Continue the pipe to add a footnote (using `tab_footnote()`) which will indicate how `general_health` is ranked. assign the footnote to the `footnote` parameter, and assign the `cells_body()` function to location. Within `cells_body()` set the column to `general_health`. This adds the footnote to all the values within `general_health`.
+Continue the pipe to add a footnote (using `tab_footnote()`) which will indicate how `general_health` is ranked. assign the footnote to the `footnote` parameter, and assign the `cells_column_labels()` function to location. Within `cells_column_labels()` set the column to `general_health`. This adds the footnote to the header.
 
 ```{r nhanes-11, exercise = TRUE}
 
@@ -789,12 +795,12 @@ To make quotation marks appear, add a "\" before the "
 ```{r nhanes-11-hint-2, eval = FALSE}
 ... %>% 
   tab_footnote(footnote = "...",
-               locations = cells_body(column = ...))
+               cells_column_labels(column = ...))
 ```
 
 ### 
 
-The information added to the footnote was given when `?nhanes` was run
+The information added to the footnote can be found in the help page for the `nhanes` data set
 
 
 
@@ -830,6 +836,8 @@ nhanes_t
 
 **gtsummary** is a package that can be used to summarize data and tibbles and is useful in creating regression tables. A regression table shows how closely the relationship between independent variable(s) and a dependent variable is.
 
+Don't worry too much if you don't understand the data within the table you create. You will learn more about it if you decide to pursue post secondary education in math.
+
 ### Exercise 1
 
 load in the **gtsummary** package.
@@ -863,37 +871,55 @@ regression2_t
 
 ### Exercise 2
 
-I have creaed the model we will use to create the table and assigned it to `m1`.  run `m1` to view it.
+I have created the model we will use to create the table and assigned it to `m1`.  run `m1` to view it.
 
 ```{r regression-tables-2, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r regression-tables-2-hint-1, eval = FALSE}
 m1
 ```
 
-### 
-
-<!-- Reword this! Sounds weird. -->
-
-Don't think too hard about how this was created or what the output means, you may learn more about this through post secondary education
-
-The **rstanarm** package was used to create this object
-
-**rstanarm** uses [Stan](https://mc-stan.org/), a programming language, for its estimation.
-
 ### Exercise 3
 
-Start a pipe with the `tbl_regression()` function. Within `tbl_regression()` assign `m1` to `x`, `TRUE` to `intercept`, and `function(x) style_sigfig(x, digits = 2))` to `estimate_fun`.
-
+Start a pipe with the `tbl_regression()` function. Within `tbl_regression()` assign `m1` to `x`.
 ```{r regression-tables-3, exercise = TRUE}
 
 ```
 
 ```{r regression-tables-3-hint-1, eval = FALSE}
+...
+tbl_regression(...)
+```
+
+### Exercise 4
+
+Within `tbl_regression()` assign `TRUE` to `intercept`.
+
+
+```{r regression-tables-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r regression-tables-4-hint-1, eval = FALSE}
+...
+tbl_regression(...)
+```
+
+### Exercise 5
+
+Within `tbl_regression()` assign `function(x) style_sigfig(x, digits = 2))` to `estimate_fun`.
+
+```{r regression-tables-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r regression-tables-5-hint-1, eval = FALSE}
 ...
 tbl_regression(...)
 ```
@@ -908,17 +934,17 @@ The `function()` function allows us to define new functions.
 
 The `style_sigfig()` function converts a numeric argument to a string that has been rounded to a significant figure-like number.
 
-### Exercise 4
+### Exercise 6
 
 Continue the pipe with `as_gt()`.
 
-```{r regression-tables-4, exercise = TRUE}
+```{r regression-tables-6, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r regression-tables-4-hint-1, eval = FALSE}
+```{r regression-tables-6-hint-1, eval = FALSE}
 ...
 ... %>% 
   as_gt()
@@ -932,37 +958,37 @@ Currently you should have a simple table that looks like this:
 regression1_t
 ```
 
-### Exercise 5
+### Exercise 7
 
 Continue the pipe with `tab_header()` to add a suitable title and subtitle. 
 
-```{r regression-tables-5, exercise = TRUE}
+```{r regression-tables-7, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r regression-tables-5-hint-1, eval = FALSE}
+```{r regression-tables-7-hint-1, eval = FALSE}
 ...
 ... %>% 
   tab_header(...)
 ```
 
-### Exercise 6
+### Exercise 8
 
 Continue the pipe to add a caption using `tab_source_note`. To properly format the caption, wrap the character string in a call to md(). 
 
-```{r regression-tables-6, exercise = TRUE}
+```{r regression-tables-8, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r regression-tables-6-hint-1, eval = FALSE}
+```{r regression-tables-8-hint-1, eval = FALSE}
 The code to italicize text in md() is adding "*" to both ends of the string 
 ```
 
-```{r regression-tables-6-hint-2, eval = FALSE}
+```{r regression-tables-8-hint-2, eval = FALSE}
 ...
 ... %>% 
   tab_source_note(md("Source: Ryan Enos, *Causal Effect of Intergroup 
@@ -1017,89 +1043,17 @@ reactable(trains)
 Now, let's create a table that looks like this. 
 
 ```{r}
-# This palette was chosen since conservationism is associated with red, and
-# liberalism with blue.
-
-color1 <- paletteer_c("ggthemes::Red-Blue-White Diverging", 13)
-
-# Function by Greg Lin. Higher bias gives more widely spaced colors at the high
-# end. Needs to be positive. These biases where chosen to ensure that half the
-# scale is red in color, and half is blue
-
-make_color_pal <- function(colors, bias = 1) 
-                  {get_color <- colorRamp(colors, bias = bias)
-                  function(x) rgb(get_color(x), maxColorValue = 255)}
-
-att_change_pal <- make_color_pal(color1, bias = 1.35)
-
-att_start_end_pal <- make_color_pal(color1, bias = 1.7)
-
-ideology_change_pal <- make_color_pal(color1, bias = 0.8)
-
-ideology_start_end_pal <- make_color_pal(color1, bias = 1.8)
-
-att_change_color <- function(value) 
-                {value
-                normalized <- (value - min(trains$att_end - trains$att_start)) /
-                              (max(trains$att_end - trains$att_start) - 
-                                   min(trains$att_end - trains$att_start))
-                color <- att_change_pal(normalized)
-                list(background = color)}
-
-att_end_color <- function(value) 
-                {value
-                normalized <- (value - min(trains$att_end)) /
-                              (max(trains$att_end) - min(trains$att_end))
-                color <- att_start_end_pal(normalized)
-                list(background = color)}
-
-att_start_color <- function(value) 
-                {value
-                normalized <- (value - min(trains$att_start)) /
-                              (max(trains$att_start) - min(trains$att_start))
-                color <- att_start_end_pal(normalized)
-                list(background = color)}
-
-ideology_change_color <- function(value) 
-                {value
-                normalized <- (value - min(trains$ideology_end - trains$ideology_start)) /
-                              (max(trains$ideology_end - trains$ideology_start) - 
-                               min(trains$ideology_end - trains$ideology_start))
-                color <- ideology_change_pal(normalized)
-                list(background = color)}
-
-ideology_end_color <- function(value) 
-                {value
-                normalized <- (value - min(trains$ideology_end)) /
-                              (max(trains$ideology_end) - min(trains$ideology_end))
-                color <- ideology_start_end_pal(normalized)
-                list(background = color)}
-
-ideology_start_color <- function(value) 
-                {value
-                normalized <- (value - min(trains$ideology_start)) /
-                              (max(trains$ideology_start) - min(trains$ideology_start))
-                color <- ideology_start_end_pal(normalized)
-                list(background = color)}
-
-my_color_function <- function(value){
-  
-  
-}
-
-
 reactable1_t <- trains %>%
   #These filters were chosen arbitrarily to keep the able small
   filter(treatment ==  "Control") %>%
   filter(gender == "Female") %>% 
   filter(age >= 40) %>% 
   # I created these 2 columns because they would look cool in color
+  # color was removed because it involved functions to incorporate
   
   mutate(ideology_change = ideology_end - ideology_start, 
          att_change = att_end - att_start) %>% 
-  select(gender, age, race, party, att_start, att_end, att_change, 
-         ideology_start, ideology_end, ideology_change) %>%
-  
+  select(gender, age, race, party, att_start, att_end, att_change) %>%
   reactable(pagination = FALSE,
             highlight = TRUE,
             compact = TRUE,
@@ -1109,18 +1063,9 @@ reactable1_t <- trains %>%
                            age = colDef(name = "Age"),
                            race = colDef(name = "Race"),
                            party = colDef(name = "Party"),
-                           att_start = colDef(name = "Starting Attitude",
-                                              style = att_start_color),
-                           att_end = colDef(name = "Ending Attitude",
-                                            style = att_end_color),
-                           att_change = colDef(name = "Change in Attitude", 
-                                               style = att_change_color),
-                           ideology_start = colDef(name = "Starting Ideology",
-                                                   style = ideology_start_color),
-                           ideology_end = colDef(name ="Ending Ideology",
-                                                 style = ideology_end_color),
-                           ideology_change = colDef(name ="Change in Ideology",
-                                                    style = ideology_change_color)))
+                           att_start = colDef(name = "Starting Attitude"),
+                           att_end = colDef(name = "Ending Attitude"),
+                           att_change = colDef(name = "Change in Attitude")))
 reactable1_t
 ```
 
@@ -1163,7 +1108,7 @@ trains %>%
 
 ### Exercise 5
 
-Continue the pipe to `select()` the `gender`, `age`, `race`, `party`, `att_start`, `att_end`, `ideology_start`, and `ideology_end` columns.
+Continue the pipe to `select()` the `gender`, `age`, `race`, `party`, `att_start`, and `att_end` columns.
 
 
 ```{r reactable-5, exercise = TRUE}
@@ -1209,7 +1154,7 @@ Within `reactable()` assign `FALSE` to `pagination`. This makes the table to dis
 
 ### 
 
-This is useful when your table only takes a few pages to display.
+This is useful when you want all your data to be viewed together.
 
 ### Exercise 8
 
@@ -1290,7 +1235,7 @@ Within `reactable()`, assign `colDef(align = "left")` to `defaultColDef`. This w
 
 Set the value of the `columns` argument to:
 
-````
+```
 list(gender = colDef( name = "Gender"), 
      age = colDef(name = "Age"), 
      race = colDef(name = "Race"), 
@@ -1301,11 +1246,9 @@ list(gender = colDef( name = "Gender"),
      ideology_start = colDef(name = "Starting Ideology"), 
      ideology_end = colDef(name ="Ending Ideology"),
      ideology_change = colDef(name = "Change in Attitude"))
-````
+```
 
 This will rename the columns to more suitable names.
-
-
 
 ```{r reactable-12, exercise = TRUE}
 
@@ -1318,51 +1261,11 @@ This will rename the columns to more suitable names.
   reactable(..., columns = list(...))
 ```
 
-### Exercise 13
-
-Add color to the `att_start` column by assigning `att_start_color` to the style argument within the `colDef()` function for `att_start`.
-
-```{r reactable-13, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r reactable-13-hint-1, eval = FALSE}
-... %>% 
-  reactable(..., columns = list(...,
-                                att_start = colDef(..., style = att_start_color),
-                                ...))
-```
-
 ### 
 
-The functions to add color were created using the **paletteer** package
+Unfortunately there is no way to add a title to your table without using another package, such as **htmlwidgets**, in conjunction with **reactable**.
 
 ### 
-
-You will need to repeat the same thing to add color to the `att_end`, `att_change`, `ideology_start`, `ideology_end`, and `ideology_change` columns.
-
-### Exercise 14
-
-Add color to the `att_end`, `att_change`, `ideology_start`, `ideology_end`, and `ideology_change` columns
-by assigning `att_end_color`, `att_change_color`, `ideology_start_color`, `ideology_end_color`, and `ideology_change_color` to the style argument within the `colDef()` function for the respective columns.
-
-```{r reactable-14, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r reactable-14-hint-1, eval = FALSE}
-... %>% 
-  reactable(..., columns = list(..., 
-     att_end = colDef(..., style = ...), 
-     att_change = colDef(..., style = ...), 
-     ideology_start = colDef(..., style = ...), 
-     ideology_end = colDef(..., style = ...), 
-     ideology_change = colDef(..., style = ...))
-```
 
 Congratulations!
 
@@ -1372,8 +1275,22 @@ You should have now created a table that looks like:
 reactable1_t 
 ```
 
+### 
+
+You can make your **reactable** tables even cooler by adding color. Doing this involves content not covered in this course. If you want to learn how to use color in your table check out [this blog post](https://themockup.blog/posts/2020-05-13-reactable-tables-the-rest-of-the-owl/) by Thomas Mock
+
 ## Summary
 ### 
+
+To recap the key function/packages used to create tables are [`kable()`](https://bookdown.org/yihui/rmarkdown-cookbook/kable.html) (within the **knitr** package), [**gt**](https://gt.rstudio.com), [**gtsummary**](http://www.danieldsjoberg.com/gtsummary/), and [**reactable**](https://glin.github.io/reactable/).
+
+[**kable**](https://bookdown.org/yihui/rmarkdown-cookbook/kable.html) is a quick and easy way to create a simple table.
+
+[**gt**](https://gt.rstudio.com) allows for more customization and cleaner tables.
+
+[**gtsummary**](http://www.danieldsjoberg.com/gtsummary/) allows you to create summary tables, and regression tables.
+
+[**reactable**](https://glin.github.io/reactable/) is a package that enable us to create interactive tables. We aren't able to make use of many functions of [**reactable**](https://glin.github.io/reactable/) due to its complexity, but it is still useful nonetheless. 
 
 ```{r download-answers, child = "../../child_documents/download_answers.Rmd"}
 ```
