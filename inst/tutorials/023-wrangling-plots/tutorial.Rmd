@@ -70,12 +70,10 @@ income <- income[!grepl("^[A-Z ]+$",income$occupation),, drop = FALSE]
 In this tutorial, you will learn more about data visualization and wrangling with R and create various graphs. Each section follows a structure so that you will built pipes by adding new layers with each exercise to first wrangle a dataset and then create an appropriate graph for the data. This tutorial is 77-exercises long and is expected to 75 minutes to complete. 
 
 ## National Health and Nutrition Survey
-
 ### 
 
 National Health and Nutrition Examination Survey (NHANES) is a survey distributed to adults and children in the United States. 
 It contains the personal and physical information of 10,000 Americans from two surveys in 2009 and 2011.
-
 
 
 ### 
@@ -84,6 +82,7 @@ Let's create the following plot.
 
 ```{r}
 nhanes_p <- nhanes %>%
+  
   # more convenient and widespread to have measures in US system. 
   
   mutate(weight = weight * 2.2, height = height / 30.48) %>%
@@ -1624,7 +1623,7 @@ income_p
 
 ## Last letter of boy names
 
-Library `babynames` contains data about baby names through many years. 
+The **[babynames](http://hadley.github.io/babynames/)** package contains data about baby names through the years. 
 
 ### 
 
@@ -1632,17 +1631,29 @@ Using this data, let's create the folllowing graph.
 
 ```{r baby-lastnames}
 boys_p <- babynames %>%
-  # We will only analyse male baby names. 
   filter(sex == 'M') %>%
-  # prop is the proportion of a specific male baby name in all male baby names in that year. 
+  
+  # prop is supposed to be proportion of a specific name in all male baby names
+  # in that year. But I am not sure it is! For example, if you sum up prop for
+  # all M in a given year, it never adds to 1. It always adds to a number less
+  # than 1, but greater than 0.9. My *guess* would be that this is due to
+  # babynames dropping names which have very small numbers of babies with that
+  # name. If true, then prop is likely correct.
+  
   select(name, year, prop) %>%
+  
   # group by year and last letter of baby names. 
+  
   group_by(last_letter = stringr::str_sub(name, -1, -1), year) %>%
+  
   # frequency is the poroportion of a certain last letter in all male baby names in that year. 
+  
   summarize(frequency = sum(prop), .groups = 'drop') %>%
   ggplot(aes(x = year, y = frequency, colour = last_letter)) +
     geom_line() + 
-  # only color last letters that appears more than 15 % of all boy names in any year. 
+  
+    # only color last letters that appears more than 15 % of all boy names in any year. 
+    
     gghighlight(max(frequency) > 0.15,
                 label_key = last_letter) + 
     scale_x_continuous(guide = guide_axis(angle = 70),
