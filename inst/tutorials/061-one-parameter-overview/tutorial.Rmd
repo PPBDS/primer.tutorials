@@ -76,10 +76,11 @@ ppd_for_p <-posterior_epred(fit_1,
   rename(p = `1`)  
 
 ppd_reds_in_20 <- posterior_predict(fit_1, 
-  newdata = tibble(constant = rep(1, 20))) %>% 
+                    newdata = tibble(constant = rep(1, 20))) %>% 
   as_tibble() %>% 
-  mutate(total = rowSums(across(`1`:`20`))) %>% 
-  select(total) 
+  mutate(total = rowSums(across(`1`:`20`))) %>%
+  select(total) %>%
+  mutate(above_eight = ifelse(total > 8, TRUE, FALSE))
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -630,7 +631,7 @@ Consider our question:
 Let's create the posterior probability distribution of $\rho$ using **rstanarm** 
 
 ```{r}
-ppd_for_p %>%
+ppd_plot <- ppd_for_p %>%
   ggplot(aes(x = p)) +
     geom_histogram(aes(y = after_stat(count/sum(count))),
                    bins = 50) + 
@@ -642,6 +643,8 @@ ppd_for_p %>%
     scale_x_continuous(labels = scales::number_format()) +
     scale_y_continuous(labels = scales::percent_format()) +
     theme_classic()
+
+ppd_plot
 ```
 
 ### Exercise 1
@@ -818,18 +821,7 @@ To finish, use `labs()` to give your graph the appropriate title, subtitle, and 
 Reminder: Your plot should look something like this:
 
 ```{r}
-ppd_for_p %>% 
-    ggplot(aes(x = p)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 50) + 
-    labs(title = "Posterior Probability Distribution",
-         subtitle = "Distribution is centered at .34",
-         x = "Proportion p of Red Beads in Urn",
-         y = "Probability") + 
-  
-    scale_x_continuous(labels = scales::number_format()) +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
+ppd_plot
 ```
 
 ### Exercise 12
@@ -1125,13 +1117,6 @@ To finish, use `labs()` to give your graph the appropriate title, subtitle, and 
 Reminder: Your plot should look something like this:
 
 ```{r}
-ppd_reds_in_20 <- posterior_predict(fit_1, 
-                    newdata = tibble(constant = rep(1, 20))) %>% 
-  as_tibble() %>% 
-  mutate(total = rowSums(across(`1`:`20`))) %>%
-  select(total) %>%
-  mutate(above_eight = ifelse(total > 8, TRUE, FALSE))
-
 ppd_reds_in_20   %>% 
   
   # Set fill as above_eight. 
