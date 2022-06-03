@@ -15,20 +15,20 @@ ddi <- read_ipums_ddi("inst/tutorials/035-downloading-census-data/data/usa_00001
 data <- read_ipums_micro(ddi)
 
 # Clean up data by getting rid of haven labelled variables and peculiarities
-clean_data <- data %>%
-  select(INCTOT, EMPSTAT) %>%
-  mutate(empstat = as.factor(EMPSTAT)) %>%
+clean_data <- data |>
+  select(INCTOT, EMPSTAT) |>
+  mutate(empstat = as.factor(EMPSTAT)) |>
   mutate(empstat = case_when(empstat == 0 ~ "NA",
                              empstat == 1 ~ "Employed",
                              empstat == 2 ~ "Unemployed",
-                             empstat == 3 ~ "Not in labor force")) %>%
-  mutate(inctot = as.integer(INCTOT)) %>%
-  mutate(inctot = na_if(inctot, 9999999)) %>%
+                             empstat == 3 ~ "Not in labor force")) |>
+  mutate(inctot = as.integer(INCTOT)) |>
+  mutate(inctot = na_if(inctot, 9999999)) |>
   mutate(inctot = inctot/100000)
 
 # Plot and change labels
 # ..scaled.. source from https://stackoverflow.com/questions/51385455/geom-density-y-axis-goes-above-1
-ipums_plot <- clean_data %>%
+ipums_plot <- clean_data |>
   ggplot(aes(x = inctot, y = ..scaled.., fill = empstat, color = empstat)) +
   geom_density(alpha = 0.3, na.rm = TRUE) +
   xlim(0, 8) +

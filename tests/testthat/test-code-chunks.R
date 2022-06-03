@@ -50,7 +50,7 @@ for(i in tutorial_paths){
 
   # Filters out the document so that we only pull the chunks and their labels
 
-  doc_labels <- doc_structure %>% rmd_node_label()
+  doc_labels <- doc_structure |> rmd_node_label()
   doc_labels <- doc_labels[!is.na(doc_labels)]
   doc_labels <- doc_labels[doc_labels != ""]
 
@@ -77,7 +77,7 @@ for(i in tutorial_paths){
   # code chunk with no lines causes a weird error which is very hard to
   # diagnose.
 
-  doc_code <- doc_structure %>% rmd_node_code()
+  doc_code <- doc_structure |> rmd_node_code()
   doc_code[sapply(doc_code, is.null)] <- NULL
   empty_counter <- 0
   for(chunk_code in doc_code){
