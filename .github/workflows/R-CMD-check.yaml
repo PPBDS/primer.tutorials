@@ -20,24 +20,14 @@ jobs:
       - uses: actions/checkout@v2
       - uses: r-lib/actions/setup-r@v1
       - uses: r-lib/actions/setup-pandoc@v1
-      - uses: actions/cache@v1
-
-      # Copied from comments in primer check.yml:
-      # renv cache makes install dependencies almost instaneous...if it works.
-      # https://rstudio.github.io/renv/articles/ci.html
-      # renv::consent(), line 37, seems to make it work. See https://github.com/r-lib/actions/issues/79
-
-        with:
-          path: ~/Library/Application Support/renv
-          key: ${{ runner.os }}-renv-${{ hashFiles('**/renv.lock') }}
-          restore-keys: |
-             ${{ runner.os }}-renv-
-      - name: Install dependencies
+      - name: Install macOS system dependencies
+        if: runner.os == 'macOS'
         run: |
-          install.packages(c("renv", "rcmdcheck"))
-          renv::consent(provided = TRUE)
-          renv::restore()
-        shell: Rscript {0}
+          brew install pkg-config
+          brew install gdal
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          cache-version: 2
       - name: Check
         run: rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")
         shell: Rscript {0}
