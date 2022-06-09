@@ -5,7 +5,7 @@ library(ggthemes)
 cook_stores <- read_rds("inst/tutorials/036-mapping/data/cook-stores.rds")
 cook_map <- read_rds("inst/tutorials/036-mapping/data/cook-map.rds")
 
-cook_clean_map <- cook_map %>%
+cook_clean_map <- cook_map |>
                     mutate(Percent = 100 * (estimate / summary_est))
 
 cook_stores_map <- ggplot(data = cook_clean_map,

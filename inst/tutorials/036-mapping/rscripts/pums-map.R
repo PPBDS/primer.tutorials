@@ -14,8 +14,8 @@ nw_pums <- get_pums(variables = c("PUMA", "AGEP"),
                       year = 2018)
 
 # Adds the total population and pct_Senior columns to supplement the data
-nw_Senior <- nw_pums %>%
-    group_by(ST, PUMA) %>%
+nw_Senior <- nw_pums |>
+    group_by(ST, PUMA) |>
     summarize(total_pop = sum(PWGTP),
               pct_Senior = sum(PWGTP[AGEP > 64]) / total_pop,
               .groups = "drop")
@@ -24,15 +24,15 @@ nw_Senior <- nw_pums %>%
 nw_pumas <- map(nw_states,
                 tigris::pumas,
                 class = "sf",
-                cb = TRUE) %>%
+                cb = TRUE) |>
             reduce(rbind)
 
 # Combines the shape files and our data so that it's one tibble that we can map
-nw_final <- nw_pumas %>%
+nw_final <- nw_pumas |>
     left_join(nw_Senior, by = c("STATEFP10" = "ST", "PUMACE10" = "PUMA"))
 
 # Maps the data using ggplot() and geom_sf()
-pums_map <- nw_final %>%
+pums_map <- nw_final |>
               ggplot(aes(fill = pct_Senior)) +
                 geom_sf() +
                 scale_fill_viridis_b(name = NULL,

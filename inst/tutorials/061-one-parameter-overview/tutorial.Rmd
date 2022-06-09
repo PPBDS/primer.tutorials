@@ -37,21 +37,21 @@ options(tutorial.exercise.timelimit = 60,
 # Key Data
 
 set.seed(10)
-urn <- tibble(color = c(rep("red", 400), rep("white", 600))) %>%
-  sample_frac() %>% 
+urn <- tibble(color = c(rep("red", 400), rep("white", 600))) |>
+  sample_frac() |> 
   mutate(bead_ID = 1:1000) 
 
-virtual_samples <- tibble(trial_ID = 1:1000) %>% 
-  mutate(shovel = map(trial_ID, ~ sample_n(urn, size = 50))) %>% 
-  mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) %>% 
-  mutate(numb_beads = map_int(shovel, ~ length(.$color))) %>% 
+virtual_samples <- tibble(trial_ID = 1:1000) |> 
+  mutate(shovel = map(trial_ID, ~ sample_n(urn, size = 50))) |> 
+  mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) |> 
+  mutate(numb_beads = map_int(shovel, ~ length(.$color))) |> 
   mutate(prop_red = numb_red / numb_beads)
 
-shovels_100 <- expand_grid(trial_ID = 1:100, shovel_size = 1:100) %>% 
-  mutate(shovel = map(shovel_size, ~ slice_sample(urn, n = .))) %>% 
-  mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) %>% 
-  mutate(prop_red = numb_red / shovel_size) %>% 
-  group_by(shovel_size) %>% 
+shovels_100 <- expand_grid(trial_ID = 1:100, shovel_size = 1:100) |> 
+  mutate(shovel = map(shovel_size, ~ slice_sample(urn, n = .))) |> 
+  mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) |> 
+  mutate(prop_red = numb_red / shovel_size) |> 
+  group_by(shovel_size) |> 
   summarize(st_dev_p_hat = sd(prop_red)) 
 
 #rstanarm stuff:
@@ -71,15 +71,15 @@ fit_1 <- read_rds("data/fit_1.rds")
 
 
 ppd_for_p <-posterior_epred(fit_1, 
-            newdata = tibble(constant = 1)) %>% 
-  as_tibble() %>%
+            newdata = tibble(constant = 1)) |> 
+  as_tibble() |>
   rename(p = `1`)  
 
 ppd_reds_in_20 <- posterior_predict(fit_1, 
-                    newdata = tibble(constant = rep(1, 20))) %>% 
-  as_tibble() %>% 
-  mutate(total = rowSums(across(`1`:`20`))) %>%
-  select(total) %>%
+                    newdata = tibble(constant = rep(1, 20))) |> 
+  as_tibble() |> 
+  mutate(total = rowSums(across(`1`:`20`))) |>
+  select(total) |>
   mutate(above_eight = ifelse(total > 8, TRUE, FALSE))
 ```
 
@@ -96,7 +96,7 @@ ppd_reds_in_20 <- posterior_predict(fit_1,
 Let's create the following plot that shows sampling variation for 1000 samples from an urn that contains red and white beads.
 
 ```{r}
-virtual_samples %>% 
+virtual_samples |> 
   ggplot(aes(x = prop_red)) +
     geom_histogram(binwidth = 0.01, 
                    boundary = 0.4, 
@@ -112,8 +112,8 @@ Type `urn` below to inspect the urn we will be using in this section.
 
 ```{r virtual_sampling-1, exercise = TRUE}
 set.seed(10)
-urn <- tibble(color = c(rep("red", 400), rep("white", 600))) %>%
-  sample_frac() %>% 
+urn <- tibble(color = c(rep("red", 400), rep("white", 600))) |>
+  sample_frac() |> 
   mutate(bead_ID = 1:1000) 
 ```
 
@@ -146,12 +146,12 @@ Great. Now pipe your results to the function `mutate()` to create the variable `
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r virtual_sampling-3-hint-1, eval = FALSE}
-... %>% 
+... |> 
   mutate(shovel = map(..., ~ ...))
 ```
 
 ```{r virtual_sampling-3-hint-2, eval = FALSE}
-... %>% 
+... |> 
   mutate(shovel = map(..., ~slice_sample(urn, n = ...)))
 ```
 
@@ -166,12 +166,12 @@ Continue your pipe with `mutate()` to create the variable `numb_red`, which will
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r virtual_sampling-4-hint-1, eval = FALSE}
-... %>% 
+... |> 
   mutate(... = map_int(..., ~...))
 ```
 
 ```{r virtual_sampling-4-hint-2, eval = FALSE}
-... %>% 
+... |> 
   mutate(... = map_int(..., ~ sum(.$color == "red")))
 ```
 
@@ -186,7 +186,7 @@ Use `mutate()` one last time to create the variable `prop_red`, which is our est
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r virtual_sampling-5-hint-1, eval = FALSE}
-... %>% 
+... |> 
    mutate(prop_red = ... / ...)
 ```
 
@@ -213,7 +213,7 @@ Awesome. Now start a pipe with `virtual_samples`. Use `ggplot()`to map `prop_red
 ```
 
 ```{r virtual_sampling-7-hint-1, eval = FALSE}
-virtual_samples %>% 
+virtual_samples |> 
   ggplot(aes(...)) + 
   geom_histogram()
 ```
@@ -247,7 +247,7 @@ To finish, use `labs()` to give your graph the appropriate title and axis labels
 Reminder: This is what your plot should look like. 
 
 ```{r}
-virtual_samples %>% 
+virtual_samples |> 
   ggplot(aes(x = prop_red)) +
     geom_histogram(binwidth = 0.01, 
                    boundary = 0.4, 
@@ -270,7 +270,7 @@ Within labs(), set x to expression(hat(p))
 Let's create the following plot that displays different standard deviations of red bead proportions for 100 different shovel sizes.
 
 ```{r}
-shovel_p <- shovels_100 %>%
+shovel_p <- shovels_100 |>
  ggplot(aes(x = shovel_size, y = st_dev_p_hat)) +
  geom_point() +
  labs(title = "Sampling Variation",
@@ -309,12 +309,12 @@ Use the pipe operator with your code from above. Use `mutate()`, creating a new 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r different_shovel_siz-2-hint-1, eval = FALSE}
-... %>%
+... |>
   mutate(shovel = map(..., ~ ... ))
 ```
 
 ```{r different_shovel_siz-2-hint-2, eval = FALSE}
-... %>%
+... |>
   mutate(shovel = map(... , ~ slice_sample(..., n = ...)))
 ```
 
@@ -329,12 +329,12 @@ Continue your pipe with `mutate()` to create the variable `numb_red`, which will
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r different_shovel_siz-3-hint-1, eval = FALSE}
-... %>% 
+... |> 
   mutate(... = map_int(..., ~ ...))
 ```
 
 ```{r different_shovel_siz-3-hint-2, eval = FALSE}
-... %>% 
+... |> 
   mutate(... = map_int(..., ~ sum(.$color == "red")))
 ```
 
@@ -350,7 +350,7 @@ Continue your pipe from above, using `mutate()` to create one final column calle
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r different_shovel_siz-4-hint-1, eval = FALSE}
-... %>%
+... |>
   mutate(prop_red = ... / ...)
 ```
 
@@ -365,7 +365,7 @@ Great. Continue your pipe and use the `group_by()` function to group our tibble 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r different_shovel_siz-5-hint-1, eval = FALSE}
-... %>%
+... |>
   group_by(...)
 ```
 
@@ -381,7 +381,7 @@ Continue your pipe one last time, and use `summarize()` to create a new column n
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r different_shovel_siz-6-hint-1, eval = FALSE}
-... %>% 
+... |> 
   summarize(st_dev_p_hat = sd(...))
 ```
 
@@ -408,7 +408,7 @@ Start a new pipe from `shovels_100`. Use `ggplot()`to map `shovel_size` to the x
 ```
 
 ```{r different_shovel_siz-8-hint-1, eval = FALSE}
-shovels_100 %>% 
+shovels_100 |> 
   ggplot(aes(x = ..., y = ...)) + 
   geom_point()
 ```
@@ -503,22 +503,22 @@ tibble(source = c("Population", "Population", "Population","...",
               "white", "red", "white", "...",
               "?", "red", "?", "...",
               "?", "red", "?", "...",
-              "?", "red", "?")) %>%
+              "?", "red", "?")) |>
 
   # Then, we use the gt function to make it pretty
 
-  gt() %>%
+  gt() |>
   cols_label(source = md("Source"),
              location = md("Location"),
              time = md("Time"),
              id = md("ID"),
-             color = md("Color")) %>%
+             color = md("Color")) |>
   tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = c(source))) %>%
+            location = cells_body(columns = c(source))) |>
   tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"),
-            locations = cells_column_labels(columns = c(source))) %>%
-  cols_align(align = "center", columns = everything()) %>%
-  cols_align(align = "left", columns = c(source)) %>%
+            locations = cells_column_labels(columns = c(source))) |>
+  cols_align(align = "center", columns = everything()) |>
+  cols_align(align = "left", columns = c(source)) |>
   fmt_markdown(columns = everything())
 ```
 
@@ -631,7 +631,7 @@ Consider our question:
 Let's create the posterior probability distribution of $\rho$ using **rstanarm** 
 
 ```{r}
-ppd_plot <- ppd_for_p %>%
+ppd_plot <- ppd_for_p |>
   ggplot(aes(x = p)) +
     geom_histogram(aes(y = after_stat(count/sum(count))),
                    bins = 50) + 
@@ -728,8 +728,8 @@ Copy your code from above. First pipe `as_tibble()` to your code. Then continue 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r courage-5-hint-1, eval = FALSE}
-... %>%
-  ... %>%
+... |>
+  ... |>
   rename(...)
 ```
 
@@ -755,7 +755,7 @@ Awesome! Now let's graph the draws from the posterior. First, start a pipe with 
 
 
 ```{r courage-7-hint-1, eval = FALSE}
-ppd_for_p %>%
+ppd_for_p |>
   ggplot(aes(x = ...)) + 
   geom_histogram
 ```
@@ -864,7 +864,7 @@ The two functions to predict future outcomes in **rstanarm** are `posterior_epre
 First let's use `posterior_predict()`. 
 
 ```{r}
-ppd_reds_in_20 %>% 
+ppd_reds_in_20 |> 
   ggplot(aes(x = total)) +
     geom_histogram(aes(y = after_stat(count/sum(count))),
                    bins = 50) +
@@ -884,10 +884,10 @@ Next `posterior_epred()`.
 ```{r}
 # Create posterior_epred() model
 posterior_epred(fit_1, 
-  newdata = tibble(constant = rep(1, 20))) %>% 
-  as_tibble() %>% 
-  mutate(total = rowSums(across(`1`:`20`))) %>% 
-  select(total) %>% 
+  newdata = tibble(constant = rep(1, 20))) |> 
+  as_tibble() |> 
+  mutate(total = rowSums(across(`1`:`20`))) |> 
+  select(total) |> 
 #Graph it
   ggplot(aes(x = total)) +
     geom_histogram(aes(y = after_stat(count/sum(count))),
@@ -947,7 +947,7 @@ Copy your code from above and pipe on `as_tibble()`. Then type `ppd_reds_in_20` 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r temperance-3-hint-1, eval = FALSE}
-... %>%
+... |>
   ...
 ```
 
@@ -966,8 +966,8 @@ Let's find the total number of red beads drawn. Copy your code from above and cr
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r temperance-4-hint-1, eval = FALSE}
-... %>%
-  mutate(total = ...) %>%
+... |>
+  mutate(total = ...) |>
   select(...)
 ```
 
@@ -1013,19 +1013,19 @@ Let's visualize this graphically. To do so, first and add a new column called `a
 
 ```{r temperance-6, exercise = TRUE}
 ppd_reds_in_20 <- posterior_predict(fit_1, 
-                  newdata = tibble(constant = rep(1, 20))) %>% 
-  as_tibble() %>% 
-  mutate(total = rowSums(across(`1`:`20`))) %>% 
+                  newdata = tibble(constant = rep(1, 20))) |> 
+  as_tibble() |> 
+  mutate(total = rowSums(across(`1`:`20`))) |> 
   select(total)
 ```
 
 ```{r temperance-6-hint-1, eval = FALSE}
-... %>%
+... |>
   mutate(above_eight = ...)
 ```
 
 ```{r temperance-6-hint-2, eval = FALSE}
-... %>%
+... |>
   mutate(above_eight = ifelse(..., ..., ...))
 ```
 
@@ -1038,7 +1038,7 @@ Awesome! Now let's graph our distribution. Start a new pipe with `ppd_reds_in_20
 ```
 
 ```{r temperance-7-hint-1, eval = FALSE}
-prob_dist %>%
+prob_dist |>
   ggplot(aes(x = ..., fill = ...)) + 
   geom_histogram()
 ```
@@ -1117,7 +1117,7 @@ To finish, use `labs()` to give your graph the appropriate title, subtitle, and 
 Reminder: Your plot should look something like this:
 
 ```{r}
-ppd_reds_in_20   %>% 
+ppd_reds_in_20   |> 
   
   # Set fill as above_eight. 
   

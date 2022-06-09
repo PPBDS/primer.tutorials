@@ -19,10 +19,10 @@ cook_map <- get_acs(geography = "tract",
                     geometry = TRUE,
                     summary_var = "B02001_001")
 
-cook_map_clean <- cook_map %>%
+cook_map_clean <- cook_map |>
   mutate(Percent = 100 * (estimate / summary_est))
 
-cook_stores_map <- cook_map_clean %>%
+cook_stores_map <- cook_map_clean |>
   ggplot(aes(fill = Percent, color = Percent)) +
   geom_sf() +
   scale_fill_viridis_c(direction = -1) +

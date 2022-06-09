@@ -15,8 +15,8 @@ races_data <- get_acs(geography = "tract",
                  geometry = TRUE)
 
 # Creates map using data, adding a column for the percentage along the way.
-races_map <- races_data  %>%
-                 mutate(Percent = 100 * (estimate / summary_est)) %>%
+races_map <- races_data  |>
+                 mutate(Percent = 100 * (estimate / summary_est)) |>
                  ggplot(aes(fill = Percent)) +
                  geom_sf(size = 0.003) +
                  scale_fill_viridis_c(direction = -1, option = "inferno") +
