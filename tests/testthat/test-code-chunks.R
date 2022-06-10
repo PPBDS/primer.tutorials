@@ -15,9 +15,9 @@ for(i in tutorial_paths){
   lines <- readLines(i)
   labels <- lines[grepl("^```\\{", lines)]
 
-  # Gets the labels that don't have r at the beginning.
+  # Gets the labels that don't have r or html at the beginning.
 
-  no_r_labels <- labels[grepl("```\\{[^r]", labels)]
+  no_r_labels <- labels[grepl("```\\{[^(r|html)]", labels)]
 
   if(length(no_r_labels) > 0){
     stop("From test-code-chunks.R. Missing `r` at beginning of code chunk labels: ",
