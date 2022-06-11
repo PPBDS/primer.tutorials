@@ -15,7 +15,8 @@ for(i in tutorial_paths){
   lines <- readLines(i)
   labels <- lines[grepl("^```\\{", lines)]
 
-  # Gets the labels that don't have r or html at the beginning.
+  # Gets the labels that don't have r or =html at the beginning.
+  # =html tag is used to render gist in tutorials (use case: rstudio and friends).
 
   no_r_labels <- labels[grepl("```\\{r|^=html", labels)]
 
