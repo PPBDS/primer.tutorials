@@ -13,12 +13,12 @@ for(i in tutorial_paths){
   # chunk in the file.
 
   lines <- readLines(i)
-  labels <- lines[grepl("^```\\{", lines)]
+  labels <- lines[grepl("^```\\{.*\\}", lines)]
 
   # Gets the labels that don't have r or =html at the beginning.
   # =html tag is used to render gist in tutorials (use case: rstudio and friends).
 
-  no_r_labels <- labels[grepl("```\\{r|^=html", labels)]
+  no_r_labels <- labels[!grepl("```\\{(r|=html)[ ,\\}].*", labels)]
 
   if(length(no_r_labels) > 0){
     stop("From test-code-chunks.R. Missing `r` at beginning of code chunk labels: ",
