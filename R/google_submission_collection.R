@@ -32,7 +32,7 @@ google_submission_collection <- function(key,
 
   message("Accessing Gmail")
 
-  rds_paths <- gmail_access(gmail.filter, key, secret)
+  rds_paths <- gmail_access(gmail.filter, tutorial_id, key, secret)
 
   message("Finished downloading files from Gmail")
 

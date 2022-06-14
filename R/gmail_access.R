@@ -7,7 +7,7 @@
 #' @return rds_paths paths of locally saved rds files from gmail
 #' @export
 
-gmail_access <- function(query, key, secret){
+gmail_access <- function(query, tut_id, key, secret){
 
   # In order to get the full Gmail authentication needed to read emails and
   # download attachments, we have to manually configure and call authentication
@@ -47,6 +47,10 @@ gmail_access <- function(query, key, secret){
       }
 
       if (!stringr::str_detect(attached$filename[[1]], "\\.rds$")){
+        next
+      }
+      
+      if (!stringr::str_detect(attached$filename[[1]], tut_id)){
         next
       }
 
