@@ -4,10 +4,12 @@
 \alias{gmail_access}
 \title{Gmail Access and Submission Processing}
 \usage{
-gmail_access(query, key, secret)
+gmail_access(query, tut_id, key, secret)
 }
 \arguments{
 \item{query}{used to filter mails to find submissions}
+
+\item{tut_id}{tutorial id for filtering submissions}
 
 \item{key}{client id obtained from oauth credentials}
 

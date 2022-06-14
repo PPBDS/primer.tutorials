@@ -1,6 +1,7 @@
 #' Gmail Access and Submission Processing
 #'
 #' @param query used to filter mails to find submissions
+#' @param tut_id tutorial id for filtering submissions
 #' @param key client id obtained from oauth credentials
 #' @param secret client secret obtained from oauth credentials
 #'
