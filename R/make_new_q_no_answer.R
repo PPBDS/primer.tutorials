@@ -16,6 +16,7 @@
 #' Keyboard shortcut should be Cmd + SHIFT + E (MAC)
 #'
 #' @return question skeleton with appropriate labels and numbers
+#' 
 make_new_q_no_answer <- function(){
 
   # Steps:
@@ -90,7 +91,7 @@ make_new_q_no_answer <- function(){
   # inserting the appropriate label
   # and exercise number at the right places
 
-  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-%s}\nquestion_text(\n\t\"prompt here\",\n\tanswer(NULL, correct = TRUE),\n\tallow_retry = TRUE,\n\ttry_again_button = \"Text for button\",\n\tincorrect = NULL)\n```\n\n###\n\n",
+  new_exercise <- sprintf("### Exercise %s\n\n\n```{r %s-%s}\nquestion_text(NULL,\n\tanswer(NULL, correct = TRUE),\n\tallow_retry = TRUE,\n\ttry_again_button = \"Edit Answer\",\n\tincorrect = NULL,\n\trows = 3)\n```\n\n###\n\n",
                           exercise_number,
                           section_id,
                           exercise_number)
