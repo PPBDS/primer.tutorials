@@ -29,6 +29,8 @@ library(leaflet)
 library(ggplot2)
 library(patchwork)
 library(glue)
+library(idbr)
+library(ggiraph)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local",
@@ -108,25 +110,16 @@ pal <- colorNumeric(
 
 # Center the tutorial around this book: https://walker-data.com/census-r/index.html
 
+## Needed for chapter 12
 
-# This is all of the data that the Census Key is needed for.
+fertility_data <- get_idb(
+  country = "all",
+  year = 2021,
+  variables = "tfr",
+  geometry = TRUE,
+) 
 
-# rural <- get_decennial(geography = "state",
-#                        variables = c("P001001", "P002005"),
-#                        year = 2010,
-#                        output = "wide")
-# write_rds(rural, "data/05-census-rural.rds")
-
-rural <- read_rds("data/rural.rds")
-
-# il_pums <- get_pums(variables = c("PUMA", "FINCP"),
-#                     state     = "Illinois",
-#                     recode    = TRUE,
-#                     survey    = "acs1",
-#                     year      = 2019)
-# write_rds(il_pums, "data/05-census-il-pums.rds")
-
-il_pums <- read_rds("data/il-pums.rds")
+fertility_data$tooltip <- paste0(fertility_data$name, ": ",             round(fertility_data$tfr, 2))
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -135,9 +128,9 @@ il_pums <- read_rds("data/il-pums.rds")
 ```{r info-section, child = "../../child_documents/info_section.Rmd"}
 ```
 
-<!-- Decide what to keep and what to delete. No more just-commented-out sections. -->
+<!-- Decide what to keep and what to delete. No more just-commented-out sections. SG: Done-->
 
-<!-- Move things around. What makes sense? What is balanced? -->
+<!-- Move things around. What makes sense? What is balanced? SG: Done-->
 
 
 ## Introduction
@@ -639,12 +632,11 @@ Then in your console, run `options("tigris_use_cache")`. Copy and paste the comm
 
 ```{r census-geographic-da-3}
 question_text(NULL,
-	message = "answer here",
-	answer(NULL,
-	correct = TRUE),
-	allow_retry = FALSE,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 6)
+	rows = 3)
 ```
 
 ### 
@@ -1738,1134 +1730,611 @@ You should now have a basic sense of how to create interactive graphs in multipl
 
 There are  alternate ways to create interactive graphs that you can check out [here](https://walker-data.com/census-r/mapping-census-data-with-r.html#interactive-mapping)
 
+## Dealing with big data
+Instead of a census tract map for just one city, let’s do a “big data” project involving every census track in the country, plotting the percentage of people who are two or more races.  
 
-<!-- ## Graphing Census data -->
+Let's try to recreate this map:
 
-<!-- ###  -->
-
-<!-- Now that we've successfully accessed a variable name and the information contained within it, let's try graphing the ratio of rural population to the actual population for every state. -->
-
-<!-- ### Exercise 1 -->
-
-<!-- First, let's try to access the Decennial Census. The Decennial Census is conducted every 10 years and is the survey that the Census Bureau was established for in the first place. -->
-
-<!-- ###  -->
-
-<!-- Run the `load_variables()` function, setting the `year` argument to `2010` and the `dataset` argument to `"sf1"`. -->
-
-<!-- ```{r graphing-census-data-1, exercise = TRUE} -->
-
-<!-- ``` -->
-
-<!-- ```{r graphing-census-data-1-hint-1, eval = FALSE} -->
-<!-- load_variables(year    = ..., -->
-<!--                dataset = ...) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- This returns all of the variables that the Decennial Census uses. The `"sf1"` dataset contains the summary files for the Decennial Census, so we can look at it in order to see all of the variables used by the Census Bureau. -->
-
-<!-- ### Exercise 2 -->
-
-<!-- This returned a lot of information, but it's a little harder to find what we actually need. In this case, we need to find the actual population variable and the rural population so that we can determine the final ratio. -->
-
-<!-- ###  -->
-
-<!-- We can do this by using a standard `filter()` command like we did with tidyverse.  -->
-
-<!-- ###  -->
-
-<!-- Pipe the `load_variables()` function into a `filter()` command that filters the `concept` so that it equals `"URBAN AND RURAL"`. -->
-
-<!-- ```{r graphing-census-data-2, exercise = TRUE} -->
-
-<!-- ``` -->
-
-<!-- <button onclick = "transfer_code(this)">Copy previous code</button> -->
-
-<!-- ```{r graphing-census-data-2-hint-1, eval = FALSE} -->
-<!-- load_variables(year    = ..., -->
-<!--                dataset = ...) |> -->
-<!--   filter(concept == ... & stringr::str_detect(..., ...)) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- This filters the variables so that it only has data about the urban and rural populations, but it's absolutely massive and contains almost 9,000 variables, almost none of which are actually intelligible. -->
-
-<!-- ### Exercise 3 -->
-
-<!-- Let's filter out the variables so that they're only part of the "P" group and don't contain any unnecessary information. -->
-
-<!-- ###  -->
-
-<!-- Continue the pipe and use the `filter()` command to filter the `name` column so that it only displays entries containing the string `"P"` using `"string::str_detect()"`. -->
-
-<!-- ```{r graphing-census-data-3, exercise = TRUE} -->
-
-<!-- ``` -->
-
-<!-- <button onclick = "transfer_code(this)">Copy previous code</button> -->
-
-<!-- ```{r graphing-census-data-3-hint-1, eval = FALSE} -->
-<!-- load_variables(year    = ..., -->
-<!--                dataset = ...) |> -->
-<!--   filter(concept == ...) |> -->
-<!--   filter(stringr::str_detect(name, ...)) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- The reason we chose the `"P"` variable group is because it also contains race data, making it useful later on in this tutorial. If you also wanted to find household data, you can use the `"H"` group. If you want to find information about the different variables and their groups, please visit [the Census API documentation](https://api.census.gov/data/2010/dec/sf1/variables.html). -->
-
-<!-- ### Exercise 4 -->
-
-<!-- Now that we have our variable names, let's actually load in our data. We can do this using the `get_decennial()` function, which is very similar to the `get_acs()` function that we used earlier. -->
-
-<!-- ###  -->
-
-<!-- This time, we need to get data from 2 variables: The total population ("P001001") and the rural population ("P002005").  -->
-
-<!-- ###  -->
-
-<!-- Run the `get_decennial()` function, setting the `geography` argument to `"state"`, the `year` argument to `2010`, the `variables` argument to a vector containing these two variable IDs, and the `output` argument to `"wide"`.  -->
-
-<!-- ```{r graphing-census-data-4, exercise = TRUE} -->
-
-<!-- ``` -->
-
-<!-- ```{r graphing-census-data-4-hint-1, eval = FALSE} -->
-<!-- get_decennial(geography = ..., -->
-<!--               variables = c(..., ...), -->
-<!--               year      = ...) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- This gets all of the 2010 data from the P001001 and P002005 variables and their value for each state. -->
-
-<!-- ### Exercise 5 -->
-
-<!-- The thing is, this is really unhelpful! The variable names are stored in a column next to their values rather than in their own columns, making it really hard to just access one value without breaking your back. -->
-
-<!-- ###  -->
-
-<!-- Luckily, there's an easy way to fix this. Repeat the same code as before, but this time setting the `output` argument to `"wide"`. -->
-
-<!-- ```{r graphing-census-data-5, exercise = TRUE} -->
-
-<!-- ``` -->
-
-<!-- <button onclick = "transfer_code(this)">Copy previous code</button> -->
-
-<!-- ```{r graphing-census-data-5-hint-1, eval = FALSE} -->
-<!-- get_decennial(geography = ..., -->
-<!--               variables = c(..., ...), -->
-<!--               year      = ..., -->
-<!--               output    = "wide") -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- By setting the `output` argument to wide, we make the variables their own columns, much like the `pivot_wider()` function. This puts each variable into their own column, making it much easier to access each variable value individually. -->
-
-<!-- ### Exercise 6 -->
-
-<!-- Let's create the following plot using this data. -->
-
-<!-- ```{r} -->
-<!-- # Including this in the tutorial instead of in the setup chunk because the -->
-<!-- # students aren't supposed to be able to access it. -->
-
-<!-- rural_graph <- rural |> -->
-<!--                  mutate(prop_rural = P002005/P001001) |>  -->
-<!--                  ggplot(aes(x = prop_rural, y = fct_reorder(NAME, prop_rural))) + -->
-<!--                    geom_point() + -->
-<!--                    labs(title    = "Rural Population in US States in 2010", -->
-<!--                         subtitle = "Maine and Vermont are the most rural states", -->
-<!--                         caption  = "Source: US Census", -->
-<!--                         x        = "Rural Population Proportion", -->
-<!--                         y        = NULL) + -->
-<!--                    theme(axis.text.y = element_text(size = 5)) -->
-
-<!-- rural_graph -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- Save the previous output to a variable named `rural` so that we can start out graph. -->
-
-
-<!-- ```{r graphing-census-data-6, exercise = TRUE} -->
-
-<!-- ``` -->
-
-<!-- <button onclick = "transfer_code(this)">Copy previous code</button> -->
-
-<!-- ```{r graphing-census-data-6-hint-1, eval = FALSE} -->
-<!-- rural <- ... -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- We'll be using this tibble to create a graph and save our data. -->
-
-<!-- ### Exercise 7 -->
-
-<!-- First we need to get the proportion of the rural population: the x axis for our graph. -->
-
-<!-- ###  -->
-
-<!-- Start a new pipe using `rural` and, using `mutate()`, add a column named `prop_rural` which equals `P002005` divided by `P001001`. -->
-
-<!-- ```{r graphing-census-data-7, exercise = TRUE} -->
-
-<!-- ``` -->
-
-<!-- ```{r graphing-census-data-7-hint-1, eval = FALSE} -->
-<!-- rural |> -->
-<!--   mutate(prop_rural = P002005 / P001001) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- Remember that the P002005 variable represents the population that lives in rural areas while the P001001 variable represents the total population in a state. This way, we can get the proportion of the rural population with ease. -->
-
-<!-- ### Exercise 8 -->
-
-<!-- Let's start our graph. First, we have to map out our axes to the correct data. -->
-
-<!-- ###  -->
-
-<!-- Continue the pipe, adding `ggplot()` and, within `aes()`, setting `x` equal to to `prop_rural` and the `y` argument to `NAME`. -->
-
-<!-- ```{r graphing-census-data-8, exercise = TRUE} -->
-
-<!-- ``` -->
-
-<!-- <button onclick = "transfer_code(this)">Copy previous code</button> -->
-
-<!-- ```{r graphing-census-data-8-hint-1, eval = FALSE} -->
-<!-- ... |> -->
-<!--   ggplot(aes(x = ..., y = ...)) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- While this does technically graph our data, it doesn't show anything since we didn't tell it how we wanted to structure our graph. -->
-
-<!-- ### Exercise 9 -->
-
-<!-- Add a `geom_point()` layer to the pipe. -->
-
-<!-- ```{r graphing-census-data-9, exercise = TRUE} -->
-
-<!-- ``` -->
-
-<!-- <button onclick = "transfer_code(this)">Copy previous code</button> -->
-
-<!-- ```{r graphing-census-data-9-hint-1, eval = FALSE} -->
-<!-- ... |> -->
-<!--   ggplot(aes(x = ..., y = ...)) + -->
-<!--     geom_point() -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- This should show all of the states and their rural population proportion in alphabetical order. However, that's not very helpful for actually finding any trends in the data. -->
-
-<!-- ### Exercise 10 -->
-
-<!-- Let's sort the states by their rural population. Change the `y` argument to reorder the names based on the rural population ratio. -->
-
-<!-- ```{r graphing-census-data-10, exercise = TRUE} -->
-
-<!-- ``` -->
-
-<!-- <button onclick = "transfer_code(this)">Copy previous code</button> -->
-
-<!-- ```{r graphing-census-data-10-hint-1, eval = FALSE} -->
-<!-- ... |> -->
-<!--   ggplot(aes(x = ..., y = fct_reorder(..., ...))) + -->
-<!--     geom_point() -->
-<!-- ``` -->
-
-<!-- ### Exercise 11 -->
-
-<!-- Now let's add the labels to the graph. -->
-
-<!-- As a reminder, here's what the graph should look like: -->
-
-<!-- ```{r} -->
-<!-- rural_graph -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- Additionally, continue the pipe and add the function `theme(axis.text.y = element_text(size = 5))` in order to shrink the size of the labels and let them all fit onto the graph. -->
-
-<!-- ###  -->
-
-<!-- ```{r graphing-census-data-11, exercise = TRUE} -->
-
-<!-- ``` -->
-
-<!-- <button onclick = "transfer_code(this)">Copy previous code</button> -->
-
-<!-- ```{r graphing-census-data-11-hint-1, eval = FALSE} -->
-<!-- ... + -->
-<!--   labs(title    = ..., -->
-<!--        subtitle = ..., -->
-<!--        caption  = ..., -->
-<!--        x        = ..., -->
-<!--        y        = ...) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- Now that we've looked at American Community Survey and Decennial Census data, let's look at PUMS data. -->
-
-## PUMS data
-### 
-
-**P**ublic **U**se **M**icrodata **S**amples, or **PUMS** data, contains advanced census data on individual people. While it only contains data for about 1% of the US, it's extremely deep and lets you do a lot of cool things.
+```{r}
+include_graphics("images/races-map.png")
+```
 
 ### Exercise 1
 
-While this may seem intimidating, PUMS is largely the same as the previous functions with a few small differences. 
+First, we need to create a new R Markdown file to hold our map.
 
 ### 
 
-Run the `glimpse()` function on the dataset `pums_variables` to see what each of the variables represents.
+Create a new R Markdown file titled `tworaces.Rmd` in your regular R project folder and delete all of the text except for the setup chunk and the YAML header. Then, load `tidyverse` and `tidycensus`.
 
-```{r pums-data-1, exercise = TRUE}
+### 
 
-```
+Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below.
 
-```{r pums-data-1-hint-1, eval = FALSE}
-pums_variables
+```{r dealing-with-big-dat-1}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
 ```
 
 ### 
 
-The `pums_variables` dataset is automatically constructed by the **tidycensus** package and contains a large amount of information, with 31,759 different variables.
+Feel free to add some text about the map that we're producing and what's included inside it.
 
 ### Exercise 2
 
-Let's try to collect the age, sex, and income data for every single person in PUMS. The `AGEP` variable is for age, the `FINCP` variable is for income, and the `SEX` variable is the sex.
+Let's start our map by finding the correct variable in the American Community Survey.
 
 ### 
 
-We can do this by using the `get_pums()` function. Run the `get_pums()` function, setting the `variables` argument to the ones described above, `state` to your state's name, `recode` to `TRUE`, and `survey` to `"acs1"`.
+Run `load_variables(2018, "acs5") |> filter(concept == "RACE")` in the Console in order to load most of the variables relating to race.
 
-```{r pums-data-2, exercise = TRUE}
+### 
 
-```
+Type the names of the variables that refers to the total population and the variable that refers to the population that has a heritage of 2 or more races into the box below.
 
-```{r pums-data-2-hint-1, eval = FALSE}
-get_pums(variables = c(..., ..., ...),
-         state     = ...,
-         recode    = TRUE,
-         survey    = "acs1")
+```{r dealing-with-big-dat-2}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
 ```
 
 ### 
 
-If you wanted to import data from the entire United States, you can set the `state` argument to `state.name`. Keep in mind that this is all 3 million participants in the PUMS program, so it takes up a large amount of space (over 100 megabytes).
+You can determine what the variable refers to by looking at the `label` column. 
 
-The `recode` argument transforms numerical ID codes into human-readable strings, with columns like `ST` holding the FIPS code while `ST_label` has the actual name of the state.
+For example, the variable `B02001_008` has a label of `Estimate!!Total!!Two or more races`, which means that it's looking at the number of people who are made up of 2 or more races out of the total estimated population. 
+
+By contrast, the variable `B02001_001` has a label of `Estimate!!Total`, showing how it represents the total estimated population.
 
 ### Exercise 3
 
-Let's try graphing the percent of PUMS participants below the poverty line in your state.
+For this map, we want to focus on the mainland US in order to simplify things. In order to do this, we can just filter the states that aren't part of it. This is similar to the nuclear option we did earlier, but this time we're manipulating the data instead of the graph.
 
-Here's what an Illinois graph should look like.
+### 
 
-<!-- All of these hide stuff so I'm using them all. It's lazy but it works. -->
+Create a new code chunk to contain the code necessary for this function.
 
-```{r results = 'hide', warning = FALSE}
-il_graph <- il_pums |>
-              group_by(PUMA) |>
-              summarize(total_pop  = sum(PWGTP),
-                        pct_income = sum(PWGTP[FINCP < 12880]) / total_pop,
-                        .groups    = "drop") |>
-              ggplot(aes(x = pct_income, y = fct_reorder(PUMA, pct_income))) +
-              geom_point() +
-              labs(title    = "Poverty in Illinois PUMA Zones in 2019",
-                   subtitle = "PUMA zones in Will County and Kane County have the highest poverty rates.",
-                   x        = "Poverty Population Percentage",
-                   y        = "PUMA Zone Code") +
-              theme(axis.text.y = element_text(size = 3))
+Then, create a new variable called `continental` that contains the value `state.name[! state.name %in% c("Alaska", "Hawaii")]`.
 
-il_graph
+### 
+
+Run `readLines("tworaces.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-3}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
 ```
 
 ### 
 
-First we need to load our data. Run `get_pums()`, setting the `variables` argument to `"PUMA"` and `"FINCP"`, the `state` to your state's name, `recode` to `TRUE`, the `survey` to `"acs1"`, and the year to 2019. Save this to the `st_pums` variable.
-
-```{r pums-data-3, exercise = TRUE}
-
-```
-
-```{r pums-data-3-hint-1, eval = FALSE}
-st_pums <- get_pums(variables = c(..., ...),
-                    state     = ...,
-                    recode    = TRUE,
-                    survey    = "acs1",
-                    year      = ...)
-```
+The `state.name` variable is automatically installed in R, and it includes the name of every US state. In this case, we're filtering out Alaska and Hawaii so that they aren't included in our search. 
 
 ### Exercise 4
 
-Second, we need to filter and group the different people by their PUMA zones so that we can talk about the things done over the entire population.
+Now that we've filtered the data, let's try to download it from the Census onto our computers.
+
+Make sure to do any filters **before** you download any data so that you aren't pulling too much data onto your computer and taking too much time. 
+
+This is especially important when you're working with highly detailed data like this, where one state could have hundreds of rows.
 
 ### 
 
-Start a new pipe with `st_pums` and group it by the `PUMA` column.
 
-```{r pums-data-4, exercise = TRUE}
+Create `get_acs()` command using the `continental` vector we created earlier as the `state` and the Census variable that described 2 races as the `variables` argument. Additionally, since we're looking at the entire country, remove the `county` argument. Save this to a variable named `races`.
 
+### 
+
+Run `readLines("tworaces.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-4}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
+### 
 
-```{r pums-data-4-hint-1, eval = FALSE}
-st_pums |>
-  group_by(PUMA)
-```
+And here we encounter one of the main problems in dealing with big data: **it takes a massive amount of time**. Unless you're directly plugged into a cell tower, you probably took at least a couple of seconds to download all 87.3 MB of data onto your computer. 
+
+This is why summary statistics are important. Rather than downloading all of the data for every census tract and then totaling it, it's much better to download the data for every state if that's what you need to do. In general, try to look for summary data first rather than finding very specific data about very specific cases.
 
 ### Exercise 5
 
-Now let's use those groups and summarize the entire population by their income. 
+Let's create a graph. We must't change the information beforehand Let's implement some fixes.
 
 ### 
 
-Continue the pipe with the `summarize()` function, creating a column named `total_pop` that contains the sum of `PWGTP`.
+Create a pipe off of `races` and create a `Percent` column that is 100 times the ratio between the `estimate` and `summary_est` columns.
 
-```{r pums-data-5, exercise = TRUE}
+### 
 
-```
+Run `readLines("tworaces.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r pums-data-5-hint-1, eval = FALSE}
-... |>
-  summarize(total_pop = sum(...))
+```{r dealing-with-big-dat-5}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
 ```
 
 ### 
 
-The `PWGTP` column is the number of people contained within that sample, so if you total all of the `PWGTP` column then you can get the total population within the study.
+Much like before, this changes the data into a percentage that lets us clearly distinguish between the different data points.
 
 ### Exercise 6
 
-We just totaled the population, but now we need to add the income information. 
+Continue the pipe and create a map using the `ggplot()` and `geom_sf()` functions. Map the `fill` argument to the `Percent` column that we created before.
 
 ### 
 
-Within the `summarize()` function, add a new column called `pct_income`. This column should include the sum of all the elements of `PWGTP` that have a `FINCP` less than `12880`, then divide it by the total population.
+Run `readLines("tworaces.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
 
-```{r pums-data-6, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r pums-data-6-hint-1, eval = FALSE}
-... |>
-  summarize(total_pop  = sum(...),
-            pct_income = sum(PWGTP[... < ...]) / ...)
+```{r dealing-with-big-dat-6}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
 ```
 
 ### 
 
-This gets the percentage of people below the poverty line. It's also advisable to drop the groups after the `summarize()` in order to avoid conflicts later down the road.
+Now we can clearly distinguish between the areas, but it's very hard to distinguish between the different census tracts.
 
 ### Exercise 7
 
-Continue the pipe with a `ggplot()`, mapping the `x` to `pct_income` and the `y` to `PUMA`. Then add a `geom_point()` layer in order to display the point graph.
+Within the `geom_sf()` function, set the `size` argument to `0.003`.
 
-```{r pums-data-7, exercise = TRUE}
+### 
 
+Run `readLines("tworaces.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-7}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
+### 
 
-```{r pums-data-7-hint-1, eval = FALSE}
-... |>
-  ggplot(aes(x = ..., y = ...)) +
-  geom_point()
-```
+By setting size to 0.003, we can create thin outlines around our census tracts. Any larger and these outlines would make it hard to see our tracts.
 
 ### Exercise 8
 
-Let's sort the zones by their poverty rates. Change the `y` argument to reorder the names based on the rural population ratio using `fct_reorder()`.
+Now, continue the pipe and add the `scale_fill_viridis_c()` function. Invert the colors using the `direction` argument and set the `option` to `"inferno"`.
 
-```{r pums-data-8, exercise = TRUE}
+### 
+
+Run `readLines("tworaces.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-8}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+The `inferno` option sets the color palette to have smaller percentages be lighter while higher percentages are darker. This makes it easy for anyone to understand your graph, even if they're colorblind.
+
+### Exercise 9
+
+Lastly, we need to clean up our map and make it understandable.
+
+Remember that our final map is supposed to look like this:
+
+```{r}
+include_graphics("images/races-map.png")
+```
+
+### 
+
+Set the labels to what's seen in the graph above and set the theme to `theme_void()`.
+
+### 
+
+Run `readLines("tworaces.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-9}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+You may have noticed how applying `theme_void()` gets rid of the x and y axes. This is especially important for maps because the x and y axes represent latitude and longitude lines, which aren't very useful when you're trying to create infographics and don't need the exact coordinates of a location.
+
+### Exercise 10
+
+The problem is, that graph took forever to load! Waiting for 10 minutes just to load a small website with a couple of graphics is going to drive anyone insane.
+
+### 
+
+That's why we need to save our graph to an RDS file. Save your graph to a variable, then write that variable to an RDS file named `races_map.rds` using the function `write_rds()`.
+
+### 
+
+Run `list.files()` in the Console to list all of the files in your project. Copy and paste the output into the space below.
+
+```{r dealing-with-big-dat-10}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+This saves our map as an RDS file for future use. Keep in mind that RDS files are unique to R and can't be distributed to other people. If you want to save the graph and send it to somebody else, try saving it as an image using the `ggsave()` function.
+
+### Exercise 11
+
+While we did save our R object, we never actually use it in our website.
+
+### 
+
+Start a new code chunk that just reads the file `races_map.rds` using the `read_rds()` function. Make sure to comment out the previous code so that it doesn't run.
+
+```{r dealing-with-big-dat-11}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+If you want to learn more about RDS files, please read Chapter 3 of the Primer.
+
+### 
+
+
+## International data
+
+In this section we are going to learn how to work with and graph/map census data about the world! Let's get started. 
+
+###
+
+First make sure you have your Census API Key in your .Renviron file from the first Census tutorial. If not, follow those steps again. 
+
+### Exercise 1
+
+Load the `idbr` package. On the next line, run `get_idb()` with `country` set to `"Nigeria"`, `variables"` to `"pop"`, and `year` to `1990:2100`.
+
+```{r international-data-1, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r pums-data-8-hint-1, eval = FALSE}
-... |>
-  ggplot(aes(x = ..., y = fct_reorder(..., ...))) +
-    geom_point()
+```{r international-data-1-hint, eval = FALSE}
+library(...)
+get_idb(country = "...",
+        variables = "...",
+        year = 1990:2100)
 ```
 
-<!-- ### Exercise 9 -->
+###
 
-<!-- Now let's add the labels to the graph. -->
+Notice how we can not only use historical data, but also projected data for the future. 
 
-<!-- As a reminder, here's what the graph should look like: -->
+### Exercise 2
 
+Let's make a plot. Pipe this into `ggplot()` setting `x` to `year` and `y` to `pop`. Also add the `geom_line()` layer setting `color` to `"darkgreen"`. 
 
-<!-- ```{r} -->
-<!-- rural_graph -->
-<!-- ``` -->
+```{r international-data-2, exercise = TRUE}
 
+```
 
-<!-- Make sure to change the labels for your state's graph. -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- ###  -->
+```{r international-data-2-hint, eval = FALSE}
+... |> 
+  ggplot(mapping = aes(x = ..., y = ...)) + 
+  geom_line(color = "...")
+```
 
-<!-- Additionally, continue the pipe and add the function `theme(axis.text.y = element_text(size = 3))` in order to shrink the size of the labels and let them all fit onto the graph. -->
+###
 
-<!-- ###  -->
+Let's finish this graph. 
 
-<!-- ```{r pums-data-9, exercise = TRUE} -->
+### Exercise 3
 
-<!-- ``` -->
+Add the `theme_minimal()` layer and the `scale_y_continuous()` layer setting `labels` to `scales::label_number_si()`. 
 
-<!-- <button onclick = "transfer_code(this)">Copy previous code</button> -->
+```{r international-data-3, exercise = TRUE}
 
-<!-- ```{r pums-data-9-hint-1, eval = FALSE} -->
-<!-- ... + -->
-<!--   labs(title    = ..., -->
-<!--        subtitle = ..., -->
-<!--        caption  = ..., -->
-<!--        x        = ..., -->
-<!--        y        = ...) -->
-<!-- ``` -->
+```
 
-<!-- ###  -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- If you want to see what PUMA zones correlate to what counties, you can visit the [Census Bureau documentation](https://www.census.gov/geographies/reference-maps/2010/geo/2010-pumas.html). -->
+```{r international-data-3-hint, eval = FALSE}
+... +
+  theme_minimal() +
+  scale_y_continuous(... = scales::label_number_si())
+```
 
-<!-- ## IPUMS data -->
+###
 
-<!-- IPUMS, or the **I**ntegrated **P**ublic **U**se **M**icrodata **S**eries, is a great source for big data.  -->
+### Exercise 4
 
-<!-- It includes the Current Population Survey (CPS) from the U.S. Census as well as other health and housing data.  -->
+Add the appropriate labels using `labs()`.
 
-<!-- ###  -->
+```{r international-data-4, exercise = TRUE}
 
-<!-- An initial word of caution to those new to the system is that your requests are not filled immediately, so **start early!** -->
+```
 
-<!-- You may have to pause the tutorial while you wait for your account to be approved. -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- ### Exercise 1 -->
+```{r international-data-4-hint, eval = FALSE}
 
-<!-- You are going to be publishing our graph to your RPubs website, so you need to create a new GitHub repo and R project. -->
+```
 
-<!-- ###  -->
 
-<!-- Create a new GitHub repo named "ipums-graph" and link it to an RStudio project. Make sure to edit `.gitignore` to ignore the `.Rproj` file. -->
+This is what your plot should look like:
 
-<!-- ###  -->
+```{r}
+include_graphics("images/idb_plt.png")
+```
 
-<!-- Then create a new R Markdown file titled "IPUMS_Graph". Then save the file and name it "index.Rmd". -->
+###
 
-<!-- ###  -->
+Nice! We just successfully made a plot using international Census data. 
 
-<!-- Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below. -->
+Click [here](https://walker-data.com/census-r/working-with-census-data-outside-the-united-states.html#visualizing-idb-data) for more advanced plotting!
 
-<!-- ```{r ipums-data-1} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
+### Exercise 5
 
-<!-- ###  -->
+Let's learn how to map this data. Like the other "get" functions, `get_idb()` has a `geometry` argument. 
 
-<!-- This will be the file that we're coding in for the rest of this tutorial. Knit the file first to make sure that it's all up and running. -->
+###
 
-<!-- ### Exercise 2 -->
+Run `get_idb()` below setting `country` to `"all"`, `year` to `2021`, `variables` to `"tfr"`, and `geometry` to `TRUE`.
 
-<!-- Delete all of the text other than the YAML header and setup chunk in `index.Rmd`. -->
+```{r international-data-5, exercise = TRUE}
 
-<!-- ###  -->
+```
 
-<!-- Then load the packages **tidyverse**, **ggthemes**, and **ipumsr** into the setup chunk using the `library()` command. We're going to be using these packages throughout the rest of this tutorial. -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- ###  -->
+```{r international-data-5-hint, eval = FALSE}
+get_idb(country ="...",
+        year = ...,
+        variables = "...",
+        geometry = ...)
+```
 
-<!-- Run `readLines("index.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below. -->
+###
 
-<!-- ```{r ipums-data-2} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
+By importing the geometry argument, we enable ourselves to map it. 
 
-<!-- ###  -->
+### Exercise 6
 
-<!-- The **ipumsr** package is an easy way to import IPUMS data. You can learn more about it [here](https://cran.r-project.org/web/packages/ipumsr/vignettes/ipums.html). -->
+Copy/paste your code from above. Pipe your code into `ggplot()` and set `fill` to `tfr`. Additionally, add the `geom_sf()` layer.
 
-<!-- ### Exercise 3 -->
+```{r international-data-6, exercise = TRUE}
 
-<!-- Now that we have our project ready, we need to actually download our data. We'll do this by directly downloading from the IPUMS website and manually generating a request. -->
+```
 
-<!-- ###  -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- Start at the [IPUMS home page](https://ipums.org/) and select the survey you wish to explore via the 'visit site' option. -->
+```{r international-data-6-hint, eval = FALSE}
+... |> 
+  ggplot(mapping = aes(...)) +
+  geom_sf()
+```
 
-<!-- ```{r echo = FALSE, output.width = "500px"} -->
-<!-- include_graphics("images/step_1visit_site.png") -->
-<!-- ``` -->
+###
 
-<!-- ###  -->
+Our map is going to be shaded based on the `tfr` variable. 
 
-<!-- From here you will see a prompt to login or register at the very top of the widow: -->
+### Exercise 7
 
-<!-- ```{r echo = FALSE, output.width = "500px"} -->
-<!-- include_graphics("images/login_pt1_02.png") -->
-<!-- ``` -->
+Add the `theme_bw()` layer. Additionally, add the `coord_sf()` layer setting `crs` to `"ESRI:54030"`.
 
-<!-- ###  -->
+```{r international-data-7, exercise = TRUE}
 
-<!-- If you have used IPUMS before, then you may proceed to login and move on to select your data. However, if you are a new user, you will need to apply for access. The register tab will ask you for standard account creation information. -->
+```
 
-<!-- ###  -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- You should list Harvard University as your institution, undergraduate as your occupation, and statistics as your research area. Make sure to state that you are completing the Primer as part of your research statement. Otherwise just use your normal email and don't fill in the optional fields like your occupation title. -->
+```{r international-data-7-hint, eval = FALSE}
+... + 
+  theme_bw() + 
+  coord_sf(crs = "...")
+```
 
-<!-- ###  -->
+###
 
-<!-- There are a handful of data use agreements you will be required to agree to in this process which you should note specifically with regard to citations. -->
+Recall that by setting the `crs` argument, we make countries accurate relative to other countries.
 
-<!-- Once you have applied, you will need to await the confirmation of your account to log in fully. -->
+### Exercise 8
 
-<!-- ###  -->
+Finally, add the `scale_fill_viridis_c()` layer and the `labs()` layer setting `fill` to `"Total fertility rate\n(2021)"`.
 
-<!-- The official slogan of IPUMS is **Use it for GOOD -- never for EVIL** and it's even included in the terms and conditions. -->
+```{r international-data-8, exercise = TRUE}
 
-<!-- As such, we're now contractually obligated to use IPUMS for good things.   -->
-<!-- <font size = "1"> There goes my dream of being a mad (data) scientist. </font> -->
+```
 
-<!-- <!-- screw programming i should be a standup comedian. my stand up show would be a genocide --> -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- ### Exercise 4 -->
+```{r international-data-8-hint, eval = FALSE}
+... + 
+  labs(fill = "Total fertility rate\n(2021)")
+```
 
-<!-- Once you receive the email confirmation and logged in properly, you'll be able to start selecting and importing your data. -->
+###
 
-<!-- ###  -->
+Your graph should look like this: 
 
-<!-- Let's try to recreate the following graph: -->
+```{r}
+include_graphics("images/idb_map.png")
+```
 
-<!-- <!-- This is a poor imitation of the graph in the Primer, I would like the source code for it since this graph is hacky and stupid, plus I'm not sure if I used the right theme. Contacting Beau Meche about the issue. --> -->
+###
 
-<!-- ```{r out.width = "875px"} -->
-<!-- include_graphics("images/ipums_plot.png") -->
-<!-- ``` -->
+We just successfully created a map using international Census data. 
 
-<!-- ###  -->
+### Exercise 9
 
-<!-- The first option you will need to consider and specify will be the samples (see 'select samples' button), or time the period covered by your data. By default, all of the data from all possible years is selected, but that's obviously way too much data for our purposes. -->
+When making world maps, using animation or interactive functions will enhance the map greatly.
 
-<!-- ###  -->
+###
 
-<!-- We only need to read in the data for the year 2019, so change the sample to only use 2019 ACS data. -->
+We assigned the raw data we imported (in exercise 5) to `fertility_data` for you, which will be used in future exercises. Take a look at code below and run it.
 
-<!-- ```{r out.width = "875px"} -->
-<!-- include_graphics("images/sample_select.gif") -->
-<!-- ``` -->
+```{r international-data-9, exercise = TRUE}
+fertility_data$tooltip <- paste0(fertility_data$name, ": ", round(fertility_data$tfr, 2))
+```
 
-<!-- ###  -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- Keep in mind that we only want 2019 ACS data, not ACS5 data. ACS5 is a 5 year survey that includes all of the data from the past 5 years, which in this case would be 2014-2019. -->
+```{r international-data-9-hint, eval = FALSE}
 
-<!-- ### Exercise 5 -->
+```
 
-<!-- When you submit your sample, you'll be redirected to the variable selection page. -->
+###
 
-<!-- ###  -->
+We created a new `tooltip` column in our `fertility_data` object which is what will display when our mouse hovers over a country in the interactive map. It will display the country name, colon, and tfr rounded to the hundreths place. 
 
-<!-- You can see below that the household and person tabs (highlighted) will provide a drop down of common variables from this repository under the respective classifications. To add a variable to your ‘cart’ you simply select the + icon, if not available either there is a corresponding explanation or it simply isn’t available. -->
+### Exercise 10
 
-<!-- ```{r out.width = "875px"} -->
-<!-- include_graphics("images/var_selection_01.png") -->
-<!-- ``` -->
+Load the `ggiraph` package; we will use this to create an interactive map. 
 
-<!-- ###  -->
+```{r international-data-10, exercise = TRUE}
 
-<!-- You can also search for variables. In this case, we want the 'INCTOT' and 'EMPSTAT' variables to get the income of a person and their employment status. -->
+```
 
-<!-- Find those variables and add them into your cart. -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- ### Exercise 6 -->
+```{r international-data-10-hint, eval = FALSE}
+library(...)
+```
 
-<!-- Click "View Cart" to show your cart. Here, you can review and revise your selections in the cart menu prior to requesting the ‘pull.’  -->
+###
 
-<!-- ###  -->
+Most of the mapping process is the same as a static graph; the only thing we will have to change is `geom_sf()` with one more step. 
 
-<!-- Shown below is what the cart review window should show. An X indicates the existence of data in the given time period. Note that since we're only pulling from one year, we only have data for the 2019 ACS. -->
+### Exercise 11
 
-<!-- ```{r} -->
-<!-- include_graphics("images/cart_02.png") -->
-<!-- ``` -->
+Start a pipe with `fertility_data` and pipe it into `ggplot()`, setting `fill` to `tfr`. Additionally, add the `theme_bw()` layer.
 
-<!-- ###  -->
+```{r international-data-11, exercise = TRUE}
 
-<!-- The cart also has a large amount of preselected variables. These are mandatory, but they contain a large amount of information such as the year and the serial number of the data. -->
+```
 
-<!-- ### Exercise 7 -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- When you are satisfied with the sample specifications, you can proceed to the create data extract page.  -->
+```{r international-data-11-hint, eval = FALSE}
+fertilizer |> 
+  ggplot(mapping = aes(fill = ...)) +
+  theme_bw()
+```
 
-<!-- ###  -->
+###
 
-<!-- This will provide you with a handful of final options and a text window to describe the sample you’ve created. You should treat this like a commit message in GitHub - brief and meaningful. -->
+As you can see our setup is pretty similar.
 
-<!-- Look at the "ESTIMATED SIZE" field. This file is a _massive_ 287.3 MB, or about 1,673 copies of Tales of Beedle the Bard. -->
+### Exercise 12
 
-<!-- Unrecognizable references aside, this is an important fact that you should keep in mind later on. -->
+Add the `geom_sf_interactive()` layer. Inside `aes()`, set `tooltip` to `tooltip` and `data_id` to `code`. Outside the `aes()` function, set `size` to `0.1`. 
 
-<!-- ###  -->
+```{r international-data-12, exercise = TRUE}
 
-<!-- Submitting your request should automatically bring you to the request history page associated with your account. You should note that your requests will only be available for 72 hours, and you should make sure to promptly download your information upon receipt. -->
+```
 
-<!-- ```{r} -->
-<!-- include_graphics("images/request_history_01.jpg") -->
-<!-- ``` -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- ###  -->
+```{r international-data-12-hint, eval = FALSE}
+... +
+  geom_sf_interactive(aes(tooltip = tooltip, data_id = ...), size = 0.1)
+```
 
-<!-- Download the `.dat` file, the DDI Codebook, and the R Command file from the request page.  -->
+###
 
-<!-- You will need to first download the data via Download.DAT, then you will need to save the DDI and R links (via ‘save as’) in the same location as your .dat.gz file. Then relocate these files into your R project. -->
+The `geom_sf_interactive()` sets up the interactive element of the graph.
 
-<!-- ###  -->
+### Exercise 13
 
-<!-- Here's a full GIF of the process: -->
+Add the `coord_sf()`, `scale_fill_viridis_c()`, and `labs()` layers with the same arguments as before in the static graph. 
 
-<!-- ```{r out.width = "875px"} -->
-<!-- include_graphics("images/full_demo.gif") -->
-<!-- ``` -->
+```{r international-data-13, exercise = TRUE}
 
-<!-- ###  -->
+```
 
-<!-- Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below. -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- ```{r ipums-data-7} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
+```{r international-data-13-hint, eval = FALSE}
+... +
+  coord_sf(crs = "ESRI:54030") +
+  scale_fill_viridis_c() +
+  labs(fill = "...")
+```
 
-<!-- ###  -->
+###
 
-<!-- We finally have all of our files in R, but there's a few things missing before we can start. -->
+Notice that the output still isn't interactive. This is where we have to utilize the `ggiraph` package.
 
-<!-- ### Exercise 8 -->
+### Exercise 14
 
-<!-- Our data file is currently _compressed_ in a `.gz` folder, which needs to be unzipped. -->
+Copy/paste your code from above. Assign the whole pipe to a variable named `map`. Start a new line with the `girafe()` function, setting `ggobj` to `map`.
 
-<!-- ###  -->
+```{r international-data-14, exercise = TRUE}
 
-<!-- Download [7zip](https://www.7-zip.org/download.html), a free unzipping program, and unzip the `dat.gz` file. Extract all of the files from the file, then pull the file out of the resulting folder and place it into your general R project. -->
+```
 
-<!-- ###  -->
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
-<!-- Run `list.files()` in the Console to list all of the files within your project. Copy and paste the output into the space below. -->
+```{r international-data-14-hint, eval = FALSE}
+map <- ...
+girafe(ggobj = map)
+```
 
-<!-- ```{r ipums-data-8} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
+###
 
-<!-- ###  -->
+Your map looks the same as the static one, but if you hover over a country, notice that a number pulls up.
 
-<!-- A `.gz` file is a compressed folder much like a ZIP file, reducing the file size. You can learn more about `.gz` files [here](https://www.makeuseof.com/what-is-gz-file/). -->
+###
 
-<!-- This process is used by most government agencies to distribute data to researchers, with databases like [The Cancer Genome Atlas](https://portal.gdc.cancer.gov/) requiring you to download certain case data and then unzip it using 7zip. -->
+We successfully created a interactive graph with international data. 
 
-<!-- ### Exercise 9 -->
+###
 
-<!-- Now that we finally have our data downloaded, let's create our graph. -->
-
-<!-- ###  -->
-
-<!-- First, let's bring our data out of the file and into our R project. Add the line `source(usa_00001.R)` to the setup chunk of `index.Rmd`. -->
-
-<!-- ###  -->
-
-<!-- Run `readLines("index.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below. -->
-
-<!-- ```{r ipums-data-9} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- The `source()` command runs an R file at the very beginning of the R Markdown command, which is extremely useful for a case like this where we have our R code already written for us. -->
-
-<!-- When you run the `source(usa_00001.R)` command, it should load the `ddi` and `data` objects. Try running `view(data)` to see all of the data that we just imported from PUMS. It should have over 3 million rows, making it decidedly "big" data. -->
-
-<!-- ### Exercise 10 -->
-
-<!-- So let's start graphing. -->
-
-<!-- ###  -->
-
-<!-- Start a pipe with data and select the `INCTOT` and `EMPSTAT` columns. -->
-
-<!-- ###  -->
-
-<!-- Run `readLines("index.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below. -->
-
-<!-- ```{r ipums-data-10} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- These are the only columns that we need, and they're the variables that we asked for in our requests. -->
-
-<!-- ### Exercise 11 -->
-
-<!-- Now if we look closely at our `data` object, we'll see that there are a few columns with the `haven_labelled` datatype. While this is useful for other languages like Stata, it's pretty useless in R. -->
-
-<!-- ###  -->
-
-<!-- Continue the pipe and create a new column named `incstat` that contains `INCSTAT` as an integer. Then create another column named `empstat` that contains `EMPSTAT` as a factor. -->
-
-<!-- ###  -->
-
-<!-- Run `readLines("index.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below. -->
-
-<!-- ```{r ipums-data-11} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- To learn more about Haven labelled variables, please visit the [Primer](https://ppbds.github.io/primer/ipums.html#haven-labelled-variables). -->
-
-<!-- ### Exercise 12 -->
-
-<!-- Now, you may have seen that when you opened the "DDI" file from the original request link, it looked something like this: -->
-
-<!-- ```{r} -->
-<!-- include_graphics("images/xml_view.png") -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- This is because the `.xml` file contains *metadata*, or information about your imported data. And we can read through that information to find out what we need to use. For example, the metadata about the `EMPSTAT` variable looks like this: -->
-
-<!-- ```{r} -->
-<!-- include_graphics("images/variable_view.png") -->
-<!-- ``` -->
-
-<!-- We can use the categories to format our data. -->
-
-<!-- ###  -->
-
-<!-- Change the `empstat` column to replace the numbers with the strings shown above. Use the `case_when()` function to replace `0` with `"NA"`, `1` with `"Employed"`, `2` with `"Unemployed"`, and `3` with `"Not in labor force"`. -->
-
-<!-- ###  -->
-
-<!-- Run `readLines("index.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below. -->
-
-<!-- ```{r ipums-data-12} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- You can see a lot of important information about each of the different variables by reading through the `.xml` file. XML files are a type of file storage similar to HTML but more suited to data transport. You can read more about XML files [here](https://www.howtogeek.com/357092/what-is-an-xml-file-and-how-do-i-open-one/). -->
-
-<!-- ### Exercise 13 -->
-
-<!-- If we look at the very bottom of the XML file, we can see how INCTOT also has certain exceptions. Specifically, the value `9999999` means `NA`, which is pretty important for our purposes. -->
-
-<!-- ``` -->
-<!-- INCTOT Specific Variable Codes -->
-<!-- -009995 = -$9,900 (1980) -->
-<!-- -000001 = Net loss (1950) -->
-<!-- 0000000 = None -->
-<!-- 0000001 = $1 or break even (2000, 2005-onward ACS and PRCS) -->
-<!-- 9999999 = N/A -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- Mutate the `inctot` column so that the value is `NA` if it's `9999999`. Use the `na_if()` function. -->
-
-<!-- ###  -->
-
-<!-- Run `readLines("index.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below. -->
-
-<!-- ```{r ipums-data-13} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- These coding exceptions are listed throughout the XML file, so make sure you read through it whenever you have anything to change. -->
-
-<!-- ### Exercise 14 -->
-
-<!-- There's one more step before we finish wrangling our data. -->
-
-<!-- ###  -->
-
-<!-- Mutate the `inctot` column so that it's divided by 100,000. -->
-
-<!-- ###  -->
-
-<!-- Run `readLines("index.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below. -->
-
-<!-- ```{r ipums-data-14} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- This makes our income brackets much smaller and much easier to deal with, rather than the wide, spread out income ranges that make our graph extremely wide. -->
-
-<!-- ### Exercise 15 -->
-
-<!-- Continue the pipe and add the `ggplot()` function, mapping `x` to `inctot`, `y` to `..scaled..`, `fill` to `empstat`, and `color` to `empstat`. -->
-
-<!-- ###  -->
-
-<!-- Then add the `geom_density()` function, setting the `alpha` argument to `0.3` and `na.rm` to `TRUE`. -->
-
-<!-- ###  -->
-
-<!-- Run `readLines("index.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below.  -->
-
-<!-- ```{r ipums-data-15} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- This creates a graph that contains the density of each income bracket. The `..scaled..` option means that the density is scaled so that it fits within a range of 0 to 1. -->
-
-<!-- ### Exercise 16 -->
-
-<!-- Now, our graph is extremely big for what it is. -->
-
-<!-- ###  -->
-
-<!-- Limit the x axis to between 0 and 8 using the `xlim()` function. -->
-
-<!-- ###  -->
-
-<!-- Run `readLines("index.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below. -->
-
-<!-- ```{r ipums-data-16} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- This constrains the values to a reasonable limit and normalizes most of the data. -->
-
-<!-- ### Exercise 17 -->
-
-<!-- Now let's refine our y axis numbers. -->
-
-<!-- ###  -->
-
-<!-- Add the function `scale_y_continuous(labels = scales::label_number())` to your graph. -->
-
-<!-- ###  -->
-
-<!-- Run `readLines("index.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below. -->
-
-<!-- ```{r ipums-data-17} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- This formats the y axis so that it properly formats the decimals without converting it to scientific notation. -->
-
-<!-- ### Exercise 18 -->
-
-<!-- Now, if you tried to generate this graph as it is you'd notice how the legend is still kind of messed up. -->
-
-<!-- ###  -->
-
-<!-- Add the layers `scale_fill_discrete()` and `scale_color_discrete()`, setting the `name` argument to `Employment Status` in both functions. -->
-
-<!-- ###  -->
-
-<!-- Run `readLines("index.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below. -->
-
-<!-- ```{r ipums-data-18} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- We're almost done, we just need to set our themes and do the final clean up. -->
-
-<!-- ### Exercise 19 -->
-
-<!-- Let's change our labels and the theme now. -->
-
-<!-- Remember, we're trying to recreate the following graph: -->
-
-<!-- ```{r out.width = "875px"} -->
-<!-- include_graphics("images/ipums_plot.png") -->
-<!-- ``` -->
-
-<!-- The theme used is `theme_economist(dkpanel = TRUE)`. -->
-
-<!-- ###  -->
-
-<!-- Run `readLines("index.Rmd") |> tail(15)` in the Console to list the last 15 lines in `index.Rmd`. Copy and paste the output into the space below. -->
-
-<!-- ```{r ipums-data-19} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- We're finally done! Finish formatting your R Markdown file and add descriptions or headers with whatever you want to do.  -->
-
-<!-- ### Exercise 20 -->
-
-<!-- Now we need to commit and push our file. -->
-
-<!-- ```{r ipums-data-20} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- ## Publishing -->
-
-<!-- We're now going to publish our R Markdown file to RPubs and show it off to the world. -->
-
-<!-- ### Exercise 1 -->
-
-<!-- Publish your file to RPubs by knitting and clicking the "Publish" button. Paste the URL into the space below. -->
-
-<!-- ```{r publishing-1} -->
-<!-- question_text(NULL, -->
-<!-- 	message = "answer here", -->
-<!-- 	answer(NULL, -->
-<!-- 	correct = TRUE), -->
-<!-- 	allow_retry = FALSE, -->
-<!-- 	incorrect = NULL, -->
-<!-- 	rows = 6) -->
-<!-- ``` -->
-
-<!-- ###  -->
-
-<!-- Congratulations on completing this tutorial. -->
-
-<!-- ###  -->
+If you want to learn about other country-specific census databases, such as Cansensus, visit [here](https://walker-data.com/census-r/working-with-census-data-outside-the-united-states.html#country-specific-census-data-packages).
 
 ## Summary
-From this tutorial, you should have gained a basic sense of the Census API, and how to use data from the US Census to create graphs and maps. 
+From this tutorial, you should have gained a basic sense of the Census API, and how to use data from the US Census and World Census to create graphs and maps. 
 
 Check out [this](https://walker-data.com/census-r/index.html) book to see more in-depth Census information. 
 
