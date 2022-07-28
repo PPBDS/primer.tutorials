@@ -641,7 +641,7 @@ The estimate plus or minus the margin of error is known as a **confidence interv
 
 ### Exercise 2
 
-Copy/paste your code from above. Add the `moe_level` argument and set it to `99`.
+Copy/paste your code from above. Add the `moe_level` argument and set it to `95`.
 
 ```{r margin-of-error-2, exercise = TRUE}
 
@@ -672,6 +672,12 @@ Every confidence interval comes with a **confidence level**. When we import data
 Copy/paste your code from above and change the `moe_level` from `95` to `99`.
 
 ```{r margin-of-error-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-3-hint, eval = FALSE}
 get_acs(
   geography = "...",
   state = "...",
@@ -679,12 +685,6 @@ get_acs(
   year = ...,
   moe_level = 99
 )
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r margin-of-error-3-hint, eval = FALSE}
-
 ```
 
 ###
@@ -707,10 +707,6 @@ Copy/paste the code from Exercise 3 and run it without any changes.
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r margin-of-error-4-hint, eval = FALSE}
-
-```
-
 ###
 
 Let's look at the first column. The estimate is 85413,	and the margin of error is 9527.246. So the bottom bound of this interval is 85413 - 9527.246 (75,885.75) and the upper bound is 85413 + 9527.246 (94,940.25). 
@@ -724,6 +720,30 @@ You can learn more about a margin of error and some related functions [here](htt
 ### Exercise 5
 
 So now that we have an idea of what a confidence interval and a margin of error is, let's visualize it.
+
+We are going to create this graph:
+
+```{r}
+maine_income_plt <- get_acs(
+  state = "Maine",
+  geography = "county",
+  variables = c(hhincome = "B19013_001"),
+  year = 2020
+) |> 
+  mutate(NAME = str_remove(NAME, " County, Maine")) |> 
+  ggplot(aes(x = estimate, y = reorder(NAME, estimate))) + 
+  geom_point(size = 3, color = "darkgreen") +
+    geom_errorbar(aes(xmin = estimate - moe, xmax = estimate + moe)) +
+  labs(title = "Median household income", 
+       subtitle = "Counties in Maine", 
+       x = "", 
+       y = "ACS estimate") + 
+  theme_minimal(base_size = 12.5) + 
+  scale_x_continuous(labels = scales::label_dollar())
+
+maine_income_plt
+```
+
 
 ###
 
@@ -877,7 +897,7 @@ Notice the dollar signs on the x-axis now.
 Add the appropriate labels. Remember, our graph should look like this:
 
 ```{r}
-include_graphics("images/moe_plt.png")
+maine_income_plt
 ```
 
 
@@ -897,6 +917,36 @@ include_graphics("images/moe_plt.png")
 Nice! We just visualized margin of error... but at one moment in time. Let's see how we can observe it over time.
 
 ### Exercise 13
+
+We are going to create this plot:
+
+```{r}
+deschutes_value_plt <- map_dfr(years, ~{
+  get_acs(
+    geography = "county",
+    variables = "B25077_001",
+    state = "OR",
+    county = "Deschutes",
+    year = .x,
+    survey = "acs1"
+  )
+}, .id = "Year") |> 
+  ggplot(aes(x = Year, y = estimate, group = 1)) + 
+  geom_ribbon(aes(ymax = estimate + moe, ymin = estimate - moe), 
+              fill = "navy",
+              alpha = 0.4) + 
+  geom_line(color = "navy") + 
+  geom_point(color = "navy", size = 2) + 
+  theme_minimal(base_size = 12) + 
+  scale_y_continuous(labels = scales::label_dollar(scale = .001, suffix = "k")) + 
+  labs(title = "Median home value in Deschutes County, OR",
+       x = "Year",
+       y = "ACS estimate",
+       caption = "Shaded area represents margin of error around the ACS estimate")
+
+deschutes_value_plt
+```
+
 
 Create a vector named `years` that goes from `2005` through `2019`
 
@@ -1009,7 +1059,7 @@ Ok we have our data, let's plot it.
 
 ### Exercise 18
 
-Copy/paste your code from above. Pipe it into `ggplot()` setting `x` to `year`, `y` to `estimate`, and `group` to `1`.
+Copy/paste your code from above. Pipe it into `ggplot()` setting `x` to `Year`, `y` to `estimate`, and `group` to `1`.
 
 ```{r margin-of-error-18, exercise = TRUE}
 
@@ -1019,7 +1069,7 @@ Copy/paste your code from above. Pipe it into `ggplot()` setting `x` to `year`, 
 
 ```{r margin-of-error-18-hint, eval = FALSE}
 ... +
-  ggplot(aes(x = year, y = estimate, group = 1))
+  ggplot(aes(x = Year, y = estimate, group = 1))
 ```
 
 ###
@@ -1138,7 +1188,7 @@ Add the appropriate labels.
 Remember our plot should look like this:
 
 ```{r}
-include_graphics("images/moe_ot_plt.png")
+deschutes_value_plt
 ```
 
 
