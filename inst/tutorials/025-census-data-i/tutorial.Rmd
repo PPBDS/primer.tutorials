@@ -31,6 +31,7 @@ library(patchwork)
 library(glue)
 library(idbr)
 library(ggiraph)
+library(purrr)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local",
@@ -140,6 +141,11 @@ pal <- colorNumeric(
 fertility_data <- read_rds("data/fertility_data.rds")
 
 fertility_data$tooltip <- paste0(fertility_data$name, ": ",             round(fertility_data$tfr, 2))
+
+## Needed for chapter 4 - margin of error
+
+years <- 2005:2019
+
 ```
 
 ```{r copy-code-chunk, child = "../../child_documents/copy_button.Rmd"}
@@ -360,7 +366,9 @@ get_acs(geography = "...",
 
 ### 
 
-The example above fetches data on the number of residents born in Mexico by state. Notice that the tibble produced has an `estimate` and a `moe` column rather than a `value` column like the Decennial Census data. The `estimate` column is ACS's estimate, and the `moe` column is the margin of error around that estimate. 
+The example above fetches data on the number of residents born in Mexico by state. Notice that the tibble produced has an `estimate` and a `moe` column rather than a `value` column like the Decennial Census data. 
+
+**This will come back, keep it in the back of your mind.**
 
 ### Exercise 5
 
@@ -595,6 +603,609 @@ This should return a tibble with 6 columns, one of them being "variable". We can
 
 Congrats! You now have the necessary skills to pull all kinds of data from the [US Census Bureau](https://www.census.gov/).
 
+
+## Margin of error
+
+Recall that in the previous section, we said: **"This will come back, keep it in the back of your mind."** In this section, we are going to learn what a margin of error (moe) is, and how we can analyze and visualize it.
+
+### Exercise 1
+
+Run `get_acs()` below setting `geography` to `"county"`, `state` to `"Rhode Island"`, `variables` to `"B19013_001"` (median household income), and `year` to `2020`.
+
+```{r margin-of-error-1, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-1-hint, eval = FALSE}
+get_acs(
+  geography = "...",
+  state = "...",
+  variables = "B19013_001",
+  year = ...
+)
+```
+
+###
+
+Look at the `estimate` column. Unlike the Decennial Census, the American Community Survey uses samples. This means they might only ask 20 people for their household income. Based on the statistical variables taken from that sample, they can **estimate** the true **population parameter**. 
+
+Examples of a population parameter include: mean age of the US, proportion of college students in the US, etc. 
+
+###
+
+Because we are estimating, we can cast a 'safety net' per say, or something to give us a little wiggle room if we're wrong. So along with our estimate, we give ourselves a **margin of error**.
+
+The estimate plus or minus the margin of error is known as a **confidence interval**. Let's explore that. 
+
+### Exercise 2
+
+Copy/paste your code from above. Add the `moe_level` argument and set it to `95`.
+
+```{r margin-of-error-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-2-hint, eval = FALSE}
+get_acs(
+  geography = "...",
+  state = "...",
+  variables = "...",
+  year = ...,
+  moe_level = 95
+)
+```
+
+###
+
+The estimate remains constant, but the margin of error changes... why?
+
+###
+
+Every confidence interval comes with a **confidence level**. When we import data from the ACS, this level defaults to 90%, but we changed it to 95% just now.
+
+### Exercise 3
+
+Copy/paste your code from above and change the `moe_level` from `95` to `99`.
+
+```{r margin-of-error-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-3-hint, eval = FALSE}
+get_acs(
+  geography = "...",
+  state = "...",
+  variables = "...",
+  year = ...,
+  moe_level = 99
+)
+```
+
+###
+
+The `moe` column changed again.
+
+###
+
+When the confidence level is 99%, it means that 99 out of 100 times, the population parameter (in this case median household income) will fall between the confidence interval's upper bound and lower bound. 
+
+In the examples earlier, as confidence level increased, so did margin of error because if your interval is larger, it makes more sense that there is a higher chance that the true population parameter falls within it.
+
+### Exercise 4
+
+Copy/paste the code from Exercise 3 and run it without any changes.
+
+```{r margin-of-error-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+###
+
+Let's look at the first column. The estimate is 85413,	and the margin of error is 9527.246. So the bottom bound of this interval is 85413 - 9527.246 (75,885.75) and the upper bound is 85413 + 9527.246 (94,940.25). 
+
+The final interval is (75.885.75, 94,940.25) which is saying that the mean household income for Bristol County is between \$75.885.75 and \$94,940.25.
+
+###
+
+You can learn more about a margin of error and some related functions [here](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#handling-margins-of-error-in-the-american-community-survey-with-tidycensus).
+
+### Exercise 5
+
+So now that we have an idea of what a confidence interval and a margin of error is, let's visualize it.
+
+We are going to create this graph:
+
+```{r}
+maine_income_plt <- get_acs(
+  state = "Maine",
+  geography = "county",
+  variables = c(hhincome = "B19013_001"),
+  year = 2020
+) |> 
+  mutate(NAME = str_remove(NAME, " County, Maine")) |> 
+  ggplot(aes(x = estimate, y = reorder(NAME, estimate))) + 
+  geom_point(size = 3, color = "darkgreen") +
+    geom_errorbar(aes(xmin = estimate - moe, xmax = estimate + moe)) +
+  labs(title = "Median household income", 
+       subtitle = "Counties in Maine", 
+       x = "", 
+       y = "ACS estimate") + 
+  theme_minimal(base_size = 12.5) + 
+  scale_x_continuous(labels = scales::label_dollar())
+
+maine_income_plt
+```
+
+
+###
+
+Run `get_acs()` below setting `state` to `"Maine"`, `geography` to `"county"`, `variables` to `c(hhincome = "B19013_001")` (remember we can rename variable names by doing it in a vector), and `year` to `2020`.
+
+```{r margin-of-error-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-5-hint, eval = FALSE}
+get_acs(state = "...",
+        geography = "...",
+        variables = c(hhincome = "..."),
+        year = ...)
+```
+
+###
+
+This gives you your data, but the `NAME` column is somewhat annoying because it includes "County" and "Maine". We already know that they are counties in Maine so let's clean it up.
+
+### Exercise 6
+
+Copy/paste your code from last exercise. Pipe it into `mutate()`. Inside `mutate()`, set the `NAME` column to `str_remove(NAME, " County, Maine")`.
+
+```{r margin-of-error-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-6-hint, eval = FALSE}
+get_acs(state = "...",
+        geography = "...",
+        variables = c(hhincome = "..."),
+        year = ...) |> 
+  mutate(NAME = str_remove(NAME, " County, Maine"))
+```
+
+###
+
+The `str_remove()` function looked at the `NAME` column (1st argument) and removed the text that was specified in the second argument. This is an extremely useful wrangling tool.
+
+### Exercise 7
+
+Copy/paste your code from above and pipe it into `ggplot()`. Set `x` to `estimate` and `y` to `reorder(NAME, estimate)`.
+
+```{r margin-of-error-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-7-hint, eval = FALSE}
+... |> 
+  ggplot(aes(x = ..., y = reorder(NAME, estimate)))
+```
+
+###
+
+By reordering the names on the y-axis based on their estimate value, we can see a clear trend line instead of a bunch of random points in random counties.
+
+### Exercise 8
+
+We can graph the actual estimate points with `geom_point()`. Add this layer setting `size` to `3` and `color` to `"darkgreen"`.
+
+```{r margin-of-error-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-8-hint, eval = FALSE}
+... +
+  geom_point(size = ..., color = "...")
+```
+
+###
+
+Now comes the new part.
+
+### Exercise 9
+
+We can error bars for the margin of error by using `geom_errorbar()`.
+
+###
+
+Add the `geom_errorbar()` layer setting `xmin` to `estimate - moe` and `xmax` to `estimate + moe`. You will need to do this inside `aes` because you are mapping it to the graph.
+
+```{r margin-of-error-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-9-hint, eval = FALSE}
+... +
+  geom_errorbar(aes(xmin = estimate - moe,
+                    xmax = estimate + moe))
+```
+
+###
+
+This added the errorbars to our graph as you can see. Let's continue customization.
+
+### Exercise 10
+
+Add the `theme_minimal()` layer setting `base_size` to `12.5`.
+
+```{r margin-of-error-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-10-hint, eval = FALSE}
+... +
+  theme_minimal(base_size = ...)
+```
+
+###
+
+Let's fix our x-axis.
+
+### Exercise 11
+
+Well, I guess you could say "make better" instead of fix. We should add dollar signs to signify that this represents money.
+
+###
+
+Add the `scale_x_continuous()` layer setting `labels` to `scales::label_dollar()`.
+
+```{r margin-of-error-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-11-hint, eval = FALSE}
+... +
+  scale_x_continuous(labels = scales::label_dollar())
+```
+
+###
+
+Notice the dollar signs on the x-axis now. 
+
+### Exercise 12
+
+Add the appropriate labels. Remember, our graph should look like this:
+
+```{r}
+maine_income_plt
+```
+
+
+```{r margin-of-error-12, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-12-hint, eval = FALSE}
+... + 
+  labs(...)
+```
+
+###
+
+Nice! We just visualized margin of error... but at one moment in time. Let's see how we can observe it over time.
+
+### Exercise 13
+
+We are going to create this plot:
+
+```{r}
+deschutes_value_plt <- map_dfr(years, ~{
+  get_acs(
+    geography = "county",
+    variables = "B25077_001",
+    state = "OR",
+    county = "Deschutes",
+    year = .x,
+    survey = "acs1"
+  )
+}, .id = "Year") |> 
+  ggplot(aes(x = Year, y = estimate, group = 1)) + 
+  geom_ribbon(aes(ymax = estimate + moe, ymin = estimate - moe), 
+              fill = "navy",
+              alpha = 0.4) + 
+  geom_line(color = "navy") + 
+  geom_point(color = "navy", size = 2) + 
+  theme_minimal(base_size = 12) + 
+  scale_y_continuous(labels = scales::label_dollar(scale = .001, suffix = "k")) + 
+  labs(title = "Median home value in Deschutes County, OR",
+       x = "Year",
+       y = "ACS estimate",
+       caption = "Shaded area represents margin of error around the ACS estimate")
+
+deschutes_value_plt
+```
+
+
+Create a vector named `years` that goes from `2005` through `2019`
+
+```{r margin-of-error-13, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-13-hint, eval = FALSE}
+years <- 2005:2019
+```
+
+###
+
+These are the years we will iterate over.
+
+### Exercise 14
+
+Run `library(purrr)` below
+
+```{r margin-of-error-14, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-14-hint, eval = FALSE}
+library(...)
+```
+
+###
+
+We will be using `map_dfr()` from the `purrr` package for this graph.
+
+### Exercise 15
+
+Run `map_dfr` below, setting the first argument to `years`. You WILL get an error.
+
+```{r margin-of-error-15, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-15-hint, eval = FALSE}
+map_dfr(years)
+```
+
+###
+
+The first argument just tells `map_dfr()` which object to iterate over.
+
+### Exercise 16
+
+Copy/paste your code from above. Your second argument should be enclosed within `~{}` (Curly brackets with a tilde in front.)
+
+Inside the curly brackets, run `get_acs()` setting `geography` to `"county"`, `variables`   to `"B25077_001"`, `state` to `"OR"`, `county` to `"Deschutes"`, `year` to `.x`, and `survey` to `"acs1"`.
+
+```{r margin-of-error-16, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-16-hint, eval = FALSE}
+map_dfr(years,  ~{
+  get_acs(
+    geography = "...",
+    variables = "...",
+    state = "...",
+    county = "...",
+    year = .x,
+    survey = "..."))
+
+```
+
+###
+
+By setting `year` to `.x`, the function iterates through our vector and grabs data from each year instead of just one. 
+
+Our data should be there, but it's confusing to know which year is which. 
+
+### Exercise 17
+
+Copy/paste your code from above. Add a third argument in `map_dfr()`. The argument is `.id`, and you should set it to `"Year"`.
+
+```{r margin-of-error-17, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-17-hint, eval = FALSE}
+map_dfr(years,  ~{
+  get_acs(geography = "...",
+    variables = "...",
+    state = "...",
+    county = "...",
+    year = .x,
+    survey = "..."),
+  .id = "Year")
+```
+
+###
+
+If you look at the data now, there should be a new `Year` column. This is what the `.id` argument does: it creates a new column in the output data frame that contains values equivalent to the names of the input object, which in this case is `years`.
+
+Ok we have our data, let's plot it.
+
+### Exercise 18
+
+Copy/paste your code from above. Pipe it into `ggplot()` setting `x` to `Year`, `y` to `estimate`, and `group` to `1`.
+
+```{r margin-of-error-18, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-18-hint, eval = FALSE}
+... +
+  ggplot(aes(x = Year, y = estimate, group = 1))
+```
+
+###
+
+The argument group = 1 is used to help `ggplot()` understand how to connect the yearly data points with lines given that only one county is being visualized.
+
+### Exercise 19
+
+Add the `geom_line()` and `geom_point()` layers.
+
+```{r margin-of-error-19, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-19-hint, eval = FALSE}
+... + 
+  geom_line() +
+  geom_point()
+```
+
+###
+
+`geom_line()` draws the lines, and we layer points on top of the lines as well to highlight the actual ACS estimates.
+
+### Exercise 20
+
+We will add the margin of error component with `geom_ribbon()`.
+
+###
+
+Add the `geom_ribbon` layer. Inside `aes()` set `xmin` to `estimate - moe` and `xmax` to `estimate + moe`.
+
+```{r margin-of-error-20, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-20-hint, eval = FALSE}
+... + 
+  geom_ribbon(aes(xmin = estimate - moe,
+                  xmax = estimate + moe))
+```
+
+###
+
+Now we need to add some styling arguments within `geom_ribbon()` outside of `aes()`
+
+### Exercise 21
+
+Outside of `aes()` but inside `geom_ribbon()`, set `fill` to `"navy"` and `alpha` to `0.4`.
+
+```{r margin-of-error-21, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-21-hint, eval = FALSE}
+... + 
+  geom_ribbon(aes(...), fill = "...", alpha = ...)
+```
+
+###
+
+Now let's do the things we did in the last graph.
+
+### Exercise 22
+
+Add the `theme_minimal()` layer setting `base_size` to `12`.
+
+```{r margin-of-error-22, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-22-hint, eval = FALSE}
+... + 
+  theme_minimal(base_size = 12)
+```
+
+###
+
+Now let's relabel the y-axis.
+
+### Exercise 23
+
+It's more appealing to see $400k for money rather than 400000. Let's do that.
+
+###
+
+Add the `scale_y_continuous()` layer setting `labels` to `scales::label_dollar()`. Inside `label_dollar()`, set `scale` to `.001` and `suffix` to `"k"`.
+
+```{r margin-of-error-23, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-23-hint, eval = FALSE}
+... + 
+  scale_y_continuous(labels = scales::label_dollar(scale = .001, suffix = "k"))
+```
+
+###
+
+We label the y-axis with dollar signs, divide them by 1000, and then add the "k" suffix.
+
+### Exercise 24
+
+Add the appropriate labels.
+
+Remember our plot should look like this:
+
+```{r}
+deschutes_value_plt
+```
+
+
+```{r margin-of-error-24, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r margin-of-error-24-hint, eval = FALSE}
+... + 
+  labs(...)
+```
+
+###
+
+Congrats! We went through what a margin of error is, and how we can plot it! 
 
 ## Census geographic data
 
@@ -1955,7 +2566,7 @@ The `inferno` option sets the color palette to have smaller percentages be light
 
 Lastly, we need to clean up our map and make it understandable.
 
-Our final mapshould look like this:
+Our final map should look like this:
 
 ```{r}
 include_graphics("images/races-map.png")
