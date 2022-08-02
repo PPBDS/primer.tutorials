@@ -9,6 +9,7 @@ jobs:
     runs-on: macOS-latest
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      CENSUS_API_KEY: ${{ secrets.CENSUS_KEY }}
     steps:
       - uses: actions/checkout@v2
 
@@ -23,15 +24,17 @@ jobs:
         shell: Rscript {0}
 
       - name: Cache R packages
-        uses: actions/cache@v1
+        id: cache_new
+        uses: actions/cache@v3
+        env:
+          cache-name: refresh_cache
         with:
           path: ${{ env.R_LIBS_USER }}
-          key: macOS-r-4.2.1-${{ hashFiles('.github/depends.Rds') }}
+          key: macOS-r-4.2.1-build-{{env.cache-name}}-${{ hashFiles('.github/depends.Rds') }}
           restore-keys: macOS-r-4.2.1
-      - if: ${{ steps.cache-npm.outputs.cache-hit == 'false' }}
+      - if: ${{ steps.cache_new.outputs.cache-hit == 'false' }}
         name: Build
         run: npm build
-
       - name: Install dependencies
         run: |
           install.packages("remotes")
