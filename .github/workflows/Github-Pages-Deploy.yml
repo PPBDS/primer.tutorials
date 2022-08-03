@@ -9,6 +9,9 @@ jobs:
     runs-on: macOS-latest
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      CENSUS_API_KEY: ${{ secrets.CENSUS_KEY }}
+      R_LIBS_USER: ~/Library/Application Support/renv
+      CACHE-NAME: refresh_cache
     steps:
       - uses: actions/checkout@v2
 
@@ -19,15 +22,20 @@ jobs:
       - name: Query dependencies
         run: |
           install.packages('remotes')
-          saveRDS(remotes::dev_package_deps(dependencies = TRUE), ".github/depends.Rds", version = 2)
+          saveRDS(remotes::dev_package_deps(dependencies = TRUE), ".github/depends.Rds", version = 3)
         shell: Rscript {0}
 
       - name: Cache R packages
-        uses: actions/cache@v1
+        id: cache_new
+        uses: actions/cache@v3
         with:
           path: ${{ env.R_LIBS_USER }}
-          key: macOS-r-4.0-3-${{ hashFiles('.github/depends.Rds') }}
-          restore-keys: macOS-r-4.0-3-
+          key: macOS-r-4.2-1-${{ hashFiles('.github/depends.Rds') }}
+          restore-keys: macOS-r-4.2-1
+      - if: ${{ steps.cache_new.outputs.cache-hit == 'false' }}
+        name: List the state of node modules
+        continue-on-error: true
+        run: npm list
 
       - name: Install dependencies
         run: |
@@ -37,8 +45,13 @@ jobs:
           remotes::install_dev("pkgdown")
         shell: Rscript {0}
 
+      - name: Build
+        run: npm build
+
       - name: Install package
-        run: R CMD INSTALL .
+        run: |
+          R CMD INSTALL .
+          install.packages("sf")
 
       - name: Establish git credentials
         run: |
