@@ -25,10 +25,30 @@ jobs:
           saveRDS(remotes::dev_package_deps(dependencies = TRUE), ".github/depends.Rds", version = 3)
         shell: Rscript {0}
 
+      - name: Cache R packages
+        id: cache_new
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: macOS-r-4.2-1-${{ hashFiles('.github/depends.Rds') }}
+          restore-keys: macOS-r-4.2-1
+      - if: ${{ steps.cache_new.outputs.cache-hit == 'false' }}
+        name: List the state of node modules
+        continue-on-error: true
+        run: npm list
+
+      - name: Install dependencies
+        run: |
+          install.packages("remotes")
+          install.packages("rsconnect")
+          remotes::install_deps(dependencies = TRUE)
+          remotes::install_dev("pkgdown")
+        shell: Rscript {0}
+
       - name: Install package
         run: |
           R CMD INSTALL .
-          install.packages("sf")
+          brew install sf
 
       - name: Establish git credentials
         run: |
