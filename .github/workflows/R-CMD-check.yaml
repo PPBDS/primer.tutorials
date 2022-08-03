@@ -34,6 +34,7 @@ jobs:
       R_LIBS_USER: ~/Library/Application Support/renv
       GITHUB_ACTION: TRUE
       CENSUS_API_KEY: ${{ secrets.CENSUS_KEY }} 
+      RENV_PATHS_ROOT: ~/.local/share/renv
       
 # Got the renv setup advice from: https://github.com/r-lib/actions/tree/v2/setup-renv. 
 # But not sure if this is necessary nor how to use it.        
@@ -55,7 +56,25 @@ jobs:
           brew install gdal
           
       - uses: r-lib/actions/setup-renv@v2
-      - uses: r-lib/actions/setup-pandoc@v2    
+      - uses: r-lib/actions/setup-pandoc@v2
+        with:
+          cache-version: 2
+          extra-packages: |
+            any::renv
+            any::rcmdcheck
+      - name: Cache packages
+        uses: actions/cache@v1
+        with:
+          path: ${{ env.RENV_PATHS_ROOT }}
+          key: ${{ runner.os }}-renv-${{ hashFiles('**/renv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-renv-
+
+      - name: Restore packages
+        shell: Rscript {0}
+        run: |
+         if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
+          renv::restore()
       - name: Check
         run: rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")
         shell: Rscript {0}
