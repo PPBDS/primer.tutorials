@@ -1,44 +1,69 @@
 on:
   push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
-  release:
-    types: [published]
-  workflow_dispatch:
+    branches: master
 
 name: pkgdown
 
 jobs:
   pkgdown:
-    runs-on: ubuntu-latest
-    # Only restrict concurrency for non-PR jobs
-    concurrency:
-      group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
+    runs-on: macos-latest
     env:
+      R_COMPILE_AND_INSTALL_PACKAGES: never
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      CENSUS_API_KEY: ${{ secrets.CENSUS_KEY }}
+      R_LIBS_USER: ~/Library/Application Support/renv
+      CACHE-NAME: refresh_cache
+      R_KEEP_PKG_SOURCE: yes
     steps:
       - uses: actions/checkout@v2
 
-      - uses: r-lib/actions/setup-pandoc@v2
+      - uses: r-lib/actions/setup-r@master
 
+      - uses: r-lib/actions/setup-pandoc@master
+      
+      - uses: r-lib/actions/setup-renv@v2
+      
       - uses: r-lib/actions/setup-r@v2
-        with:
-          use-public-rspm: true
-
+      
       - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: any::pkgdown, local::.
-          needs: website
 
-      - name: Build site
-        run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
+      - name: Query dependencies
+        run: |
+          install.packages('remotes')
+          saveRDS(remotes::dev_package_deps(dependencies = TRUE), ".github/depends.Rds", version = 2)
         shell: Rscript {0}
 
-      - name: Deploy to GitHub pages 🚀
-        if: github.event_name != 'pull_request'
-        uses: JamesIves/github-pages-deploy-action@4.1.4
+      - name: Cache R packages
+        id: cache_new
+        uses: actions/cache@v2
         with:
-          clean: false
-          branch: gh-pages
-          folder: docs
+          path: ${{ env.R_LIBS_USER }}
+          key: macOS-r-4.2-1-${{ hashFiles('.github/depends.Rds') }}
+          restore-keys: macOS-r-4.2-1
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: |
+          brew install imagemagick@6
+          brew install libgit2
+        shell: Rscript {0}
+      
+      - name: Install libcurl on macOS
+        if: runner.os == 'macos'
+        run: |
+          brew install libcurl
+          brew install curl
+
+      - name: Install package
+        run: |
+          R CMD INSTALL .
+
+      - name: Establish git credentials
+        run: |
+          install.packages("usethis")
+          usethis::use_git_config(user.name = "David Kane", user.email = "dave.kane@gmail.com")
+        shell: Rscript {0}
+
+      - name: Deploy package
+        run: pkgdown::deploy_to_branch(new_process = FALSE)
+        shell: Rscript {0}
