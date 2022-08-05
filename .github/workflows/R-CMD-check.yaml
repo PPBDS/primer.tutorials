@@ -1,50 +1,55 @@
 # Start with https://github.com/r-lib/actions, with https://github.com/features/actions
 # as general background. 
+# Explore r2u, may be superior to caching.
+# We can use renv or r2u but not both.
 
-# For help debugging build failures open an issue on the RStudio community 
-# with the 'github-actions' tag.
-# https://community.rstudio.com/new-topic?category=Package%20development&tags=github-actions
-
-# Key point when considing r2u: 
-
-# r2u is an apt repo, which via bspm becomes used 
-# "automagically" via standard R calls of install.packages() and alike. 
-# That last part is important: package installations that do not use install.packages() 
-# (such as the RStudio GUI, renv, rig, ...) do not benefit from install.packages() 
-# calling apt for you, and cannot take advantage of r2u.
-
-# So, we can use renv or r2u but not both.
-
+# Workflow will run on push or pull request.
+# Can specify branches if we expand past a master branch.
 on:
   push:
   pull_request:
-
+# Just the name of the workflow.
 name: R-CMD-check
-
 jobs:
   R-CMD-check:
+    # Runs on ubuntu 
+    # Can be run on macOS or Windows but ubuntu seems to work better.
     runs-on: ubuntu-latest
+    # Environmental variables - search up what these are.
     env:
+      # Forces binary download instead of building packages from source.
       R_COMPILE_AND_INSTALL_PACKAGES: never
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       RENV_ACTIVATE_PROJECT: TRUE
       R_LIBS_USER: ~/Library/Application Support/renv
       GITHUB_ACTION: TRUE
+      # Census api key is not working, not sure how to embed it.
+      # We have already defined it as a secret in github
       CENSUS_API_KEY: ${{ secrets.CENSUS_KEY }} 
+      # Not sure why but this variable seems to improve workflow.
       R_KEEP_PKG_SOURCE: yes
       
 # Got the renv setup advice from: https://github.com/r-lib/actions/tree/v2/setup-renv. 
 # But not sure if this is necessary nor how to use it. 
       
     steps:
+      # All these "uses:" steps refer to pre-built yaml files 
+      # that people have already built, makes our lives easier.
+      # See the following ReadME file for information on each command.
+      # https://github.com/r-lib/actions
       - uses: actions/checkout@v2
       - uses: r-lib/actions/setup-r@v2
       - uses: r-lib/actions/setup-pandoc@master
+      - uses: r-lib/actions/setup-r-dependencies@v2
       - uses: r-lib/actions/setup-renv@v2
         with:
+          # By setting it to cache 2, we can create a new cache.
           cache-version: 2
+     # Installs and runs the actual RCMDCHECK via ubuntu syntax.
+     # Learn about ubuntu packages and syntax here:
+     # https://ubuntu.com/server/docs/package-management
       - name: Check
         run: |
-          brew install rcmdcheck
+          sudo apt install rcmdcheck
           rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "never")
         shell: Rscript {0}
