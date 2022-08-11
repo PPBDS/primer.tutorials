@@ -10,22 +10,33 @@ on:
   push:
   pull_request:
 
-# Just the name of the workflow.
+# Just the name of the workflow. I am a little confused as to the connection 
+# between the `name:` of the (check? job?) and the `R-CMD-check:` string
+# just below it. Do those two things need to be the same? What is the 
+# `R-CMD-check:` accomplishing.
 
 name: R-CMD-check
 jobs:
   R-CMD-check:
 
-    # Runs on ubuntu 
-    # Can be run on macOS or Windows but ubuntu seems to work better.
+    # Runs on ubuntu because installing weird stuff like gdal is a pain
+    # on non-Unix OS.
 
     runs-on: ubuntu-latest
 
-    # Environmental variables - search up what these are.
+    # Environmental variables:
+    # You can use environment variables to store information 
+    # that you want to reference in your workflow. 
+    # You reference environment variables within a 
+    # workflow step or an action, and the variables are interpolated on the 
+    # running machine that runs your workflow
 
     env:
 
-      # Forces binary download instead of building packages from source.
+      # Forces binary download instead of building packages from source. Still 
+      # not sure if we really need all these variables. For example, since we
+      # are no longer using renv, do we really need R_LIBS_USER? I also doubt
+      # that we need RENV_ACTIVATE_PROJECT.
 
       R_COMPILE_AND_INSTALL_PACKAGES: never
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -34,7 +45,7 @@ jobs:
       GITHUB_ACTION: TRUE
 
       # Census api key is not working, not sure how to embed it.
-      # We have already defined it as a secret in github
+      # We have already defined it as a secret in github.
 
       CENSUS_API_KEY: ${{ secrets.CENSUS_KEY }} 
 
@@ -42,32 +53,47 @@ jobs:
 
       R_KEEP_PKG_SOURCE: yes
       
-# Got the renv setup advice from: https://github.com/r-lib/actions/tree/v2/setup-renv. 
-# But not sure if this is necessary nor how to use it. 
+    # Got the renv setup advice from: https://github.com/r-lib/actions/tree/v2/setup-renv. 
+    # But not sure if this is necessary nor how to use it. Note that we no longer 
+    # use renv at all.
       
     steps:
 
       # All these "uses:" steps refer to pre-built yaml files 
       # that people have already built, making our lives easier!
       # See the following ReadMe file for information on each command.
-      # https://github.com/r-lib/actions
+      # https://github.com/r-lib/actions. 
 
       - uses: actions/checkout@v2
       - uses: r-lib/actions/setup-r@v2
       - uses: r-lib/actions/setup-pandoc@master
+      
+      # I think that setup-r-dependencies looks in the DESCRIPTION file
+      # and installs every package there. In the past, we have used a setup 
+      # script that used renv. This seems good enough for now.
+      
       - uses: r-lib/actions/setup-r-dependencies@v2
-      - uses: r-lib/actions/setup-renv@v2
+      
+      # Do we need `uses: actions/cache@v3`? That command is in the other
+      # YAML file. Seems like it ought to be necessary here . . .
+      
         with:
- 
-          # By setting it to cache 2, we can create a new cache.
+    
+          # Cache is version 1 by default.
+          # If you need to clear cache and create new one,
+          # change cache-version to 2 for only one commit.
+          # Change it back to 1 for the commit after that.
   
-          cache-version: 2
+          cache-version: 1
   
-     # Installs and runs the actual RCMDCHECK via R syntax.
-     # We use R syntax because we set it to Rscript below.
+      # Running rcmdcheck below, shows us an error whenver the workflow
+      # says "error".
+      # You can do the check inside Rstduio itself by either clicking
+      # "check" in the build tab or running the rcmdcheck() function.
+      # This yaml files will run rcmdcheck in the cloud.
   
       - name: Check
         run: |
           install.packages("rcmdcheck")
-          rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "never")
+          rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")
         shell: Rscript {0}

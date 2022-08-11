@@ -1,52 +1,92 @@
 # Read the R-CMD-check yaml file.
 # The workflow will run on a push or pull request.
+# Can specify branches if needed.
+
 on:
   push:
   pull_request:
+
+# Does the string `pkgdown` need to be the same in these two places?
 
 name: pkgdown
 
 jobs:
   pkgdown:
+    
     # Again, ubuntu seems to work better.
+    
     runs-on: ubuntu-latest
     env:
+      
       # Forces binary.
+      
       R_COMPILE_AND_INSTALL_PACKAGES: never
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      # Census api key not working in github, not sure why
-      CENSUS_API_KEY: ${{ secrets.CENSUS_KEY }}
-      R_LIBS_USER: ~/Library/Application Support/renv
-      # This variable improves workflow, not sure why; do some research!
+      
+      # This variable improves workflow, not sure why
+      
       R_KEEP_PKG_SOURCE: yes
+      cache-name: new-cache
     steps:
+      
       # Again, visit the following link for information on these setups.
-      # https://github.com/r-lib/actions
+      # https://github.com/r-lib/actions. Should setup-r come before or
+      # after setup-pandoc? Why are some @v2 and some @master?
+      
       - uses: actions/checkout@v2
-      - uses: r-lib/actions/setup-r@master
+      - uses: r-lib/actions/setup-r@v2
       - uses: r-lib/actions/setup-pandoc@master
       - uses: r-lib/actions/setup-r-dependencies@v2
-      - uses: r-lib/actions/setup-r@v2
-      - uses: r-lib/actions/setup-renv@v2
+      
       # Finds all necessary dependencies and sees if they are ahead 
       # or behind CRAN. 
       # Not sure if this necessary, feel free to experiment with it.
+      
+      # Why is Query dependencies necessary? Doesn't this just happen 
+      # automatically? we don't use it in the other YAML>
+      
       - name: Query dependencies
         run: |
           install.packages('remotes')
           saveRDS(remotes::dev_package_deps(dependencies = TRUE), ".github/depends.Rds", version = 2)
         shell: Rscript {0}
-      # Installs R CMD check stuff
+      
+      # Installs R CMD check stuff. Or does it? Seems useless!
+      
       - name: Install package
         run: R CMD INSTALL .
-      # Establishes preceptors github credentials for workflow
+      
+      # Establishes preceptors github credentials for workflow. But why is this
+      # necessary?
+      
       - name: Establish git credentials
         run: |
           install.packages("usethis")
           usethis::use_git_config(user.name = "David Kane", user.email = "dave.kane@gmail.com")
         shell: Rscript {0}
+     
+      # Not sure exactly what this section does, might be a cache.
+      # Not sure how this relates to the rcmdcheck cache.
+      
+      - name: Caching
+        id: cache-new
+        uses: actions/cache@v3
+        with:
+          
+          # Cache files will be in primer.tutorials directory.
+          # This is specified by "path:".
+          # Each cache is given a unique key, ours is given one below.
+          # That process is complex, you can read about it here:
+          # https://docs.github.com/en/rest/actions/cache
+          # Maybe adopt the workflow below?
+          # https://github.com/actions/cache
+          
+          path: ~/primer.tutorials
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/DESCRIPTION') }}
+      
       # A way to customize our site, see following link.
       # https://pkgdown.r-lib.org/reference/deploy_to_branch.html
+     
       - name: Deploy package
         run: pkgdown::deploy_to_branch(new_process = FALSE)
         shell: Rscript {0}
