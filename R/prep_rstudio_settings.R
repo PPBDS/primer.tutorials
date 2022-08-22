@@ -23,10 +23,12 @@ prep_rstudio_settings <- function(){
   rstudioapi::writeRStudioPreference("show_hidden_files", TRUE)
   rstudioapi::writeRStudioPreference("rmd_viewer_type", "pane")
 
-  # Other settings which might be looked at include: packages_pane_enabled,
-  # always_write_history, rainbow_parantheses, show_invisibles,
-  # show_rmd_render_commit, sync_files_pane_working_dir, syntax_color_console
-  # and use_tiny_tex.
+  # Other settings which might be looked at include: document_author,
+  # packages_pane_enabled, always_write_history, rainbow_parantheses,
+  # show_invisibles, show_rmd_render_commit, sync_files_pane_working_dir,
+  # syntax_color_console and use_tiny_tex.
+  
+  # These settings are stored in: ~/.config/rstudio/rstudio-prefs.json
   
   # This portion of the function is modeled after the function census_api_key()
   # from the tidycensus package.
