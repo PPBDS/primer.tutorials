@@ -17,6 +17,8 @@ prep_rstudio_settings <- function(){
   # Change default settings in RStudio. Here all are settings:
   # https://docs.rstudio.com/ide/server-pro/session_user_settings/session_user_settings.html
   
+  message("Changing RStudio settings to better defaults.")
+  
   rstudioapi::writeRStudioPreference("save_workspace", "never")
   rstudioapi::writeRStudioPreference("load_workspace", FALSE)
   rstudioapi::writeRStudioPreference("insert_native_pipe_operator", TRUE)
@@ -56,11 +58,11 @@ prep_rstudio_settings <- function(){
 
     if (stringr::str_detect(gsub(" ", "", curr_prof), stringr::fixed(gsub(" ", "", rprof_line)))){
 
-      message("Option already in your .Rprofile")
+      message("options(pkgType = 'binary') is already in your .Rprofile.")
 
     }else{
 
-      message("Appending new option to your .Rprofile")
+      message("Appending options(pkgType = 'binary') to your .Rprofile")
 
       write(paste0(trimws(curr_prof), "\n", rprof_line), file = rprof, append = FALSE)
 
@@ -80,6 +82,6 @@ prep_rstudio_settings <- function(){
 
   options(pkgType = "binary")
 
-  message("You will now only install the binary version of packages")
+  message("You will now only install the binary version of packages.")
 
 }
