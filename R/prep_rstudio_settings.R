@@ -33,55 +33,57 @@ prep_rstudio_settings <- function(){
   # These settings are stored in: ~/.config/rstudio/rstudio-prefs.json
   
   # This portion of the function is modeled after the function census_api_key()
-  # from the tidycensus package.
-
-  # Get path to user Rprofile and Renviron
+  # from the tidycensus package. We only do it on non-Linux systems.
   
-  home <- Sys.getenv("HOME")
-  rprof <- file.path(home, ".Rprofile")
+  if(Sys.info()["sysname"] != "Linux"){
 
-  # Create lines to insert. We added the trailing newline because there is a bug
-  # (?) where the .Rprofile script does not run when the .Rprofile file does not
-  # end with a trailing newline.
-
-  rprof_line <- "options(pkgType = 'binary')\n"
-
-  # If user already has an .Rprofile, then just append to that file
-  # If not, create an .Rprofile in home directory and write to that.
+    # Get path to user Rprofile and Renviron
+    
+    home <- Sys.getenv("HOME")
+    rprof <- file.path(home, ".Rprofile")
   
-  if (file.exists(rprof)){
-
-    curr_prof <- readr::read_file(rprof)
-
-
-    # If option already in user's .Rprofile, then just don't write in it
-
-    if (stringr::str_detect(gsub(" ", "", curr_prof), stringr::fixed(gsub(" ", "", rprof_line)))){
-
-      message("options(pkgType = 'binary') is already in your .Rprofile.")
-
-    }else{
-
-      message("Appending options(pkgType = 'binary') to your .Rprofile")
-
-      write(paste0(trimws(curr_prof), "\n", rprof_line), file = rprof, append = FALSE)
-
+    # Create lines to insert. We added the trailing newline because there is a bug
+    # (?) where the .Rprofile script does not run when the .Rprofile file does not
+    # end with a trailing newline.
+  
+    rprof_line <- "options(pkgType = 'binary')\n"
+  
+    # If user already has an .Rprofile, then just append to that file
+    # If not, create an .Rprofile in home directory and write to that.
+    
+    if (file.exists(rprof)){
+  
+      curr_prof <- readr::read_file(rprof)
+  
+  
+      # If option already in user's .Rprofile, then just don't write in it
+  
+      if (stringr::str_detect(gsub(" ", "", curr_prof), stringr::fixed(gsub(" ", "", rprof_line)))){
+  
+        message("options(pkgType = 'binary') is already in your .Rprofile.")
+  
+      }else{
+  
+        message("Appending options(pkgType = 'binary') to your .Rprofile")
+  
+        write(paste0(trimws(curr_prof), "\n", rprof_line), file = rprof, append = FALSE)
+  
+      }
     }
-  }
-  if (!file.exists(rprof)){
-
-    message("Creating .Rprofile in your home directory")
-
-    file.create(rprof)
-
-    write(rprof_line, file = rprof, append = TRUE)
-
-  }
-
+    if (!file.exists(rprof)){
+  
+      message("Creating .Rprofile in your home directory")
+  
+      file.create(rprof)
+  
+      write(rprof_line, file = rprof, append = TRUE)
+  
+    }
+  
   # Set pkgType to "binary" for this R session
 
-  options(pkgType = "binary")
-
-  message("You will now only install the binary version of packages.")
+    options(pkgType = "binary")
+    message("You will now only install the binary version of packages.")
+  }
 
 }
