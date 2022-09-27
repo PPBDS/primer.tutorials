@@ -1,5 +1,5 @@
 library(learnr)
-library(primer.tutorials)
+library(all.primer.tutorials)
 library(tidyverse)
 
 # Goal is to make sure that each tutorial includes the required Information and

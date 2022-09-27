@@ -1,4 +1,4 @@
-library(primer.tutorials)
+library(all.primer.tutorials)
 library(tidyverse)
 library(rvest)
 

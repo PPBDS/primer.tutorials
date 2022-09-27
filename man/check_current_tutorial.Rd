@@ -10,7 +10,7 @@ check_current_tutorial()
 current document OVERWRITTEN and formatted with correct chunk labels
 }
 \description{
-An add-in for formatting primer.tutorials.
+An add-in for formattingall.primer.tutorials.
 
 It uses format_tutorial() to format the tutorial Rmd open
 in the current editor

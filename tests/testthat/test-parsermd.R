@@ -1,5 +1,5 @@
 library(parsermd)
-library(primer.tutorials)
+library(all.primer.tutorials)
 
 # This is a test to make sure that all tutorials can be parsed with
 # the package parsermd without error.

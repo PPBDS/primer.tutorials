@@ -35,7 +35,7 @@ Then **restart your R session** or **restart RStudio**.
 In order to access the tutorials, start by loading the package.
 
 ``` r
-library(primer.tutorials)
+library(all.primer.tutorials)
 ```
 
  
@@ -90,8 +90,8 @@ recommended that you regularly re-install this tutorial package by
 running the following 2 lines of code in your **R console**:
 
 ``` r
-remove.packages("primer.tutorials")
-remotes::install_github("PPBDS/primer.tutorials")
+remove.packages("all.primer.tutorials")
+remotes::install_github("PPBDS/all.primer.tutorials")
 ```
 
 For version updates for dependency packages please follow the same
