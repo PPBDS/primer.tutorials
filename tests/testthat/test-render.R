@@ -1,4 +1,4 @@
-library(primer.tutorials)
+library(all.primer.tutorials)
 library(tidyverse)
 
 # Our definition of "test" for a tutorial file is to run render() and hope there
@@ -30,7 +30,7 @@ for(i in tutorial_paths){
 
 # This test is not complete because it does not simulate the scenario in which a
 # user runs a tutorial directly. For example, if you forget to include
-# library(primer.tutorials) in the code chunk for a tutorial, it will fail for a
+# library(all.primer.tutorials) in the code chunk for a tutorial, it will fail for a
 # user because it won't find submission_ui. But such a flawed tutorial.Rmd will
 # pass this test because we load library(primary.tutorials) before we start the
 # test above. Maybe this is just an edge case we can ignore.

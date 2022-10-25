@@ -2,7 +2,7 @@
 #'
 #' @description
 #'
-#' An add-in for formatting primer.tutorials.
+#' An add-in for formatting all.primer.tutorials.
 #'
 #' It uses format_tutorial() to format the tutorial Rmd open
 #' in the current editor

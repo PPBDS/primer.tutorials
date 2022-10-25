@@ -2,7 +2,7 @@
 #'
 #' @description
 #'
-#' An add-in for writing primer.tutorials.
+#' An add-in for writing all.primer.tutorials.
 #'
 #' It reads the latest exercise and section name
 #' and then adds an exercise skeleton.

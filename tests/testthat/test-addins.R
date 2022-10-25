@@ -1,5 +1,5 @@
 library(learnr)
-library(primer.tutorials)
+library(all.primer.tutorials)
 library(tidyverse)
 
 # This test is created to test the formatting addin.
@@ -12,7 +12,7 @@ format_tutorial_paths <- Sys.glob(file.path("test-data/addin_test_inputs", "form
 
 for (i in seq_along(format_tutorial_paths)){
 
-  test_doc <- primer.tutorials::format_tutorial(paste0(
+  test_doc <- all.primer.tutorials::format_tutorial(paste0(
     file.path("test-data/addin_test_inputs", "format_input_"), i, ".Rmd"))
 
   output_doc <- readr::read_file(paste0(
