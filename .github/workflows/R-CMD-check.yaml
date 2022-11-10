@@ -1,31 +1,8 @@
-# The trickiest recent issue involves deciding between setup-renv and setup-r-dependencies. 
-# In theory, we should prefer the former since renv is designed precisely to replicate
-# your setup on a new machine. Unfortunately, it assumes that the machine has all the
-# necessary unbuntu libraries installed. So, to get r-lib/actions/setup-renv to work,
-# you need to install a bunch of libraies by hand. At one point, I determined by
-# trial and error that this worked:
-
-# - name: Install needed libraries
-#     run: sudo apt-get install -y libcurl4-openssl-dev libudunits2-dev libgdal-dev libgeos-dev libproj-dev libfontconfig1-dev
-
-# But what an absurd hack! I am not even sure which of these is truly necessary.
-# (For the record, the main issues seemed to involve the R packages curl, rstanarm and sf.)
-# See this issue thread for discussion:
-
-# https://github.com/r-lib/actions/issues/652
-
-# Anyway, for now, we will just use the setup-r-dependencies approach. It (somehow!)
-# magically figures out which ubuntu libraries are needed and installs them before 
-# installing any R packages. But we really should help the maintainers figure
-# out how to bring this functionality to setup-renv.
-
-# Other thoughts:
-
 # Start with https://github.com/features/actions and https://github.com/r-lib/actions  
-# for general background information. Biggest current problem is slowness. Can't
-# we make this faster?
-# Most useful approach is probably to use r2u. This is probably the future of fast
-# builds of R environments. Currently, it seems like r2u and renv do not play
+# for general background information.
+
+# A better approach is probably to use r2u. This is probably the future of fast
+# builds of R environments. Currently, it seems like r2u and setup-renv do not play
 # nicely with each other.
 
 # Workflow will run on push or pull request.
@@ -78,21 +55,26 @@ jobs:
 
       R_KEEP_PKG_SOURCE: yes
 
-    
     steps:
-  
-      # All these "uses:" steps refer to pre-built yaml files 
-      # that people have already built, making our lives easier!
+    
+    # setup-renv is not as sophisticated (or as error prone?) as setup-r-dependencies,
+    # so, we need to install a handful of unbuntu binaries by hand. This is annoying!
+    # But it is also necessary because setup-r-dependencies, at least with our set up,
+    # does not using caching correctly. (Don't forget that you need to set cache-version 
+    # to a number different from 1 if you want to blow away the old cache.)
+    
+      - name: Install needed libraries
+        run: sudo apt-get install -y libcurl4-openssl-dev libudunits2-dev libgdal-dev libgeos-dev libproj-dev libfontconfig1-dev
+
+      # All these "uses:" steps refer to default yaml files 
+      # that people have already created, making our lives easier!
       # See the following ReadMe file for information on each command.
       # https://github.com/r-lib/actions. 
       
       - uses: actions/checkout@v3
       - uses: r-lib/actions/setup-pandoc@v2      
       - uses: r-lib/actions/setup-r@v2
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: any::rcmdcheck
-          needs: check
+      - uses: r-lib/actions/setup-renv@v2
       - uses: r-lib/actions/check-r-package@v2
     
 
