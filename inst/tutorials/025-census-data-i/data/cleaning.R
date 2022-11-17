@@ -1,3 +1,16 @@
+##Needed for chapter 6
+
+# dc_income <- get_acs(
+#   geography = "tract",
+#   variables = "B19013_001",
+#   state = "DC",
+#   year = 2020,
+#   geometry = TRUE
+# )
+# 
+# write_rds(dc_income, "data/dc_income.rds")
+
+
 ##Needed for chapter 6 
 
 # dallas_bachelors <- get_acs(
