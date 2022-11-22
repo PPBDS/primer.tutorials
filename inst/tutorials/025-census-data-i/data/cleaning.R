@@ -1,4 +1,6 @@
- # Needed for chapter 6
+ # Needed for chapter 6 
+
+# I Put these in rscript for cleanliness in the tutorial, it makes it easier for the author of said tutorial to write the tutorial, instead of going through lots and lots of scrolling every time they want to go to the actual tutorial. This also organizes the data better, there is no extra code and you can clearly see where the code is, instead of having a big, hard to read block of code.
 
  dc_income <- get_acs(
   geography = "tract",
