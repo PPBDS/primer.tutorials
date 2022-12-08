@@ -45,7 +45,7 @@ write_rds(dc_income, "data/dc_income.rds")
    geometry = TRUE
  )
 
- write_rds(dallas_bachelors, "data/dallas_bachelors.rds")
+write_rds(dallas_bachelors, "data/dallas_bachelors.rds")
 
 
 # Needed for chapter 6
