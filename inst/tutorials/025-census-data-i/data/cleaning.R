@@ -1,4 +1,25 @@
- # Needed for chapter 6 
+
+library(learnr)
+library(all.primer.tutorials)
+library(tidyverse)
+library(stringr)
+library(primer.data)
+library(tidycensus)
+library(ipumsr)
+library(ggthemes)
+library(knitr)
+library(stringr)
+library(tigris)
+library(tmap)
+library(mapview)
+library(leaflet)
+library(ggplot2)
+library(patchwork)
+library(glue)
+library(idbr)
+library(ggiraph)
+library(purrr)
+library(sf)
 
 # I Put these in rscript for cleanliness in the tutorial, it makes it easier for the author of said tutorial to write the tutorial, instead of going through lots and lots of scrolling every time they want to go to the actual tutorial. This also organizes the data better, there is no extra code and you can clearly see where the code is, instead of having a big, hard to read block of code.
 
@@ -6,11 +27,11 @@
   geography = "tract",
    variables = "B19013_001",
    state = "DC",
-   year = 2020,
+   year = 2021,
    geometry = TRUE
  )
 
- write_rds(dc_income, "data/dc_income.rds")
+write_rds(dc_income, "data/dc_income.rds")
 
 
  # Needed for chapter 6
@@ -18,13 +39,13 @@
  dallas_bachelors <- get_acs(
    geography = "tract",
    variables = "DP02_0068P",
-   year = 2020,
+   year = 2021,
    state = "TX",
    county = "Dallas",
    geometry = TRUE
  )
 
- write_rds(dallas_bachelors, "data/dallas_bachelors.rds")
+write_rds(dallas_bachelors, "data/dallas_bachelors.rds")
 
 
 # Needed for chapter 6
@@ -41,10 +62,13 @@
      Asian = "P2_008N"
    ),
    summary_var = "P2_001N",
-   year = 2020,
+   year = 2021,
    geometry = TRUE
- ) %>%
-   mutate(percent = 100 * (value / summary_value))
+ ) |>
+   mutate(percent = 100 * (value / summary_value)) 
+ 
+ # Whenever you run this with year = 2021, it says error in UseMethod("gather") : 
+ # no applicable method for 'gather' applied to an object of class "character", It works for 2020 and all previous years, not 2021 though. 
 
 write_rds(hennepin_race, "data/hennepin_race.rds")
 
@@ -53,7 +77,7 @@ write_rds(hennepin_race, "data/hennepin_race.rds")
  us_median_age <- get_acs(
    geography = "state",
    variables = "B01002_001",
-  year = 2019,
+  year = 2021,
    survey = "acs1",
   geometry = TRUE,
   resolution = "20m"
