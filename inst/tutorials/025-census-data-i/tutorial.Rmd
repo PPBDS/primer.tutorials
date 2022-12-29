@@ -21,7 +21,6 @@ library(tidycensus)
 library(ipumsr)
 library(ggthemes)
 library(knitr)
-library(stringr)
 library(tigris)
 library(tmap)
 library(mapview)
@@ -457,7 +456,7 @@ get_estimates(geography = "...",
 
 ### 
 
-The code above requested all components of change population estimates for 2019 for Queens County in NY. 
+The code above requested all components of change population estimates for 2019 for Chatham County in Georgia. 
 
 The confusing part of this function is probably the `product` argument, which essentially allows the user to access the indicators used to produce the intercensal population estimates. 
 
@@ -528,6 +527,8 @@ In other words, the ACS calculated that a good estimate of the median household 
 ### Exercise 2
 
 The estimate plus or minus the margin of error is known as a **confidence interval**. Let's explore that.
+
+###
 
 Copy/paste your code from above. Add the `moe_level` argument and set it to `95`.
 
@@ -608,7 +609,16 @@ So now that we have an idea of what a confidence interval and a margin of error 
 We are going to create this graph:
 
 ```{r}
-include_graphics("images/moe_plt.png")
+get_acs(state = "Maine", geography = "county", variables = c((hhincome = "B19013_001"), year = 2021)) |>
+  mutate(NAME = str_remove(NAME, " County, Maine"))|>
+  ggplot(mapping = aes(x = estimate, y = reorder(NAME, estimate))) +
+  geom_pointrange(aes(xmax = estimate + moe, xmin = estimate - moe))+ 
+  scale_x_continuous(labels = scales::label_dollar())+
+  labs(title = "Median Household income in Maine Counties", 
+       subtitle = "Counties Surrounding Portland seem to be Richer",
+       y = "Counties",
+       x = "Median Household income",
+       caption = "2021 American Community Survey")
 ```
 
 ###
@@ -718,14 +728,23 @@ Add the `scale_x_continuous()` layer setting `labels` to `scales::label_dollar()
 
 ###
 
-Notice the dollar signs on the x-axis now. 
+You can do a lot of things using the scales package, such as adding percent signs and dollar signs. You can learn more about scales [here](https://scales.r-lib.org/).
 
 ### Exercise 12
 
 Add the appropriate labels. Remember, our graph should look like this:
 
 ```{r}
-include_graphics("images/moe_plt.png")
+get_acs(state = "Maine", geography = "county", variables = c((hhincome = "B19013_001"), year = 2021)) |>
+  mutate(NAME = str_remove(NAME, " County, Maine"))|>
+  ggplot(mapping = aes(x = estimate, y = reorder(NAME, estimate))) +
+  geom_pointrange(aes(xmax = estimate + moe, xmin = estimate - moe))+ 
+  scale_x_continuous(labels = scales::label_dollar())+
+  labs(title = "Median Household income in Maine Counties", 
+       subtitle = "Counties Surrounding Portland seem to be Richer",
+       y = "Counties",
+       x = "Median Household income",
+       caption = "2021 American Community Survey")
 ```
 
 
@@ -742,7 +761,7 @@ include_graphics("images/moe_plt.png")
 
 ###
 
-Nice! We just visualized margin of error... but at one moment in time. Let's see how we can observe it over time.
+We just visualized margins of error at one moment in time, now, we are going to make a plot that spans multiple years. You can learn more about visualizing margins of error [here](https://walker-data.com/census-r/exploring-us-census-data-with-visualization.html?q=margins%20of%20error#visualizing-margins-of-error)
 
 ### Exercise 13
 
