@@ -21,7 +21,6 @@ library(tidycensus)
 library(ipumsr)
 library(ggthemes)
 library(knitr)
-library(stringr)
 library(tigris)
 library(tmap)
 library(mapview)
@@ -465,7 +464,7 @@ get_estimates(geography = "...",
 
 ### 
 
-The code above requested all components of change population estimates for 2019 for Queens County in NY. 
+The code above requested all components of change population estimates for 2019 for Chatham County in Georgia. 
 
 The confusing part of this function is probably the `product` argument, which essentially allows the user to access the indicators used to produce the intercensal population estimates. 
 
@@ -536,6 +535,8 @@ In other words, the ACS calculated that a good estimate of the median household 
 ### Exercise 2
 
 The estimate plus or minus the margin of error is known as a **confidence interval**. Let's explore that.
+
+###
 
 Copy/paste your code from above. Add the `moe_level` argument and set it to `95`.
 
@@ -616,7 +617,18 @@ So now that we have an idea of what a confidence interval and a margin of error 
 We are going to create this graph:
 
 ```{r}
-include_graphics("images/moe_plt.png")
+moe_hhincome_plot <- get_acs(state = "Maine", geography = "county", variables = c((hhincome = "B19013_001"), year = 2021)) |>
+  mutate(NAME = str_remove(NAME, " County, Maine"))|>
+  ggplot(mapping = aes(x = estimate, y = reorder(NAME, estimate))) +
+  geom_pointrange(aes(xmax = estimate + moe, xmin = estimate - moe))+ 
+  scale_x_continuous(labels = scales::label_dollar())+
+  labs(title = "Median Household income in Maine Counties", 
+       subtitle = "Counties Surrounding Portland seem to be Richer",
+       y = "Counties",
+       x = "Median Household income",
+       caption = "2021 American Community Survey")
+
+moe_hhincome_plot
 ```
 
 ###
@@ -726,14 +738,14 @@ Add the `scale_x_continuous()` layer setting `labels` to `scales::label_dollar()
 
 ###
 
-Notice the dollar signs on the x-axis now. 
+You can do a lot of things using the scales package, such as adding percent signs and dollar signs. You can learn more about scales [here](https://scales.r-lib.org/).
 
 ### Exercise 12
 
 Add the appropriate labels. Remember, our graph should look like this:
 
 ```{r}
-include_graphics("images/moe_plt.png")
+moe_hhincome_plot
 ```
 
 
@@ -750,7 +762,7 @@ include_graphics("images/moe_plt.png")
 
 ###
 
-Nice! We just visualized margin of error... but at one moment in time. Let's see how we can observe it over time.
+We just visualized margins of error at one moment in time, now, we are going to make a plot that spans multiple years. You can learn more about visualizing margins of error [here](https://walker-data.com/census-r/exploring-us-census-data-with-visualization.html?q=margins%20of%20error#visualizing-margins-of-error)
 
 ### Exercise 13
 
@@ -823,8 +835,6 @@ map_dfr(years)
 The first argument just tells `map_dfr()` which object to iterate over.
 
 ### Exercise 16
-
-<!-- MH: I have kept the years the same (for now), but this exercise always returns this error: Error: 5-year ACS support in tidycensus begins with the 2005-2009 5-year ACS. Consider using decennial Census data instead. -->
 
 Copy/paste your code from above. Your second argument should be enclosed within `~{}` (Curly brackets with a tilde in front.)
 
@@ -1037,31 +1047,13 @@ Congrats! We went through what a margin of error is, and how we can plot it!
 
 Census and ACS data are associated with geographies, which are the units at which the data is aggregated. We are going to learn how to work with these.
 
-<!-- DK: Teach about usethis::edit_r_profile(). -->
+###
 
-### Exercise 1
+We will be using the *tigris* package
 
-Load the `tigris` package 
+One problem with *tigris* is that sometimes it will take a long time to download data. We can avoid this by editing our `.Rprofile` file. 
 
-```{r census-geographic-da-1, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r census-geographic-da-1-hint-1, eval = FALSE}
-library(...)
-```
-
-### 
-
-Working with spatial datasets is quite complex. Fortunately, the `tigris` package does a lot of the work for us. Let's explore the basic functions of this package. 
-
-### Exercise 2
-
-One problem with `tigris` is that sometimes it will take a long time to download data. We can avoid this by editing our `.Rprofile` file. 
-
-Run `usethis::edit_r_profile()` in the Console. Then put `options(tigris_use_cache = TRUE)` in your `.Rprofile` file. Save and close the file.
+Run `usethis::edit_r_profile()` in the Console. Then put `options(tigris_use_cache = TRUE)` in your `.Rprofile` file. Restart R for the changes to take effect. (The tutorial may be terminated, once R is restarted, just come right back to the tutorial, it should save your spot.)
 
 ### 
 
@@ -1079,6 +1071,27 @@ question_text(NULL,
 ### 
 
 The `~` symbol indicates your home directory. The command should have returned the content of your `.Rprofile` file, which should be the one line you just added. But, depending on your computer set up, this might not work. No worries if so!
+
+### Exercise 1
+
+Load the `tigris` package 
+
+```{r census-geographic-da-1, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r census-geographic-da-1-hint-1, eval = FALSE}
+library(...)
+```
+
+### 
+
+Working with spatial data sets is quite complex. Fortunately, the `tigris` package does a lot of the work for us. Let's explore the basic functions of this package. 
+
+### Exercise 2
+
 
 ### Exercise 3
 
