@@ -40,18 +40,103 @@ options(tutorial.exercise.timelimit = 60,
 
 # Center the tutorial around this book: https://walker-data.com/census-r/index.html
 
+dc_income <- get_acs(
+geography = "tract",
+  variables = "B19013_001",
+  state = "DC",
+  year = 2021,
+  geometry = TRUE
+ )
+
+write_rds(dc_income, "data/dc_income.rds")
+
+
+ # Needed for chapter 6
+
+ dallas_bachelors <- get_acs(
+   geography = "tract",
+   variables = "DP02_0068P",
+   year = 2021,
+   state = "TX",
+   county = "Dallas",
+   geometry = TRUE
+ )
+
+write_rds(dallas_bachelors, "data/dallas_bachelors.rds")
+
+
+# Needed for chapter 6
+
+ hennepin_race <- get_decennial(
+   geography = "tract",
+  state = "MN",
+  county = "Hennepin",
+   variables = c(
+     Hispanic = "P2_002N",
+     White = "P2_005N",
+     Black = "P2_006N",
+     Native = "P2_007N",
+     Asian = "P2_008N"
+   ),
+   summary_var = "P2_001N",
+   year = 2020,
+   geometry = TRUE
+ ) |>
+   mutate(percent = 100 * (value / summary_value)) 
+ 
+write_rds(hennepin_race, "data/hennepin_race.rds")
+
+# Needed for chapter 6
+
+ us_median_age <- get_acs(
+   geography = "state",
+   variables = "B01002_001",
+  year = 2021,
+   survey = "acs1",
+  geometry = TRUE,
+  resolution = "20m"
+) |>
+   shift_geometry()
+
+ write_rds(us_median_age, "data/us_median_age.rds")
+
+# Needed for chapter 12
+
+ fertility_data <- get_idb(
+   country = "all",
+   year = 2021,
+   variables = "tfr",
+   geometry = TRUE,
+ )
+
+ write_rds(fertility_data, "data/fertility_data.rds")
+ 
+ years <- 2005:2019
+ names(years) <- years
+ 
+ dekalb_years <- map_dfr(years, ~{
+   get_acs(geography = "county",
+           variables = "B25077_001",
+           state = "GA",
+           county = "Dekalb",
+           survey = "acs1",
+           year = .x,)
+ },.id = "Year")
+ 
+ write_rds(dekalb_years, "data/dekalb_years.rds")
+ 
 st <- states(year = 2019)
 
-dc_income <- read_rds("data/dc_income.rds") 
+dc_income <- read_rds("data/dc_income.rds")
 
-us_median_age <- read_rds("data/us_median_age.rds") 
+us_median_age <- read_rds("data/us_median_age.rds")
 
-hennepin_race <- read_rds("data/hennepin_race.rds") 
+hennepin_race <- read_rds("data/hennepin_race.rds")
 
-dallas_bachelors <- read_rds("data/dallas_bachelors.rds") 
+dallas_bachelors <- read_rds("data/dallas_bachelors.rds")
 
-
-hennepin_black <- hennepin_race |> 
+dekalb_years <- read_rds("data/dekalb_years.rds")
+hennepin_black <- hennepin_race |>
   filter(variable == "Black")
  
 pal <- colorNumeric(
@@ -599,7 +684,7 @@ By reordering the names on the y-axis based on their `estimate` value, we avoid 
 
 ### Exercise 8
 
-We will be using `geom_pointrange`, which will show us the margin of error and the mean household income.
+We will be using `geom_pointrange`, which is very similar to `geom_point()` but with a line going through it to show the range and margin of error.
 
 ###
 
@@ -613,7 +698,7 @@ For `geom_pointrange` to show the margin of error, we will need to do some (very
 
 ```{r margin-of-error-8-hint, eval = FALSE}
 ... +
-  geom_point(size = ..., color = "...")
+  geom_pointrange(aes(xmax = ..., xmin = ...))
 ```
 
 ###
@@ -671,9 +756,21 @@ We just visualized margins of error at one moment in time, now, we are going to 
 
 We are going to create this plot:
 
-```{r}
-include_graphics("images/moe_plt_time.png")
+
+```{r eval=FALSE}
+years <- 2005:2019
+names(years) <- years
+
+ggplot(dekalb_years, mapping = aes(x = Year, 
+                                   y = estimate, 
+                                   group = 1)) + 
+  geom_line()+
+  geom_point()+
+  geom_ribbon(fill = "navy", alpha = 0.3, aes(ymax = estimate + moe, ymin = estimate - moe))+
+  scale_y_continuous(labels = scales::label_dollar(scale = .001, suffix = "k"))
+  
 ```
+
 
 
 Create a vector named `years` that goes from `2005` through `2019`
@@ -741,7 +838,7 @@ The first argument just tells `map_dfr()` which object to iterate over.
 
 Copy/paste your code from above. Your second argument should be enclosed within `~{}` (Curly brackets with a tilde in front.)
 
-Inside the curly brackets, run `get_acs()` setting `geography` to `"county"`, `variables`   to `"B25077_001"`, `state` to `"OR"`, `county` to `"Deschutes"`, `year` to `.x`, and `survey` to `"acs1"`.
+Inside the curly brackets, run `get_acs()` setting `geography` to `"county"`, `variables`   to `"B25077_001"`, `state` to `"GA"`, `county` to `"Dekalb"`, `year` to `.x`, and `survey` to `"acs1"`.
 
 ```{r margin-of-error-16, exercise = TRUE}
 
@@ -794,7 +891,9 @@ map_dfr(years,  ~{
 
 If you look at the data now, there should be a new `Year` column. This is what the `.id` argument does: it creates a new column in the output data frame that contains values equivalent to the names of the input object, which in this case is `years`.
 
-Ok we have our data, let's plot it.
+###
+
+Now that we have our data, let's plot it.
 
 ### Exercise 18
 
@@ -861,7 +960,7 @@ Now we need to add some styling arguments within `geom_ribbon()` outside of `aes
 
 ### Exercise 21
 
-Outside of `aes()` but inside `geom_ribbon()`, set `fill` to `"navy"` and `alpha` to `0.4`.
+Outside of `aes()` but inside `geom_ribbon()`, set `fill` to `"navy"` and `alpha` to `0.3`.
 
 ```{r margin-of-error-21, exercise = TRUE}
 
@@ -876,26 +975,10 @@ Outside of `aes()` but inside `geom_ribbon()`, set `fill` to `"navy"` and `alpha
 
 ###
 
-Now let's do the things we did in the last graph.
-
-### Exercise 22
-
-Add the `theme_minimal()` layer setting `base_size` to `12`.
-
-```{r margin-of-error-22, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r margin-of-error-22-hint, eval = FALSE}
-... + 
-  theme_minimal(base_size = 12)
-```
+<!-- knowledge drop of sorts -->
 
 ###
-
-Now let's relabel the y-axis.
+Now we need to re-label the y axis.
 
 ### Exercise 23
 
