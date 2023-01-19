@@ -95,3 +95,18 @@ write_rds(hennepin_race, "data/hennepin_race.rds")
  )
 
  write_rds(fertility_data, "data/fertility_data.rds")
+ 
+ years <- 2005:2019
+ names(years) <- years
+ 
+ dekalb_years <- map_dfr(years, ~{
+   get_acs(geography = "county",
+           variables = "B25077_001",
+           state = "GA",
+           county = "Dekalb",
+           survey = "acs1",
+           year = .x,)
+ },.id = "Year")
+ 
+ write_rds(dekalb_years, "inst/tutorials/025-census-data-i/data/dekalb_years.rds")
+ 
