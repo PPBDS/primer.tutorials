@@ -66,7 +66,6 @@ income <- income[!grepl("^[A-Z ]+$",income$occupation),, drop = FALSE]
 ```
 
 ## Introduction
-
 In this tutorial, you will learn more about data visualization and wrangling with R and create various graphs. Each section follows a structure so that you will built pipes by adding new layers with each exercise to first wrangle a dataset and then create an appropriate graph for the data. This tutorial is 77-exercises long and is expected to 75 minutes to complete. 
 
 ## National Health and Nutrition Survey
@@ -399,10 +398,11 @@ The color argument sets the label for the thing that was passed to `color` argum
 
 
 ## Covid-19
-
 ### 
 
-The `covid` contains data about Covid-19 and factors affecting Covid-19. Source of this data set is Johns Hopkins University, and we downloaded it from [ourworldindata.org](https://ourworldindata.org/coronavirus-source-data).  
+<!-- DK: This example is very sloppy! -->
+
+The `covid` tibble contains data about Covid-19 and related variables. The source of this data set is Johns Hopkins University, and we downloaded it from [ourworldindata.org](https://ourworldindata.org/coronavirus-source-data).  
 
 
 ### 
@@ -423,8 +423,7 @@ covid_graph <- covid |>
   # the new DAILY cases. Location is the country.
   
   select(continent, median_age, new_cases, location, population) |>
-  drop_na(new_cases) |> 
-  group_by(location) |> 
+  drop_na() |> 
   
   # Besides real continents, there were rows that showed the data of globe, and
   # the continent of those columns were world. I excluded that. case_by_pop is
@@ -435,8 +434,7 @@ covid_graph <- covid |>
   summarize(case_by_pop = sum(new_cases) / first(population),
             agemed = first(median_age),
             continent = first(continent), 
-            rm.na = TRUE,
-            .group = 'drop') |>
+            .by = location) |>
   ggplot(mapping = aes(x = agemed, 
                        y = case_by_pop,
                        label = location,
@@ -466,7 +464,7 @@ glimpse(...)
 
 ### 
 
-Although there are many NA values, these exist because of there isn't any of that variable. For example, for Covid-19 cases, there are NA values at the beginning since Covid-19 had not reached Afghanistan back then.
+There are many NA variables. Does that look reasonable? Probably! Lots of countries don't have the public health infrastructure to tabulate cases of covid.
 
 ### Exercise 2
 
@@ -490,11 +488,11 @@ select(ends_with(c("ent", "cation", "new_cases", "median_age")))
 ````
 
 
-Although this code would be inefficient in for this variables, it would be helpful if we were to select all `cases` related columns, all of which would end with `_cases`. 
+Although this code would be inefficient for these variables, it would be helpful if we were to select all `cases` related columns, all of which would end with `_cases`. 
 
 ### Exercise 3
 
-Because we do not want to include rows where there are no Covid-19 cases, drop NA values in the `new_cases` column. 
+Because we do not want to include rows where there is missing data, use `drop_na()`.
 
 ```{r covid19-3, exercise = TRUE}
 
@@ -504,16 +502,17 @@ Because we do not want to include rows where there are no Covid-19 cases, drop N
 
 ```{r covid19-3-hint-1, eval = FALSE}
 ... |> 
-  drop_na(...)
+  drop_na()
 ```
 
 ### 
 
-If we did not `drop_na()`, errors would have been raised in further codes. 
+If we did not `drop_na()`, errors would have been raised in later steps. 
+
 
 ### Exercise 4
 
-To make our further country-based calculations easer, Now group by `location`.
+`filter` in a way that we extract all rows but the ones where the `continent` is `World`. Use `!=` to not include those rows.
 
 ```{r covid19-4, exercise = TRUE}
 
@@ -523,16 +522,35 @@ To make our further country-based calculations easer, Now group by `location`.
 
 ```{r covid19-4-hint-1, eval = FALSE}
 ... |>
-  group_by(...)
+  filter(...)
 ```
 
-### 
+```{r covid19-4-hint-2, eval = FALSE}
+... |>
+  filter(continent != "World")
+```
 
-In our dataset, there is a continent value `world` that contains the summation of data of individual countries. For example, new cases of `world` is the total new cases recorded that day. 
+<!-- Drop some knowledge! -->
 
 ### Exercise 5
 
-`filter` in a way that we extract all rows but the ones where the `continent` is `World`. Remember to use `!=` to not include specific rows.
+<!-- DK: This question should be split into several separate ones. -->
+
+For our analysis, we want to calculate total Covid-19 cases divided by population for each country. To achieve, we need to create a variable using `summarize`
+
+### 
+
+Create a variable `case_by_pop` that is equal to `sum()` of `new_cases` divided by `population`. 
+
+Since the population is the same for every row for a country, to get the `population`, choose the `first()` value.
+
+### 
+
+Using the `first()` function, create a `"agemed"` and `"continent"` variables that should be equal to `median_age` and `continent` of the country, respectively.
+
+### 
+
+Use the `.by` argument with a value of `location` to perform these calculations for each country.
 
 ```{r covid19-5, exercise = TRUE}
 
@@ -542,85 +560,15 @@ In our dataset, there is a continent value `world` that contains the summation o
 
 ```{r covid19-5-hint-1, eval = FALSE}
 ... |>
-  filter(...)
-```
-
-```{r covid19-5-hint-2, eval = FALSE}
-... |>
-  filter(continent != "World")
-```
-
-### 
-
-Because `World` is not  a continent and we want to make country-wise and country-wise analysis, we excluded the rows where the continent is equal to world.
-
-### Exercise 6
-
-For our analysis, we want to calculate total Covid-19 cases divided by population for each country. To achieve, we need to create a variable using `summarize`
-
-### 
-
-Create a variable `case_by_pop` that is equal to `sum()` of `new_cases` divided by `population`. 
-Since the population is the same for every row for a country, to get the `population`, choose the `first()` value.
-
-### 
-
-Using the `first()` function, create a `"agemed"` and `"continent"` variables that should be equal to `median_age` and `continent` of the country, respectively.
-
-### 
-
-Furthermore, to avoid any errors NA values might cause, set `na.rm` argument to `TRUE`.
-
-```{r covid19-6, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r covid19-6-hint-1, eval = FALSE}
-... |>
       summarize(case_by_pop = sum(...) / first(...),
               agemed = first(...),
               continent = first(...),
-              na.rm = ...)
+              .by = ...)
 ```
 
-### 
+<!-- Drop some knowledge! -->
 
-Did you receive a warning message? 
-
-### Exercise 7
-
-Our job with groups is done since we have created the needed variables. However, we have to set an argument to choose what to do with groups. 
-
-### 
-
-`.groups` is an argument that tells `summarize()` what to do with the grouping of the data after it has used the grouping to produce its summary. 
-
-If you exclude `.groups` argument, you will get a warning message.
-
-### 
-
-Within `summarize` function from previous exercise, set `.groups` argument equal to `"drop"`. 
-
-
-```{r covid19-7, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r covid19-7-hint-1, eval = FALSE}
-... |> 
-  summarize(...,
-            .groups = "...")
-```
-
-### 
-
- `.groups` does not affect the data in the summary tibble. You can either `"keep"` the grouping, `"drop"` the grouping, or `"drop_last"`, i.e. to drop the last of the specified grouping variables (this is because retaining all the same groups after summary creates groups which only contain single rows). `"drop_last"` is the default in most cases.  
-
-### Exercise 8
+### Exercise 6
 
 To include all four variables on the plot, we have to map each of them to a different argument.
 
@@ -630,13 +578,13 @@ Continue your pipe and add  `ggplot()`.  Map `agemed` to the x-axis, `case_by_po
 
 Then, to create a scatter, add a new layer `geom_point()`.
 
-```{r covid19-8, exercise = TRUE, warning=FALSE}
+```{r covid19-6, exercise = TRUE, warning = FALSE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r covid19-8-hint-1, eval = FALSE}
+```{r covid19-6-hint-1, eval = FALSE}
 ... |> 
   ggplot(mapping = aes(x = ..., 
                        y = ...,
@@ -645,17 +593,17 @@ Then, to create a scatter, add a new layer `geom_point()`.
   geom_point()
 ```
 
-### Exercise 9
+### Exercise 7
 
 Add the theme `theme_economist()` as a new layer to the plot.
 
-```{r covid19-9, exercise = TRUE, warning = FALSE}
+```{r covid19-7, exercise = TRUE, warning = FALSE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r covid19-9-hint-1, eval = FALSE}
+```{r covid19-7-hint-1, eval = FALSE}
 ... +
   theme_economist()
 ```
@@ -664,13 +612,13 @@ Add the theme `theme_economist()` as a new layer to the plot.
 
 Instead of `theme_economist()` we could have chosen a theme among choices such as `theme_minimal()`, `theme_classic()`, and many more. For all existing `ggplot2` themes, click [this link](https://ggplot2.tidyverse.org/reference/ggtheme.html).
 
-### Exercise 10
+### Exercise 8
 
 To finish your plot, use `labs()` to give the graph a title and axis labels.
 
 Reminder: This is what your plot should look like.
 
-```{r covid19-10}
+```{r covid19-8}
 final_graph
 ```
 
@@ -686,17 +634,17 @@ Now, although our graph looks like the desired graph, it is not interactive, and
 
 This is beacuse, we have to make use of **[plotly](https://plotly.com/r/getting-started/)** package to create interactive graphs.
 
-### Exercise 11
+### Exercise 9
 
 Moreover, to use plotly, we have to save our graph to a variable. Therefore, save our plot to a variable names `covid_graph`.
 
-```{r covid19-11, exercise = TRUE, warning = FALSE}
+```{r covid19-9, exercise = TRUE, warning = FALSE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r covid19-11-hint-1, eval = FALSE}
+```{r covid19-9-hint-1, eval = FALSE}
 covid_graph <- covid |>
   select(continent, median_age, new_cases, location, population) ...
 .
@@ -708,17 +656,17 @@ covid_graph <- covid |>
 
 Since we saved our graph as `covid_graph`, the only thing to do is pass our variable as an argument to `ggplotly` function.
 
-### Exercise 12
+### Exercise 10
 
 Copy and paste everything you have above and run `ggplotly(covid_graph)`.
 
-```{r covid19-12, exercise = TRUE, warning = FALSE}
+```{r covid19-10, exercise = TRUE, warning = FALSE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r covid19-12-hint-1, eval = FALSE}
+```{r covid19-10-hint-1, eval = FALSE}
 ...
 
 ggplotly(...)
@@ -757,9 +705,8 @@ Let's create the following plot.
   # differently by the experiment, we group by treatment groups and education
   # levels.
   
-  group_by(treatment, education) |>
   summarize(mean_change_in_expenses = mean(change_in_expenses),
-            .groups = "drop") |>
+            .by = c(treatment, education)) |>
   
   # treatment and control groups were given the numbers 1 and 0, respectively.
   # More convenient to have them with actual group names.
@@ -820,7 +767,6 @@ sps |>
   filter(education %in% ...)
 ```
 
-
 ```{r seguro-popular-2-hint-2, eval = FALSE}
 sps |>
   filter(education %in% c("...","...",
@@ -872,48 +818,30 @@ Because we want to visualize the impact of treatments, we need a measure of the 
 
 From September 2005 to July 2006, Mexico encountered an inflation. `t2_health_exp_3m` contains the 3 months of health-related spendings from July 2006 to August 2006.
 
+
 ### Exercise 5
 
-Using `group_by()` function, group the data by `treatment` and `education`.
+Use `summarize()` to calculate `mean_change_in_expenses`, the` mean()` of the `change_in_expenses` for each group. Set the `.by` argument to `c(treatment, education)`.
 
 ```{r seguro-popular-5, exercise = TRUE}
-
+  
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r seguro-popular-5-hint-1, eval = FALSE}
-... |>
-  group_by(...)
+... |> 
+  summarize(... = mean(...),
+            .by = ...)
 ```
 
 ### 
 
 To ensure the results are accurate, we need findings that support that health-related spending did in fact decrease in treatment group. Therefore, taking into the inflation account, the difference between` t2_health_exp_3m` and `health_exp_3m` should be lower for the treatment group. 
 
+
+
 ### Exercise 6
-
-Use `summarize()` to calculate `mean_change_in_expenses`, the` mean()` of the `change_in_expenses` for each group. Set the argument `.groups` equal to "drop".
-
-```{r seguro-popular-6, exercise = TRUE}
-  
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r seguro-popular-6-hint-1, eval = FALSE}
-... |> 
-  summarize(... = mean(...),
-            .groups = "drop")
-```
-
-### 
-
-If we didn't specify the `.groups` argument, R would raise a warning because our groups would still exist. These unwanted existing groups may distort with future calculations. Therefore, we used `"drop"` to get rid of these groups. 
-
-
-
-### Exercise 7
 
 The `treatment` variable is in binary form, taking values 1 and 0. 
 For clarification purposes, using `mutate`, change the `treatment` variable. Set every 1 equal to `Treatment Group` and every 0 to `Control Group`. 
@@ -922,13 +850,13 @@ For clarification purposes, using `mutate`, change the `treatment` variable. Set
 
 Use `ifelse()` for this. Within `ifelse()`, set condition where `treatment == "1"` to `Treatment Group` and `Control Group` in other conditions.
 
-```{r seguro-popular-7, exercise = TRUE}
+```{r seguro-popular-6, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r seguro-popular-7-hint-1, eval = FALSE}
+```{r seguro-popular-6-hint-1, eval = FALSE}
  ... |> 
   mutate(treatment = ifelse(treatment == "...", "...", "Control Group")) 
 ```
@@ -938,18 +866,18 @@ Use `ifelse()` for this. Within `ifelse()`, set condition where `treatment == "1
 Alternatively, we could have used `if_else()` function from **[dplyr](https://www.rdocumentation.org/packages/dplyr/versions/0.7.8)** package. The difference between these two functions is that `if_else()` function is somewhat faster than base package function `ifelse()`.
 
 
-### Exercise 8
+### Exercise 7
 
 Use `|>` to add `ggplot()`.
 
 
-```{r seguro-popular-8, exercise = TRUE}
+```{r seguro-popular-7, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r seguro-popular-8-hint-1, eval = FALSE}
+```{r seguro-popular-7-hint-1, eval = FALSE}
 .. |> 
   ggplot()
 ```
@@ -959,17 +887,17 @@ Use `|>` to add `ggplot()`.
 We see that `ggplot()` gives us a blank sheet. Now, we should specify aesthetics to change this. 
 
 
-### Exercise 9
+### Exercise 8
 
 Within `aes` within `ggplot` object from previous exercise, map `education` to x-axis. Map `mean_change_in_expenses` to the y-axis, and `treatment` to the `fill`. 
 
-```{r seguro-popular-9, exercise = TRUE}
+```{r seguro-popular-8, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r seguro-popular-9-hint-1, eval = FALSE}
+```{r seguro-popular-8-hint-1, eval = FALSE}
 .. |> 
   ggplot(aes(x = education,
              y = mean_change_in_expenses,
@@ -980,17 +908,17 @@ Within `aes` within `ggplot` object from previous exercise, map `education` to x
 
 Because we haven't specified the plot type yet, we don't see concrete results. We need to change that. 
 
-### Exercise 10
+### Exercise 9
 
 Add the layer `geom_col()`.
 
-```{r seguro-popular-10, exercise = TRUE}
+```{r seguro-popular-9, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r seguro-popular-10-hint-1, eval = FALSE}
+```{r seguro-popular-9-hint-1, eval = FALSE}
 .. |> 
   ggplot(aes(x = "education",
              y = "mean_change_in_expenses",
@@ -1002,17 +930,17 @@ Add the layer `geom_col()`.
 
 When you set the `fill` argument in the `ggplot` equal to a variable, ggplot by default sets a color set.
 
-### Exercise 11
+### Exercise 10
 
 To make the bar charts color of your choice, you can use `scale_fill_manual` function. This function takes on values as a vector. Within this argument, set `values` equal to a vector of two colors: `cornflowerblue` and `darkturquoise`.
 
-```{r seguro-popular-11, exercise = TRUE}
+```{r seguro-popular-10, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r seguro-popular-11-hint-1, eval = FALSE}
+```{r seguro-popular-10-hint-1, eval = FALSE}
 ... +
   scale_fill_manual(values= c("cornflowerblue", "...")) +
   geom_col()
@@ -1022,9 +950,33 @@ To make the bar charts color of your choice, you can use `scale_fill_manual` fun
 
 If we had more categories of data, we also could have made use of   **RColorBrewer** package. This package provides a function named `scale_fill_brewer()`. With this function, you can specify a color palette of your choice. 
 
-### Exercise 12
+### Exercise 11
 
 Within `geom_col()`, set the `position` argument equal to `"dodge"`. Moreover, you can also set the transparency of the bars with the argument `alpha`, where the default value of 1.0 is opaque. For our graph in this section, we set the `alpha` equal to 0.9. 
+
+```{r seguro-popular-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r seguro-popular-11-hint-1, eval = FALSE}
+... +
+  geom_col(position = "dodge", alpha = 0.9)
+```
+
+### 
+
+Alternatively, we could have not specified position argument. In that case, we would see stacked bars, rather than side-by-side bars.
+
+### Exercise 12
+
+We also want to order bars in a descending educational level order.
+In our case, we want the order `"college"`, `"high school"`, `"secondary school"`, and `"preschool"`.
+
+### 
+
+We can achieve this by setting `limits` argument of `scale_x_discrete()` equal to order of factors you want. We want the education levels in an increasing order. Therefore, pass in a vector of `preschool`, `secondary`, `high school`, and `college` in this order.
 
 ```{r seguro-popular-12, exercise = TRUE}
 
@@ -1034,21 +986,20 @@ Within `geom_col()`, set the `position` argument equal to `"dodge"`. Moreover, y
 
 ```{r seguro-popular-12-hint-1, eval = FALSE}
 ... +
-  geom_col(position = "dodge", alpha = 0.9)
+   scale_x_discrete(limits = ...)
 ```
 
 ### 
 
-Alternatively, we could have not specified position argument. In that case, we would see stacked bars, rather than side-by-side bars.
+We also could have other scaling methods. For instance, if we used `scale_x_reverse()`, our bars would be in reverse order, and x-axis labels would be in decreasing order.
 
 ### Exercise 13
 
-We also want to order bars in a descending educational level order.
-In our case, we want the order `"college"`, `"high school"`, `"secondary school"`, and `"preschool"`.
+It would also be more representative if the y-axis values were displayed with pesos sign, since the observed change in health-related expenses is in pesos in Mexico. 
 
 ### 
 
-We can achieve this by setting `limits` argument of `scale_x_discrete()` equal to order of factors you want. We want the education levels in an increasing order. Therefore, pass in a vector of `preschool`, `secondary`, `high school`, and `college` in this order.
+We can achieve this with `scale_y_continuous()` function. Within this function, set `labels` equal to `dollar_format()`. Within `dollar_format()`, set `suffix` equal to pesos sign, `₱`, and set `prefix` equal to `""`.
 
 ```{r seguro-popular-13, exercise = TRUE}
 
@@ -1057,29 +1008,6 @@ We can achieve this by setting `limits` argument of `scale_x_discrete()` equal t
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r seguro-popular-13-hint-1, eval = FALSE}
-... +
-   scale_x_discrete(limits = ...)
-```
-
-### 
-
-We also could have other scaling methods. For instance, if we used `scale_x_reverse()`, our bars would be in reverse order, and x-axis labels would be in decreasing order.
-
-### Exercise 14
-
-It would also be more representative if the y-axis values were displayed with pesos sign, since the observed change in health-related expenses is in pesos in Mexico. 
-
-### 
-
-We can achieve this with `scale_y_continuous()` function. Within this function, set `labels` equal to `dollar_format()`. Within `dollar_format()`, set `suffix` equal to pesos sign, `₱`, and set `prefix` equal to `""`.
-
-```{r seguro-popular-14, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r seguro-popular-14-hint-1, eval = FALSE}
 ... +
    scale_y_continuous(labels = scales::dollar_format(suffix = "₱", 
                                                      prefix = "")) 
@@ -1090,11 +1018,11 @@ We can achieve this with `scale_y_continuous()` function. Within this function, 
 `scale_y_continuous` have formatting values to dollar feature. However, it does not have it for other currencies. In those cases, we have to specify the currency sign by using `dollar_format()` argument and pass it to `labels`. You can find and copy currency signs by searching them on Google. 
 
 
-### Exercise 15
+### Exercise 14
 
 Add `theme_minimal()` to change the style of the graph.
 
-```{r seguro-popular-15, exercise = TRUE}
+```{r seguro-popular-14, exercise = TRUE}
 
 ```
 
@@ -1106,11 +1034,11 @@ Alternatively, we could have used themes such as `theme_light()` and `theme_dark
 
 
 
-### Exercise 16
+### Exercise 15
 
 To finish your plot, use `labs()` to give the graph a title, subtitle, axis labels, and caption of your choice.
 
-```{r seguro-popular-16, exercise = TRUE}
+```{r seguro-popular-15, exercise = TRUE}
 
 ```
 
@@ -1121,7 +1049,6 @@ sps_p
 ```
 
 ## Gender inequality 
-
 This dataset shows the median weekly incomes for 535 different occupations. The data encompasses information for all working American citizens as of January 2015. The incomes are broken into male and female statistics, preceded by the total median income when including both genders.
 
 ### 
@@ -1419,8 +1346,6 @@ Currently, our graph is not easy to read. As the first step on making it easy-to
   geom_dumbbell()
 ```
 
-
-
 ### Exercise 12
 
 Now for color and size selection for the graph, manipulate the `geom_dumbbell()` object's arguments. 
@@ -1658,6 +1583,8 @@ income_p
 
 ## Last letter of boy names
 
+<!-- DK: Some code here seems too hard. Or maybe it just needs a clearer explanation. -->
+
 The **[babynames](http://hadley.github.io/babynames/)** package contains data about baby names through the years. 
 
 ### 
@@ -1677,13 +1604,14 @@ boys_p <- babynames |>
   
   select(name, year, prop) |>
   
-  # group by year and last letter of baby names. 
+  # Add last letter of baby names. 
   
-  group_by(last_letter = stringr::str_sub(name, -1, -1), year) |>
+  mutate(last_letter = stringr::str_sub(name, -1, -1)) |>
   
   # frequency is the poroportion of a certain last letter in all male baby names in that year. 
   
-  summarize(frequency = sum(prop), .groups = 'drop') |>
+  summarize(frequency = sum(prop), 
+            .by = c(year, last_letter)) |>
   ggplot(aes(x = year, y = frequency, colour = last_letter)) +
     geom_line() + 
   
@@ -1715,9 +1643,11 @@ boys_p
 
 ### 
 
-We could have also used `head()` function to have insights about the dataset.
+We could have also used `head()` function to check the first few rows of the tibble.
 
 ### Exercise 2
+
+<!-- DK: Seems bad. We never do this! -->
 
 To check for `NA` values, use `any()` function with argument `is.na()`, argument of which should be the dataset. 
 
@@ -1731,7 +1661,7 @@ any(is.na(...))
 
 ### 
 
-This function returned `FALSE`, which indicates that there is no NA values. 
+This function returned `FALSE`, which indicates that there are no NA values. 
 
 ### Exercise 3
 
@@ -1747,7 +1677,6 @@ babynames |>
 
 ```
 
-
 ```{r last-letter-of-boy-n-3-hint-2, eval = FALSE}
 babynames |>
   filter(sex == 'M')
@@ -1756,7 +1685,7 @@ babynames |>
 
 ### Exercise 4
 
-Extract only `name`, `year`, and `prop` columns. 
+Select the `name`, `year`, and `prop` columns. 
 
 ```{r last-letter-of-boy-n-4, exercise = TRUE}
 
@@ -1777,11 +1706,11 @@ when selecting `name` and `year` columns, we can use the following code:
 
 ### Exercise 5
 
-We want the last letters of boy names. Therefore, create a new variable names `last_letters` that should be equal to last letter of each boy name.To get the last letter of each boy name, we will make use of `str_sub()` function of **[stringr](https://stringr.tidyverse.org/)** package. 
+We want the last letters of boy names. Therefore, create a new variable names `last_letters` that should be equal to last letter of each boy name. To get the last letter of each boy name, we will make use of `str_sub()` function of **[stringr](https://stringr.tidyverse.org/)** package. 
 
 ### 
 
-Pass `name`, `-1` and `-1` arguments to `str_sub()`. Since we will use this variable only for grouping, you can create it within the `group_by()` function. Moreover, because we will also calculate popularity of last letters *by year*, pass `year` into the `group_by()` function as well.
+Use the `mutate()` function to add a new column: `last_letter`. Its value is the `str_sub()` function with `name`, `-1` and `-1` as its first three arguments.
 
 ```{r last-letter-of-boy-n-5, exercise = TRUE}
 
@@ -1791,17 +1720,15 @@ Pass `name`, `-1` and `-1` arguments to `str_sub()`. Since we will use this vari
 
 ```{r last-letter-of-boy-n-5-hint-1, eval = FALSE}
 ... |>
-  group_by(last_letter = stringr::str_sub(..., ..., -1), ...)
+  mutate(last_letter = stringr::str_sub(..., ..., -1))
 ```
-
 
 ```{r last-letter-of-boy-n-5-hint-2, eval = FALSE}
 babynames |>
   filter(sex == 'M')|>
   select(name, year, prop)|>
-  group_by(last_letter = stringr::str_sub(name, -1, -1),year)
+  mutate(last_letter = stringr::str_sub(name, -1, -1))
 ```
-
 
 ### 
 
@@ -1924,7 +1851,6 @@ Moreover, we want to visualize y-axis as percentage instead of proportion. There
   scale_y_continuous(... = scales::...()) 
 ```
 
-
 ```{r last-letter-of-boy-n-11-hint-2, eval = FALSE}
 ... +
   scale_y_continuous(labels = scales::percent_format()) 
@@ -1977,7 +1903,7 @@ boys_p
 ### 
 
 ## Summary
-###
+### 
 
 In this tutorial, we learned how to create graphs using complex pipes. 
 Takeaways from this tutorial are, 
