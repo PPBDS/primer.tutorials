@@ -74,6 +74,21 @@ raw_data_wiki <- read_html(wiki_url) |>
   html_element("#mw-content-text") |>
   html_element("table.wikitable") |>
   html_table()
+
+# Wikipedia Table data 
+
+clean_data <- raw_data_wiki |>
+  rename(population = 'Population (total inhabitants) (2015) [1]',
+         total_deaths = 'Murders and Nonnegligent\nManslaughter(total deaths) (2015) [2]',
+         death_rate = 'Murder and Nonnegligent\nManslaughter Rate(per 100,000 inhabitants) (2015)') |>
+  select(population, death_rate) |>
+  mutate(population = parse_number(population)) |>
+  mutate(pop_tile = ntile(population, 20)) |>
+  summarize(sum_rate = sum(death_rate),
+            num_states = n(),
+            .by = pop_tile) |>
+  mutate(avg_rate = sum_rate/num_states) |>
+  mutate(percent_rate = avg_rate/sum(avg_rate))
 ```
 
 <!-- DK: Lots of tutorials, like Webscraping, don't provide the button for easy use of previous answer. -->
@@ -1135,7 +1150,7 @@ Nice work!
 Now you have a tibble web-scraped directly from OpenSecrets.
 
 ## Wikipedia table
-<!-- AG: I'm going to change this to the Canadian Wikipedia since we already have a SelectorGadget video -->
+
 
 Now you will try your hand in scraping data from a Wikipedia page about <a href="https://en.wikipedia.org/w/index.php?title=%22,%22Gun_violence_in_the_United_States_by_state%22,%22&direction=prev&oldid=810166167">gun violence in the United States by state</a> and plotting it.
 
@@ -1143,19 +1158,6 @@ Let's create the following plot:
 
 
 ```{r make-wiki_graph, echo = FALSE}
-clean_data <- raw_data_wiki |>
-  rename(population = 'Population (total inhabitants) (2015) [1]',
-         total_deaths = 'Murders and Nonnegligent\nManslaughter(total deaths) (2015) [2]',
-         death_rate = 'Murder and Nonnegligent\nManslaughter Rate(per 100,000 inhabitants) (2015)') |>
-  select(population, death_rate) |>
-  mutate(population = parse_number(population)) |>
-  mutate(pop_tile = ntile(population, 20)) |>
-  summarize(sum_rate = sum(death_rate),
-            num_states = n(),
-            .by = pop_tile) |>
-  mutate(avg_rate = sum_rate/num_states) |>
-  mutate(percent_rate = avg_rate/sum(avg_rate))
-
 wiki_graph <- 
   ggplot(clean_data, aes(x = pop_tile, y = percent_rate)) + 
     geom_col() +
