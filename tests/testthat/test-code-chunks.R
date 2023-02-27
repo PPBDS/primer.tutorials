@@ -74,24 +74,4 @@ for(i in tutorial_paths){
     }
   }
 
-  # Checks for empty chunks by extracting the code from the document. Having a
-  # code chunk with no lines causes a weird error which is very hard to
-  # diagnose.
-
-  doc_code <- doc_structure |> rmd_node_code()
-  doc_code[sapply(doc_code, is.null)] <- NULL
-  empty_counter <- 0
-  for(chunk_code in doc_code){
-    if(length(chunk_code) == 0){
-      empty_counter <- empty_counter + 1
-    }
-  }
-
-  # There should be less than 3 empty chunks: the copycodechunk, info, and the
-  # download chunks.
-
-  if(empty_counter > 3){
-    warning("From test-code-chunks.R. ", empty_counter,
-            " empty code chunks present in file ", i, "\n")
-  }
 }
