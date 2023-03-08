@@ -339,7 +339,190 @@ tibble(title = section |> html_elements("h2") |> html_text2(),
        director = section |> html_element(".director") |> html_text2())
 ```
 
-### 
+<!-- DK: Might split the above up into a couple of questions, fully replicating the example in the book. -->
+
+### Exercise 6
+
+Consider [the highest rated movies](https://www.imdb.com/chart/top) on [IMDb](https://en.wikipedia.org/wiki/IMDb), the Internet Movie Database. The url is `https://www.imdb.com/chart/top`. Pipe that url (with quotation marks) to `read_html()`.
+
+```{r web-scaping-examples-6, exercise = TRUE}
+
+```
+
+
+```{r web-scaping-examples-6-hint, eval = FALSE}
+"https://www.imdb.com/chart/top" |> 
+  ...
+```
+
+###
+
+Note that `read_html()` takes longer to run than the previous example because the underlying webpage is much more complex.
+
+
+### Exercise 7
+
+The key element is a table, which is often the case with web scraping exercises. Continue the pipe to `html_element("table")`
+
+
+```{r web-scaping-examples-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r web-scaping-examples-7-hint, eval = FALSE}
+... |> 
+  html_table("...")
+```
+
+###
+
+The result is no longer an "html_document." Instead, it is an "html_node." 
+
+<!-- Drop knowledge! Use of the "table" tag (?) and then use of html_table(). Two uses of "table" connected or random? -->
+
+### Exercise 8
+
+Continue the pipe to `html_table()`.
+
+```{r web-scaping-examples-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r web-scaping-examples-8-hint, eval = FALSE}
+... |> 
+  html_table()
+```
+
+###
+
+The result is a tibble with 250 rows and 5 columns. But, as you can see, the column names are a mess, as our the values in many of the cells. We need to clean it up.
+
+### Exercise 9
+
+Continue the pipe to a `select()` call which renames the second column to `rank_title_year ` and the third column to `rating`.
+
+```{r web-scaping-examples-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r web-scaping-examples-9-hint, eval = FALSE}
+... |> 
+  select(
+      rank_title_year = `Rank & Title`,
+      rating = `IMDb Rating`
+    )
+```
+
+###
+
+`select()` does two things: it keeps only two columns, both of which it renames. But the `rank_title_year` is a mess because it really includes three different variables, all mashed together.
+
+### Exercise 10
+
+Continue the pipe with a call to `mutate()` which runs `str_squish()` on `rank_title_year`, assigning the result to `rank_title_year`. Modifying a variable "in place" like this is a common approach. We don't need to keep the original value around. 
+
+
+```{r web-scaping-examples-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r web-scaping-examples-10-hint, eval = FALSE}
+... |> 
+  mutate(
+    rank_title_year = str_squish(rank_title_year)
+  )
+```
+
+###
+
+`[str_squish()](https://stringr.tidyverse.org/reference/str_trim.html)` removes whitespace at the start and end or a character variable, and replaces all internal whitespace with a single space.
+
+### Exercise 11
+
+Continue the pipe with a call to `mutate()`, creating a new variable called `rank` which is the result of running `parse_number()` on `rank_title_year`.
+
+```{r web-scaping-examples-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r web-scaping-examples-11-hint, eval = FALSE}
+... |> 
+  mutate(rank = parse_number(rank_title_year))
+```
+
+###
+
+This approach depends on the fact that `[parse_number()](https://readr.tidyverse.org/reference/parse_number.html)` grabs the first number it can find in the string. It ignores characters and numbers which come after.
+
+
+### Exercise 12
+
+Continue the pipe to `mutate()`, creating a new variable `title` which is the result of running `str_extract()` on `rank_title_year` with the pattern argument set to `"(?<=\\d\\.\\s)(.*)(?=\\s\\(\\d{4}\\))"`.
+
+```{r web-scaping-examples-12, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r web-scaping-examples-12-hint, eval = FALSE}
+... |> 
+  mutate(title = str_extract(rank_title_year, 
+                             pattern = "(?<=\\d\\.\\s)(.*)(?=\\s\\(\\d{4}\\))"))
+```
+
+###
+
+We gave  [ChatGPT](https://chat.openai.com/) this prompt:
+
+> Using the stringr package in R, I want to run str_extract() on the string "1. The Shawshank Redemption (1994)" and extract just "The Shawshank Redemption". What pattern should I use?
+
+It gave back the regular expression above, explaining:
+
+> This will extract the substring between the digit and dot followed by a space, and the year in parentheses. The (?<=) and (?=) are positive lookbehind and lookahead assertions respectively, which match the pattern inside them but do not include it in the final output. The .* matches any characters in between.
+
+Use AI to solve any regular expression problem that takes longer than 30 seconds.
+
+### Exercise 13
+
+Complete the pipe with a `select()` statement which keeps `rank`, `title` and `rating` in that order.
+
+```{r web-scaping-examples-13, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r web-scaping-examples-13-hint, eval = FALSE}
+"https://www.imdb.com/chart/top" |> 
+  read_html() |> 
+  html_element("table") |> 
+  html_table() |>   
+  select(
+    rank_title_year = `Rank & Title`,
+    rating = `IMDb Rating`
+) |> 
+  mutate(
+    rank_title_year = str_squish(rank_title_year)
+) |> 
+  mutate(rank = parse_number(rank_title_year)) |>   
+  mutate(title = 
+           str_extract(rank_title_year, 
+                       pattern = "(?<=\\d\\.\\s)(.*)(?=\\s\\(\\d{4}\\))")) |> 
+  select(rank, title, rating)
+```
+
+###
 
 You now understand web scraping. This Section and the previous one were based on the [web scraping](https://r4ds.hadley.nz/webscraping.html) material from [*R for Data Science (2e)*](https://r4ds.hadley.nz/) by Hadley Wickham, Mine Çetinkaya-Rundel, and Garrett Grolemund.
 
