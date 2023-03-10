@@ -16,7 +16,7 @@ Bayesian Data Science](https://ppbds.github.io/primer)*.
 
 ## Installation
 
-You can install the the development version from
+You can install the development version from
 [GitHub](https://github.com/) with:
 
 ``` r
