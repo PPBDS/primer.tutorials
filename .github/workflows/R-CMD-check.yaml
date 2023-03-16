@@ -1,3 +1,13 @@
+# Below is the standard "check-release" Github Actions from the nice
+# folks at r-libs. It works fine. The problem is that I really want
+# to use renv with this package. But, if you do, you need to use
+# setup-renv instead of setup-r-dependencies, obviously. The problem
+# with that is that setup-renv seems unable to work with rstanarm, and
+# maybe other packages. Either it does not build at all or, if it does,
+# the cache stops working. Despite many hours of work, and Q/A with
+# Posit Community, I could not get it to function. So, no renv for
+# this package.
+
 # Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 on:
@@ -15,33 +25,15 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
     steps:
-
-      # setup-renv is not as sophisticated (or as error prone?) as setup-r-dependencies,
-      # so, we need to install a handful of unbuntu binaries by hand. This is annoying!
-      # But it is also necessary because setup-r-dependencies, at least with our set up,
-      # does not using caching correctly. (Don't forget that you need to set cache-version
-      # to a number different from 1 if you want to blow away the old cache.)
-
-      - name: Need to update everything first in order to catch moved packages
-        run: sudo apt-get update
-
-      - name: Install needed libraries
-        run: sudo apt-get install -y libcurl4-openssl-dev libudunits2-dev libgdal-dev libgeos-dev libproj-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libglpk-dev
-
       - uses: actions/checkout@v3
-
-      # Using setup-renv below makes (?) pandoc necessary.
-
-      - uses: r-lib/actions/setup-pandoc@v2
 
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
 
-      # Replace setup-r-dependencies with setup-renv. Doing so
-      # requires (?) installing rcmdcheck by hand.
-
-      - uses: r-lib/actions/setup-renv@v2
-      - run: Rscript -e 'install.packages("rcmdcheck")'
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
 
       - uses: r-lib/actions/check-r-package@v2
