@@ -1,5 +1,5 @@
 library(learnr)
-library(all.primer.tutorials)
+library(tutorial.helpers)
 library(tidyverse)
 library(stringr)
 library(primer.data)
