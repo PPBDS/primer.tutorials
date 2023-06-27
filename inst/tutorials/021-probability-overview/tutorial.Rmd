@@ -1,6 +1,6 @@
 ---
 title: 'Probability: Overview'
-author: Yuhan Wu and Mann Talati
+author: Mann Talati and Yuhan Wu
 tutorial:
   id: probability-overview
 output:
@@ -19,6 +19,102 @@ library(primer.data)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
         tutorial.storage = "local") 
+
+shoesize_p <- tibble(Wshoes = rnorm(n = 100000, mean = 8, sd = 1.5),
+       Mshoes = rnorm(n = 100000, mean = 10.5, sd = 1.5)) |> 
+  pivot_longer(cols = everything(), 
+               names_to = "distribution", 
+               values_to = "value") |>  
+   ggplot(aes(x = value, fill = distribution)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = 0.5, 
+                   bins = 100, 
+                   position = "identity") +
+    labs(title = "Normal Distributions of shoe sizes",
+         x = "Value",
+         y = "Probability")
+
+emp_p <- 
+  tibble(results = sample(c(0, 1), 100, replace = TRUE)) |> 
+  ggplot(aes(x = results)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))), 
+                   binwidth = 0.5, 
+                   color = "white") +
+    labs(title = "Empirical Probability Distribution",
+         subtitle = "Flipping one coin a hundred times",
+         x = "Outcome\nResult of Coin Flip",
+         y = "Probability") +
+    scale_x_continuous(breaks = c(0, 1), 
+                       labels = c("Heads", "Tails")) +
+    scale_y_continuous(labels = 
+                         scales::percent_format(accuracy = 1)) +
+    theme_classic()
+
+set.seed(1)
+emp_dist_dice <- tibble(ID = 1:100) |> 
+  mutate(die_1 = map_dbl(ID, ~ sample(c(1:6), size = 1))) |> 
+  mutate(die_2 = map_dbl(ID, ~ sample(c(1:6), size = 1))) |> 
+  mutate(sum = die_1 + die_2) |> 
+  ggplot(aes(x = sum)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))), 
+                   binwidth = 1, 
+                   color = "white") +
+    labs(title = "Empirical Probability Distribution",
+         subtitle = "Sum from rolling two dice, replicated one hundred times",
+         x = "Outcome\nSum of Two Die",
+         y = "Probability") +
+    scale_x_continuous(breaks = seq(2, 12, 1), labels = 2:12) +
+    scale_y_continuous(labels = 
+                         scales::percent_format(accuracy = 1)) +
+    theme_classic()
+
+emp_mpg <- mpg |>
+  filter(drv == "f", cty >= 16) |>
+  select(displ)|>
+  drop_na() |>
+  ggplot(aes(x = displ)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))), 
+                 binwidth = 1, 
+                 color = "white")+
+  labs(title = "Empirical Probability Distribution",
+       subtitle = "Engine Displacement for front-wheel drive cars from mpg",
+       x = "Engine Displacement",
+       y = "Probability",caption = "Source:mpg") +
+  scale_y_continuous(labels =
+                      scales::percent_format(accuracy = 1)) +
+  theme_classic()
+
+jd_disease <- tibble(ID = 1:10000, 
+                     have_disease = rep(c(TRUE, FALSE), 
+                                    5000)) |> 
+  mutate(positive_test = if_else(have_disease,
+          map_int(have_disease, ~ rbinom(n = 1, size = 1, p = 0.99)),
+          map_int(have_disease, ~ rbinom(n = 1, size = 1, p = 0.5))))
+
+joint_p <- tibble(in_bag = rep(c(0, 1, 2), 1000)) |>
+  mutate(in_sample = map_int(in_bag, ~ rbinom(n = 1, 
+                                              size = 3, 
+                                              p = ./2))) |>
+  ggplot(aes(x = in_sample, y = in_bag)) +
+    geom_jitter(alpha = 0.5) +
+    labs(title = "Black and White Marbles",
+         subtitle = "More white marbles in bag mean more white marbles selected",
+         x = "White Marbles Selected",
+         y = "White Marbles in the Bag") +
+    scale_y_continuous(breaks = c(0, 1, 2)) +
+  theme_classic()
+
+emp_p <- tibble(p = rep(seq(0, 1, 0.1), 1000)) |>
+  mutate(heads = map_int(p, ~ rbinom(n = 1, size = 20, p = .))) |>
+  ggplot(aes(y = p, x = heads)) +
+    geom_jitter(alpha = 0.1) +
+    labs(title = "Empirical Distribution of Number of Heads",
+         subtitle = expression(paste("Based on simulations with various values of ", rho[h])),
+         x = "Number of Heads out of 20 Tosses",
+         y = expression(rho[h])) +
+  scale_y_continuous(breaks = seq(0, 1, 0.1)) +
+  theme_classic()
+
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -37,7 +133,6 @@ options(tutorial.exercise.timelimit = 60,
 
 <!-- Yuhan Work Environment Testing -->
 
-
 ## Introduction
 ### 
 
@@ -48,7 +143,7 @@ This tutorial covers [Chapter 2](https://ppbds.github.io/primer/05-probability.h
   4. Create distributions using tools above and from earlier chapters.
   5. Start thinking about the meaning of each distribution by looking at each graph.
 
-## 2.1 Distributions
+## Distributions
 ### 
 
 Let's create this normal distribution by the end of this section.
@@ -127,8 +222,6 @@ tibble(numbers = 1:101) |>
 
 Both `mean()` and `median()` have `na.rm` value set to its default `FALSE`, the `na.rm` means the function does not consider NA value in the tibble.
 
-
-
 ### Exercise 4
 
 Within the `summarise()`, add a new argument separate by comma, `stan_dev`, and set `stan_dev` equal to the standard deviation of `numbers` using sd().Recall standard deviation is measuring how spread out our numbers were.
@@ -195,7 +288,6 @@ tibble(numbers = 1:100) |>
 
 It will create another two rows, because quantile has three values in it's column, yet if we want to keep it in one rows, we can add `list()` around `quantile()`, so that we create an list-column for column quantile and keep everything else in 1 row.
 
-
 ### Exercise 7
 
 Start a new pipe using `tibble()`, make the first column name is `ID`, and set it equal to the consecutive integer from 1 to 100, then make the second column which name is `scores`, and set it equal using rep() where value `1350` occurs 20 times, value `1380` occurs 30 times, `1440` occurs 40 times, and `1520` occurs 10 times. Remember to group the `rep()` together using `c()`.
@@ -237,8 +329,6 @@ tibble(ID = 1:100 , scores = c(rep(1350, ...),
 
 Function `quantile()` produces sample quantiles corresponding to the given probabilities. The smallest observation corresponds to a probability of 0 and the largest to a probability of 1.
 
-
-
 ### Exercise 9
 
 Now let's say instead looking at the percentile you want to randomly pick 10 people from 1350 to 1520 score range to admit.Within `summarise()`, replace `percentile` to `admit`, and set it equal using `sample()`, within `sample()`, the first argument is `scores`, second set `size` equal to 10, and third set `replace` equals `FALSE`.
@@ -261,10 +351,10 @@ tibble(ID = 1:100 , scores = c(rep(1350, ...),
 
 Within `sample()`, the first argument represents the data source, `size` means the number of values we are picking, and `replace` means whether we pick the same value twice.
 
-
 ### Exercise 10
 
 Let's now use `runif()` to draw from a uniform distribution. Within `runif()`, set `n` to 5 (the number of draws), `min` to 5, and `max` to 8. 
+
 ```{r distributions-10, exercise = TRUE}
 
 ```
@@ -292,7 +382,6 @@ tibble(heads = rbinom(n = 1000, size = 1, prob = 0.5))
 ### 
 
 `rbinom()` is used for the scenario where there is only two possible outcome also known as Boolean data type, the coin toss in this case is an example of an Boolean data. Within `rbinom()` the value `n` means how many value is draw, `size` is how many value draws each time, and `prob` is the probability of the outcome.
-
 
 ### Exercise 12
 
@@ -352,8 +441,6 @@ Let's prepare to plot our tibble.  Use `|>` to add the function `pivot_longer()`
 
 `pivot_longer()` "lengthens" data, increasing the number of rows and decreasing the number of columns. The inverse transformation is `pivot_wider()`
 
-
-
 ### Exercise 15
 
 Continue your pipe with `ggplot()` to map `x` to `draw` and `fill` to Distribution. Add the layer `geom_histogram()`. Within `geom_histogram()`, use `aes()` to add aesthetic with `after_stat()` . Inside `aes()`, set `y` equals to `after_stat()` with `count/sum(count)` to put percents on the y-axis.
@@ -401,7 +488,7 @@ Reminder: This is what your plot should look like.
 shoesize_p
 ```
 
-## 2.2 Probability Distributions With Flipping a Coin 
+## Probability Distributions With Flipping a Coin 
 ### 
 
 Let's create the following *empirical distribution* of flipping a fair coin. Recall, that empirical distribution is based on data therefore we need to simulated our data, that is "flipping the coin" by ourselves.
@@ -444,11 +531,7 @@ sample(c(..., ...), 100, replace = TRUE)
 
 ### 
 
-Essencially we are flipping a coin 100 times on our own on the computer. This is one way we can get access to our *population*, which contains all the data we need.
-
-
-<!-- From https://stat.ethz.ch/R-manual/R-devel/library/stats/html/Binomial.html -->
-
+Essentially we are flipping a coin 100 times on our own on the computer. This is one way we can get access to our *population*, which contains all the data we need.
 
 ### Exercise 2
 
@@ -467,7 +550,6 @@ tibble(... = sample(..., ..., ...))
 ### 
 
 `sample()` is what we always use in flipping coins, rolling dice, and other simple probability problems, where we can pick an value and repeat it as many times as we want.
-
 
 ### Exercise 3
 
@@ -532,7 +614,6 @@ The color argument within geom_histogram(), determines the color of the bar's fr
 
 Now use `scale_x_continuous()` so the x-axis has `breaks` at 0 and 1. Set the `labels` for the breaks as "Heads" and "Tails", respectively. 
 
-
 ```{r flipping-a-coin-6, exercise = TRUE}
 
 ```
@@ -578,7 +659,7 @@ Finally, use `labs()` to add the appropriate title, subtitle, and axis labels.
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-Reminder: Your plot should look similar to the the one below. **Note**: the height of the bars will vary because our `rbinom()` statements generate different proportions every time! If we used the function `set.seed()` then we would be able to replicate our results. Learn more about set.seed [here](https://www.tutorialspoint.com/why-we-should-use-set-seed-in-r). 
+Reminder: Your plot should look similar to the the one below. **Note**: the height of the bars will vary because our `rbinom()` statements generate different proportions every time! If we used the function `set.seed()` then we would be able to replicate our results. Learn more about set.seed [here](https://www.tutorialspoint.com/why-we-should-use-set-seed-in-r).
 
 ```{r}
 emp_p
@@ -586,10 +667,9 @@ emp_p
 
 ### 
 
-Remember the *empirical distribution* is grabbing data out of the *population*.
-*Population* is the imaginary urn from which our data has been, or will be drawn. 
+Remember the *empirical distribution* is grabbing data out of the *population*. *Population* is the imaginary urn from which our data has been, or will be drawn. 
 
-## 2.2 Probability Distributions With Rolling Two Dice
+## Probability Distributions With Rolling Two Dice
 ### 
 
 Let's create the following *empirical distribution* for rolling two dice.
@@ -663,7 +743,6 @@ This may return an error, but you may still continue on to the next exercise whe
 
 Nice! Now let's pipe down the above and use the `mutate()` function to assign the `map_dbl` functions we above to an value called "die_1".
 
-
 ```{r rolling-two-dice-3, exercise = TRUE}
 
 ```
@@ -683,7 +762,6 @@ mutate(die_1 = map_dbl(ID, ~ sample(c(1:6), size = 1))) |>
 ### Exercise 4
 
 Now copy and paste the results from above, and do the exact same thing again but instead row named to value to `die_2`, because we need the results for two dices.
-
 
 ```{r rolling-two-dice-4, exercise = TRUE}
 
@@ -705,7 +783,6 @@ mutate(die_2 = map_dbl(ID, ~ sample(c(1:6), size = 1))) |>
 
 Use the `mutate()` function once again, name the value of the sum of `die_1` and `die_2` to "sum"
 
-
 ```{r rolling-two-dice-5, exercise = TRUE}
 
 ```
@@ -720,7 +797,6 @@ mutate(sum = die_1 + die_2)
 ### Exercise 6
 
 Copy and paste the results from above, now use `ggplot()` to graph the Empirical Distribution, set `x = sum` within `aes()`, and then add a layer of `geom_histogram()`
-
 
 ```{r rolling-two-dice-6, exercise = TRUE}
 
@@ -759,7 +835,6 @@ Also set `binwidth` to .5 and `color` to "white" within `geom_histrogram()`.
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-
 ```{r rolling-two-dice-8-hint-1, eval = FALSE}
 ... +
     geom_histogram(aes(y = after_stat(count/sum(count))), 
@@ -770,7 +845,6 @@ Also set `binwidth` to .5 and `color` to "white" within `geom_histrogram()`.
 ### Exercise 9
 
 Now use `scale_x_continuous()` so the x-axis has `breaks` to the sequence between 2 and 12 common difference is 1 using `seq()`. Set the `labels` for the breaks as from 2 to 12.
-
 
 ```{r rolling-two-dice-9, exercise = TRUE}
 
@@ -818,7 +892,7 @@ Reminder: Your plot should look similar to the the one below.
 emp_dist_dice
 ```
 
-## 2.2 Probability Distributions With Engine Displacement
+## Probability Distributions With Engine Displacement
 ### 
 
 <!-- MT: need to replaced nhanes in the book with mpg data  -->
@@ -826,7 +900,7 @@ emp_dist_dice
 Let's create the following *empirical distribution* about the "engine displacement of the next front-wheel drive car you'll see" using the data from the `mpg` dataset.
 
 ```{r}
-emp_height <- mpg |>
+emp_mpg <- mpg |>
   filter(drv == "f", cty >= 16) |>
   select(displ)|>
   drop_na() |>
@@ -841,7 +915,8 @@ emp_height <- mpg |>
   scale_y_continuous(labels =
                       scales::percent_format(accuracy = 1)) +
   theme_classic()
-emp_height
+
+emp_mpg
 ```
 
 ### Exercise 1
@@ -967,10 +1042,10 @@ Finally, use `labs()` to add the appropriate title, subtitle, axis labels, and c
 Reminder: Your plot should look exatly like this one because we used the exact same data from mpg.
 
 ```{r}
-emp_height
+emp_mpg
 ```
 
-## 2.3 List-columns and Map Functions
+## List-columns and Map Functions
 ###
 
 We need to expand our collection of R tricks by learning about list-columns and `map_*` functions. Recall that a list is different from an atomic vector. In atomic vectors, each element of the vector has one value. Lists, however, can contain vectors, and even more complex objects, as elements.
@@ -1176,7 +1251,7 @@ The reason for why we are doing these almost the same exercise is to show you ho
 
 ### Exercise 12
 
-Create a tibble using tibble(), set the first column ID equal to a set of integers form 1 to 10. 
+Create a tibble using `tibble()`, set the first column `ID` equal to a set of integers from 1 to 10. 
 
 ```{r listcolumns-and-map--12, exercise = TRUE}
 
@@ -1186,11 +1261,13 @@ Create a tibble using tibble(), set the first column ID equal to a set of intege
 tibble(ID= 1:10)
 ```
 
-We can get the consecuetive integers we want by using : instead of c().
+###
+
+We can get the consecutive integers we want by using `:` instead of `c()`.
 
 ### Exercise 13
 
-Use mutate() to create a new column called N, set n equal an value from 10 random values in which the mean is 0 and standard deviation is 1. 
+Use `mutate()` to create a new column called `N`, set n equal an value from 10 random values in which the mean is 0 and standard deviation is 1. 
 
 ```{r listcolumns-and-map--13, exercise = TRUE}
 
@@ -1205,11 +1282,11 @@ tibble(ID = 1:10) |>
 
 ### 
 
-Note how all N is equal, essentially what happened here is N calculate it self using the sample() function and copy it 10 times to matched the ID column.
+Note how all `N` is equal, essentially what happened here is `N` calculate it self using the `sample()` function and copy it 10 times to matched the `ID` column.
 
 ### Exercise 14
 
-Create an new column called Y using mutate(), this time use map_dbl(), set the first argument to ID to represent the data source, the second argument to the `sample()` *Formula* we created in the last exercise.
+Create an new column called `Y` using `mutate()`, this time use `map_dbl()`, set the first argument to `ID` to represent the data source, the second argument to the `sample()` *Formula* we created in the last exercise.
 
 ```{r listcolumns-and-map--14, exercise = TRUE}
 
@@ -1227,9 +1304,320 @@ tibble(ID = 1:10) |>
 
 ### 
 
-When we add on the map_* () function to the mutate, it grabs the data in this case is `ID`, and it deals with each one of the data using the formula in the second statement `~sample()`, that's why we would get different results for each ID in the Y column but not in the N column.
+When we add on the `map_* ()` function to the mutate, it grabs the data in this case is `ID`, and it deals with each one of the data using the formula in the second statement `~sample()`, that's why we would get different results for each ID in the Y column but not in the `N` column.
 
-## 2.5 Three Models 
+## Two Models
+###
+
+The simplest possible setting for inference involves two models — meaning two possible states of the world — and two outcomes from an experiment. Imagine that there is a disease — Probophobia, an irrational fear of probability — which you either have or don’t have. We don’t know if you have the diseases, but we do assume that there are only two possibilities.
+
+###
+
+Let's create the following *joint and conditional* probability tibble about Probophobia. There is then a 50% chance that you test positive and a 50% chance you test negative.
+
+```{r}
+jd_disease <- tibble(ID = 1:10000, 
+                     have_disease = rep(c(TRUE, FALSE), 
+                                        5000)) |>
+  mutate(positive_test = if_else(have_disease,
+                                 map_int(have_disease, ~ rbinom(n = 1, size = 1, p = 0.99)),
+                                 map_int(have_disease, ~ rbinom(n = 1, size = 1, p = 0.5))))
+
+jd_disease
+```
+
+### Exercise 1
+
+Use `tibble()` and set `ID` from 1 to 10000.
+
+```{r 24-two-models-1, exercise = TRUE}
+
+```
+
+```{r 24-two-models-1-hint, eval = FALSE}
+tibble(ID = ...)
+```
+
+###
+
+The first step is to simply create an tibble that consists of the simulated data we need to plot our distribution. 
+
+### Exercise 2
+
+Within the `tibble()` set `have_disease` to `rep(c(TRUE, FALSE), 5000)`.
+
+```{r 24-two-models-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-2-hint, eval = FALSE}
+tibble(..., have_disease = rep(c(TRUE, FALSE), 5000))
+```
+
+###
+
+We have two different probabilities and they are completely separate from each other and we want to keep the two probabilities and the disease results in two and only two columns so that we can graph using the `ggplot()` function.
+
+### Exercise 3
+
+Start a pipe with the above code and `mutate()`, `positive_test` set to `if_else(have_disease)`.
+
+```{r 24-two-models-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-3-hint, eval = FALSE}
+... |>
+  mutate(positive_test = if_else(...))
+```
+
+### Exercise 4
+
+Finally let's add two `map_int()`'s with `have_disease` and `rbinom()`. In `rbinom()` set `n` to 1, `size` to 1, and `prob` to 0.99 for the first and 0.5 for the second.
+
+```{r 24-two-models-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-4-hint, eval = FALSE}
+... |>
+  mutate(...,
+         map_int(..., ~ rbinom(n = 1, size = ..., p = 0.99)),
+         map_int(..., ~ rbinom(n = 1, size = ..., p = 0.5))))
+```
+
+###
+
+We use the `rep` and `seq` functions when creating the table. The `seq` function sets the sequence we wants, in this case it is only two numbers, 0.01 (99% accuracy for testing negative if no disease, therefore 1% for testing positive if no disease) and 0.5 (50% accuracy for testing positive/negative if have disease), then we used the `rep` functions to repeat the process 10,000 times for each probability, in total 20,000 times.
+
+### Exercise 5
+
+Take the above code and set it to the `jd_disease` variable.
+
+```{r 24-two-models-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-5-hint, eval = FALSE}
+jd_disease <- ... 
+```
+
+### Exercise 6
+
+Let's create an *unnormalized conditional distribution*. Start a pipe with the `jd_disease` to `filter()` and only include `positive_test` equal to 1.
+
+```{r 24-two-models-6, exercise = TRUE}
+
+```
+
+```{r 24-two-models-6-hint, eval = FALSE}
+... |> 
+  filter(... == 1)
+```
+
+###
+
+Since the test is not always accurate, you cannot be 100% certain that you have it. Here we are isolating the slice where the test result equals 1 (meaning positive).
+
+### Exercise 7
+
+Continue the pipe from above and `ggplot()` and within `aes()` set `x` to `have_disease`.
+
+```{r 24-two-models-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-7-hint, eval = FALSE}
+... |> 
+  ggplot(aes(x = ...))
+```
+
+### Exercise 8
+
+Add `geom_bar()` to the view the following graph.
+
+```{r 24-two-models-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-8-hint, eval = FALSE}
+... +
+    ...()
+```
+
+### Exercise 9
+
+Now we want to add labels with `labs()`. Set `title` to "Disease Status Given Positive Test", `subtitle` to "Almost all of the cases were infected", `x` to "Disease Status", and `y` to "Count".
+
+```{r 24-two-models-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-9-hint, eval = FALSE}
+... +
+    labs(title = ...,
+         ... = "Almost all of the cases were infected",
+         x = ...,
+         y = ...)
+```
+
+### Exercise 10
+
+Let's add `scale_x_discrete()` and set `breaks` to `c(FALSE, TRUE)`.
+
+```{r 24-two-models-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-10-hint, eval = FALSE}
+... +
+    scale_x_discrete(... = c(..., ...))
+```
+
+###
+
+We want to change the labels on the bottom of the graph which can be done by recognizing that the `breaks` are `FALSE` and `TRUE` on the bottom.
+
+### Exercise 11
+
+Continue the `scale_x_discrete()` function by adding `labels` set to `c("Healthy", "Infected")`.
+
+```{r 24-two-models-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-11-hint, eval = FALSE}
+... +
+    scale_x_discrete(...,
+                     labels = c("Healthy", "Infected"))
+```
+
+###
+
+Through labels we are able to change the label `FALSE` to "Healthy" and `TRUE` to "Infected".
+
+###
+
+Most people who test positive are infected. This is a result for common diseases like cold.
+
+### Exercise 12
+
+Let's use the data from above to create a *conditional distribution*. Add `geom_bar()` and within `aes()` set `y` to `after_stat(count/sum(count))`.
+
+```{r 24-two-models-12, exercise = TRUE}
+jd_disease |> 
+  filter(positive_test == 1) |> 
+  ggplot(aes(have_disease))
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-12-hint, eval = FALSE}
+jd_disease |> 
+  filter(positive_test == 1) |> 
+  ggplot(aes(have_disease)) +
+    geom_bar(aes(y = ...)))
+```
+
+###
+
+`filter()` transforms a *joint distribution* into a *conditional distribution*. We will turn the *unnormalized distribution* into a *posterior probability distribution*.
+
+### Exercise 13
+
+In `geom_bar()` set `color` to "white".
+
+```{r 24-two-models-13, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-13-hint, eval = FALSE}
+... +
+    geom_bar(aes(y = ...)), 
+             color = "white")
+```
+
+###
+
+If we zoom in on the plot, about 70% of people who tested positive have the disease and 30% who tested positive do not have the disease. In this case, we are focusing on one slice of the probability distribution where the test result was positive.
+
+### Exercise 14
+
+Let's add labels to this graph through `labs()`. Set `title` to "Posterior for Probophobia Conditional on Positive Test", `x` to "Probophobia Status", and `y` to "Probability".
+
+```{r 24-two-models-14, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-14-hint, eval = FALSE}
+... +
+    labs(... = "Posterior for Probophobia Conditional on Positive Test",
+    x = ...,
+    y = ...)
+```
+
+### Exercise 15
+
+Now we want to add `scale_x_discrete()`. Set `breaks` to `c(FALSE, TRUE)` and `labels` to `c("Healthy", "Infected")`.
+
+```{r 24-two-models-15, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-15-hint, eval = FALSE}
+... +
+    scale_x_discrete(breaks = c(FALSE, TRUE),
+                     labels = c("Healthy", "Infected"))
+```
+
+###
+
+There are two disease outcomes: positive or negative. By isolating a section, we are looking at a *conditional distribution*. Conditional on a positive test, you can visualize the likelihood of actually having the disease versus not.
+
+### Exercise 16
+
+Continue by adding `scale_y_continuous()` and set `labels` to `scales::percent_format(accuracy = 1)`.
+
+```{r 24-two-models-16, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 24-two-models-16-hint, eval = FALSE}
+... +
+    scale_y_continuous(labels = ...)
+```
+
+###
+
+With a positive test, you can be almost 70% sure that you have Probophobia, however there is a good chance about 30% that you receive a false positive, so don’t worry too much there is still about a third of hope that you get the wrong result.
+
+## Three Models 
 ### 
 
 Let's create the following *joint distribution* of the number of white marbles in a bag and the number of white marbles pulled out in the sample.
@@ -1302,6 +1690,7 @@ This is because `rbinom()` only generate 1 values, so r copied and paste that va
 ### Exercise 4
 
 Now set `in_sample` to the function `map_int()`. The first argument to `map_int()` should be `in_bag`. The second argument should be an `rbinom()` where `n` is set to 1, `size` is set to 3, and `p` is set to `./2`.
+
 ```{r three-models-4, exercise = TRUE}
 
 ```
@@ -1328,7 +1717,6 @@ Pipe your result into `ggpplot()`. Map `in_sample` to the x-axis and `in_bag` to
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
-
 
 ```{r three-models-5-hint-1, eval = FALSE}
 ... |> 
@@ -1367,6 +1755,8 @@ Now use `scale_y_continuous()` to break the y-axis into three values. Within `sc
   scale_y_continuous(breaks = c(..., ..., ...)
 ```
 
+###
+
 Why do we do this? Each value on the y-axis represents a different version or belief about the world.
 
 ### Exercise 8
@@ -1386,7 +1776,9 @@ joint_p
 ```
 
 ```{r three-models-8-hint-1, eval = FALSE}
-
+... +
+  labs(...) +
+  theme_classic(...)
 ```
 
 ### 
@@ -1586,7 +1978,7 @@ Reminder: This is what your plot should look like.
 norm_p
 ```
 
-## 2.6 N Models 
+## N Models 
 ### 
 
 Let's create the following *empirical distribution* for possible simulations for $\rho_h$. In other words, we will create a joint distribution of models which might be true and of data which our experiment might generate. 
@@ -1749,6 +2141,7 @@ Copy the code from exercise 7 upto ggplot. Pipe this to `filter()` for where `he
 ```
 
 ```{r n-models-8-hint-1, eval = FALSE}
+... |>
   filter(heads == ...)
 ```
 
@@ -1811,7 +2204,6 @@ norm_p
 
 We begin our code the same way we began our code for the *unnormalized conditional distribution*. We have provided the code for you below. To begin, add the layer `geom_histogram()` and set `bins` to 50.
 
-
 ```{r n-models-11, exercise = TRUE}
  tibble(p = rep(seq(0, 1, 0.1), 1000)) |>
   mutate(heads = map_int(p, ~ rbinom(n = 1, size = 20, p = .))) |> 
@@ -1827,7 +2219,6 @@ We begin our code the same way we began our code for the *unnormalized condition
 ### Exercise 12
 
 Within `geom_histogram()`, use `after_stat()` . Inside `aes()` with the argument `y = count/sum(count)` use `after_stat()` to put percents on the y-axis.
-
 
 ```{r n-models-12, exercise = TRUE}
 
@@ -1864,7 +2255,6 @@ Now use `scale_y_continuous()` to put the y-axis in percent format. Within `scal
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-
 ```{r n-models-14-hint-1, eval = FALSE}
 ... + 
   scale_y_continuous(labels = scales::percent_format(...))
@@ -1873,7 +2263,6 @@ Now use `scale_y_continuous()` to put the y-axis in percent format. Within `scal
 ### Exercise 15
 
 Finally, use `labs()` to add the title "Posterior Probability Distribution of P(h)". Then label your x-axis "Possibility values for P(h)" and y-axis "Probability". Also add the layer `theme_classic()`.
-
 
 ```{r n-models-15, exercise = TRUE}
 
@@ -1887,10 +2276,10 @@ Reminder: This is what your plot should look like.
 norm_p
 ```
 
-## 2.7 Working with Probability Distributions with `rbinom()`
+## Working with Probability Distributions with `rbinom()`
 ###
 
-Consider binomial distribution, the case in which the probability of some Boolean variable (for instance success or failure) is calculated for repeated, independent trials. One common example would be the probability of flipping a coin and landing on heads.
+Consider *binomial distribution*, the case in which the probability of some Boolean variable (for instance success or failure) is calculated for repeated, independent trials. One common example would be the probability of flipping a coin and landing on heads.
 
 ### Exercise 1
 
@@ -2035,9 +2424,9 @@ Copy the code from above, change the `labels` to unfair instead of fair and chan
 
 ###
 
-Here we have a situation in which we are 10,000 times, flipping a unfair coin 10 times. We can see that "Heads" was favored the most throughout the entire flipping.
+Here we have a situation in which we are 10,000 times, flipping a unfair coin 10 times. We can see that "Heads" was favored the most throughout the entire flipping. Check out [**binomial distribution**] https://stat.ethz.ch/R-manual/R-devel/library/stats/html/Binomial.html to learn more about the data involved with binomial distribution.
 
-## 2.8 Cardinal Virtues with Wisdom
+## Cardinal Virtues with Wisdom
 
 - Are the data we have close enough to the data we want (i.e., the Preceptor Table) that we can consider both as coming from the same population?
 
@@ -2084,7 +2473,7 @@ question_text(NULL,
 	rows = 6)
 ```
 
-## 2.8 Cardinal Values with Justice
+## Cardinal Values with Justice
 
 - Does the relationship among the variables demonstrate stability, meaning is the model stable across different time periods?
 
@@ -2157,7 +2546,7 @@ question_text(NULL,
 	rows = 6)
 ```
 
-## 2.8 Cardinal Virtues with Courage
+## Cardinal Virtues with Courage
 
 - Which variables to include and to estimate the values of unknown parameters?
 
@@ -2203,7 +2592,7 @@ question_text(NULL,
 	rows = 6)
 ```
 
-## 2.8 Cardinal Virtues with Temperance
+## Cardinal Virtues with Temperance
 
 - How to use the model and DGM to answer questions?
 
