@@ -1,6 +1,6 @@
 ---
 title: "One Parameter: Overview"
-author: Ryan Southward
+author: Ryan Southward and Mann Talati
 tutorial:
   id: one-parameter-overview
 output:
@@ -54,6 +54,27 @@ shovels_100 <- expand_grid(trial_ID = 1:100, shovel_size = 1:100) |>
   group_by(shovel_size) |> 
   summarize(st_dev_p_hat = sd(prop_red)) 
 
+shovel_p <- shovels_100 |>
+ ggplot(aes(x = shovel_size, y = st_dev_p_hat)) +
+ geom_point() +
+ labs(title = "Sampling Variation",
+      subtitle = "Larger samples have less variation",
+      x = "Shovel size",
+      y = "Standard deviation of the proportion red")
+
+ppd_plot <- ppd_for_p |>
+  ggplot(aes(x = p)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 50) + 
+    labs(title = "Posterior Probability Distribution",
+         subtitle = "Distribution is centered at .34",
+         x = "Proportion p of Red Beads in Urn",
+         y = "Probability") + 
+  
+    scale_x_continuous(labels = scales::number_format()) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
 #rstanarm stuff:
 
 urn_data <- tibble(red = c(rep(1, 17), rep(0, 33)))
@@ -89,7 +110,15 @@ ppd_reds_in_20 <- posterior_predict(fit_1,
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
 
-## Virtual sampling
+## Introduction
+###
+
+This tutorial covers [Chapter 3](https://ppbds.github.io/primer/06-one-parameter.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/). This tutorial will review topics including One Parameter, shovel method, virtual sampling, standard error, cardinal virtues (wisdom, justice, courage, and temperance), and a case study.
+
+## Virtual Sampling Through a Similar Real Sampling Activity
+###
+
+In this section, we mimic this physical sampling with virtual sampling, using a computer. In a real sampling activity, we would perform a tactile sampling activity. In this we use a physical urn of beads and a physical shovel which is done by hand so that we could develop our intuition about the ideas behind sampling. 
 
 ### 
 
@@ -108,76 +137,80 @@ virtual_samples |>
 
 ### Exercise 1
 
-Type `urn` below to inspect the urn we will be using in this section.
+Create a `urn` variable on the second line that is set to a `tibble()`. Within the `tibble()` set `color` to the combination of `rep("red", 400)` and `rep("white", 600)`.
 
-```{r virtual_sampling-1, exercise = TRUE}
+```{r 32-virtual-sampling-1, exercise = TRUE}
 set.seed(10)
-urn <- tibble(color = c(rep("red", 400), rep("white", 600))) |>
-  sample_frac() |> 
-  mutate(bead_ID = 1:1000) 
+
 ```
+
+```{r 32-virtual-sampling-1-hint, eval = FALSE}
+set.seed(10)
+urn <- tibble(... = c(rep("...", ...), 
+                        rep("...", ...)))
+```
+
+###
+
+`set.seed()` ensures that the beads in our virtual urn are always in the same order. This ensures that the figures in the book match their written descriptions. We want 40% of the beads to be red. The `rep()` function will repeat the first argument a number of times specified by the second argument. We then combine our 400 red beads and 600 white beads using `c()`.
 
 ### Exercise 2
 
-Good. Recall that the `rep()` function will repeat the first argument a number of times specified by the second argument. We then combine our 400 red beads and 600 white beads using `c()`, and finally "mix" the urn using `sample_frac()`. 
+Within the `urn` variable start a pipe and set it to `sample_frac()`.
 
-To simulate the process of real-world sampling, let’s take a sample of 50 beads from our virtual urn. To do so, create a `tibble()` that has one variable `trial_ID` that takes on the values 1 to 1000.
-
-```{r virtual_sampling-2, exercise = TRUE}
-
-```
-
-```{r virtual_sampling-2-hint-1, eval = FALSE}
-tibble(trial_ID = ...)
-```
-
-```{r virtual_sampling-2-hint-2, eval = FALSE}
-Use the : operator to create a range of integers.
-```
-
-### Exercise 3
-
-Great. Now pipe your results to the function `mutate()` to create the variable `shovel`, which is set to the function `map()`. The first argument to `map()` should be `trial_ID`. The second argument should use `slice_sample()`. Within `slice_sample()`, the first argument should be `urn` (the data we want to sample from), and then set `n` equal to our sample size (we want a sample size of 50). 
-
-```{r virtual_sampling-3, exercise = TRUE}
+```{r 32-virtual-sampling-2, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r virtual_sampling-3-hint-1, eval = FALSE}
-... |> 
-  mutate(shovel = map(..., ~ ...))
+```{r 32-virtual-sampling-2-hint, eval = FALSE}
+urn <- ... |>
+          sample_frac()
 ```
 
-```{r virtual_sampling-3-hint-2, eval = FALSE}
-... |> 
-  mutate(shovel = map(..., ~slice_sample(urn, n = ...)))
+###
+
+`sample_frac()` keeps all the rows in the tibble but rearranges their order. We don't need to do this. A virtual urn does not care about the order of the beads. But we find it aesthetically pleasing to mix them up.
+
+### Exercise 3
+
+Finish the pipe with `mutate()` and set `bead_ID` to 1 through 1000.
+
+```{r 32-virtual-sampling-3, exercise = TRUE}
+
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 32-virtual-sampling-3-hint, eval = FALSE}
+urn <- ... |>
+          mutate(... = 1:1000)
+```
+
+###
+
+The first variable `bead_ID` is used as an identification variable. None of the beads in the actual urn are marked with numbers. The second variable `color` indicates whether a particular virtual bead is red or white.
 
 ### Exercise 4
 
-Continue your pipe with `mutate()` to create the variable `numb_red`, which will tells us the number of red beads present. Set `numb_red` to the function `map_int()`. The first argument to `map_int()` should be `shovel`. The second argument should take the `sum()` of where the column `color` of `shovel` is equal to red.
+To simulate the process of real-world sampling, let’s take a sample of 50 beads from our virtual urn. To do so, create a `tibble()` that has one variable `trial_ID` that takes on the values 1 to 1000.
 
 ```{r virtual_sampling-4, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r virtual_sampling-4-hint-1, eval = FALSE}
-... |> 
-  mutate(... = map_int(..., ~...))
+tibble(trial_ID = ...)
 ```
 
 ```{r virtual_sampling-4-hint-2, eval = FALSE}
-... |> 
-  mutate(... = map_int(..., ~ sum(.$color == "red")))
+Use the : operator to create a range of integers.
 ```
 
 ### Exercise 5
 
-Use `mutate()` one last time to create the variable `prop_red`, which is our estimate of the proportion of red beads in the urn. Set `prop_red` to `numb_red` divided by the sample size (in this exercise we are using a set sample size of 50).
+Now pipe your results to the function `mutate()` to create the variable `shovel`, which is set to the function `map()`. The first argument to `map()` should be `trial_ID`. The second argument should use `slice_sample()`. Within `slice_sample()`, the first argument should be `urn` (the data we want to sample from), and then set `n` equal to our sample size (we want a sample size of 50). 
 
 ```{r virtual_sampling-5, exercise = TRUE}
 
@@ -187,12 +220,21 @@ Use `mutate()` one last time to create the variable `prop_red`, which is our est
 
 ```{r virtual_sampling-5-hint-1, eval = FALSE}
 ... |> 
-   mutate(prop_red = ... / ...)
+  mutate(shovel = map(..., ~ ...))
 ```
+
+```{r virtual_sampling-5-hint-2, eval = FALSE}
+... |> 
+  mutate(shovel = map(..., ~slice_sample(urn, n = ...)))
+```
+
+###
+
+The advantage of modern technology is that we can use virtual simulation as many times as we choose, so we have no restrictions on resources. No longer are the days where we have to recruit our friends to tirelessly sample from the physical urn.
 
 ### Exercise 6
 
-Assign your code from above to an object named `virtual_samples`.
+Continue your pipe with `mutate()` to create the variable `numb_red`. Set `numb_red` to the function `map_int()`. The first argument to `map_int()` should be `shovel`. The second argument should take the `sum()` of where `.$color` is equal to red.
 
 ```{r virtual_sampling-6, exercise = TRUE}
 
@@ -201,26 +243,41 @@ Assign your code from above to an object named `virtual_samples`.
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r virtual_sampling-6-hint-1, eval = FALSE}
-Use the assignment operator <-  to do so.
+... |> 
+  mutate(... = map_int(..., ~...))
 ```
+
+```{r virtual_sampling-6-hint-2, eval = FALSE}
+... |> 
+  mutate(... = map_int(..., ~ sum(.$color == "red")))
+```
+
+###
+
+R evaluates if `color == red`, and treats `TRUE` values like the number `1` and `FALSE` values like the number `0`. So summing the number of `TRUE`s and `FALSE`s is equivalent to summing `1`’s and `0`’s. In the end, this operation counts the number of beads where `color` equals “red”.
 
 ### Exercise 7
 
-Awesome. Now start a pipe with `virtual_samples`. Use `ggplot()`to map `prop_red` to the x-axis. Also, add the layer `geom_histogram()` to create a histogram of our data.
+Use `mutate()` one last time to create the variable `prop_red`. Set `prop_red` to `numb_red` divided by the sample size (in this exercise we are using a set sample size of 50).
 
 ```{r virtual_sampling-7, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r virtual_sampling-7-hint-1, eval = FALSE}
-virtual_samples |> 
-  ggplot(aes(...)) + 
-  geom_histogram()
+... |> 
+   mutate(prop_red = ... / ...)
 ```
+
+###
+
+`prop_red` estimate's our proportion of red beads in the urn.
 
 ### Exercise 8
 
-Within `geom_histrogram()` set `binwidth` to .01, `boundary` to .4, and `color` to "white".
+Assign your code from above to an object named `virtual_samples`.
 
 ```{r virtual_sampling-8, exercise = TRUE}
 
@@ -229,16 +286,61 @@ Within `geom_histrogram()` set `binwidth` to .01, `boundary` to .4, and `color` 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r virtual_sampling-8-hint-1, eval = FALSE}
-... +
-  geom_histrogram(binwidth = ..., boundary = ..., color = ...)
+Use the assignment operator <-  to do so.
 ```
 
 ### Exercise 9
 
-To finish, use `labs()` to give your graph the appropriate title and axis labels. See **hint** for guidance to create the symbol $\hat{p}$.
-
+Now start a pipe with `virtual_samples`. Use `ggplot()` to map `prop_red` to the x-axis.
 
 ```{r virtual_sampling-9, exercise = TRUE}
+
+```
+
+```{r virtual_sampling-9-hint-1, eval = FALSE}
+virtual_samples |> 
+  ggplot(aes(...))
+```
+
+### Exercise 10
+
+Add the layer `geom_histogram()` to create a histogram of our data.
+
+```{r 32-virtual-sampling-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r 32-virtual-sampling-10-hint, eval = FALSE}
+... +
+  geom_histogram()
+```
+
+### Exercise 11
+
+Within `geom_histrogram()` set `binwidth` to .01, `boundary` to .4, and `color` to "white".
+
+```{r virtual_sampling-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r virtual_sampling-11-hint-1, eval = FALSE}
+... +
+  geom_histrogram(binwidth = ..., boundary = ..., color = ...)
+```
+
+###
+
+Recall that `p` is equal to the proportion of beads which are red in each sample.
+
+### Exercise 12
+
+To finish, use `labs()` to give your graph the appropriate title and axis labels. See **hint** for guidance to create the symbol $\hat{p}$.
+
+```{r virtual_sampling-12, exercise = TRUE}
 
 ```
 
@@ -257,15 +359,25 @@ virtual_samples |>
          title = "Distribution of 1,000 proportions red") 
 ```
 
-```{r virtual_sampling-9-hint-1, eval = FALSE}
+```{r virtual_sampling-12-hint-1, eval = FALSE}
 Within labs(), set x to expression(hat(p))
 ```
 
+###
+
+This visualization allows us to see how our results differed between our tactile and virtual urn results. As we can see, there is some variation between our results. This is not a cause for concern, as there is always expected sampling variation between results.
+
 <!-- RS: Later on add exercises to build the graph that compares shovel size 25, 50, and 100. In a few days I will edit the primer to remove the bindrows() nonsense and create the graph using expand_grid(). -->
 
-## SE of different shovel sizes
+## Standard Error of different shovel sizes
 
 ### 
+
+<!-- MT: add questions about the definitions/important concepts of standard error -->
+
+Standard errors (SE) quantify the effect of sampling variation on our estimates. In other words, they quantify how much we can expect the calculated proportions of a shovel’s beads that are red to vary from one sample to another sample to another sample, and so on. As a general rule, as sample size increases, the standard error decreases.
+
+###
 
 Let's create the following plot that displays different standard deviations of red bead proportions for 100 different shovel sizes.
 
@@ -280,7 +392,6 @@ shovel_p <- shovels_100 |>
 
 shovel_p
 ```
-
 
 ### Exercise 1
 
@@ -298,9 +409,11 @@ expand_grid(trial_ID = ..., shovel_size = ...)
 Use the : operator to create a range of integers. 
 ```
 
+###
+
 ### Exercise 2
 
-Use the pipe operator with your code from above. Use `mutate()`, creating a new column called `shovel`. Set `shovel` equal to a `map()` function, passing in `shovel_size` as the first argument, and the `slice_sample()` function as the second argument. Within `slice_sample()`, the first argument should be `urn` (the data we want to sample from), and then set `n` equal to `.` (we want to pass in the `shovel_size` using `map()`).
+Continue the pipe with `mutate()`, creating a new column called `shovel`. Set `shovel` equal to a `map()` function, passing in `shovel_size` as the first argument, and the `slice_sample()` function as the second argument. Within `slice_sample()`, the first argument should be `urn` (the data we want to sample from), and then set `n` equal to `.` (we want to pass in the `shovel_size` using `map()`).
 
 ```{r different_shovel_siz-2, exercise = TRUE}
 
@@ -337,7 +450,6 @@ Continue your pipe with `mutate()` to create the variable `numb_red`, which will
 ... |> 
   mutate(... = map_int(..., ~ sum(.$color == "red")))
 ```
-
 
 ### Exercise 4
 
@@ -438,7 +550,10 @@ shovel_p
       y = "Standard deviation of the proportion red")
 ```
 
-## Wisdom
+## Cardinal Virtues with Wisdom
+###
+
+*Wisdom* requires the creation of a Preceptor Table, an examination of our data, and a determination, using the concept of “validity,” as to whether or not we can (reasonably!) assume that the two come from the same population.
 
 ### Exercise 1
 
@@ -446,11 +561,11 @@ Consider the following question:
 
 > If we get 17 red beads in a random sample of size 50 taken from a mixed urn, what proportion $\rho$ of the beads in the urn are red?
 
-Our *Preceptor Table* is a table with minimal rows and columns such that we can perfectly answer our question using it. Describe, 2 sentences, the rows and columns of the Preceptor Table for our problem. 
+Our *Preceptor Table* is a table with minimal rows and columns such that we can perfectly answer our question using it. In one sentence explain the columns for our Preceptor Table for the question. 
 
 ```{r wisdom-1}
 question_text(NULL,
-	message = "The Preceptor Table would have as many rows as there are beads in the urn. There would be 2 columns: One for bead ID and one for bead color.",
+	message = "There would be 2 columns: One for the bead ID and one for bead color because the Preceptor Table would have as many rows as there are beads in the urn.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -460,11 +575,11 @@ question_text(NULL,
 
 ### Exercise 2
 
-Can we consider that the data from our urn sample and the Preceptor Table come from the same population? Respond in 1 sentence. 
+How can the *assumption of validity* apply to this question? Write one sentence applying this key concept to our situation. 
 
 ```{r wisdom-2}
 question_text(NULL,
-	message = "The sample was drawn directly from the urn we want to infer about, so the Data and Preceptor Table both come from the same population.",
+	message = "Our sample comes directly from the urn that we are infering about which means that the data and Preceptor refer to the same population, allowing the assumption of validity to hold true because of the similarity.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -472,11 +587,14 @@ question_text(NULL,
 	rows = 6)
 ```
 
-## Justice
+## Cardinal Virtues with Justice
+###
 
-For the next 3 exercises, use the following Population Table for our urn problem:
+*Justice* starts with an examination of the stability, representativeness, and unconfoundedness of the Population Table and ends with an assumption about the mathematical form of the data generating mechanism.
 
-<!-- RS: Maybe don't add a question about the composition of the Population Table because this would be relatively new to students and they may be better served just looking at the example.  -->
+###
+
+For the next three exercises, use the following Population Table for our urn problem:
 
 ```{r}
 tibble(source = c("Population", "Population", "Population","...",  
@@ -524,11 +642,11 @@ tibble(source = c("Population", "Population", "Population","...",
 
 ### Exercise 1
 
-In 2 sentences, explain why the location column is the same for the Data, Preceptor Table, and Population.  
+In one sentence explain the time value for our data.
 
 ```{r justice-1}
 question_text(NULL,
-	message = "Because the beads from our data presumably come from the same urn for which we want to answer our question about, we can assume they come from the same population. As such, we assume that all population members come from inside the same urn.",
+	message = "The time column for the data is listed as the time of the sample, because only one sample was taken for which we have data.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -538,11 +656,11 @@ question_text(NULL,
 
 ### Exercise 2
 
-In a paragraph explain why each source (Data, Preceptor Table, and Population) has a different time value. 
+In one sentence explain the time value for our Preceptor Table.
 
 ```{r justice-2}
 question_text(NULL,
-	message = "The Population has a time range from as far back as 2 years before the sample and upto 2 years into the future, because the urn sample could have theoretically been taken from anytime in the past or into the future, so a wider population must be acknowledged. The time column for the data is listed as the time of the sample, because only one sample was taken for which we have data. The Preceptor Table has a time column of now, because we want to know the contents of the urn in the present day to answer our question.",
+	message = "The Preceptor Table has a time column of now, because we want to know the contents of the urn in the present day to answer our question.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -550,14 +668,13 @@ question_text(NULL,
 	rows = 6)
 ```
 
-
 ### Exercise 3
 
-Great work! Now, in 2 sentences, explain why the colors of some beads are known, while the colors for other beads are unknown. 
+In one sentence explain the time value for our Population.
 
 ```{r justice-3}
 question_text(NULL,
-	message = "The colors of beads in the sample are recorded and known. Because the Data directly fills in the Preceptor Table, we know the colors of some sampled beads in both the Preceptor Table and wider Population. However, there are also other beads that were not sampled for which the color is unknown.",
+	message = "The Population has a time range from as far back as 2 years before the sample and upto 2 years into the future, because the urn sample could have theoretically been taken from anytime in the past or into the future, so a wider population must be acknowledged.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -567,13 +684,12 @@ question_text(NULL,
 
 ### Exercise 4
 
-Write one sentence which provides a reason for why the assumption of validity might not be true.
+In two sentences, provide a reason why the assumption of stability might not hold.
 
-```{r justice-4}
+```{r 34-justice-4}
 question_text(NULL,
-	message = "If the color of the beads wears off overtime, then the meaning of the color red from sample to sample changes.",
-	answer(NULL,
-	correct = TRUE),
+	message = "What if someone dumps some red beads into the urn after we take our sample? Then we cannot assume stability, because the proportion of red beads in the urn, p, the instant before the dump is different than the proportion red in the urn after.",
+	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
@@ -581,28 +697,25 @@ question_text(NULL,
 
 ### Exercise 5
 
-Write one sentence which provides a reason for why the assumption of stability might not be true.
+In two sentences, provide a reason why the assumption of representativeness will hold.
 
-```{r justice-5}
+```{r 34-justice-5}
 question_text(NULL,
-	message = "If someone dumps more red beads into the urn after we take our sample, then the sample would only be reflective of the contents of the urn in the past and not the present, and stability could not be assumed.",
-	answer(NULL,
-	correct = TRUE),
+	message = "For the sample proportion to be similar to the actual population proportion, we ideally want the data we have to be a random, unbiased selection from our population. In the context of our problem, the sampling mechanism of using a shovel of size 50 to sample beads from an urn in which the beads are thoroughly mixed should be enough to consider our sample representative of the population.",
+	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
 
-
 ### Exercise 6
 
-Write one sentence which provides a reason for why the assumption of representativeness might not be true.
+In two sentences, provide a reason why the assumption of unconfoundedness will not apply.
 
-```{r justice-6}
+```{r 34-justice-6}
 question_text(NULL,
-	message = "If the urn is not well mixed, then the sample would not be representitive of the whole urn.",
-	answer(NULL,
-	correct = TRUE),
+	message = "Since this is a predictive model, we do not have to worry about unconfoundedness. There is no “treatment” which might be confounded with anything.",
+	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
@@ -610,11 +723,11 @@ question_text(NULL,
 
 ### Exercise 7
 
-Good. Now let's turn our attention to the Data Generating Mechanism (DGM). Should our urn problem be modeled by a normal or binomial distribution? Explain your reasoning in 2 sentences.  
+Now let's turn our attention to the *Data Generating Mechanism (DGM)*. Should our urn problem be modeled by a normal or binomial distribution? Explain your reasoning in 2 sentences.  
 
 ```{r justice-7}
 question_text(NULL,
-	message = "Our urn problem should be modeled by a binomial distribution, because we model the number of times a red bead is selected (successes) over a white bead (failures). Because there are only 2 possibilities to model, the urn problem can be modeled by a binomial distribution",
+	message = "Our urn problem should be modeled by a binomial distribution, because we model the number of times a red bead is selected (successes) over a white bead (failures). There are only 2 possibilities to model, and the urn problem can be modeled by a binomial distribution",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -622,7 +735,10 @@ question_text(NULL,
 	rows = 6)
 ```
 
-## Courage
+## Cardinal Virtues with Courage
+###
+
+*Courage* takes the mathematical formula from *Justice* and, using code, creates a fitted model, included posterior probability distributions for all the unknown parameters.
 
 ###
 
@@ -630,7 +746,7 @@ Consider our question:
 
 > If we get 17 red beads in a random sample of size 50 taken from a mixed urn, what proportion $\rho$ of the beads in the urn are red?
 
-Let's create the posterior probability distribution of $\rho$ using **rstanarm** 
+Let's create the *Posterior Probability Distribution* of $\rho$ using **rstanarm** 
 
 ```{r}
 ppd_plot <- ppd_for_p |>
@@ -653,28 +769,40 @@ ppd_plot
 
 Our urn problem can be represented by a binomial model, so we structure our data in a binomial format:  1's represent the number of successes (red beads drawn), and the 0's represent the number of failures (white beads drawn). 
 
-Type `urn_data` below to inspect the data we will be using to create our model. 
+###
+
+Load the **rstanarm** package first. 
 
 ```{r courage-1, exercise = TRUE}
-library(rstanarm)
-urn_data <- tibble(red = c(rep(1, 17), rep(0, 33)))
+
+```
+
+```{r courage-1-hint-1, eval = FALSE}
+library(...)
 ```
 
 ### Exercise 2
 
-Next we'll use `stan_glm()` to create a simple Bayesian model. When using `stan_glm()`, there are always four arguments that should be specified:
+Create a `urn_data` variable set to it to a `tibble()`. Within the `tibble()` set `red` to a combination of `rep(1, 17)` and `rep(0, 33)`.
 
-* The `data` argument tells `stan_glm()` what data frame to work with. Set `data` to `urn_data`. 
-* The `family` argument tells `stan_glm()` what mathematical formula should be used to create our model. Set `family` to `binomial`.
-* The `formula` argument tells `stan_glm()` what model is to be fitted. Because we have no predictors, we use the argument `formula = red ~ 1`, which means that we only model the outcome based on the unknown proportion of red beads in the urn. 
-* Set `refresh` to 0 in order to suppress the behavior of printing to the console, and `seed` to 10 so that we get the same output every time we run the code.
+```{r 34-courage-2, exercise = TRUE}
 
-```{r courage-2, exercise = TRUE}
+```
+
+```{r 34-courage-2-hint, eval = FALSE}
+urn_data <- tibble(... = c(rep(1, 17), ...))
+```
+
+### Exercise 3
+
+Next we'll use `stan_glm()` to create a simple Bayesian model. When using `stan_glm()`, we have to use five arguments. Set `data` to `urn_data`. Set `family` to `binomial`. Set `formula` to `red ~ 1`. Set `refresh` to 0. Finally, set `seed` to 10.
+
+```{r courage-3, exercise = TRUE}
 
 
 ```
 
-```{r courage-2-hint-1, eval = FALSE}
+```{r courage-3-hint-1, eval = FALSE}
 stan_glm(data = ...,
          family = ...,
          formula = ..., 
@@ -684,33 +812,31 @@ stan_glm(data = ...,
 
 ###
 
-You do not need to understand what the printed model means. 
-
-### Exercise 3
-
-Next, we should save our model to be able to work with it in later questions.
-
-Copy your code from the previous exercise, and assign it to an object called `fit_1`.  
-
-```{r courage-3, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r courage-3-hint-1, eval = FALSE}
-Use the assignment operator <-  to do so.
-```
+The `data` argument tells `stan_glm()` what data frame to work with. Set `data` to `urn_data`. The `family` argument tells `stan_glm()` what mathematical formula should be used to create our model. Set `family` to `binomial`. The `formula` argument tells `stan_glm()` what model is to be fitted. Because we have no predictors, we use the argument `formula = red ~ 1`, which means that we only model the outcome based on the unknown proportion of red beads in the urn. We use `refresh` at 0 in order to suppress the behavior of printing to the console, and `seed` to 10 so that we get the same output every time we run the code.
 
 ### Exercise 4
 
-Let's recreate our posterior distribution using `posterior_epred()`, assigning our code to a variable called `ppd_for_p`. Pass in `fit_1` as the first argument, and then set the argument `newdata` equal to a `tibble()`. Within the `tibble()`, include `constant = 1`. 
+We need to save our model to be able to work with it in later questions. Copy your code from the previous exercise, and assign it to an object called `fit_1`.  
 
 ```{r courage-4, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r courage-4-hint-1, eval = FALSE}
+Use the assignment operator <-  to do so.
+```
+
+### Exercise 5
+
+Let's recreate our posterior distribution using `posterior_epred()`, assigning our code to a variable called `ppd_for_p`. Pass in `fit_1` as the first argument, and then set the argument `newdata` equal to a `tibble()`. Within the `tibble()`, include `constant = 1`. 
+
+```{r courage-5, exercise = TRUE}
+
+```
+
+```{r courage-5-hint-1, eval = FALSE}
 ppd_for_p <- posterior_epred(..., 
                  newdata = ...)
 ```
@@ -719,71 +845,53 @@ ppd_for_p <- posterior_epred(...,
 
 We use `constant = 1` as junk data to make sure our tibble has just 1 row. 
 
-### Exercise 5
-
-Copy your code from above. First pipe `as_tibble()` to your code. Then continue your pipe by renaming the column of the resulting tibble from `1` to `p` by using `p = 1` within `rename()`. **Remember to include backticks around 1**. 
-
-```{r courage-5, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r courage-5-hint-1, eval = FALSE}
-... |>
-  ... |>
-  rename(...)
-```
-
-```{r courage-5-hint-2, eval = FALSE}
-Within rename, set p equal to `1`. Make sure to include backticks around 1!
-```
-
 ### Exercise 6
 
-Type `ppd_for_p` below to view 4,000 draws from our posterior. 
+Copy your code from above. First pipe `as_tibble()` to your code. Then continue your pipe by renaming the column of the resulting tibble from `1` to `p` by using `p = 1` within `rename()`. **Remember to include backticks around 1**. 
 
 ```{r courage-6, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-6-hint-1, eval = FALSE}
+... |>
+  ... |>
+  rename(...)
+```
+
+```{r courage-6-hint-2, eval = FALSE}
+Within rename, set p equal to `1`. Make sure to include backticks around 1!
+```
+
 ### Exercise 7
 
-Awesome! Now let's graph the draws from the posterior. First, start a pipe with `ppd_for_p`, and using `ggplot()` map `p` to the x axis. Also add the layer `geom_histogram()`.
+Type `ppd_for_p` below to view 4,000 draws from our posterior. 
 
 ```{r courage-7, exercise = TRUE}
 
 ```
 
-
-```{r courage-7-hint-1, eval = FALSE}
-ppd_for_p |>
-  ggplot(aes(x = ...)) + 
-  geom_histogram
-```
-
-
 ### Exercise 8
 
-Within `geom_histogram()`, use `aes()` to set `y` equal to `after_stat(count/sum(count))` in order to convert the y-axis to percent values. Also set `bins` to 50. 
-
+Now let's graph the draws from the posterior. First, start a pipe with `ppd_for_p`, and using `ggplot()` map `p` to the x axis. Add the layer `geom_histogram()`.
 
 ```{r courage-8, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r courage-8-hint-1, eval = FALSE}
-... +
-  geom_histogram(aes(... = ...),
-                 bins = ...)
+ppd_for_p |>
+  ggplot(aes(x = ...)) + 
+  geom_histogram
 ```
 
 ### Exercise 9
 
-Add the layer `scale_x_continuous()` with the argument `labels` set to `scales::number_format()`.
-    
+Within `geom_histogram()`, use `aes()` to set `y` equal to `after_stat(count/sum(count))` in order to convert the y-axis to percent values and set `bins` to 50. 
+
 ```{r courage-9, exercise = TRUE}
 
 ```
@@ -792,13 +900,14 @@ Add the layer `scale_x_continuous()` with the argument `labels` set to `scales::
 
 ```{r courage-9-hint-1, eval = FALSE}
 ... +
-  scale_x_continuous(... = ...)
+  geom_histogram(aes(... = ...),
+                 bins = ...)
 ```
 
 ### Exercise 10
 
-Great. Now add the layer `scale_y_continuous()` with the argument `labels` set to `scales::percent_format()`.
-
+Add the layer `scale_x_continuous()` with the argument `labels` set to `scales::number_format()`.
+    
 ```{r courage-10, exercise = TRUE}
 
 ```
@@ -807,14 +916,29 @@ Great. Now add the layer `scale_y_continuous()` with the argument `labels` set t
 
 ```{r courage-10-hint-1, eval = FALSE}
 ... +
-   scale_y_continuous(... = ...)
+  scale_x_continuous(... = ...)
 ```
 
 ### Exercise 11
 
-To finish, use `labs()` to give your graph the appropriate title, subtitle, and axis labels. Also add the layer `theme_classic()`. 
+Great. Now add the layer `scale_y_continuous()` with the argument `labels` set to `scales::percent_format()`.
 
 ```{r courage-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-11-hint-1, eval = FALSE}
+... +
+   scale_y_continuous(... = ...)
+```
+
+### Exercise 12
+
+To finish, use `labs()` to give your graph the appropriate title, subtitle, and axis labels. Finally, add the layer `theme_classic()`. 
+
+```{r courage-12, exercise = TRUE}
 
 ```
 
@@ -826,7 +950,7 @@ Reminder: Your plot should look something like this:
 ppd_plot
 ```
 
-### Exercise 12
+### Exercise 13
 
 Using the posterior, answer the initial question in 2 sentences: 
 
@@ -834,7 +958,7 @@ Using the posterior, answer the initial question in 2 sentences:
 
 Because the exact value of the parameter (the proportion of red beads in the urn) is unknown, your answer should not be a single number, but instead a range of values that the true value of the parameter is likely to fall between.  
 
-```{r courage-12}
+```{r courage-13}
 question_text(NULL,
 	message = "We know that there is the greatest chance that the proportion of red beads in the whole urn is between .28 and about .42, and some chance that it falls between .15 and .24 or between .42 and .56. However, there is almost no chance that the proprtion is below .15 or above .56.",
 	answer(NULL,
@@ -844,7 +968,10 @@ question_text(NULL,
 	rows = 6)
 ```
 
-## Temperance 
+## Cardinal Virtues with Temperance
+###
+
+*Temperance* guides us in the use of the model we have created to answer the questions we began with. We create posteriors of quantities of interest. We should be modest in the claims we make. The posteriors we create are never the “truth.”
 
 ### 
 
@@ -855,7 +982,6 @@ Recall our second question:
 In order to answer our question we need the probability of drawing one red bead from the urn. Because we do not know this probability exactly, we will use our `fit_1` posterior from *Courage*. 
 
 The easiest way to calculate the probability of drawing more than 8 red beads out of 20 is to predict future samples using our new shovel size, and calculate the number of samples that yield more than 8 red beads. 
-
 
 ### Exercise 1
 
@@ -916,9 +1042,13 @@ question_text(NULL,
     rows = 6)
 ```
 
+###
+
+If you answered that we should use `posterior_predict()`, you are correct!
+
 ### Exercise 2
 
-The correct answer is that we should use `posterior_predict()`. Let's assign `posterior_predict()` to a variable called `ppd_reds_in_20`. Pass in `fit_1` as the first argument, and then set the argument `newdata` equal to a `tibble()`. Within the `tibble()`, set `constant` to a vector that repeats the number 1, 20 times. Hint: use the function `rep()` to repeat, passing what you want to repeat as the first argument, and the number of times you want to repeat it as the second argument. 
+Let's assign `posterior_predict()` to a variable called `ppd_reds_in_20`. Pass in `fit_1` as the first argument, and then set the argument `newdata` equal to a `tibble()`. Within the `tibble()`, set `constant` to a vector that repeats the number 1, 20 times. Hint: use the function `rep()` to repeat, passing what you want to repeat as the first argument, and the number of times you want to repeat it as the second argument. 
 
 ```{r temperance-2, exercise = TRUE}
 
@@ -989,7 +1119,6 @@ To calculate the probability, we want to know the number of draws **above** 8, a
 
 *The total number of draws can be calculated by using the `length()` function to find the length of the `total` column in `ppd_reds_in_20`
 
-
 ```{r temperance-5, exercise = TRUE}
 
 ```
@@ -1033,7 +1162,7 @@ ppd_reds_in_20 <- posterior_predict(fit_1,
 
 ### Exercise 7
 
-Awesome! Now let's graph our distribution. Start a new pipe with `ppd_reds_in_20`, and use `ggplot()` to map `new_reds` to the x axis, and fill to `above_eight`. Also add the layer `geom_histogram()`. 
+Now let's graph our distribution. Start a new pipe with `ppd_reds_in_20`, and use `ggplot()` to map `new_reds` to the x axis, and fill to `above_eight`. Finally, add the layer `geom_histogram()`. 
 
 ```{r temperance-7, exercise = TRUE}
 
@@ -1042,12 +1171,12 @@ Awesome! Now let's graph our distribution. Start a new pipe with `ppd_reds_in_20
 ```{r temperance-7-hint-1, eval = FALSE}
 prob_dist |>
   ggplot(aes(x = ..., fill = ...)) + 
-  geom_histogram()
+  ...()
 ```
 
 ### Exercise 8
 
-Within `geom_histogram()`, use `aes()` to set `y` equal to `after_stat(count/sum(count))` in order to convert the y-axis to percent values. Also set `bins` to 50. 
+Within `geom_histogram()`, use `aes()` to set `y` equal to `after_stat(count/sum(count))` in order to convert the y-axis to percent values and set `bins` to 50. 
 
 ```{r temperance-8, exercise = TRUE}
 
@@ -1093,7 +1222,7 @@ Add the layer `scale_x_continuous()` with the argument `labels` set to `scales::
 
 ### Exercise 11
 
-Great. Now add the layer `scale_y_continuous()` with the argument `labels` set to `scales::percent_format()`.
+Now add the layer `scale_y_continuous()` with the argument `labels` set to `scales::percent_format()`.
 
 ```{r temperance-11, exercise = TRUE}
 
@@ -1144,7 +1273,86 @@ ppd_reds_in_20   |>
 
 ###
 
-We sum the red area under the graph to calculate the cumulative probability of drawing more than 8 red beads. 
+The red bars illustrate the area under a specific section of the curve, as compared to the entire area under the curve. When someones asks you a question, they are doing two things. First, they are providing instructions as to the posterior your should create. Here, the results with a shovel of 20 slots. Second, they are asking a question about the area under the curve in a specific region. Here, the region where the number of red beads is greater than 8 is highlighted in red. Therefore, the area below the curve that is red is how we get our estimate.
+
+## Case Study
+###
+
+Let’s now switch gears to a more realistic sampling scenario: a poll. In practice, pollsters do not take 1,000 repeated samples as we did in our previous sampling activities, but rather take only a single sample that’s as large as possible.
+
+###
+
+On December 4, 2013, National Public Radio in the US reported on a poll of President Obama’s approval rating among young Americans aged 18-29 in an article, [*“Poll: Support For Obama Among Young Americans Eroding.”*](https://www.npr.org/sections/itsallpolitics/2013/12/04/248793753/poll-support-for-obama-among-young-americans-eroding).
+
+###
+
+We are going to use our knowledge from our previous topics and apply them within our case study to answer questions.
+
+### Exercise 1
+
+Who is the (Study) Population of, `N`, individuals or observations of interest? In our Urn scenario it was 50 identically sized red and white beads. Write one sentence explaining what the study population is of the case study from above.
+
+```{r case-study-1}
+question_text(NULL,
+	message = "In the Obama poll we are concerned with young Americans aged from 18-29",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+If the sampling of a sample of size, `n`, is done at random, then
+the sample is unbiased and representative of the population of size, `N`, thus any result based on the sample can generalize to the population.
+
+### Exercise 2
+
+What is the population parameter? In our Urn scenario the population proportion, `p`, of all the beads in the urn that are red. Write one sentence explaining what the population parameter is of the case study from above.
+
+```{r case-study-2}
+question_text(NULL,
+	message = "In the case study our population parameter is the the population proportion of all young Americans who approve of Obama’s job performance.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 3
+
+What is the sampling procedure representative? In our Urn scenario were the contents of the shovel representative of the contents of the urn? Because we mixed the urn before sampling, we can feel confident that they are. Write one sentence explaining what the sampling procedure representative is of the case study from above.
+
+```{r case-study-3}
+question_text(NULL,
+	message = "In our case study the sampling procedure representative was the the sample of young Americans representative of all young Americans aged 18-29? This depends on whether the sampling was random (which samples rarely are).",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 4
+
+Is the sampling procedure unbiased? In our Urn scenario each bead was equally sized and we mixed the urn before using the shovel, each bead had an equal chance of being included in a sample and hence the sampling was unbiased. Write one sentence explaining if the sampling procedure unbiased based on the case study from above.
+
+```{r case-study-4}
+question_text(NULL,
+	message = "In our case study: Did all young Americans have an equal chance at being represented in this poll? Again, this depends on whether the sampling was random.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+To learn more key concepts and ideas, check out [**Case Study**](https://ppbds.github.io/primer/06-one-parameter.html#sec-sampling-case-study) that goes over the entire case study in detail.
+
+## Summary
+###
+
+This tutorial covered [Chapter 3](https://ppbds.github.io/primer/06-one-parameter.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/). This tutorial reviewd the topics including One Parameter, shovel method, virtual sampling, standard error, cardinal virtues (wisdom, justice, courage, and temperance), and a case study.
 
 ```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
 ```
