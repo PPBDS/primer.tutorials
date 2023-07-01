@@ -1,5 +1,6 @@
 ---
 title: 'Two Parameters: Overview'
+author: Mann Talati
 tutorial:
   id: two-parameters-overview
 output:
@@ -18,9 +19,16 @@ library(primer.data)
 library(rstanarm)
 library(skimr)
 
-knitr::opts_chunk$set(echo = FALSE)
-options(tutorial.exercise.timelimit = 60, 
-        tutorial.storage = "local") 
+our_data <- mpg |> 
+              select(cyl, year, cty)
+
+our_data <- our_data |>
+              drop_na()
+
+ch7 <- nhanes |> 
+  select(age, gender, weight, survey) |>
+  filter(age >= 18, gender == "Female") |> 
+  drop_na()
 
 ch7_female <- nhanes |>
   filter(survey == 2009, gender == "Female", age >= 18) |>
@@ -44,6 +52,9 @@ ts <- tibble(student_id = 1:4,
              test2 = 20:23,
              test3 = 30:33) 
 
+knitr::opts_chunk$set(echo = FALSE)
+options(tutorial.exercise.timelimit = 60, 
+        tutorial.storage = "local") 
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -52,10 +63,14 @@ ts <- tibble(student_id = 1:4,
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
 
-
 <!-- Discuss this trick: -->
 
 <!-- governors |> stan_glm(formula = lived_after ~ election_age, data = ., refresh = 0) -->
+
+## Introduction
+###
+
+This tutorial covers [Chapter 4](https://ppbds.github.io/primer/07-two-parameters.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/). This tutorial will review topics including Two Parameters, cardinal virtues (wisdom, justice, courage, and temperance), and a 0/1 outcomes.
 
 ## Preliminaries 
 
@@ -67,43 +82,24 @@ In this chapter, there were several functions thrown out there that might need a
 
 ### Exercise 1
 
-Consider this tibble, containing the test scores for three students on four tests.
+Consider this tibble, `ts`, containing the test scores for three students on four tests. Start a pipe with `ts` and pipe it to `row_wise()`.
 
-```{r preliminaries-1, echo = TRUE}
-print(ts)
-```
-
-Start a new pipe with `ts`. Use `mutate()` to create a new column called `avg` which is the average score for each student across all three tests. (Remember to use `rowwise()` as well as helpter functions like `c_across()` to tell R to compute using the rows of a tibble.)
-
-```{r preliminaries-ex-1, exercise = TRUE}
+```{r preliminaries-1, exercise = TRUE}
 
 ```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r preliminaries-1-hint-1, eval = FALSE}
-ts |> 
-  rowwise() |> 
-  mutate(avg = ...)
-```
-
-```{r preliminaries-1-hint-2, eval = FALSE}
-ts |> 
-  rowwise() |> 
-  mutate(avg = mean(c_across(...)))
-```
-
-```{r preliminaries-1-hint-3, eval = FALSE}
-ts |> 
-  rowwise() |> 
-  mutate(avg = mean(c_across(test1:test3)))
+... |> 
+  rowwise()
 ```
 
 ### 
 
+`rowwise()` as well as helper functions like `c_across()` tell R to compute using the rows of a tibble.
+
 ### Exercise 2
 
-Start a new pipe with `ts`. Use `mutate()` (as well as `rowwise()` and `c_across()`) to calculate the sum and standard deviation of the test scores for each student.
+Continue the pipe and use `mutate()` to create a new column called `avg` which is the average score (`mean()`) for each student across all three tests.
 
 ```{r preliminaries-2, exercise = TRUE}
 
@@ -111,283 +107,149 @@ Start a new pipe with `ts`. Use `mutate()` (as well as `rowwise()` and `c_across
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r preliminaries-2-hint-1, eval = FALSE}
-ts |>
-  rowwise() |>
-  mutate(sum = ...,
-         sd = ...)
+```{r preliminaries-2-hint, eval = FALSE}
+... |> 
+  mutate(... = mean(c_across(test1:test3)))
 ```
-
-```{r preliminaries-2-hint-2, eval = FALSE}
-ts |>
-  rowwise() |>
-  mutate(sum = sum(c_across(...)),
-         sd = sd(c_across(...)))
-```
-
-### 
 
 ### Exercise 3
 
-For the remaining questions we will work with the `nhanes` data set. Use `select` to pick the variables `gender`, `age` and `pulse`. Assign the result to an object named `our_data`.
+Start a new pipe with `ts` and pipe it to `row_wise()`. 
 
 ```{r preliminaries-3, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r preliminaries-3-hint-1, eval = FALSE}
-... <- nhanes |> 
-        select(...)
+... |>
+  ...()
 ```
-
-```{r preliminaries-3-hint-2, eval = FALSE}
-our_data <- nhanes |> 
-              select(gender, age, pulse)
-```
-
-`our_data` is now available for use in later questions.
-
-### 
 
 ### Exercise 4
 
-Before doing any calculations, we should get a rough overview of the data set. Run `skim()` on the tibble `our_data`. 
+Use `mutate()` and `c_across()` to calculate the sum (`sum()`) and standard deviation (`sd()`) of the test scores for each student.
 
-```{r preliminaries-4}
-
-# This is for the tibble `our_data`. I didn't put it in the
-# setup chunk at the beginning since that would make it show
-# up in the last exercise when people type it. That may be
-# confusing.
-
-our_data <- nhanes |> 
-              select(gender, age, pulse)
-```
-
-```{r drop_na, exercise = TRUE}
+```{r preliminaries-4, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r preliminaries-4-hint-1, eval = FALSE}
-skim(our_data)
+```{r preliminaries-4-hint, eval = FALSE}
+... |>
+  ...(sum = sum(c_across(...)),
+         sd = sd(c_across(...)))
 ```
-
-### 
 
 ### Exercise 5
 
-Let's get rid of all rows with any missing values. Remove the observations with NAs by creating a pipe and using `drop_na()`. Save the clean tibble again as `our_data` as you did before.
+For the remaining questions we will work with the `mpg` data set. Use `select()` to pick the variables `cyl`, `year` and `cty`. Assign the result to an object named `our_data`.
 
-```{r preliminaries-5}
-
-# Setup from before.
-
-our_data <- nhanes |> 
-              select(gender, age, pulse)
-```
-
-```{r drop_na2, exercise = TRUE}
+```{r preliminaries-5, exercise = TRUE}
 
 ```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r preliminaries-5-hint-1, eval = FALSE}
-... <- our_data |> 
-        drop_na()
+... <- mpg |> 
+        select(...)
 ```
 
 ```{r preliminaries-5-hint-2, eval = FALSE}
+our_data <- mpg |> 
+              select(cyl, year, cty)
+```
+
+###
+
+`our_data` is now available for use in later questions.
+
+### Exercise 6
+
+Before doing any calculations, we should get a rough overview of the data set. Run `skim()` on the tibble `our_data`.
+
+```{r preliminaries-6, exercise = TRUE}
+
+```
+
+```{r preliminaries-6-hint-1, eval = FALSE}
+skim(...)
+```
+
+### Exercise 7
+
+Let's get rid of all rows with any missing values. Remove the observations with `NA`s by creating a pipe and using `drop_na()`. Save the clean tibble again as `our_data` as you did before.
+
+```{r preliminaries-7, exercise = TRUE}
+
+```
+
+```{r preliminaries-7-hint-1, eval = FALSE}
+... <- our_data |> 
+        ...()
+```
+
+```{r preliminaries-7-hint-2, eval = FALSE}
 our_data <- our_data |> 
               drop_na()
 ```
 
-### 
-
-### Exercise 6
-
-The function `ungroup()` removes grouping done by the `group_by()` function. Run the code below to see the tibble `our_data`, which has been grouped by `gender`. 
-
-**Remember**: `group_by()` only affects how the data is grouped for subsequent operations, it does not itself change the appearance of the data!
-
-```{r preliminaries-6}
-
-# Setup from before.
-
-our_data <- nhanes |> 
-              select(gender, age, pulse) |> 
-              drop_na()
-```
-
-```{r rowwise3, exercise = TRUE}
-our_data  |>
-  group_by(gender)
-```
-
-### 
-
-### Exercise 7
-
-Great! Now we are going to show why using `ungroup()` is important. Let's say we wanted to calculate the average age and pulse of males and females.
-
-Notice that `ungroup()` has been placed at the end of both calculations. Run the following code. 
-
-```{r preliminaries-7}
-
-# Setup from before.
-
-our_data <- nhanes |> 
-              select(gender, age, pulse) |> 
-              drop_na()
-```
-
-```{r ungroup1, exercise = TRUE}
-our_data |>
-  group_by(gender) |>
-  mutate(m_age = mean(age)) |> 
-  mutate(m_pulse = mean(pulse)) |>
-  ungroup()
-```
-
-The output shows that the mean age (`m`) is approximately 40.3 years for males and 41.7 years for females. It also shows us that the mean pulse (`x`) is 71.67 bpm for males and 75.42 bpm for females. For both calculations, the data is grouped by `Sex` and separate from one another. 
-
-### 
-
 ### Exercise 8
 
-Instead of placing `ungroup()` at the end, we are going to place it in between the two `mutate()` functions. Run the following code.
+Since we are tech wizards, we want to make things as simple as possible. Recall the `:` operator, which creates a shortcut! Run the following code. 
 
-```{r preliminaries-8}
-
-# This is for the clean tibble `our_data`
-
-our_data <- nhanes |> 
-              select(gender, age, pulse) |> 
-              drop_na()
+```{r preliminaries-8, exercise = TRUE}
+mpg |>
+  select(manufacturer:trans)
 ```
-
-```{r ungroup2, exercise = TRUE}
-our_data |>
-  group_by(gender) |>
-  mutate(m_age = mean(age)) |> 
-  ungroup()|> 
-  mutate(x_pulse = mean(pulse)) 
-```
-
-Here our mean age (`m`), is still 40.3 years for males and 41.7 years for females. However, our mean pulse (`x`) is 73.55 bpm for every row. Because `group_by(gender)` is removed by `ungroup()` after the first `mutate()` function, the mean score is calculated for _all participants together_, which is what we do not want! Therefore, our first placement of `ungroup()` is correct. 
 
 ### 
+
+As you can see, `:` defines a closed interval. `select` returns all columns from (and including) 'manufacturer' to 'trans' in the order they appear in the tibble.
 
 ### Exercise 9
 
-We can `select()` multiple variables using different methods. Suppose we wanted to select the first three variables from `nhanes`, namely `survey`, `gender` and `age`. One way, which we have already seen before, is to type out all names. Run the code below to see this approach in action.
-
-```{r preliminaries-9, exercise = TRUE}
-nhanes |>
-  select(survey, gender, age)
-```
-
-### 
-
-### Exercise 10
-
-However, being the tech wizards that we are, we want to make things as simple as possible. Recall the `:` operator, which creates a shortcut! Run the following code. 
-
-```{r preliminaries-10, exercise = TRUE}
-nhanes |>
-  select(survey:age)
-```
-
-As you can see, `:` defines a closed interval. `select` returns all columns from (and including) 'survey' to 'age' in the order they appear in the tibble.
-
-### 
-
-### Exercise 11
-
-Awesome! We can also use `[ ]` to extract columns. This is especially useful when we want to extract variables not by their name, but by their position. Extract the third variable from `nhanes` using this method.  
+Awesome! We can also use `[ ]` to extract columns. This is especially useful when we want to extract variables not by their name, but by their position. Extract the third variable from `mpg` using this method.  
 
 **Note:** When you use `[ ]` , place a comma before the column number you want to extract. 
 
-```{r preliminaries-11, exercise = TRUE }
+```{r preliminaries-9, exercise = TRUE }
 
 ```
 
-```{r brackets1-hint, eval = FALSE }
-nhanes[...]
+```{r preliminaries-9-hint-1, eval = FALSE }
+mpg[...]
 ```
+
+### Exercise 10
+
+As before, we can combine `[ ]` with the `:` operator to extract multiple variables. Use this method to extract the first two variables from `mpg`.
+
+```{r preliminaries-10, exercise = TRUE }
+
+```
+
+```{r preliminaries-10-hint-1, eval = FALSE }
+mpg[...:...]
+```
+
+```{r preliminaries-10-hint-2, eval = FALSE }
+mpg[,1:2]
+```
+
+###
+
+Now we have successfully revisited all of the important topics for this chapter!
+
+## Cardinal Virtues with Wisdom
+###
+
+Wisdom begins with the Preceptor Table. What data would we, ideally, require to answer our questions? We then explore the data that we actually have. We apply the concept of validity to ensure that the data we want and the data we have are similar enough to allow the latter to inform us about the former. If so, we describe the population from which both the Preceptor Table and out data are drawn.
 
 ### 
 
-### Exercise 12
-
-As before, we can combine `[ ]` with the `:` operator to extract multiple variables. Use this method to extract the first two variables from `nhanes`.
-
-```{r preliminaries-12, exercise = TRUE }
-
-```
-
-```{r brackets2-hint-1, eval = FALSE }
-nhanes[...:...]
-```
-
-```{r brackets2-hint-2, eval = FALSE }
-nhanes[,1:2]
-```
-
-### 
-
-### Exercise 13
-
-We can use the function `rename()` to change the names of the variables in a tibble. For this, simply set the new name equal to the old name within `rename()`.
-
-Copy your code from the last exercise. Add a pipe and `rename()` "survey" to "year" and "gender" to "sex".
-
-```{r preliminaries-13, exercise = TRUE }
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r set_names-hint-1, eval = FALSE }
-nhanes[,1:2] |> 
-  rename(year = ...,
-         sex = ...)
-
-```
-
-### 
-
-### Exercise 14
-
-The function `after_stat()` allows us to work with variables that have been calculated by ggplot, like `density` or — in the case of the following code chunk — `count`. In ye olden days of R, you would need to surround your after-stat variables by `..` in order to refer to them (e.g. `..count..`, `..density..`) but using `after_stat()` is the modern way of doing things.
-
-Run the following code chunk.
-
-```{r preliminaries-14, exercise = TRUE}
-ggplot(nhanes, aes(age)) +
-  geom_histogram(bins = 40, aes(y = after_stat(count/sum(count))))
-```
-
-As you can see, the y-axis in the plot shows the relative proportion of each age group. Without our transformation, `geom_histogram()` would display only the absolute number of each group.
-
-### 
-
-## Wisdom
-
-### 
-
-Consider the graph below.
+Let's make the graph below.
 
 ```{r}
-ch7 <- nhanes |> 
-  select(age, gender, weight, survey) |>
-  filter(age >= 18, gender == "Female") |> 
-  drop_na()
-
 ch7 |>
   ggplot(aes(x = weight, color = gender)) + 
   geom_density() + 
@@ -401,13 +263,73 @@ ch7 |>
 
 ### Exercise 1
 
+Run `glimpse()` on `ch7`.
+
+```{r wisdom-1, exercise = TRUE}
+
+```
+
+```{r wisdom-1-hint, eval = FALSE}
+glimpse()
+```
+
+### Exercise 2
+
+Start a pipe with `ch7` using `ggplot()`, setting `x` to `weight` and `color` to `gender` in `aes()`.
+
+```{r wisdom-2, exercise = TRUE}
+
+```
+
+```{r wisdom-2-hint, eval = FALSE}
+... |>
+  ggplot(aes(x = ..., color = ...))
+```
+
+### Exercise 3
+
+Add `geom_density()` to the code.
+
+```{r wisdom-3, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r wisdom-3-hint, eval = FALSE}
+... +
+  geom_density()
+```
+
+### Exercise 4
+
+Add the following labels with `labs()` and `theme(legend.position = "none")` to remove the legend.
+
+```{r wisdom-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r wisdom-4-hint, eval = FALSE}
+... + 
+  labs(x = "...",
+       y = "...",
+       title = "...") +
+  theme(... = "none")
+```
+
+### Exercise 5
+
 As you can tell, the graph above displays "Adult Female Weight by Gender in NHANES". Let's say our motive behind generating this graph was to answer the question: _What is the probability that the next adult female we meet in Cambridge today will weigh more than 100kg?_ 
 
-Using the concept of **Wisdom**, write a paragraph about whether or not this data is relevant for the problem we face. See *The Primer* for guidance. Make sure to use the terms "Population" and "Preceptor Table".
+a paragraph about whether or not this data is relevant for the problem we face. See *The Primer* for guidance. Make sure to use the terms "Population" and "Preceptor Table".
 
-```{r wisdom-1}
+Using the concept of **Wisdom**, write two sentences about what the population is in this scenario and how it is affected by wisdom.
+
+```{r wisdom-5}
 question_text(NULL,
-	message = "Our question is about adult females in Cambridge today. The data we have (NHANES) is from a survey distributed to people of all ages in the United States. To determine whether or not our data is relevant for the problem we face, we must first determine the population that we are working with. The population (by definition) must encompass both the data we have (NHANES) and the data from the preceptor table (the data we want to have).\nFirst, the population must include people from all over the world (if we are to assume that we can use United States data to answer questions about people in Cambridge — whether or not this assumption can be made, is a question reserved for Justice).\nSecondly, the population must include data about people in all years at least from 2009 (the earliest year we have data for). If we are to answer questions about people now using data from 2009, we are assuming that the average weight has not significantly changed in the last decade and a bit.\nAs for the rest of our variables (age, gender), they are a subset of our NHANES variables, and so we do not need to make significant additions to our population.",
+	message = "The population must encompass both the data we have (NHANES) and the data from the preceptor table (the data we want to have). First, the population must include people from all over the world (if we are to assume that we can use United States data to answer questions about people in Cambridge — whether or not this assumption can be made, is a question reserved for Justice) and the population must include data about people in all years at least from 2009 (the earliest year we have data for).",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -415,9 +337,43 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### 
+###
 
-## Justice 
+Generally, the population will be much larger than either the data we have or the data we want. In fact, there is almost always a time dimension to consider. We generally want to make inferences about right now or about the future. By definition, the data we have is always from the past.
+
+### Exercise 6
+
+In two sentences, provide a reason why the *assumption of validity* might not hold.
+
+```{r cardinal-virtues-wit-6}
+question_text(NULL,
+	message = "Does “height” in our Preceptor Table mean the same thing as “height” in NHANES? Almost certainly and of course, we need to be careful about mistakes like measurement differences, like centimeters in one and inches in the other. However, we can stack the two data sets together and consider them to have come from the same population.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 7
+
+In one sentence, provide a possible issue in which the *assumption of stability* might not hold.
+
+```{r cardinal-virtues-wit-7}
+question_text(NULL,
+	message = "One possible issue could be: Are measurements taken with shoes on or shoes off?",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+## Cardinal Virtues with Justice 
+###
+
+With *Justice* we want to emphasize a few key concepts: 
+1. The Population Table, a structure which includes a row for every unit in the population. We generally break the rows in the Population Table into three categories: the data for units we want to have (the Preceptor Table), the data for units which we actually have (our actual data), and the data for units we do not care about (the rest of the population, not included in the data or the Preceptor Table).
+2. Is our data representative of the population?
+3. If the problem is causal, can we assume unconfoundedness?
 
 ### Exercise 1
 
@@ -472,13 +428,14 @@ question_text(NULL,
 
 ### 
 
-## Courage 
-
+## Cardinal Virtues with Courage 
 ### 
+
+In data science, we deal with words, math, and code, but the most important of these is code. We need *Courage* to create the model, to take the leap of faith that we can make our ideas real.
+
+###
 
 Let's create a Bayesian model of female weight.
-
-### 
 
 ### Exercise 1
 
@@ -690,13 +647,14 @@ Use labs() to add labels.
 
 ### 
 
-## Temperance 
-
+## Cardinal Virtues with Temperance 
 ### 
+
+*Temperance* guides us in the use of the model we have created to answer the questions we began with. We create posteriors of quantities of interest. We should be modest in the claims we make. The posteriors we create are never the “truth.”
+
+###
 
 We have a model of female height in 2009. What can we do with it? Let's use it to answer out initial question: _What is the probability that the next adult female we meet in Cambridge today will weigh more than 100 kilos?_
-
-### 
 
 ### Exercise 1
 
@@ -844,7 +802,10 @@ sum(... > 100) / length(...)
 sum(pp$`1` > 100) / length(pp$`1`)
 ```
 
-### 
+## Summary
+###
+
+This tutorial covered [Chapter 4](https://ppbds.github.io/primer/07-two-parameters.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/). This tutorial reviewed the topics of Two Parameters, cardinal virtues (wisdom, justice, courage, and temperance), and a 0/1 outcomes.
 
 ```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
 ```
