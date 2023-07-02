@@ -1,6 +1,6 @@
 ---
 title: 'Three Parameters: Overview'
-author: Mahima Malhotra
+author: Mahima Malhotra and Mann Talati
 tutorial:
   id: three-parameters-overview
 output:
@@ -8,7 +8,7 @@ output:
     progressive:  true
     allow_skip::  true
 runtime: shiny_prerendered
-description: 'Questions for Chapter 8: Three Parameters.'
+description: "Chapter 5 Tutorial: Three Parameters"
 ---
 
 ```{r setup, include = FALSE}
@@ -18,10 +18,74 @@ library(tidyverse)
 library(primer.data)
 library(rstanarm)
 library(gt)
+
+fit_1 <- stan_glm(age ~ party - 1, 
+                    data = trains,
+                    refresh = 0)
+
+new_obs <- tibble(party = "Democrat")
+
+pp <- posterior_predict(fit_1, newdata = new_obs) |> 
+  as_tibble() |> 
+  mutate_all(as.numeric)
+
+age_party_graph <- fit_1 |>
+  as_tibble() |>
+  select(-sigma) |>
+  mutate(Democrat = partyDemocrat, Republican = partyRepublican) |>
+  pivot_longer(cols = Democrat:Republican,
+               names_to = "parameter",
+               values_to = "age") |>
+  ggplot(aes(x = age, fill = parameter)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = 0.5,
+                   bins = 100,
+                   position = "identity") +
+    labs(title = "Posterior for Average Age",
+         subtitle = "More data allows for a more precise posterior for Democrats",
+         x = "Age",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+age_dem <- pp |> 
+  ggplot(aes(x = `1`)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+    labs(title = "Posterior for a Random Democrat's Age",
+         subtitle = "Individual predictions are always more variable than expected values",
+         x = "Age",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+newobs <- tibble(party = c("Democrat", "Democrat", "Democrat", 
+                        "Republican", "Republican","Republican"))
+
+pp <- posterior_predict(fit_1, newdata = newobs) |>
+    as_tibble() |>
+    mutate_all(as.numeric) |> 
+    set_names(c("dem_1", "dem_2", "dem_3", 
+                "rep_1", "rep_2", "rep_3")) |> 
+    rowwise() |> 
+    mutate(dems_oldest = max(c_across(dem_1:dem_3)),
+           reps_youngest = min(c_across(rep_1:rep_3)),
+           age_diff = dems_oldest - reps_youngest)
+
+age_diff_graph <- pp |>  
+  ggplot(aes(x = age_diff)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100) +
+    labs(title = "Posterior for Age Difference",
+         subtitle = "Oldest of three Democrats compared to youngest of three Republicans",
+         x = "Age",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 60, 
-        tutorial.storage = "local") 
-
+        tutorial.storage = "local")
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -36,24 +100,31 @@ options(tutorial.exercise.timelimit = 60,
 
 <!-- Change text questions to allow for written answers, and then provide your own perfect written answders. -->
 
-## Wisdom
+<!-- MT: Still need to replace primer.data with other data -->
 
-Our first step when considering our Cardinal Virtues is Wisdom. This pertains to considering the questions we strive to answer and the population for which we would like to answer them for, while also recognizing the data we would ideally have as compared to what we do.
+## Introduction
+###
 
-### 
+This tutorial covers [Chapter 5](https://ppbds.github.io/primer/08-three-parameters.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/). This tutorial will review topics including Three Parameters, cardinal virtues (wisdom, justice, courage, temperance), and an in-depth analysis of the **trains** data.
+
+## Cardinal Virtues with Wisdom
+###
+
+*Wisdom* begins with considering the questions we desire to answer and the data set we are given. In this chapter, we are going to ask a series of questions involving train commuters’ ages, party affiliations, incomes, and political ideology, as well as the causal effect of exposure to Spanish-speakers on their attitude toward immigration. These questions will pertain to all train commuters in the US today. 
 
 ### Exercise 1
 
-In order to answer the following questions, what columns would we like to have in our Preceptor Table.
+In order to answer the following questions we need to first make our Preceptor Table.
 
 *What is the probability that if a Democrat shows up to a train station in the U.S today, he will be over 50 years old?*
 
 *In a group of train commuters in the U.S. today in which three are Democrats and three are Republicans, what will the age difference be between the oldest Democrat and the youngest Republican?* 
 
+In one sentence explain the columns that we would like to have in our Preceptor Table.
 
 ```{r wisdom-1}
 question_text(NULL,
-	message = "We would have columns for party and age of train commuters.",
+	message = "Our columns would be for party and age of the train commuters.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -63,15 +134,17 @@ question_text(NULL,
 
 ### Exercise 2
 
-Next consider the following questions and the columns needed in the Preceptor Table to answer them.
+Next let's consider the following questions we need to first make our Preceptor Table.
 
 *What is the average treatment effect, of exposing U.S train commuters today to Spanish-speakers, on their attitudes toward immigration?* 
 
 *What is the largest causal effect on immigration attitudes due to exposing U.S. train commuters today to Spanish-speakers which still has a 1 in 10 chance of occurring?*
 
+In one sentence explain the columns that we would like to have in our Preceptor Table.
+
 ```{r wisdom-2}
 question_text(NULL,
-	message = "These questions would require a column for the immigration attitudes for someone who was not exposed to spanish-speakers and for someone who wasn't.",
+	message = "These questions would require a column for the immigration attitudes for someone who was not exposed to spanish-speakers and for someone who wasn't exposed.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -81,13 +154,13 @@ question_text(NULL,
 
 ### Exercise 3
 
-Continue this process for the following question.
-
 *What would you expect the income to be for a random 40 year old train commuter in the U.S. today?*
+
+In one sentence explain the columns that we would like to have in our Preceptor Table.
 
 ```{r wisdom-3}
 question_text(NULL,
-	message = "The columns we would need would be age and income.",
+	message = "We would need the columns of age and income within this scenario for the Preceptor Table.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -97,12 +170,11 @@ question_text(NULL,
 
 ### Exercise 4
 
-And for the following two questions as well.
-
 *Among all people who have an income $100,000, what proportion are liberal?*
 
 *Assume we have a group of eight people, two of whom make $100,000, two $200,000, two $300,000 and two $400,000. How many will be liberal?*
 
+In one sentence explain the columns that we would like to have in our Preceptor Table.
 
 ```{r wisdom-4}
 question_text(NULL,
@@ -116,7 +188,7 @@ question_text(NULL,
 
 ### 
 
-In the past four exercises, we have executed the first step of Wisdom, in considering the questions and figuring out ideally what data we would have to answer them. In doing so, we have determined the columns of our Preceptor Table, those being age, political party, immigration attitude for those who were exposed to Spanish speakers and for those who weren't, as well as income, and being liberal or not. 
+In the past four exercises, we have executed the first step of *Wisdom*, in considering the questions and figuring out ideally what data we would have to answer them. In doing so, we have determined the columns of our Preceptor Table, those being age, political party, immigration attitude for those who were exposed to Spanish speakers and for those who weren't, as well as income, and being liberal or not. 
 
 The combined Preceptor Table for all the question is shown below.
 
@@ -151,23 +223,23 @@ tibble(ID = c("Commuter 1", "Commuter 2", "...", "Commuter 1000", "Commuter 1001
 
 ### Exercise 5
 
-Next, let's take a look at the dataset we would like to use to answer these questions. We will be using `trains`. First, let's take a look at trains through the glimpse method.
+Next, let's take a look at the dataset we would like to use to answer these questions. We will be using `trains`. First, let's take a look at **trains** through the glimpse method.
 
 ```{r wisdom-5, exercise = TRUE}
 
 ```
 
 ```{r wisdom-5-hint-1, eval = FALSE}
-glimpse(trains)
+glimpse(...)
 ```
 
 ### 
 
-Notice that `att_end` is an integer rather than a double and that `party` is a character while `treatment` is a factor. 
+Notice that `att_end` is an `<int>` rather than a `<dbl>` and that `party` is a `<chr>` while `treatment` is a factor. 
 
 ### Exercise 6
 
-Next, learn more about the data set by calling '?trains'. 
+Run '?trains'. 
 
 ```{r wisdom-6, exercise = TRUE}
 
@@ -181,11 +253,11 @@ Notice how `att_end` represents immigration attitudes after treatment of being e
 
 ### Exercise 7
 
-Now, with a greater understanding of the data, determine how well the data we have matches up with the data we indicated we would need in our Preceptor Table to answer all the questions.
+In two sentences explain how well the data we have matches up with the data we indicated we would need in our Preceptor Table and why we can answer all of our questions.
 
 ```{r wisdom-7}
 question_text(NULL,
-	message = "We can answer every question since we have the data to do so. We will need the columns of age, income, party, liberal, att_end and treatment. This is because we need to know the age, income, political party, and whether or not someone is liberal. Additionally, att_end is the individual's ending attitude on immigration and treatment is whether or not the individual was exposed to Spanish-speakers.",
+	message = "We can answer every question since we have the data to do so. We will need the columns of age, income, party, liberal, att_end and treatment because age, income, party, liberal, and att_end are all important to validate our data, specfically att_end is the individual's ending attitude on immigration and treatment is whether or not the individual was exposed to Spanish-speakers.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -195,11 +267,11 @@ question_text(NULL,
 
 ### Exercise 8
 
-Recall that this study was done in Boston, MA in 2012. Write a paragraph discussing whether you believe it's reasonable to consider this data to be drawn from the same population as our Preceptor Table. Identify at least one reason that you may not consider the data to be drawn from the same population.
+Recall that this study was done in Boston, MA in 2012. Write two sentences discussing whether you believe it's reasonable to consider this data to be drawn from the same population as our Preceptor Table. Identify at least one reason that you may not consider the data to be drawn from the same population.
 
 ```{r wisdom-8}
 question_text(NULL,
-	message = "One possible reason we may not consider the data to be drawn from the same population as our Preceptor Table due to changes that may have occurred over time, and a belief that our larger population is unable to include both 2012 and 2021 for some reason such as if we believed that the political climate was far too different.",
+	message = "One possible reason we may not consider the data to be drawn from the same population as our Preceptor Table due to changes that may have occurred over time. A belief that our larger population is unable to include both 2012 and 2021 for some reason such as if we believed that the political climate was far too different.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -215,7 +287,7 @@ For our purposes, we will assume that the data is drawn from the same population
 
 ### 
 
-We have now completed Wisdom by creating our Preceptor Table and analyzing our data and determining its application to our questions and our population. Therefore, let's take a look at our population table.
+We have now completed *Wisdom* by creating our Preceptor Table and analyzing our data and determining its application to our questions and our population. Therefore, let's take a look at our population table.
 
 ```{r}
 tibble(source = c("Preceptor Table", "Preceptor Table", "Preceptor Table",  "...", "Data", "Data", "Data", "...", "Population", "Population", "Population"),
@@ -267,25 +339,15 @@ tibble(source = c("Preceptor Table", "Preceptor Table", "Preceptor Table",  "...
 
 Remember that since we are considering the data from 2012 and from now to be drawn from the same population, then  we are assuming that between 2012 and now, not much has changed in terms of the age distribution or party affiliation, etc., of train commuters. Therefore, we also assume that this data could be applied to some range of years before and after 2012 which includes 2021. Additionally, if we are assuming that the data specific to train stations in Boston, MA, is drawn from the same population as our population of train commuters in the U.S. today, then that also indicates to us that the population table will include commuters from locations in cities around the U.S..
 
-## age ~ party
+## age ~ party with Justice, Courage, and Temperance
+###
 
-```{r}
-fit_1 <- stan_glm(age ~ party - 1, 
-                    data = trains,
-                    refresh = 0)
+We want to build a model and then use that model to make claims about the world. Our questions about the relationship between age and party are the following:
 
-new_obs <- tibble(party = "Democrat")
+1. What is the expected age of a Democrat at the train station?
+2. In a group of three Democrats and three Republicans, what will the age difference be between the oldest Democrat and the youngest Republican?
 
-pp <- posterior_predict(fit_1, newdata = new_obs) |> 
-  as_tibble() |> 
-  mutate_all(as.numeric)
-```
-
-Now that we have completed Wisdom for all of our questions, let's look at the ones dealing specifically with the relation between age and party.
-
-*What is the probability that if a Democrat shows up to the train station, he will be over 50 years old?*
-
-*In a group of three Democrats and three Republicans, what will the age difference be between the oldest Democrat and the youngest Republican?* 
+We can answer these and similar questions by creating a model that uses party affiliation to predict age
 
 ### 
 
@@ -325,7 +387,7 @@ tibble(source = c("Preceptor Table", "Preceptor Table", "Preceptor Table",  "...
 
 ### Exercise 1
 
-Let's consider the validity of our data. Recall that validity pertains to the columns of the data and whether they have the same meaning down the columns of the population table. Write two sentences discussing if `party` has the same meaning in the Preceptor Table and the Population Table. In other words, does it mean the same thing to identify as a Republican or Democrat in 2012 as it does in 2021? Include a possible reason we would not want to do so.
+Let's consider the *validity* of our data. Recall that validity pertains to the columns of the data and whether they have the same meaning down the columns of the population table. Write two sentences discussing whether the *assumption of validity* for `party` has the same meaning in the Preceptor Table and the Population Table. In other words, does it mean the same thing to identify as a Republican or Democrat in 2012 as it does in 2021? Include a possible reason we would not want to do so.
 
 ```{r age--party-1}
 question_text(NULL,
@@ -339,7 +401,7 @@ question_text(NULL,
 
 ### Exercise 2
 
-Now, consider the stability of this relationship. Write two sentences discussing whether you think the relationship between `age` and `party` has changed between 2012 and 2021. Give a specific example or piece of knowledge that could have affected this relationship.
+Now, consider the *stability* of this relationship. Write two sentences discussing whether you think the relationship between `age` and `party` has changed between 2012 and 2021. Give a specific example or piece of knowledge that could have affected this relationship.
 
 ```{r age--party-2}
 question_text(NULL,
@@ -351,13 +413,17 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### 
+###
+
+*Stability* means that the relationship between the columns is the same for three categories of rows: the data, the Preceptor table, and the larger population from which both are drawn. With something like political ideology, it is much harder to make the assertion that data collected in 2010 would be stable to data collected in 2030. When we are confronted with this uncertainty, we can consider making our timeframe smaller. However, we would still need to assume stability from 2014 (time of data collection) to today. *Stability* allows us to ignore the issue of time.
 
 ### Exercise 3
 
-Before we consider an issue with representativeness, recall our sampling mechanism. Essentially, in 9 train stations in Boston, MA., train commuters on two trains were given surveys before and after their respective treatments, one train receiving the control, and the other being exposed to Spanish-speakers. However, participation and submission of this form was voluntary and induced by payment.
+Before we consider an issue with *representativeness*, recall our sampling mechanism. Essentially, in 9 train stations in Boston, MA., train commuters on two trains were given surveys before and after their respective treatments, one train receiving the control, and the other being exposed to Spanish-speakers. However, participation and submission of this form was voluntary and induced by payment.
 
-With this knowledge, we must consider the representativeness of the data. Write 2 sentences discussing whether we can assume the data of 2012 Boston train commuters is representative of 2012 US train commuters. Consider specifically the location of train commuters in our data as opposed to our population and how this could lead to issues with representativeness.
+###
+
+With this knowledge, we must consider the *representativeness* of the data. Write 2 sentences discussing whether we can assume the data of 2012 Boston train commuters is representative of 2012 US train commuters. Consider specifically the location of train commuters in our data as opposed to our population and how this could lead to issues with *representativeness*.
 
 ```{r age--party-3}
 question_text(NULL,
@@ -369,9 +435,13 @@ question_text(NULL,
 	rows = 6)
 ```
 
+###
+
+*Representativeness* has to do with how well our sample represents the larger population we are interested in generalizing to. Does the train experiment allow us to calculate a causal effect for people who commute by cars? Can we calculate the causal effect for people in New York City? Before we generalize to broader populations we have to consider if our experimental estimates are applicable beyond our experiment. Generally: if there was no chance that a certain type of person would have been in this experiment, we cannot make an assumption for that person.
+
 ### Exercise 4
 
-Finally, let's also consider our DGM and whether it will be linear or logistic and explain why. Also, state the family that you would use in `stan_glm` when making the fitted model.
+In two sentences explain whether our *DGM* would be linear or logistic, include the family that you would use in `stan_glm` when making the fitted model.
 
 ```{r age--party-4}
 question_text(NULL,
@@ -383,11 +453,13 @@ question_text(NULL,
 	options = list(nrows = 6))
 ```
 
+###
+
+Any *DGM* with age as its dependent variable will be predictive, not causal, for the simple reason that nothing, other than time, can change your age. You are X years old. It would not matter if you changed your party registration from Democrat to Republican or vice versa. Your age is your age. When dealing with a non-causal DGM, the focus is on predicting things. The underlying mechanism which connects age with party is less important than the brute statistical fact that there is a connection. Predictive models care little about causality.
+
 ### Exercise 5
 
-Now, let's make our posterior distribution using 'stan_glm()'. Set your outcome variable as `age`and your explanatory variable as `party` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `liberal` so we do not get an intercept.  Set `data` to `trains`, and `refresh` to 0. Additionally, since it's a linear model, set `family` to gaussian.
-
-<!-- MM: break question into multiple sections -->
+Now, let's make our posterior distribution using `stan_glm()`. Set your outcome variable as `age`and your explanatory variable as `party` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `party`.
 
 ```{r age--party-5, exercise = TRUE}
 
@@ -400,9 +472,13 @@ stan_glm(age ~ party - 1,
          family = ...)
 ```
 
+###
+
+The variable before the tilde, `age`, is our outcome. The only explanatory variable is `party`. This variable has only two values, ‘Democrat’ and ‘Republican’. We have also added `-1` at the end of the equation, indicating that we do not want an intercept, which would otherwise be added by default.
+
 ### Exercise 6
 
-Store the above in an object called `fit_1` and print it out. 
+Set `data` to `trains`, and `refresh` to 0.
 
 ```{r age--party-6, exercise = TRUE}
 
@@ -410,11 +486,48 @@ Store the above in an object called `fit_1` and print it out.
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r age--party-6-hint-1, eval = FALSE}
-fit_1 <- ...
+```{r age--party-6-hint, eval = FALSE}
+stan_glm(..., 
+         data = ...,
+         refresh = ...)
 ```
 
 ### Exercise 7
+
+Since it's a linear model, set `family` to `gaussian`.
+
+```{r age--party-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age--party-7-hint, eval = FALSE}
+stan_glm(..., 
+         ...,
+         ...,
+         family = ...)
+```
+
+###
+
+Recall that our model is linear. Since we are using a linear model, the `family` we use will be `gaussian`.
+
+### Exercise 8
+
+Store the above in an object called `fit_1` and print it out. 
+
+```{r age--party-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age--party-8-hint-1, eval = FALSE}
+fit_1 <- ...
+```
+
+### Exercise 9
 
 Now let's display this information graphically. To do so, we will make the below plot.
 
@@ -441,53 +554,23 @@ age_party_graph <- fit_1 |>
 age_party_graph
 ```
 
-First, let's make `fit_1` into a tibble and remove `sigma` since it is not of relevance to us. Remember that we need to use `as_tibble()`.
+###
 
-```{r age--party-7, exercise = TRUE}
-
-```
-
-```{r age--party-7-hint-1, eval = FALSE}
-fit_1 |> 
-  as_tibble() |> 
-  select(- sigma)
-```
-
-### Exercise 8
-
-Continue the pipe and change the labels of 'partyDemocrat' and 'partyRepublican' to be 'Democrat' and 'Republican' respectively. Print the tibble.
-
-```{r age--party-8, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r age--party-8-hint-1, eval = FALSE}
-... |> 
-  mutate(Democrat = partyDemocrat, Republican, partyRepublican)
-```
-
-### Exercise 9
-
-Continue this pipe and use `pivot_longer()` with the arguments `names_to` set to "parameter" and `values_to` set to "age".
+First, let's make `fit_1` into a tibble with `as_tibble()` and remove `sigma` with `select()`.
 
 ```{r age--party-9, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r age--party-9-hint-1, eval = FALSE}
-... |> 
-pivot_longer(cols = ...,
-             names_to = ...
-             values_to = ...)
+fit_1 |> 
+  ...() |> 
+  select(- sigma)
 ```
 
 ### Exercise 10
 
-Next, let's plot this. Map `age` to the x-axis and set `parameter` to fill. Then use `geom_histogram()`.
+Continue the pipe and change the labels of `partyDemocrat` and `partyRepublican` to be `Democrat` and `Republican` respectively.
 
 ```{r age--party-10, exercise = TRUE}
 
@@ -497,13 +580,16 @@ Next, let's plot this. Map `age` to the x-axis and set `parameter` to fill. Then
 
 ```{r age--party-10-hint-1, eval = FALSE}
 ... |> 
-  ggplot(aes(x = ..., fill = ...)) |> 
-  geom_histogram()
+  mutate(Democrat = ..., Republican, ...)
 ```
+
+###
+
+`partyDemocrat` corresponds to `β1`, the average age of Democrats in the population. `partyRepublican` corresponds to `β2`, the average age of Republicans in the population. 
 
 ### Exercise 11
 
-Now convert the y-axis to be a probability by using `aes()` in the first parameter of `geom_histogram()`. Additionally, set `alpha` to 0.5, `bins` to 100, and `position` to "identity".
+Continue this pipe and use `pivot_longer()` with the arguments `cols` set to `Democrat:Republican`, `names_to` set to `"parameter"`, and `values_to` set to `"age"`.
 
 ```{r age--party-11, exercise = TRUE}
 
@@ -512,38 +598,72 @@ Now convert the y-axis to be a probability by using `aes()` in the first paramet
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r age--party-11-hint-1, eval = FALSE}
-... geom_histogram(aes(y = after_stat(count/sum(count))),
-                   alpha = 0.5,
-                   bins = 100,
-                   position = "identity")
+... |> 
+pivot_longer(cols = ...,
+             names_to = "...",
+             values_to = "...")
 ```
 
 ### Exercise 12
 
-Now, add labels and change the scale on the y-value to make it into a percent format. Also add `theme_classic()`. 
+Map `age` to the x-axis and set `parameter` to fill with `ggplot()`. Then use `geom_histogram()`.
 
-The graph should look something like the following:
-
-```{r age--party-12, echo = FALSE}
-age_party_graph
-```
-
-```{r age--party-ex-10, exercise = TRUE}
+```{r age--party-12, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r age--party-12-hint-1, eval = FALSE}
+... |> 
+  ggplot(aes(x = ..., fill = ...)) +
+  ...()
+```
+
+### Exercise 13
+
+Now convert the y-axis to be a probability by using `aes()` in the first parameter of `geom_histogram()`. Additionally, set `alpha` to 0.5, `bins` to 100, and `position` to "identity".
+
+```{r age--party-13, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age--party-13-hint-1, eval = FALSE}
+... +
+  geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = ...,
+                   bins = ...,
+                   position = "...")
+```
+
+### Exercise 14
+
+Add labels and change the scale on the y-value to make it into a percent format. Also add `theme_classic()`. 
+
+The graph should look something like the following:
+
+```{r age--party-14, echo = FALSE}
+age_party_graph
+```
+
+```{r age--party-14, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r age--party-14-hint-1, eval = FALSE}
 To change the label, you can use `scale_y_continuous`
 ```
 
-```{r age--party-12-hint-2, eval = FALSE}
+```{r age--party-14-hint-2, eval = FALSE}
 ... |> 
   labs(title = ...,
        subtitle = ...,
        x = ...,
-       y = ...) |> 
+       y = ...) + 
   scale_y_continuous(labels = scales::percent_format()) + 
   theme_classic()
 ```
@@ -552,9 +672,11 @@ To change the label, you can use `scale_y_continuous`
 
 You have now created the posterior probability distribution for average age in relation to each party. Using this, we can answer the questions we began with pertaining to the relationship between age and party affiliation of train commuters.
 
-This brings us to the Temperance virtue for our model of `age~party`. 
+###
 
-### Exercise 13
+This brings us to the *Temperance* virtue for our model of `age~party`. 
+
+### Exercise 15
 
 Let's start by recalling the first question.
 
@@ -577,54 +699,56 @@ age_dem <- pp |>
 age_dem
 ```
 
-First make a new tibble with one observation of the `party set to the value of the "Democrat". Set this equal to `new_obs`.
+###
 
-```{r age--party-13, exercise = TRUE}
-
-```
-
-```{r age--party-13-hint-1, eval = FALSE}
-new_obs <- tibble(party = ...)
-```
-
-### Exercise 14
-
-Next, let's use `posterior_predict()` to create draws from the posterior. Set the first argument to the model for which we are running our simulations, `fit_1`, and the second argument to `new_obs`. Additionally, make all of the columns into numeric vectors. Store this as `pp`.
-
-```{r age--party-14, exercise = TRUE}
-
-```
-
-```{r age--party-14-hint-1, eval = FALSE}
-Remember to use as_tibble() to convert the result to a tibble as well as mutate() to change the results to numbers.
-```
-
-```{r age--party-14-hint-2, eval = FALSE}
-pp <- posterior_predict(..., newdata = ...) |> 
-  as_tibble() |> 
-  mutate_all(as.numeric)
-```
-
-### Exercise 15
-
-Now, let's plot this. Map the column representing age to the x-axis. Then use geom_histogram and use `aes()` in as the first argument to make the y-axis represent the probability. To do so, use `aes(y = after_stat(count/sum(count)))` as the first argument. Additionally, set `bins` to 100.
+First make a new tibble with one observation of the `party` set to the value of the `"Democrat"`. Set this equal to `new_obs`.
 
 ```{r age--party-15, exercise = TRUE}
 
 ```
 
 ```{r age--party-15-hint-1, eval = FALSE}
+new_obs <- tibble(party = ...)
+```
+
+### Exercise 16
+
+Let's use `posterior_predict()` to create draws from the posterior. Set the first argument to the model for which we are running our simulations, `fit_1`, and the second argument to `new_obs`. Additionally, make all of the columns into numeric vectors. Store this as `pp`.
+
+```{r age--party-16, exercise = TRUE}
+
+```
+
+```{r age--party-16-hint-1, eval = FALSE}
+Remember to use as_tibble() to convert the result to a tibble as well as mutate() to change the results to numbers.
+```
+
+```{r age--party-16-hint-2, eval = FALSE}
+pp <- posterior_predict(..., newdata = ...) |> 
+  as_tibble() |> 
+  mutate_all(as.numeric)
+```
+
+### Exercise 17
+
+Now, let's plot this. Map the column representing age to the x-axis. Then use geom_histogram and use `aes()` in as the first argument to make the y-axis represent the probability. To do so, use `aes(y = after_stat(count/sum(count)))` as the first argument. Additionally, set `bins` to 100.
+
+```{r age--party-17, exercise = TRUE}
+
+```
+
+```{r age--party-17-hint-1, eval = FALSE}
 Remember that columns aren't named, so since age is in the first column, the x argument would need to be set at `1`. 
 ```
 
-```{r age--party-15-hint-2, eval = FALSE}
-pp |> 
+```{r age--party-17-hint-2, eval = FALSE}
+... |> 
   ggplot(aes(x = `1`)) +
   geom_histogram(aes(y = after_stat(count/sum(count))),
                 bins = ...)
 ```
 
-### Exercise 16
+### Exercise 18
 
 Now, add a labels, make the scale for the y-values into percent-format, and add `theme_classic()`.
 
@@ -634,13 +758,13 @@ Recall, your result should appear similar to the following:
 age_dem
 ```
 
-```{r age--party-16, exercise = TRUE}
+```{r age--party-18, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r age--party-16-hint-1, eval = FALSE}
+```{r age--party-18-hint-1, eval = FALSE}
 ... +
   labs(title = "...",
        subtitle = "...",
@@ -650,17 +774,19 @@ age_dem
     theme_classic()
 ```
 
+###
+
 Now that we have the posterior distribution, we can determine the probability the next Democrat will be over 50. 
 
-### Exercise 17
+### Exercise 19
 
 In order to do so, use the posterior distribution and sum up the values in which the age is greater than 50. Then divide this value by the number of rows there are.
 
-```{r age--party-17, exercise = TRUE}
+```{r age--party-19, exercise = TRUE}
 
 ```
 
-```{r age--party-17-hint-1, eval = FALSE}
+```{r age--party-19-hint-1, eval = FALSE}
 sum(pp$`1` > 50) / nrow(pp)
 ```
 
@@ -670,28 +796,13 @@ Therefore, the probability that the next Democrat will be over 50 is around 28%.
 
 <!-- MM: Change that answer so it isn't hardcoded -->
 
-### Exercise 18
+### Exercise 20
 
 Next, let's consider the second question. 
 
 *In a group of three Democrats and three Republicans, what will the age difference be between the oldest Democrat and the youngest Republican?*
 
 To answer this, we will create the following plot.
-
-```{r}
-newobs <- tibble(party = c("Democrat", "Democrat", "Democrat", 
-                        "Republican", "Republican","Republican"))
-
-pp <- posterior_predict(fit_1, newdata = newobs) |>
-    as_tibble() |>
-    mutate_all(as.numeric) |> 
-    set_names(c("dem_1", "dem_2", "dem_3", 
-                "rep_1", "rep_2", "rep_3")) |> 
-    rowwise() |> 
-    mutate(dems_oldest = max(c_across(dem_1:dem_3)),
-           reps_youngest = min(c_across(rep_1:rep_3)),
-           age_diff = dems_oldest - reps_youngest)
-```
 
 ```{r}
 age_diff_graph <- pp |>  
@@ -708,19 +819,19 @@ age_diff_graph <- pp |>
 age_diff_graph
 ```
 
+###
+
 Since our group has three Democrats and three Republicans, make a tibble with the observations of the column "party" that we desire. Store this as `new_obs`.
 
-
-
-```{r age--party-18, exercise = TRUE}
+```{r age--party-20, exercise = TRUE}
 
 ```
 
-```{r age--party-18-hint-1, eval = FALSE}
+```{r age--party-20-hint-1, eval = FALSE}
 newobs <- tibble(party = c(...))
 ```
 
-```{r age--party-18-hint-2, eval = FALSE}
+```{r age--party-20-hint-2, eval = FALSE}
 newobs <- tibble(party = c("Democrat", "Democrat", "Democrat", 
                            "Republican", "Republican","Republican"))
 ```
@@ -729,35 +840,35 @@ newobs <- tibble(party = c("Democrat", "Democrat", "Democrat",
 
 When doing this, ensure that the column names and the observations align with those of the original data set.
 
-### Exercise 19
+### Exercise 21
 
 Now use posterior predict and make the values numeric vectors in order to create the posterior distribution. Remember to use our first argument as the fitted model `fit_1` we created earlier and the `newdata` equal to `newobs`.
 
-```{r age--party-19, exercise = TRUE}
+```{r age--party-21, exercise = TRUE}
 
 ```
 
-```{r age--party-19-hint-1, eval = FALSE}
+```{r age--party-21-hint-1, eval = FALSE}
 posterior_predict(..., newdata = ...) |>
-    as_tibble() |>
+    ...() |>
     mutate_all(as.numeric)
 ```
 
-### Exercise 20
+### Exercise 22
 
 Currently your posterior predict has numbered columns correlating to the order in which we made the columns in `newobs`. Set the names to "dem_1", "dem_2", "dem_3", "rep_1", "rep_2", and "rep_3", respectively.
 
-```{r age--party-20, exercise = TRUE}
+```{r age--party-22, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r age--party-20-hint-1, eval = FALSE}
+```{r age--party-22-hint-1, eval = FALSE}
 Use the method set_names().
 ```
 
-```{r age--party-20-hint-2, eval = FALSE}
+```{r age--party-22-hint-2, eval = FALSE}
 set_names(c(..., ..., ..., ..., ..., ...))
 ```
 
@@ -765,22 +876,21 @@ set_names(c(..., ..., ..., ..., ..., ...))
 
 While the above step may not be necessary and we could proceed with the numbered columns, renaming makes it easier for us to use the distribution since it makes the columns more clear to us.
 
-### Exercise 21
+### Exercise 23
 
-Next, group the data by row. Then, create a column `dems_oldest` that has the oldest aged 
-Democrat in the row, a column `reps_youngest` with the youngest aged Republican in the row, and a column `age_diff` for the difference between the oldest Democrat and the youngest Republican in this row. Store this as `pp` and print the result.
+Next, group the data by row. Then, create a column `dems_oldest` that has the oldest aged Democrat in the row, a column `reps_youngest` with the youngest aged Republican in the row, and a column `age_diff` for the difference between the oldest Democrat and the youngest Republican in this row. Store this as `pp` and print the result.
 
-```{r age--party-21, exercise = TRUE}
+```{r age--party-23, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r age--party-21-hint-1, eval = FALSE}
+```{r age--party-23-hint-1, eval = FALSE}
 Recall the methods `max()` and `min()`. Also, `c_across()` can be used to create a list across columns.
 ```
 
-```{r age--party-21-hint-2, eval = FALSE}
+```{r age--party-23-hint-2, eval = FALSE}
 ... |> 
   rowwise() |> 
   mutate(dems_oldest = max(c_across(...)),
@@ -792,22 +902,22 @@ Recall the methods `max()` and `min()`. Also, `c_across()` can be used to create
 
 In doing so, we have found the posterior distribution for the age difference between the oldest Democrat and youngest Republican for train commuters with a group of three Democrats and three Republicans.
 
-### Exercise 22
+### Exercise 24
 
 Let's plot this. Start by using `ggplot` and mapping the the age difference to the x-axis. Then, add the layer geom_histogram and use `aes()` within the first argument to set the y-value to be the probability. Additionally, set the second argument `bins` equal to 100.
 
-```{r age--party-22, exercise = TRUE}
+```{r age--party-24, exercise = TRUE}
 
 ```
 
-```{r age--party-22-hint-1, eval = FALSE}
-pp |> 
+```{r age--party-24-hint-1, eval = FALSE}
+... |> 
   ggplot(aes(x = ...)) + 
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = ...)
 ```
 
-### Exercise 23
+### Exercise 25
 
 Continue this pipe by adding labels. Then change the y-axis to be in percent_format and add the layer `theme_classic()`.
 
@@ -817,13 +927,13 @@ Remember, your plot should look something like this:
 age_diff_graph
 ```
 
-```{r age--party-23, exercise = TRUE}
+```{r age--party-25, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r age--party-23-hint-1, eval = FALSE}
+```{r age--party-25-hint-1, eval = FALSE}
 ... +
   labs(...) +
   scale_y_continuous(labels = scales::percent_format()) +
@@ -834,11 +944,11 @@ age_diff_graph
 
 With the posterior age difference model, we can now go on to answer our question.
 
-### Exercise 24
+### Exercise 26
 
 Use the distribution to approximate what we would expect the age difference to be between the oldest Democrat and youngest Republican in a group of train commuters with 6 Democrats and 6 Republicans.
 
-```{r age--party-24}
+```{r age--party-26}
 question_text(NULL,
 	message = "As can be seen by the above distribution, we would expect the age difference to be about 22 years.",
 	answer(NULL,
@@ -854,7 +964,7 @@ As we have seen, through the use of our fitted data and `posterior_predict()`, w
 
 Let's continue this process with our questions pertaining to immigration attitude and exposure to Spanish-speakers.
 
-## att_end ~ treatment
+## att_end ~ treatment with Justice, Courage, and Temperance
 
 Recall our questions regarding the treatment effect on `att_end`:
 
@@ -1346,7 +1456,7 @@ As you can see above, the largest treatment effect that will occur about 10% of 
 
 <!-- MM: Don't hardcode that -->
 
-## income ~ age
+## income ~ age with Justice, Courage, and Temperance
 
 Let's continue to answering our question pertaining to the relationship between income and age. Recall our question.
 
@@ -1533,7 +1643,7 @@ question_text(NULL,
 
 While this may have been different from the previous predictive models we have worked with since income is a continuous scale, you can see that the process which we used to answer the question did not change.
 
-## liberal ~ income
+## liberal ~ income with Justice, Courage, and Temperance
 
 Now, let's move on to our final two questions.
 
@@ -1927,6 +2037,11 @@ lib_group
 ### 
 
 Through this posterior, it can be seen that it is most likely to have 2 liberals in this group with various incomes.
+
+## Summary
+###
+
+This tutorial covered [Chapter 5](https://ppbds.github.io/primer/08-three-parameters.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/). This tutorial reviewed the topics of Three Parameters, cardinal virtues (wisdom), and an in-depth analysis of the **trains** data.
 
 ```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
 ```
