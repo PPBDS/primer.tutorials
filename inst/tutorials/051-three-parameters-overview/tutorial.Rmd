@@ -71,7 +71,7 @@ pp_2 <- posterior_predict(fit_1, newdata = newobs) |>
            reps_youngest = min(c_across(rep_1:rep_3)),
            age_diff = dems_oldest - reps_youngest)
 
-age_diff_graph <- pp |>  
+age_diff_graph <- pp_2 |>  
   ggplot(aes(x = age_diff)) +
     geom_histogram(aes(y = after_stat(count/sum(count))),
                    bins = 100) +
@@ -80,6 +80,130 @@ age_diff_graph <- pp |>
          x = "Age",
          y = "Probability") +
     scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+fit_2 <- stan_glm(att_end ~ treatment - 1, 
+                      data = trains,
+                      refresh = 0)
+
+treat_post <- fit_2 |> 
+  as_tibble() |> 
+  select(-sigma) |> 
+  pivot_longer(cols = treatmentTreated:treatmentControl,
+               names_to = "Parameter",
+               values_to = "attitude") |> 
+  ggplot(aes(x = attitude, fill = Parameter)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = 0.5, 
+                   bins = 100, 
+                   position = "identity") +
+    labs(title = "Posterior for Expected Attitude Toward Immigration",
+         subtitle = "Treated individuals are more conservative",
+         x = "Attitude",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) + 
+    theme_classic()
+
+newobs_2 <- tibble(treatment = c("Treated", "Control"))
+
+pe <- posterior_epred(fit_2, newobs_2) |> 
+    as_tibble() |> 
+    mutate(ate = `1` - `2`)
+
+ate_graph <- pe |> 
+  ggplot(aes(x = ate)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100) +
+    labs(title = "Posterior for Average Treatment Effect",
+         subtitle = "Exposure to Spanish-speakers shifts immigration attitudes rightward",
+         x = "Difference in Attitude",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+pp_3 <- posterior_predict(fit_2, 
+                        newdata = newobs_2) |>
+    as_tibble() |>
+    mutate_all(as.numeric) |> 
+    mutate(te = `1` - `2`)
+
+te_graph <- pp_3 |> 
+  ggplot(aes(x = te)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+    labs(title = "Posterior for Treatment Effect for One Person",
+         subtitle = "Causal effects are more variable for indvduals",
+         x = "Difference in Attitude",
+         y = "Probability") +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+fit_3 <- stan_glm(income ~ age, 
+                  data = trains,
+                  refresh = 0)
+
+newobs_3 <- tibble(age = 40)
+
+pe_2 <- posterior_epred(fit_3, newdata = newobs_3) |> 
+  as_tibble() 
+
+income_post <- pe_2 |> 
+  ggplot(aes(x = `1`)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+    labs(title = "Posterior for Expected Income",
+         subtitle = "A 40-years old commuter earns around $140,000",
+         x = "Income",
+         y = "Probability") +
+    scale_x_continuous(labels = scales::dollar_format()) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
+
+fit_4 <- stan_glm(liberal ~ income,
+                  data = trains, 
+                  family = binomial,
+                  refresh = 0)
+
+newobs_4 <- tibble(income = 100000)
+
+pe_3 <- posterior_epred(fit_4, newdata = newobs_4) |> 
+  as_tibble()
+
+postlib <- pe_3 |> 
+  ggplot(aes(x = `1`)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+  
+    scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+    labs(title = "Posterior for Proportion Liberal Among $100,000 Earners",
+         subtitle = "The population proportion is the same as the probability for any individual",
+         x = "Income",
+         y = "Probability of Being Liberal") +
+  theme_classic()
+
+newobs_5 <- tibble(income = c(rep(100000, 2),
+                            rep(200000, 2),
+                            rep(300000, 2),
+                            rep(400000, 2)))
+
+pp_4 <- posterior_predict(fit_4, 
+                        newdata = newobs_5) |> 
+  as_tibble() |> 
+  mutate_all(as.numeric) |> 
+  rowwise() |> 
+  mutate(total = sum(c_across()))
+
+lib_group <- pp_4 |> 
+  ggplot(aes(x = total)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100)  +
+    labs(title = "Posterior for Number of Liberals in Group with Varied Incomes",
+         subtitle = "Two is the most likely number, but values from 0 to 5 are plausible",
+         x = "Number of Liberals",
+         y = "Probability") +
+    scale_x_continuous(labels = scales::number_format(accuracy = 1)) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
     theme_classic()
 
 knitr::opts_chunk$set(echo = FALSE)
@@ -99,12 +223,10 @@ options(tutorial.exercise.timelimit = 60,
 
 <!-- Change text questions to allow for written answers, and then provide your own perfect written answders. -->
 
-<!-- MT: Still need to replace primer.data with other data -->
-
 ## Introduction
 ###
 
-This tutorial covers [Chapter 5](https://ppbds.github.io/primer/08-three-parameters.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/). This tutorial will review topics including Three Parameters, cardinal virtues (wisdom, justice, courage, temperance), and an in-depth analysis of the **trains** data.
+This tutorial covers [Chapter 5](https://ppbds.github.io/primer/08-three-parameters.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/). This tutorial will review topics including Three Parameters, Cardinal Virtues (wisdom, justice, courage, temperance), and an in-depth analysis of the **trains** data.
 
 ## Cardinal Virtues with Wisdom
 ###
@@ -115,15 +237,15 @@ This tutorial covers [Chapter 5](https://ppbds.github.io/primer/08-three-paramet
 
 In order to answer the following questions we need to first make our Preceptor Table.
 
-*What is the probability that if a Democrat shows up to a train station in the U.S today, he will be over 50 years old?*
+  *What is the probability that if a Democrat shows up to a train station in the U.S today, he will be over 50 years old?*
 
-*In a group of train commuters in the U.S. today in which three are Democrats and three are Republicans, what will the age difference be between the oldest Democrat and the youngest Republican?* 
+  *In a group of train commuters in the U.S. today in which three are Democrats and three are Republicans, what will the age difference be between the oldest Democrat and the youngest Republican?* 
 
-In one sentence explain the columns that we would like to have in our Preceptor Table.
+In two sentences explain the columns that we would like to have in our Preceptor Table and what they are used for.
 
 ```{r wisdom-1}
 question_text(NULL,
-	message = "Our columns would be for party and age of the train commuters.",
+	message = "We would have two columns for our Preceptor Table: party and age of the train commuters. Our age column would represent our outcome variable and our party column would represent our covariate.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -135,9 +257,9 @@ question_text(NULL,
 
 Next let's consider the following questions we need to first make our Preceptor Table.
 
-*What is the average treatment effect, of exposing U.S train commuters today to Spanish-speakers, on their attitudes toward immigration?* 
+  *What is the average treatment effect, of exposing U.S train commuters today to Spanish-speakers, on their attitudes toward immigration?* 
 
-*What is the largest causal effect on immigration attitudes due to exposing U.S. train commuters today to Spanish-speakers which still has a 1 in 10 chance of occurring?*
+  *What is the largest causal effect on immigration attitudes due to exposing U.S. train commuters today to Spanish-speakers which still has a 1 in 10 chance of occurring?*
 
 In one sentence explain the columns that we would like to have in our Preceptor Table.
 
@@ -153,13 +275,13 @@ question_text(NULL,
 
 ### Exercise 3
 
-*What would you expect the income to be for a random 40 year old train commuter in the U.S. today?*
+  *What would you expect the income to be for a random 40 year old train commuter in the U.S. today?*
 
-In one sentence explain the columns that we would like to have in our Preceptor Table.
+In two sentences explain the columns that we would like to have in our Preceptor Table and what they are used for.
 
 ```{r wisdom-3}
 question_text(NULL,
-	message = "We would need the columns of age and income within this scenario for the Preceptor Table.",
+	message = "We would need the columns of age and income within this scenario for the Preceptor Table. Our age column would represent our outcome variable and our income column would represent our covariate.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -169,15 +291,15 @@ question_text(NULL,
 
 ### Exercise 4
 
-*Among all people who have an income $100,000, what proportion are liberal?*
+  *Among all people who have an income $100,000, what proportion are liberal?*
 
-*Assume we have a group of eight people, two of whom make $100,000, two $200,000, two $300,000 and two $400,000. How many will be liberal?*
+  *Assume we have a group of eight people, two of whom make $100,000, two $200,000, two $300,000 and two $400,000. How many will be liberal?*
 
-In one sentence explain the columns that we would like to have in our Preceptor Table.
+In two sentences explain the columns that we would like to have in our Preceptor Table and what they are used for.
 
 ```{r wisdom-4}
 question_text(NULL,
-	message = "We would need a column for income, and a column for whether someone is liberal or not.",
+	message = "We would need a column for income, and a column for whether someone is liberal or not. Our liberal column would represent our outcome variable and our income column would represent our covariate.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -222,19 +344,10 @@ tibble(ID = c("Commuter 1", "Commuter 2", "...", "Commuter 1000", "Commuter 1001
 
 ### Exercise 5
 
-Next, let's take a look at the dataset we would like to use to answer these questions. We will be using `trains`. First, let's take a look at **trains** through the glimpse method.
+Next, let's take a look at the dataset we would like to use to answer these questions. We will be using `trains`. First, let's take a look at **trains** through the glimpse function.
 
 ```{r wisdom-5, exercise = TRUE}
-pp |> 
-  ggplot(aes(x = `1`)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100)  +
-    labs(title = "Posterior for a Random Democrat's Age",
-         subtitle = "Individual predictions are always more variable than expected values",
-         x = "Age",
-         y = "Probability") +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
+
 ```
 
 ```{r wisdom-5-hint-1, eval = FALSE}
@@ -243,7 +356,7 @@ glimpse(...)
 
 ### 
 
-Notice that `att_end` is an `<int>` rather than a `<dbl>` and that `party` is a `<chr>` while `treatment` is a factor. 
+Notice that `att_end` is an integer rather than a double and that `party` is a character while `treatment` is a factor. These choices are a mixture of sensible and arbitrary. Regardless, it is your responsibility to notice them. You can’t make a good model without looking closely at the data which you are using.
 
 ### Exercise 6
 
@@ -261,11 +374,11 @@ Notice how `att_end` represents immigration attitudes after treatment of being e
 
 ### Exercise 7
 
-In two sentences explain how well the data we have matches up with the data we indicated we would need in our Preceptor Table and why we can answer all of our questions.
+In one sentence explain whether we should use a *predictive* model or a *causal* model for this scenario with the *trains* data.
 
 ```{r wisdom-7}
 question_text(NULL,
-	message = "We can answer every question since we have the data to do so. We will need the columns of age, income, party, liberal, att_end and treatment because age, income, party, liberal, and att_end are all important to validate our data, specfically att_end is the individual's ending attitude on immigration and treatment is whether or not the individual was exposed to Spanish-speakers.",
+	message = "We need to use a causal model for this scenario because there is a treatment at hand.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -275,11 +388,11 @@ question_text(NULL,
 
 ### Exercise 8
 
-Recall that this study was done in Boston, MA in 2012. Write two sentences discussing whether you believe it's reasonable to consider this data to be drawn from the same population as our Preceptor Table. Identify at least one reason that you may not consider the data to be drawn from the same population.
+In two sentences explain the columns that we would like to have in our Preceptor Table and what they are used for with the *trains* data.
 
 ```{r wisdom-8}
 question_text(NULL,
-	message = "One possible reason we may not consider the data to be drawn from the same population as our Preceptor Table due to changes that may have occurred over time. A belief that our larger population is unable to include both 2012 and 2021 for some reason such as if we believed that the political climate was far too different.",
+	message = "We will need the columns of age, income, party, liberal, att_end and treatment. With these columns we have several different potential outcomes because age, income, party, liberal, and att_end are all important to validate our data.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -287,9 +400,50 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### 
+### Exercise 9
 
-While you may or may not believe that the data can be applied to our population, it is necessary to discuss how the populations may be similar and different in order to determine whether we can continue. 
+In one sentence explain the units of this situation.
+
+```{r wisdom-9}
+question_text(NULL,
+	message = "The units in this case would be the weeks per year because our potential outcomes and covariates of age, income, party, liberal, att_end and treatment.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 10
+
+In one sentence explain the treatment and how it applies to the scenario.
+
+```{r wisdom-10}
+question_text(NULL,
+	message = "The treatment depends on whether or not the individual was exposed to Spanish-speakers.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 11
+
+In two sentences provide one reason why the *assumption of validity* might not hold and explain how it may not hold within our scenario.
+
+```{r wisdom-11}
+question_text(NULL,
+	message = "The assumption of validity might not hold because the variables are too different from each other within the data and the Preceptor Table as the columns are not similar enough between each other. One possible reason we may not consider the data to be drawn from the same population as our Preceptor Table due to changes that may have occurred over time because of a belief that our larger population is unable to include both 2012 and 2021 for some reason such as if we believed that the political climate was far too different.",
+	answer(NULL,
+	correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+In order for our *assumption of validity* to hold true we need to have our data to match up with our Preceptor Table which allows us to construct a Population Table. With the *assumption of validity* we are able to build a Population Table that analyzes our data.
 
 For our purposes, we will assume that the data is drawn from the same population and can be applied to our population by treating data from 2012 to be exchangeable with data from 2021.
 
@@ -423,7 +577,7 @@ question_text(NULL,
 
 ###
 
-*Stability* means that the relationship between the columns is the same for three categories of rows: the data, the Preceptor table, and the larger population from which both are drawn. With something like political ideology, it is much harder to make the assertion that data collected in 2010 would be stable to data collected in 2030. When we are confronted with this uncertainty, we can consider making our timeframe smaller. However, we would still need to assume stability from 2014 (time of data collection) to today. *Stability* allows us to ignore the issue of time.
+*Stability* means that the relationship between the columns is the same for three categories of rows: the data, the Preceptor table, and the larger population from which both are drawn. With something like political ideology, it is much harder to make the assertion that data collected in 2010 would be stable to data collected in 2030. When we are confronted with this uncertainty, we can consider making our timeframe smaller. However, we would still need to assume stability from 2012 (time of data collection) to today. *Stability* allows us to ignore the issue of time.
 
 ### Exercise 3
 
@@ -688,7 +842,7 @@ This brings us to the *Temperance* virtue for our model of `age~party`.
 
 Let's start by recalling the first question.
 
-*What is the probability that if a Democrat shows up to the train station, he will be over 50 years old?*
+  *What is the probability that if a Democrat shows up to the train station, he will be over 50 years old?*
 
 Using our fitted data, we can now attempt to answer this question and to do so, will make the following plot.
 
@@ -808,7 +962,7 @@ Therefore, the probability that the next Democrat will be over 50 is around 28%.
 
 Next, let's consider the second question. 
 
-*In a group of three Democrats and three Republicans, what will the age difference be between the oldest Democrat and the youngest Republican?*
+  *In a group of three Democrats and three Republicans, what will the age difference be between the oldest Democrat and the youngest Republican?*
 
 To answer this, we will create the following plot.
 
@@ -976,9 +1130,9 @@ Let's continue this process with our questions pertaining to immigration attitud
 
 Recall our questions regarding the treatment effect on `att_end`:
 
-*What is the average treatment effect, of exposing train commuters to Spanish-speakers, on their attitudes toward immigration?*
+  *What is the average treatment effect, of exposing train commuters to Spanish-speakers, on their attitudes toward immigration?*
 
-*What is the largest causal effect of exposing train commuters to Spanish-speakers which still has a 1 in 10 chance of occurring?*
+  *What is the largest causal effect of exposing train commuters to Spanish-speakers which still has a 1 in 10 chance of occurring?*
 
 Unlike our previous model, this will be a causal model since the treatment of being exposed to Spanish-speakers may cause a change in immigration attitudes, unlike how changing party registration will have no effect on age.
 
@@ -1018,7 +1172,7 @@ tibble(source = c("Preceptor Table", "Preceptor Table", "Preceptor Table",  "...
 
 ### Exercise 1
 
-Let's look at the validity of our model. Write a three sentences discussing the meaning of receiving the treatment and some problems that we might run into when combining the `att_end` column from the data and our Preceptor Table. 
+Let's look at the *validity* of our model. Write three sentences discussing the meaning of receiving the treatment and some problems that we might run into when combining the `att_end` column from the data and our Preceptor Table. 
 
 ```{r attend--treatment-1}
 question_text(NULL,
@@ -1032,11 +1186,11 @@ question_text(NULL,
 
 ### Exercise 2
 
-Next, consider the stability of our model. Write two sentences considering whether you believe the model to be stable and provide a possible reason for why we may not consider the relationship between `att_end` and `treatment` to be stable.
+Next, consider the *stability* of our model. Write two sentences considering whether the *assumption of stability* may or may not hold and provide a possible reason for why we may not consider the relationship between `att_end` and `treatment` to hold with the *assumption of stability*.
 
 ```{r attend--treatment-2}
 question_text(NULL,
-	message = "Some reasons that you may consider could be the controversial elections and events in the US that have occurred between 2012 and now that may have had vast affects on immigration views in the US.",
+	message = "Some reasons that you we can consider could be the controversial elections and events in the US that have occurred between 2012 and now that may have had vast affects on immigration views in the US. Therefore, the assumption of stability may not hold because of the change in elections and events that have caused a shift in the immigration views.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -1046,12 +1200,11 @@ question_text(NULL,
 
 ### 
 
-While you have discussed a reason that the model may not be stable, we will assume that this has not impacted our relationship and assume the model to be stable.
+While you have discussed a reason that the *assumption of stability* for the model may not hold, we will assume that this has not impacted our relationship and use the *assumption of stability* for the model as it will hold.
  
-
 ### Exercise 3
 
-Now, let's take a look at representativeness. Write two sentences discussing if we can consider the data from Boston in 2012 to be representative of the US in 2012. Include at least one reason for which we may not believe this.
+Now, let's take a look at *representativeness*. Write two sentences discussing if we can consider the data from Boston in 2012 to be representative of the US in 2012. Include at least one reason for which we may not believe this.
 
 ```{r attend--treatment-3}
 question_text(NULL,
@@ -1065,7 +1218,7 @@ question_text(NULL,
 
 ### Exercise 4
 
-Lastly, write one sentence stating whether we will use a linear or logistic model. Use the words "outcome variable".
+Lastly, write one sentence stating whether we will use a *linear* or *logistic* model and include what outcome variable will affect this model.
 
 ```{r attend--treatment-4}
 question_text(NULL,
@@ -1077,25 +1230,33 @@ question_text(NULL,
 	rows = 6)
 ```
 
+###
+
+Now, that we have considered the *Justice* virtue, let's continue to *Courage* and make our fitted model using `stan_glm()`. 
+
 ### Exercise 5
 
-```{r}
-fit_2 <- stan_glm(att_end ~ treatment - 1, 
-                      data = trains,
-                      refresh = 0)
-```
-
-Now, that we have considered the Justice virtue, let's continue to Courage and make our fitted model using `stan_glm()`.  
-
-Set your outcome variable as `att_end`and your explanatory variable as `treatment` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `treatment` so we do not get an intercept.  Set `data` to `trains`, and `refresh` to 0. Set this to the `fit_2` and print it out.
-
-<!-- MM: Add family argument and break into more sections -->
+Set your outcome variable as `att_end`and your explanatory variable as `treatment` (Remember you must insert a tilde `~` between the two). Also, include a `-1` after `treatment` so we do not get an intercept.
 
 ```{r attend--treatment-5, exercise = TRUE}
 
 ```
 
 ```{r attend--treatment-5-hint-1, eval = FALSE}
+stan_glm(... ~ ... -1)
+```
+
+### Exercise 6
+
+Set `data` to `trains`, and `refresh` to 0. Set this to the `fit_2` and print it out.
+
+```{r attend--treatment-wi-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attend--treatment-wi-6-hint, eval = FALSE}
 fit_2 <- stan_glm(... ~ ... -1,
                   data = ...
                   refresh = ...)
@@ -1105,31 +1266,15 @@ fit_2 <- stan_glm(... ~ ... -1,
 
 Now, let's look at the posterior distributions for those who were treated and those who weren't.
 
-### Exercise 6
+### Exercise 7
 
 To do so, we will make the following plot.
 
 ```{r}
-treat_post <- fit_2 |> 
-  as_tibble() |> 
-  select(-sigma) |> 
-  pivot_longer(cols = treatmentTreated:treatmentControl,
-               names_to = "Parameter",
-               values_to = "attitude") |> 
-  ggplot(aes(x = attitude, fill = Parameter)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   alpha = 0.5, 
-                   bins = 100, 
-                   position = "identity") +
-    labs(title = "Posterior for Expected Attitude Toward Immigration",
-         subtitle = "Treated individuals are more conservative",
-         x = "Attitude",
-         y = "Probability") +
-    scale_y_continuous(labels = scales::percent_format()) + 
-    theme_classic()
-
 treat_post
 ```
+
+###
 
 First, make `fit_2` into a tibble and get rid of `sigma` since it is not of importance to us. Remember that you need to use `as_tibble()`.
 
@@ -1140,29 +1285,12 @@ First, make `fit_2` into a tibble and get rid of `sigma` since it is not of impo
 ```{r attend--treatment-6-hint-1, eval = FALSE}
 fit_2 |> 
   as_tibble() |> 
-  select(...)
-```
-
-### Exercise 7
-
-Next, use `pivot_longer()` with the argument of `cols` set to the "treatmentTreated" and "treatmentControl". Set the argument `names_to` to "Parameter", and `values_to` to "attitude".
-
-```{r attend--treatment-7, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r attend--treatment-7-hint-1, eval = FALSE}
-... |> 
-  pivot_longer(cols = ...,
-               names_to = ...
-               values_to = ...)
+  select(~...)
 ```
 
 ### Exercise 8
 
-Let's plot this.  Map `attitude` on the x-axis and set `fill` to `Parameter`. Add the layer `geom_histogram()` and make y into a probability. Set `alpha` to 0.5, `bins` to 100, and `position` to "identity".
+Use `pivot_longer()` with the argument of `cols` set to the "treatmentTreated" and "treatmentControl". Set the argument `names_to` to "Parameter", and `values_to` to "attitude".
 
 ```{r attend--treatment-8, exercise = TRUE}
 
@@ -1172,14 +1300,31 @@ Let's plot this.  Map `attitude` on the x-axis and set `fill` to `Parameter`. Ad
 
 ```{r attend--treatment-8-hint-1, eval = FALSE}
 ... |> 
+  pivot_longer(cols = ...:...,
+               names_to = "...",
+               values_to = "...")
+```
+
+### Exercise 9
+
+Let's plot this.  Map `attitude` on the x-axis and set `fill` to `Parameter`. Add the layer `geom_histogram()` and make y into a probability. Set `alpha` to 0.5, `bins` to 100, and `position` to "identity".
+
+```{r attend--treatment-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r attend--treatment-9-hint-1, eval = FALSE}
+... |> 
   ggplot(aes(x = ..., y = ...)) + 
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  alpha = ...,
                  bins = ...
-                 position = ...)
+                 position = "...")
 ```
 
-### Exercise 9
+### Exercise 10
 
 Next, add labels, change the y-scale to be in a percent format and add the layer `theme_classic()`.
 
@@ -1189,58 +1334,38 @@ The posterior should appear similar to the following:
 treat_post
 ```
 
-```{r attend--treatment-9, exercise = TRUE}
+```{r attend--treatment-10, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r attend--treatment-9-hint-1, eval = FALSE}
+```{r attend--treatment-10-hint-1, eval = FALSE}
 ... +
   labs(...) + 
   scale_y_continous(labels = scales::percent_format()) + 
-  theme_classic()
+  ...()
 ```
 
 ### 
 
 Now, using this posterior distribution, we can go on to answer the questions that we began this section with. 
 
-### Exercise 10
+### Exercise 11
 
 Recall our first question pertaining to this distribution:
 
-*What is the average treatment effect, of exposing people to Spanish-speakers, on their attitudes toward immigration?*
+  *What is the average treatment effect, of exposing people to Spanish-speakers, on their attitudes toward immigration?*
 
 To help us answer this, we will make the following plot.
 
 ```{r}
-newobs <- tibble(treatment = c("Treated", "Control"))
-
-pe <- posterior_epred(fit_2, newobs) |> 
-    as_tibble() |> 
-    mutate(ate = `1` - `2`)
-
-```
-
-```{r}
-ate_graph <- pe |> 
-  ggplot(aes(x = ate)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100) +
-    labs(title = "Posterior for Average Treatment Effect",
-         subtitle = "Exposure to Spanish-speakers shifts immigration attitudes rightward",
-         x = "Difference in Attitude",
-         y = "Probability") +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
-
 ate_graph
 ```
 
 Using the distribution, approximate the average treament effect.
 
-```{r attend--treatment-10}
+```{r attend--treatment-11}
 question_text(NULL,
 	message = "Your answer should fall around 1.5",
 	answer(NULL,
@@ -1250,48 +1375,48 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 11
-
-Now, let's use `posterior_epred()` to answer this question. Create a tibble like we have done before with our desired ovservations. For this scenario, call it `newobs` and set `treatment` having two values, "Treated" and "Control".
-
-```{r attend--treatment-11, exercise = TRUE}
-
-```
-
-```{r attend--treatment-11-hint-1, eval = FALSE}
-newobs <- tibble(treatment = c("Treated", "Control"))
-```
-
 ### Exercise 12
 
-Next, use `posterior_epred()` and set the first argument to our fitted model and the second to the tibble we just created. Remember we need to use `as_tibble()`.
+Now, let's use `posterior_epred()` to answer this question. Create a tibble like we have done before with our desired ovservations. For this scenario, call it `newobs_2` and set `treatment` having two values, "Treated" and "Control".
 
 ```{r attend--treatment-12, exercise = TRUE}
 
 ```
 
 ```{r attend--treatment-12-hint-1, eval = FALSE}
-posterior_epred(..., ...) |> 
-  as_tibble()
+newobs_2 <- tibble(treatment = c("Treated", "Control"))
 ```
 
 ### Exercise 13
 
-Continue this pipe and add a column `ate` for the average treatment effect. Set this to `pe`. 
-
-Recall that the average treatment effect is the control value subtracted from the treated value.
+Next, use `posterior_epred()` and set the first argument to our fitted model and the second to the tibble we just created. Remember we need to use `as_tibble()`.
 
 ```{r attend--treatment-13, exercise = TRUE}
 
 ```
 
+```{r attend--treatment-13-hint-1, eval = FALSE}
+posterior_epred(..., ...) |> 
+  as_tibble()
+```
+
+### Exercise 14
+
+Continue this pipe and add a column `ate` for the average treatment effect. Set this to `pe`. 
+
+Recall that the average treatment effect is the control value subtracted from the treated value.
+
+```{r attend--treatment-14, exercise = TRUE}
+
+```
+
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r attend--treatment-13-hint-1, eval = FALSE}
+```{r attend--treatment-14-hint-1, eval = FALSE}
 Remember that our columns are not titled, but are numbered and we need to use the format `1` to get the value from our first column.
 ```
 
-```{r attend--treatment-13-hint-2, eval = FALSE}
+```{r attend--treatment-14-hint-2, eval = FALSE}
 pe <- ... |> 
   mutate(ate = `1` - `2`)
 ```
@@ -1300,22 +1425,22 @@ pe <- ... |>
 
 This results in the posterior probability distribution of average treatment effect.
 
-### Exercise 14
+### Exercise 15
 
 Now, let's graph this. Map `ate` to the x-axis and add the layer `geom_histogram()`. Make the values on the y-axis probabilities and set the argument `bins` to 100. 
 
-```{r attend--treatment-14, exercise = TRUE}
+```{r attend--treatment-15, exercise = TRUE}
 
 ```
 
-```{r attend--treatment-14-hint-1, eval = FALSE}
+```{r attend--treatment-15-hint-1, eval = FALSE}
 pe |>
   ggplot(aes(x = ...)) + 
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = ...)
 ```
 
-### Exercise 15
+### Exercise 16
 
 Next, add labels, format the values on the y-axis to be percents using `scale_y_continuous`, and add the layer `theme_classic()`.
 
@@ -1325,13 +1450,13 @@ The posterior should look similar to the following:
 ate_graph
 ```
 
-```{r attend--treatment-15, exercise = TRUE}
+```{r attend--treatment-16, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r attend--treatment-15-hint-1, eval = FALSE}
+```{r attend--treatment-16-hint-1, eval = FALSE}
 ... + 
   labs(...) + 
   scale_y_continuous(labels = scales::percent_format()) +
@@ -1342,45 +1467,37 @@ ate_graph
 
 In creating the posterior distribution, we have effectively answered our first question to determine the average treatment.
 
-### Exercise 16
-
-```{r echo = FALSE}
-pp <- posterior_predict(fit_2, 
-                        newdata = newobs) |>
-    as_tibble() |>
-    mutate_all(as.numeric) |> 
-    mutate(te = `1` - `2`)
-```
+### Exercise 17
 
 Now, let's take a look at our second question. 
 
-*What is the largest effect size which still has a 1 in 10 chance of occurring?*
+  *What is the largest effect size which still has a 1 in 10 chance of occurring?*
 
-To answer this one, we will use `posterior_predict()` for two people, one who is treated and the other control. In other words, we can use the tibble `newobs` which we already created. Set the first argument to our fitted model and `newdata` to `newobs`. Make sure to use `as_tibble()` and to make all the values numeric as we have done previously.
+To answer this one, we will use `posterior_predict()` for two people, one who is treated and the other control. In other words, we can use the tibble `newobs` which we already created. Set the first argument to our fitted model and `newdata` to `newobs_2`. Make sure to use `as_tibble()` and to make all the values numeric as we have done previously.
 
-```{r attend--treatment-16, exercise = TRUE}
+```{r attend--treatment-17, exercise = TRUE}
 
 ```
 
-```{r attend--treatment-16-hint-1, eval = FALSE}
+```{r attend--treatment-17-hint-1, eval = FALSE}
 posterior_predict(..., 
                   newdata = ...) |>
   as_tibble() |>
   mutate_all(as.numeric)
 ```
 
-### Exercise 17
+### Exercise 18
 
-Continue this pipe and add a column `te` which is the difference between the treated person and the untreated person. Remember the columns are unnamed and that you must use numbers. Store this as `pp`.
+Continue this pipe and add a column `te` which is the difference between the treated person and the untreated person. Remember the columns are unnamed and that you must use numbers. Store this as `pp_3`.
 
-```{r attend--treatment-17, exercise = TRUE}
+```{r attend--treatment-18, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r attend--treatment-17-hint-1, eval = FALSE}
-pp <- ... |> 
+```{r attend--treatment-18-hint-1, eval = FALSE}
+pp_3 <- ... |> 
   mutate(te = `1` - `2`)
 ```
 
@@ -1388,39 +1505,28 @@ pp <- ... |>
 
 We have now created the posterior distribution for the treatment effect for one person. 
 
-### Exercise 18
+### Exercise 19
 
 Let's now plot this and make the graph shown below. 
 
 ```{r echo = FALSE}
-te_graph <- pp |> 
-  ggplot(aes(x = te)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100)  +
-    labs(title = "Posterior for Treatment Effect for One Person",
-         subtitle = "Causal effects are more variable for indvduals",
-         x = "Difference in Attitude",
-         y = "Probability") +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
-
 te_graph
 ```
 
 Map `te` to the x-axis and add the layer `geom_histogram()`. Make the values on the y-axis into probabilities and set the argument `bins` to 100.
 
-```{r attend--treatment-18, exercise = TRUE}
+```{r attend--treatment-19, exercise = TRUE}
 
 ```
 
-```{r attend--treatment-18-hint-1, eval = FALSE}
-pp |> 
+```{r attend--treatment-19-hint-1, eval = FALSE}
+pp_3 |> 
   ggplot(aes(x = ...)) +
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = ...)
 ```
 
-### Exercise 19
+### Exercise 20
 
 Continue this pipe and add labels, format the y-axis to percents, and add the layer `theme_classic()`.
 
@@ -1429,13 +1535,13 @@ The result should appear similar to the following:
 te_graph
 ```
 
-```{r attend--treatment-19, exercise = TRUE}
+```{r attend--treatment-20, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r attend--treatment-19-hint-1, eval = FALSE}
+```{r attend--treatment-20-hint-1, eval = FALSE}
 ... +
   labs(...) + 
   scale_y_continuous(labels = scales::percent_format()) + 
@@ -1446,16 +1552,16 @@ te_graph
 
 Using this distribution, we can evaluate the difference between treatment effect for a single individual and notice how large the spread is. To answer our question though, we need to look at the value at the 90th percentile since we are looking to find what the largest causal effect is that has a 1 in 10 chance of occurring.
 
-### Exercise 20
+### Exercise 21
 
-In order to do so, we can use the function `quantile()`. To do so, select the `te` column of `pp` and use this as the first argument of `quantile()`. Set the second argument `prob` to our desired percentile, 0.9.
+In order to do so, we can use the function `quantile()`. To do so, select the `te` column of `pp_3` and use this as the first argument of `quantile()`. Set the second argument `prob` to our desired percentile, 0.9.
 
-```{r attend--treatment-20, exercise = TRUE}
+```{r attend--treatment-21, exercise = TRUE}
 
 ```
 
-```{r attend--treatment-20-hint-1, eval = FALSE}
-quantile(pp$te, prob = 0.9)
+```{r attend--treatment-21-hint-1, eval = FALSE}
+quantile(pp_3$te, prob = 0.9)
 ```
 
 ### 
@@ -1468,7 +1574,7 @@ As you can see above, the largest treatment effect that will occur about 10% of 
 
 Let's continue to answering our question pertaining to the relationship between income and age. Recall our question.
 
-*What would you expect the income to be for a 40-year old train commuter?*
+  *What would you expect the income to be for a 40-year old train commuter?*
 
 Recall the population table pertaining to this question.
 
@@ -1508,64 +1614,89 @@ tibble(source = c("Preceptor Table", "Preceptor Table", "Preceptor Table",  "...
 
 ### Exercise 1
 
-First, let's make our fitted model using `stan_glm()`. Set your outcome variable to `income` and your explanatory variable to `age`. Set data to `trains` and refresh to `0`. Store this as `fit_3`.
+In two sentences, provide a reason why the *assumption of stability* might not hold.
 
-<!-- MM: Add family argument -->
-
-```{r income--age-1, exercise = TRUE}
-
+```{r income--age-1}
+question_text(NULL,
+	message = "The assumption of stability may not hold because of the relationship between age and income and how that has changed between 2012 and now. Once again, let’s consider inflation and what would happen if the incomes were to increase at the rate of inflation, the income distribution would be drastically different than that of 2012.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
 ```
 
-```{r income--age-1-hint-1, eval = FALSE}
-fit_3 <- stan_glm(income ~ age,
-                  data = ...
-                  refresh = ...)
-```
+###
 
-```{r echo = FALSE}
-fit_3 <- stan_glm(income ~ age, 
-                  data = trains,
-                  refresh = 0)
-
-```
-
-### 
-
-Unlike previous question we have dealt with regarding predictive modeling, the predictor variable income is continuous in that there are a range of varying incomes as opposed to only having two options of "Democrat" and "Republican as we did in our model of party ~ age.
+Wages don’t tend to change as quickly as inflation does, so they likely did not change significantly and we can consider this model to be stable.
 
 ### Exercise 2
 
-Now that we have made our fitted model, let's make our posterior distribution. Start by making a tibble `newobs` with the observation `age` is equal to 40.
+In two sentences, provide a reason why the *assumption of representativeness* might not hold.
 
-```{r income--age-2, exercise = TRUE}
-
+```{r income--age-2}
+question_text(NULL,
+	message = "We could still not assume representativeness because those who actually complete and submit the survey are not random. We could possibly see a skewing in the age distribution and overestimate of the younger people in the population, and if younger people also tend to have a lower income than older people, this could also alter our answers to our current questions.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
+###
 
-```{r income--age-2-hint-1, eval = FALSE}
-newobs <- tibble(age = 40)
-```
-
-```{r echo = FALSE}
-newobs <- tibble(age = 40)
-```
+If we had reason to believe this is true, one way that we could fix this issue of representativeness is to alter our population to be train commuters in the US who would respond to the survey. In doing so, our population would then accommodate for the skewed age distribution under the assumption that younger individuals tend to respond to surveys at higher rates than older people.
 
 ### Exercise 3
 
-Now, recall that `posterior_epred()` is used when looking for expected values such as in this case. Therefore, use `posterior_epred()` with the first argument as our fitted model `fit_3` and the `newdata` argument as `newobs`. Remember to use `as_tibble()`. Store this as `pe`.
+First, let's make our fitted model using `stan_glm()`. Set your outcome variable to `income` and your explanatory variable to `age`. Set data to `trains` and refresh to `0`. Store this as `fit_3`.
 
 ```{r income--age-3, exercise = TRUE}
 
 ```
 
 ```{r income--age-3-hint-1, eval = FALSE}
-pe <- posterior_epred(..., newdata = ...) |> 
+fit_3 <- stan_glm(income ~ age,
+                  data = ...
+                  refresh = ...)
+```
+
+```{r income--age-3-hint-2, eval = FALSE}
+fit_3 <- stan_glm(income ~ age, 
+                  data = trains,
+                  refresh = 0)
+```
+
+### 
+
+Unlike previous question we have dealt with regarding predictive modeling, the predictor variable income is continuous in that there are a range of varying incomes as opposed to only having two options of "Democrat" and "Republican as we did in our model of party ~ age.
+
+### Exercise 4
+
+Now that we have made our fitted model, let's make our posterior distribution. Start by making a tibble `newobs_3` with the observation `age` is equal to 40.
+
+```{r income--age-4, exercise = TRUE}
+
+```
+
+```{r income--age-4-hint-1, eval = FALSE}
+newobs_3 <- tibble(age = ...)
+```
+
+### Exercise 5
+
+Now, recall that `posterior_epred()` is used when looking for expected values such as in this case. Therefore, use `posterior_epred()` with the first argument as our fitted model `fit_3` and the `newdata` argument as `newobs_3`. Remember to use `as_tibble()`. Store this as `pe`.
+
+```{r income--age-5, exercise = TRUE}
+
+```
+
+```{r income--age-5-hint-1, eval = FALSE}
+pe_2 <- posterior_epred(..., newdata = ...) |> 
   as_tibble()
 ```
 
-```{r echo = FALSE}
-pe <- posterior_epred(fit_3, newdata = newobs) |> 
+```{r income--age-5-hint-2, eval = FALSE}
+pe_2 <- posterior_epred(fit_3, newdata = newobs_3) |> 
   as_tibble() 
 ```
 
@@ -1573,44 +1704,32 @@ pe <- posterior_epred(fit_3, newdata = newobs) |>
 
 Now that we have the posterior for expected income, let's plot it.
 
-### Exercise 4
+### Exercise 6
 
 We will be making the graph shown below.
 
 ```{r}
-income_post <- pe |> 
-  ggplot(aes(x = `1`)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100)  +
-    labs(title = "Posterior for Expected Income",
-         subtitle = "A 40-years old commuter earns around $140,000",
-         x = "Income",
-         y = "Probability") +
-    scale_x_continuous(labels = scales::dollar_format()) +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
-
 income_post
 ```
 
 Map the column for income to the x-axis. Then add the layer `geom_histogram()` and make y-value a probability. Additionally, make the argument `bins` equal to 100. 
 
-```{r income--age-4, exercise = TRUE}
+```{r income--age-6, exercise = TRUE}
 
 ```
 
-```{r income--age-4-hint-1, eval = FALSE}
+```{r income--age-6-hint-1, eval = FALSE}
 Remember that the columns are unnamed so you will have to call them using numbers.
 ```
 
-```{r income--age-4-hint-2, eval = FALSE}
-pe |> 
+```{r income--age-6-hint-2, eval = FALSE}
+pe_2 |> 
   ggplot(aes(x = `1`)) +
   geom_histogram(aes(y = after_stat(count/sum(count))),
                  bins = ...)
 ```
 
-### Exercise 5
+### Exercise 7
 
 Now add labels to the graph and format the x-values to be in dollar-format and the y-values to be percent-format. Also, add the layer `theme_classic()`.
 
@@ -1619,27 +1738,27 @@ The posterior should appear similar to the following:
 income_post
 ```
 
-```{r income--age-5, exercise = TRUE}
+```{r income--age-7, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r income--age-5-hint-1, eval = FALSE}
+```{r income--age-7-hint-1, eval = FALSE}
 ... +
   labs(...) +
-  scale_x_continuous(labels = scales::dollar_format()) +
+  scale_x_continuous(... = scales::dollar_format()) +
   scale_y_continuous(labels = scales::percent_format()) +
-  theme_classic()
+  ...()
 ```
 
-### Exercise 6
+### Exercise 8
 
 Using the above distribution, estimate about how much a 40-year old train commuter would earn.
 
-```{r income--age-6}
+```{r income--age-8}
 question_text(NULL,
-	message = "They would earn around $140,000.",
+	message = "A 40-year old train commuter would earn around $140,000.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -1655,9 +1774,9 @@ While this may have been different from the previous predictive models we have w
 
 Now, let's move on to our final two questions.
 
-*Among all people who have an income $100,000, what proportion are liberal?*
+  *Among all people who have an income $100,000, what proportion are liberal?*
 
-*Assume we have a group of eight people, two of whom make $100,000, two $200,000, two $300,000 and two $400,000. How many will be liberal?*
+  *Assume we have a group of eight people, two of whom make $100,000, two $200,000, two $300,000 and two $400,000. How many will be liberal?*
 
 Recall the subpart of our population table for these questions.
 
@@ -1695,11 +1814,11 @@ tibble(source = c("Preceptor Table", "Preceptor Table", "Preceptor Table",  "...
 
 ### Exercise 1
 
-Now, before we make this model, consider the validity of the data. Write two sentences discussing a reason why `income` and `liberal` may not have the same meaning in our data set and our Preceptor Table.
+Now, before we make this model, consider the *validity* of the data. Write two sentences discussing a reason why `income` and `liberal` may not have the same meaning in our data set and our Preceptor Table.
 
 ```{r liberal--income-1}
 question_text(NULL,
-	message = "One possible reason you may consider include inflation altering the real value of income, in that earning $100,000 in 2012 won't have the same value as earning $100,000 in 2021. You may also consider if the meaning of being liberal has changed over the years and if their are different beliefs now than there were in 2012.",
+	message = "One possible reason you may consider include inflation altering the real value of income, in that earning $100,000 in 2012 won't have the same value as earning $100,000 in 2023. You may also consider if the meaning of being liberal has changed over the years and if their are different beliefs now than there were in 2012.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -1711,11 +1830,11 @@ question_text(NULL,
 
 ### Exercise 2
 
-State whether the model is linear or logistic and why. Specify the outcome variable.
+State whether the model is *linear* or *logistic* and why. Specify the outcome variable.
 
 ```{r liberal--income-2}
 question_text(NULL,
-	message = "This is a logistic model because `liberal` is the outcome variable and it does not have a range of values, but rather only 2.",
+	message = "This is a logistic model because `liberal` is the outcome variable and it does not have a range of values, but rather only two.",
 	answer(NULL,
 	correct = TRUE),
 	allow_retry = FALSE,
@@ -1727,7 +1846,7 @@ question_text(NULL,
 
 Unlike our past three models, in this model the outcome variable is not continuous. In the past three models, we have had outcome variables of `age`, `att_end`, and `income`, all of which have a range of values. 
 
-In this model, however, the outcome variable is `liberal` which only has values of TRUE and FALSE, indicating a logistic model. Therefore, when modeling, we must use the `binomial` family.
+In this model, however, the outcome variable is `liberal` which only has values of `TRUE` and `FALSE`, indicating a logistic model. Therefore, when modeling, we must use the `binomial` family.
 
 ### Exercise 3
 
@@ -1755,50 +1874,37 @@ fit_4 <- stan_glm(liberal ~ income,
 
 With our fitted model, we can proceed to answer our questions. Recall our first question for this relationship:
 
-*Among all people who have an income $100,000, what proportion are liberal?*
+  *Among all people who have an income $100,000, what proportion are liberal?*
 
-Like always, to answer the question, we must first make a tibble with the observations we desire. In this case, make a tibble with `income` set to 100000, and store this as `newobs`.
+Like always, to answer the question, we must first make a tibble with the observations we desire. In this case, make a tibble with `income` set to 100000, and store this as `newobs_4`.
 
 ```{r liberal--income-4, exercise = TRUE}
 
 ```
 
 ```{r liberal--income-4-hint-1, eval = FALSE}
-newobs <- tibble(income = ...)
-```
-
-```{r echo = FALSE}
-newobs <- tibble(income = 100000)
+newobs_4 <- tibble(income = ...)
 ```
 
 ### Exercise 5
 
-Now, in order to get our posterior distribution, let's use `posterior_epred()` with the first argument as our fitted model, `fit_4`, and the second argument `newdata` as `newobs`. Remember to make this a tibble as well. Store this as `pe`.
+Now, in order to get our posterior distribution, let's use `posterior_epred()` with the first argument as our fitted model, `fit_4`, and the second argument `newdata` as `newobs_4`. Remember to make this a tibble as well. Store this as `pe_3`.
 
 ```{r liberal--income-5, exercise = TRUE}
 
 ```
 
 ```{r liberal--income-5-hint-1, eval = FALSE}
-pe <- posterior_epred(..., newdata = ...) |> 
-  as_tibble()
-```
-
-```{r echo = FALSE}
-pe <- posterior_epred(fit_4, newdata = newobs) |> 
+pe_3 <- posterior_epred(..., newdata = ...) |> 
   as_tibble()
 ```
 
 ### Exercise 6
 
-Print out `pe`.
+Print out `pe_3`.
 
 ```{r liberal--income-6, exercise = TRUE}
 
-```
-
-```{r liberal--income-6-hint-1, eval = FALSE}
-pe
 ```
 
 ### 
@@ -1810,19 +1916,6 @@ The population proportion is the same as the probability for any single individu
 Now that we have made our posterior distribution, let's plot it by making the following graph.
 
 ```{r echo = FALSE}
-postlib <- pe |> 
-  ggplot(aes(x = `1`)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100)  +
-  
-    scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
-    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-    labs(title = "Posterior for Proportion Liberal Among $100,000 Earners",
-         subtitle = "The population proportion is the same as the probability for any individual",
-         x = "Income",
-         y = "Probability of Being Liberal") +
-  theme_classic()
-
 postlib
 ```
 
@@ -1837,8 +1930,8 @@ Remember that your columns are not named, but numbered.
 ```
 
 ```{r liberal--income-7-hint-2, eval = FALSE}
-pe |> ggplot(aes(x = `1`)) + 
-  geom_histogram(aes(y = after_stat(count/sum(count))),
+pe_3 |> ggplot(aes(x = `1`)) + 
+  geom_histogram(aes(... = after_stat(count/sum(count))),
                  bins = ...)
 ```
 
@@ -1879,16 +1972,16 @@ postlib
 ```{r liberal--income-9-hint-1, eval = FALSE}
 ... + 
   labs(...) + 
-  theme_classic().
+  ...()
 ```
 
 ### Exercise 10
 
 Now that we've answered our first question, let's consider our second question.
 
-*Assume we have a group of eight people, two of whom make $100,000, two $200,000, two $300,000 and two $400,000. How many will be liberal?*
+  *Assume we have a group of eight people, two of whom make $100,000, two $200,000, two $300,000 and two $400,000. How many will be liberal?*
 
-In order to answer this question, let's first make our tibble with the desired observations. In this case, we would like to have 2 people who make $100,000, $200,000, $300,000, and $400,000 each. So, in our tibble, set income to these values. Store this as `newobs`.
+In order to answer this question, let's first make our tibble with the desired observations. In this case, we would like to have 2 people who make $100,000, $200,000, $300,000, and $400,000 each. So, in our tibble, set income to these values. Store this as `newobs_5`.
 
 ```{r liberal--income-10, exercise = TRUE}
 
@@ -1899,22 +1992,15 @@ In order to answer this question, let's first make our tibble with the desired o
 ```
 
 ```{r liberal--income-10-hint-2, eval = FALSE}
-newobs <- tibble(income = c(rep(100000, 2),
-                            rep(200000, 2),
-                            rep(300000, 2),
-                            rep(400000, 2)))
-```
-
-```{r echo = FALSE}
-newobs <- tibble(income = c(rep(100000, 2),
-                            rep(200000, 2),
-                            rep(300000, 2),
-                            rep(400000, 2)))
+newobs_5 <- tibble(income = c(rep(..., 2),
+                            rep(200000, ...),
+                            rep(..., 2),
+                            rep(400000, ...)))
 ```
 
 ### Exercise 11
 
-Now, let's make our posterior distribution. Stary by using `posterior_predict()` with the first argument as our fitted model `fit_4` and the second argument `newdata` set to `newobs`. Make this a tibble and convert the values to be numeric.
+Now, let's make our posterior distribution. Stary by using `posterior_predict()` with the first argument as our fitted model `fit_4` and the second argument `newdata` set to `newobs_5`. Make this a tibble and convert the values to be numeric.
 
 ```{r liberal--income-11, exercise = TRUE}
 
@@ -1943,7 +2029,7 @@ Continue that pipe by grouping the rows using `rowwise()`.
 
 ### Exercise 13
 
-Now, like we have done before, we are going to add a total column which is the sum of the entire row since every individual who is liberal in our groupings is represented by a `1` and everyone who isn't is represented by a `0`, so the total will give us the number of liberals in the group. Store this as `pp`.
+Now, like we have done before, we are going to add a total column which is the sum of the entire row since every individual who is liberal in our groupings is represented by a `1` and everyone who isn't is represented by a `0`, so the total will give us the number of liberals in the group. Store this as `pp_4`.
 
 ```{r liberal--income-13, exercise = TRUE}
 
@@ -1956,16 +2042,8 @@ You can use `c_across` to go across all the columns when taking the sum
 ```
 
 ```{r liberal--income-13-hint-2, eval = FALSE}
-... |> 
-  mutate(total = sum(c_across()))
-```
-
-```{r echo = FALSE}
-pp <- posterior_predict(fit_4, 
-                        newdata = newobs) |> 
-  as_tibble() |> 
-  mutate_all(as.numeric) |> 
-  rowwise() |> 
+pp_4 <- 
+  ... |> 
   mutate(total = sum(c_across()))
 ```
 
@@ -1974,17 +2052,7 @@ pp <- posterior_predict(fit_4,
 Now, let's plot this by making the below graph.
 
 ```{r}
-lib_group <- pp |> 
-  ggplot(aes(x = total)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100)  +
-    labs(title = "Posterior for Number of Liberals in Group with Varied Incomes",
-         subtitle = "Two is the most likely number, but values from 0 to 5 are plausible",
-         x = "Number of Liberals",
-         y = "Probability") +
-    scale_x_continuous(labels = scales::number_format(accuracy = 1)) +
-    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-    theme_classic()
+lib_group
 ```
 
 Start by mapping `total` to the x-axis using `ggplot()` and add the layer `geom_histogram()`. Make the y-axis represent the probability rather than the count and set the argument `bins` to 100.
@@ -2000,10 +2068,10 @@ To make y a probability, use `aes(y = after_stat(count/sum(count)))` as the firs
 ```
 
 ```{r liberal--income-14-hint-2, eval = FALSE}
-pp |> 
-  ggplot(aes(x = total)) |> 
+pp_4 |> 
+  ggplot(aes(x = ...)) |> 
   geom_histogram(aes(y = after_stat(count/sum(count))),
-                 bins = 100)
+                 ... = 100)
 ```
 
 ### Exercise 15
@@ -2049,7 +2117,7 @@ Through this posterior, it can be seen that it is most likely to have 2 liberals
 ## Summary
 ###
 
-This tutorial covered [Chapter 5](https://ppbds.github.io/primer/08-three-parameters.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/). This tutorial reviewed the topics of Three Parameters, cardinal virtues (wisdom), and an in-depth analysis of the **trains** data.
+This tutorial covered [Chapter 5](https://ppbds.github.io/primer/08-three-parameters.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/). This tutorial reviewed the topics of Three Parameters, Cardinal Virtues (wisdom), and an in-depth analysis of the **trains** data.
 
 ```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
 ```
