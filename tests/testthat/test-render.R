@@ -1,6 +1,6 @@
 # For now, we will do all our tutorial testing in this one script.
 
-tutorial_paths <- tutorial.helpers::return_tutorial_paths(package = "all.primer.tutorials")
+tutorial_paths <- tutorial.helpers::return_tutorial_paths(package = "primer.tutorials")
 
 # First, we make sure that all the tutorials can be knitted.
 

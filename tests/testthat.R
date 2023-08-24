@@ -1,4 +1,4 @@
 library(testthat)
-library(all.primer.tutorials)
+library(primer.tutorials)
 
-test_check("all.primer.tutorials")
+test_check("primer.tutorials")

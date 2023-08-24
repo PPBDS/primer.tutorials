@@ -1,6 +1,10 @@
-# all.primer.tutorials (development version)
+# primer.tutorials (development version)
 
-# all.primer.tutorials 1.2.1
+# primer.tutorials 1.2.2
+
+* Return to primer.tutorials name for repo and package.
+
+# primer.tutorials 1.2.1
 
 * Delete outline of rtweet tutorial.
 

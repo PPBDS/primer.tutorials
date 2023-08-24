@@ -11,7 +11,7 @@ status](https://github.com/PPBDS/primer.tutorials/workflows/R-CMD-check/badge.sv
 
 ## About this package
 
-`all.primer.tutorials` provides the tutorials used in the *[Primer for
+`primer.tutorials` provides the tutorials used in the *[Primer for
 Bayesian Data Science](https://ppbds.github.io/primer)*.
 
 ## Installation
@@ -21,7 +21,7 @@ You can install the development version from
 
 ``` r
 # install.packages("remotes")
-remotes::install_github("PPBDS/all.primer.tutorials")
+remotes::install_github("PPBDS/primer.tutorials")
 ```
 
 For suggested updates during installation, though you do not have to
@@ -35,7 +35,7 @@ Then **restart your R session** or **restart RStudio**.
 In order to access the tutorials, start by loading the package.
 
 ``` r
-library(all.primer.tutorials)
+library(primer.tutorials)
 ```
 
  
@@ -90,8 +90,8 @@ recommended that you regularly re-install this tutorial package by
 running the following 2 lines of code in your **R console**:
 
 ``` r
-remove.packages("all.primer.tutorials")
-remotes::install_github("PPBDS/all.primer.tutorials")
+remove.packages("primer.tutorials")
+remotes::install_github("PPBDS/primer.tutorials")
 ```
 
 For version updates for dependency packages please follow the same
