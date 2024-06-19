@@ -25,15 +25,6 @@ options(tutorial.exercise.timelimit = 600,
 poll_data <- tibble(biden = c(rep(1, 655), 
                               rep(0, 904)))
 
-# fit_gauss <- brm(formula = biden ~ 1,
-#                 data = poll_data,
-#                 refresh = 0,
-#                 silent = 2,
-#                 seed = 9)
-# write_rds(fit_gauss, "data/fit_gauss.rds")
-
-fit_gauss <- read_rds("data/fit_gauss.rds")
-
 
 # fit_bern <- brm(formula = biden ~ 1,
 #                 data = poll_data,
@@ -54,6 +45,8 @@ fit_bern <- read_rds("data/fit_bern.rds")
 ```
 
 <!-- DK: I left out the by-hand calculation of the confidence interval. Add it in? -->
+
+<!-- Sort of shame that the model takes so long to run. Maybe find an example with fewer observations? If we did, we could run the model many times, examining one-by-one what some of the arguments do. Might even do that here with subsets of the data. -->
 
 ## Introduction
 ### 
@@ -474,13 +467,12 @@ library(tidybayes)
 
 Run this code in order to generate the polling data.
 
-```{r courage-4-ex, exercise = TRUE}
+```{r courage-4, exercise = TRUE}
 poll_data <- tibble(biden = c(rep(1, 655), 
                               rep(0, 904)))
 
 slice_sample(poll_data, n = 10)
 ```
-
 
 ```{r courage-4-test, include = FALSE}
 poll_data <- tibble(biden = c(rep(1, 655), 
@@ -489,77 +481,245 @@ poll_data <- tibble(biden = c(rep(1, 655),
 slice_sample(poll_data, n = 10)
 ```
 
-###
+### 
+
+We don't care exactly who voted for Biden and who did not. In that sense, the rows of the data (and the Preceptor Table) are "exchangeable," which means (roughly) that nothing changes if we re-arrange the IDs of any of the rows.
 
 ### Exercise 5
 
+Use `brm()` to fit a model, assigning the result to an object called `fit_bern`. Use the arguments: `formula = biden ~ 1`, `data = poll_data`, `family = bernoulli()`, `refresh = 0`, `silent = 2`, and `seed = 9`.
 
-```{r courage-5-ex, exercise = TRUE}
 
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r courage-5-hint, eval = FALSE}
+```{r courage-5, exercise = TRUE}
 
 ```
 
-```{r courage-5-test, include = FALSE}
-
+```{r courage-5-hint-1, eval = FALSE}
+fit_bern <- brm(formula = ...,
+                ... = poll_data,
+                family = bernoulli(),
+                ... = 0,
+                silent = ...,
+                ... = 9)
 ```
 
-###
+This will take a little whole to run. It won't produce anything because of the `refresh` and `silent` arguments. 
+
+### 
+
+You really ought to run all the code in the chapter, the better to understand the details of the effects of different arguments.
 
 ### Exercise 6
 
+Type `fit_bern` and hit "Run Code." This generates the same results as using `print(fit_bern)`.
 
-```{r courage-6-ex, exercise = TRUE}
+
+```{r courage-6, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r courage-6-hint, eval = FALSE}
-
+```{r courage-6-hint-1, eval = FALSE}
+print(...)
 ```
 
 ```{r courage-6-test, include = FALSE}
-
+print(fit_bern)
 ```
 
-###
+### 
+
+<!-- XX Same some general words about the object. Note that we are about to go through the top 4 rows. -->
+
+<!-- Add summary() Exercise if it gives a different answer -->
 
 ### Exercise 7
 
+Run `family()` on `fit_bern`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable. 
 
-```{r courage-7-ex, exercise = TRUE}
+```{r courage-7, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r courage-7-hint, eval = FALSE}
-
+```{r courage-7-hint-1, eval = FALSE}
+family(...)
 ```
 
 ```{r courage-7-test, include = FALSE}
+family(fit_bern)
+```
+
+### 
+
+<!-- DK: This is good material, but too long. And too complex for this first pass. -->
+
+In this case, we see that the family of the error term is bernoulli. In a Bernoulli data generating mechanism, we have:
+
+$$ biden_i  \sim Bernoulli(\rho) $$
+
+Each voter $i$ which we sample either supports Biden or they do not. If person $i$ supports Biden, the value drawn is `1`, which is the standard way of representing `TRUE`.
+
+The default link function for a Bernoulli model is logit, as in:
+
+$$
+\rho = \frac{e^{\beta_0}}{1 + e^{\beta_0}}
+$$
+By definition, the parameter $\rho$ is only allowed to take values between 0 and 1. We want to constrain the model so that only these values are even possible.
+
+### Exercise 8
+
+Run `formula()` on `fit_bern`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s). 
+
+```{r courage-8, exercise = TRUE}
 
 ```
 
-###
+```{r courage-8-hint-1, eval = FALSE}
+formula(...)
+```
+
+```{r courage-8-test, include = FALSE}
+formula(fit_bern)
+```
+
+### 
+
+In this case, we have the simplest possible formula. `biden`, which is a zero/one binary variable is a function of a constant. There are no independent variables.
+
+### Exercise 9
+
+Run `nobs()` on `fit_bern`. The `nobs()` function returns the **n**umber of **obs**ervations.
+
+```{r courage-9, exercise = TRUE}
+
+```
+
+```{r courage-9-hint-1, eval = FALSE}
+nobs(...)
+```
+
+```{r courage-9-test, include = FALSE}
+nobs(fit_bern)
+```
+
+### 
+
+In this case, the number of observations is `r scales::comma(nobs(fit_bern))`. 
+
+### Exercise 10
+
+Run `posterior_interval()` on `fit_bern`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
+
+```{r courage-10, exercise = TRUE}
+
+```
+
+```{r courage-10-hint-1, eval = FALSE}
+posterior_interval(...)
+```
+
+```{r courage-10-test, include = FALSE}
+posterior_interval(fit_bern)
+```
+
+### 
+
+There are several parameters in the model, almost all of them so-called "nuisance" parameters, meaning that we don't care about them. Their particular values don't really help us to directly calculate any quantity of interest.
 
 
+### Exercise 11
 
-<!-- Questions about models, tests, and the DGM. -->
+Run `fixef()` on `fit_bern`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
+
+```{r courage-11, exercise = TRUE}
+
+```
+
+```{r courage-11-hint-1, eval = FALSE}
+fixef(...)
+```
+
+```{r courage-11-test, include = FALSE}
+fixef(fit_bern)
+```
+
+### 
+
+The "Intercept" is the key part of the model. Because the family is (incorrectly!) Gaussian and the link function an identity, the actual model we are estimating looks like:
+
+$$ biden_i =  \mu + \epsilon_i $$
+
+with $\epsilon_i \sim N(0, \sigma^2)$. $y_i$ is the height of male $i$. $\mu$ is true proportion of Biden voters. $\epsilon_i$ is the "error term," the difference between the vote of person $i$ and the true proportion of Biden voters.
+
+### Exercise 12
+
+Run `pp_check()` on `fit_bern` with the `type` argument set to `"bars"`.  The `pp_check()` runs a **p**osterior **p**redictive check.
+
+```{r courage-12, exercise = TRUE}
+
+```
+
+```{r courage-12-hint-1, eval = FALSE}
+pp_check(...,  type = "...")
+```
+
+```{r courage-12-test, include = FALSE}
+pp_check(fit_bern,  type = "bars")
+```
+
+### 
+
+In this case, there are two possible outcomes: 0/1. The actual values in the data are labeled `y`. We use our fitted model, `fit_bern` to generate 10 alternate data sets, 10 "fake" data sets. What might the number of votes for (and not for) Biden look like if `fit_bern` is true. The graphic demonstrates that the fake data is very similar to the real data, thus suggesting that our model has captured reality, at least somewhat. 
+
+If the fake data had looked very different from the real data, we have had a problem.  
 
 
+### Exercise 13
+
+Use `library()` to load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
+
+```{r courage-13, exercise = TRUE}
+
+```
+
+```{r courage-13-hint-1, eval = FALSE}
+library(gtsummary)
+```
+
+```{r courage-13-test, include = FALSE}
+library(gtsummary)
+```
+
+### 
+
+Read [this tutorial](https://www.danieldsjoberg.com/gtsummary/articles/tbl_regression.html) for an introduction to `tbl_regression()`, the most important function in the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
+
+### Exercise 14
+
+Run `tbl_regression()` on `fit_bern` with `intercept = TRUE`. 
 
 
-### Exercise 4
+```{r courage-14, exercise = TRUE}
+
+```
+
+```{r courage-14-hint-1, eval = FALSE}
+tbl_regression(..., intercept = TRUE)
+```
+
+```{r courage-14-test, include = FALSE}
+tbl_regression(fit_bern, intercept = TRUE)
+```
+
+### 
+
+The [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package includes many functions for formatting our table. The better your work looks, the more seriously people will take it.
+
+
+### Exercise 15
 
 Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add at least one sentence which describes the modelling approach which you are using. Also add at least one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
 
-```{r courage-4}
+```{r courage-15}
 question_text(NULL,
 	message = "XX.",
 	answer(NULL, correct = TRUE),
@@ -586,13 +746,142 @@ question_text(NULL,
 	rows = 6)
 ```
 
-<!-- Questions and Answers; Humility -->
-
 ### Exercise 2
+
+Recall the question with which we began:
+
+> What are the odds, if we just look at two voters, both will have voted for Biden?
+
+To answer this question, we need to create the `newdata` object which we will use with `fit_bern`. 
+
+Type `tibble(.rows = 2)`. Hit "Run Code."
+
+```{r temperance-2, exercise = TRUE}
+
+```
+
+```{r temperance-2-hint-1, eval = FALSE}
+tibble(... = 2)
+```
+
+```{r temperance-2-test, include = FALSE}
+tibble(.rows = 2)
+```
+
+### 
+
+This creates an empty tibble with two rows. Because `fit_bern` is such a simple model, one with no independent varibles, the `newdata` object is also extremely simple. In this case, we are interested in the two people we might meet (and who they voted for) so we need to rows in `newdata`.
+
+The number of rows in `newdata` corresponds to the number of units for which we seek to forecast the behavior/results.
+
+### Exercise 3
+
+Pipe `fit_bern` to `add_predicted_draws()` with `newdata = tibble(.rows = 2)`.
+
+
+```{r temperance-3, exercise = TRUE}
+
+```
+
+```{r temperance-3-hint-1, eval = FALSE}
+fit_bern |> 
+  ...(newdata = tibble(.rows = ...))
+```
+
+```{r temperance-3-test, include = FALSE}
+fit_bern |> 
+  add_predicted_draws(newdata = tibble(.rows = 2))
+```
+
+### 
+
+Note that there are 8,000 row, 4,000 for each individual, stacked on top of each other. The `.row` variable refers to the respective row in `newdata`.
+
+### Exercise 4
+
+Add `select(.row, .draw, .prediction)` to the pipe.
+
+```{r temperance-4, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-4-hint-1, eval = FALSE}
+... |> 
+  ...(.row, ..., .prediction) 
+```
+
+```{r temperance-4-test, include = FALSE}
+fit_bern |> 
+  add_predicted_draws(newdata = tibble(.rows = 2)) |> 
+  select(.row, .draw, .prediction) 
+```
+
+### 
+
+Note that the tibble which is "spat" out at the end of this pipe is a grouped tibble. See the "Groups" label at the top. Unless we `ungroup()` the pipe, future commands will be executed on `.row = 1` rows separately from `.row = 2` rows.
+
+### Exercise 5
+
+Continue the pipe with `pivot_wider()` setting, `values_from = .prediction` and `names_from = .row`.
+
+```{r temperance-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-5-hint-1, eval = FALSE}
+... |> 
+  pivot_wider(... = .prediction, names_from = ...)
+```
+
+```{r temperance-5-test, include = FALSE}
+fit_bern |> 
+  add_predicted_draws(newdata = tibble(.rows = 2)) |> 
+  select(.row, .draw, .prediction) |> 
+  pivot_wider(values_from = .prediction, names_from = .row)
+```
+
+### 
+
+`pivot_wider()` gets rid of the grouping automatically. We now have a column for each of our two individuals, represented by `1` and `2`. The tibble has 4,000 rows because this is the default number of draws we create with functions like `add_predicted_draws()`.
+
+<!-- DK: Sure would be nice to have a question which explains what this object means. -->
+
+### Exercise 6
+
+Continue the pipe with `mutate()` setting, "both = if_else(`1` & `2`, TRUE, FALSE)" as the argument. (Apologies for the formating of these instructions, The 1 and the 2 in this code must both be surrounded with backticks.)
+
+
+
+```{r temperance-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-6-hint-1, eval = FALSE}
+... |> 
+  mutate(both = if_else(`1` & `2`, TRUE, FALSE)) 
+```
+
+```{r temperance-6-test, include = FALSE}
+fit_bern |> 
+  add_predicted_draws(newdata = tibble(.rows = 2)) |> 
+  select(.row, .draw, .prediction) |> 
+  pivot_wider(values_from = .prediction, names_from = .row) |> 
+  mutate(both = if_else(`1` & `2`, TRUE, FALSE)) 
+```
+
+### 
+
+### Exercise 7
 
 Write a paragraph which summarizes your project. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI. 
 
-```{r temperance-2}
+```{r temperance-7}
 question_text(NULL,
 	message = "XX.",
 	answer(NULL, correct = TRUE),
