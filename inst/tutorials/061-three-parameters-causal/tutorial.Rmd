@@ -18,10 +18,21 @@ library(tidyverse)
 library(brms)
 library(tidybayes)
 library(gtsummary)
+library(primer.data)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
+
+#fit_gauss <- brm(formula = att_end ~ treatment,
+#             data = trains,
+#             family = gaussian(),
+#             silent = 2,
+#             refresh = 0,
+#             seed = 9)
+#write_rds(fit_gauss, "data/fit_gauss.rds")
+
+fit_gauss <- read_rds("data/fit_gauss.rds")
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -521,7 +532,7 @@ question_text(NULL,
 
 ### 
 
-<!-- Add knowledge drop  -->
+A similar set of issues apply to our data as it is not a random draw from the underlying population in 2012. Instead, we only have data from Boston, and not any other city. 
 
 ### Exercise 7
 
@@ -599,7 +610,11 @@ question_text(NULL,
 
 ### 
 
+Courage creates a mathematical model which connects the outcome variable to the covariates, if any. Then, using code, we create a fitted model, including posterior probability distributions for all the unknown parameters.
+
 ### Exercise 2
+
+As the outcome is a continuous variable, we use the **brms** package to build Bayesian models (“brms” stands for Bayesian regression models.)
 
 Load the **brms** package.
 
@@ -617,9 +632,11 @@ library(brms)
 
 ### 
 
-<!-- XX: Some comments about this problem. -->
+In this problem, the treatment is a factor variable with two levels: "Treatment" and "Control." The **brm()** will automatically transform treatment into a 0/1 variable named **treatmentControl** which will take on the value 1 if person $i$ received control and 0 if they received treatment.
 
 ### Exercise 3
+
+The **tidybayes** packages makes working with the fitted models easier. 
 
 Load the **tidybayes** package.
 
@@ -637,174 +654,273 @@ library(tidybayes)
 
 ### 
 
-<!-- XX: Some comments about this problem. -->
-
-<!-- XX: Might need an exercise which gets/creates/cleans the data you need for fitting the model. -->
-
 ### Exercise 4
 
-Create a model using `brm()` from the **brms** package. Your arguments should XX. 
+Type **?tidybayes** in the Console and copy paste the description. CP/CR.
 
-Assign the result to an object called `fit_XX`.
-
-<!-- Search and replace "fit_XX" as appropriate. -->
-
-<!-- Don't forget to create this model yourself in the setup chunk. Do this once, save the object, comment out that code and then just read_rds to create the object for his tutorial. -->
-
-<!-- Depending on code speed, you can run this function multiple times, without assigning the return value, looking at the printout, and seeing how things change. -->
-
-```{r courage-4, exercise = TRUE}
-
-```
-
-```{r courage-4-hint-1, eval = FALSE}
-
+```{r courage-4}
+question_text(NULL,
+	message = "**tidybayes** is an R package that aims to make it easy to integrate popular Bayesian modeling methods into a tidy data + ggplot workflow.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
 ```
 
 ### 
 
+<!-- XX: Some comments about this problem. -->
+
+<!-- XX: Might need an exercise which gets/creates/cleans the data you need for fitting the model. DONE-->
 ### Exercise 5
 
-Type `fit_XX` and hit "Run Code." This generates the same results as using `print(fit_XX)`.
-
+Type `trains` and hit "Run Code." This will generate the data set about US commuters toward immigration, which will be used to construct the model.
 
 ```{r courage-5, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r courage-5-hint-1, eval = FALSE}
-print(...)
+trains
 ```
 
 ```{r courage-5-test, include = FALSE}
-# print(fit_XX)
+trains
 ```
 
 ### 
 
-<!-- XX Same some general words about the object. Note that we are about to go through the top 4 rows. -->
-
-<!-- Add summary() Exercise if it gives a different answer -->
+The data that we want to analyze consists of the attitude toward immigration after the experiment is complete (att_end) and the exposure to Spanish-speakers (treatment) of each individual on these train platforms.
 
 ### Exercise 6
 
-Run `family()` on `fit_XX`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable. 
+Pipe `trains` to the function `select()` with `att_end` and `treatment` as the arguments.
 
 ```{r courage-6, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r courage-6-hint-1, eval = FALSE}
-family(...)
+... |> 
+  select(...,...)
 ```
 
 ```{r courage-6-test, include = FALSE}
-# family(fit_XX)
+trains |> 
+  select(att_end, treatment)
 ```
 
 ### 
 
-<!-- DK: This is a great location for explanations which get much more detailed in later chapters. -->
+The `treatment` can either be “Treated” or “Control” which are the two factors that may influence `att_end`. Participants were asked three questions about immigration issues, each of which allowed for an answer indicating strength of agreement on a scale form 1 to 5, with higher values for `att_end` indicating more agreement with conservative viewpoints.
 
-In this case, XX . . .
+### 
 
 ### Exercise 7
 
-Run `formula()` on `fit_XX`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s). 
+Continue the pipe with `summary()`
 
 ```{r courage-7, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r courage-7-hint-1, eval = FALSE}
-formula(...)
+... |> 
+  summary()
 ```
 
 ```{r courage-7-test, include = FALSE}
-# formula(fit_XX)
+trains |>
+  select(att_end, treatment) |>
+  summary()
 ```
 
 ### 
 
-In this case, XX . . .
+`summary()` shows us what the different values of `att_end` and `treatment` are because it is a factor. The range for `att_end` seems `reasonable`.
+
+### 
 
 ### Exercise 8
 
-Run `nobs()` on `fit_XX`. The `nobs()` function returns the **n**umber of **obs**ervations.
+Create a model using `brm()` from the **brms**. Use the argument `formula = att_end ~ treatment`, `data = trains`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 9`.
+
+Assign the result to an object called `fit_gauss`.
+
+<!-- Don't forget to create this model yourself in the setup chunk. Do this once, save the object, comment out that code and then just read_rds to create the object for his tutorial. DONE -->
+
+<!-- Depending on code speed, you can run this function multiple times, without assigning the return value, looking at the printout, and seeing how things change. -->
 
 ```{r courage-8, exercise = TRUE}
 
 ```
 
 ```{r courage-8-hint-1, eval = FALSE}
-nobs(...)
+fit_gauss <- brm(formula = ...,
+                ... = trains,
+                family = gaussian(),
+                ... = 0,
+                silent = ...,
+                ... = 9)
 ```
 
-```{r courage-8-test, include = FALSE}
-# nobs(fit_XX)
-```
+This will take a little whole to run. It won't produce anything because of the `refresh` and `silent` arguments. 
 
 ### 
 
-In this case, XX
-
 ### Exercise 9
 
-Run `posterior_interval()` on `fit_XX`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
+Type `fit_gauss` and hit "Run Code." This generates the same results as using `print(fit_gauss)`.
+
 
 ```{r courage-9, exercise = TRUE}
 
 ```
 
 ```{r courage-9-hint-1, eval = FALSE}
-posterior_interval(...)
+print(...)
 ```
 
 ```{r courage-9-test, include = FALSE}
-# posterior_interval(fit_XX)
+print(fit_gauss)
 ```
 
 ### 
 
-In this case, XX
+The top 4 rows (`Family`, `Link`, `Formula`, `Data`) are the setup of the models, you want to check this to make sure you did not make a mistake in the call to `brm()`. Next, we will go deeper in each of these rows.
 
+<!-- XX Same some general words about the object. Note that we are about to go through the top 4 rows. DONE -->
+
+<!-- Add summary() Exercise if it gives a different answer -->
 
 ### Exercise 10
 
-Run `fixef()` on `fit_XX`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
+Run `family()` on `fit_gauss`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable. 
 
 ```{r courage-10, exercise = TRUE}
 
 ```
 
 ```{r courage-10-hint-1, eval = FALSE}
-fixef(...)
+family(...)
 ```
 
 ```{r courage-10-test, include = FALSE}
-# fixef(fit_XX)
+family(fit_gauss)
 ```
 
 ### 
 
-In this case, XX
+<!-- DK: This is a great location for explanations which get much more detailed in later chapters. DONE -->
 
-<!-- DK: Consider adding questions about conditional_effects(), ranef() and other commands, if relevant. -->
+In this case, the "Family" is "gaussian", which is the default value for the `family` argument in `brms()`. Gaussian is another term for the normal distribution. 
 
 ### Exercise 11
 
-Run `pp_check()` on `fit_XX`. The `pp_check()` runs a **p**osterior **p**redictive check.
+Run `formula()` on `fit_gauss`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s). 
 
 ```{r courage-11, exercise = TRUE}
 
 ```
 
 ```{r courage-11-hint-1, eval = FALSE}
-pp_check(...)
+formula(...)
 ```
 
 ```{r courage-11-test, include = FALSE}
-# pp_check(fit_XX)
+formula(fit_gauss)
+```
+
+### 
+
+In this case, the "Formula" is `att_end ~ treatment`, which is what we passed in to the formula argument when we called `brm()`. 
+
+### Exercise 12
+
+Run `nobs()` on `fit_gauss`. The `nobs()` function returns the **n**umber of **obs**ervations.
+
+```{r courage-12, exercise = TRUE}
+
+```
+
+```{r courage-12-hint-1, eval = FALSE}
+nobs(...)
+```
+
+```{r courage-12-test, include = FALSE}
+nobs(fit_gauss)
+```
+
+### 
+
+In this case, the "number of observation" is: `r scales::comma(nobs(fit_gauss))`. These are 115 people whom we have the data.
+
+### Exercise 13
+
+Recall the definition of `Posterior Distribution` from [Chapter 2](https://ppbds.github.io/primer/probability.html#probability-distributions), which is a type of `Probability Distribution` that is based on our beliefs and expectations.
+
+Run `posterior_interval()` on `fit_gauss`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
+
+```{r courage-13, exercise = TRUE}
+
+```
+
+```{r courage-13-hint-1, eval = FALSE}
+posterior_interval(...)
+```
+
+```{r courage-13-test, include = FALSE}
+posterior_interval(fit_gauss)
+```
+
+### 
+<!-- GK: Not sure about the interpretation -->
+A confidence interval, and its associated confidence level, tells us how likely the truth is to lie within a specific range. In this case, we are 95% confident that the true value of each parameter to lie between each above range.
+
+### Exercise 14
+
+Run `fixef()` on `fit_gauss`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
+
+```{r courage-14, exercise = TRUE}
+
+```
+
+```{r courage-14-hint-1, eval = FALSE}
+fixef(...)
+```
+
+```{r courage-14-test, include = FALSE}
+fixef(fit_gauss)
+```
+
+### 
+<!-- GK: Add interpretation of the result  -->
+In this case, XX
+
+<!-- DK: Consider adding questions about conditional_effects(), ranef() and other commands, if relevant. -->
+
+### Exercise 15
+
+In order to check whether we have selected the right model, we can compare our model's prediction with our actual data. The bayesplot package includes the `pp_check()` function for that purpose.
+
+Run `pp_check()` on `fit_gauss`. The `pp_check()` runs a **p**osterior **p**redictive check.
+
+```{r courage-15, exercise = TRUE}
+
+```
+
+```{r courage-15-hint-1, eval = FALSE}
+pp_check(...)
+```
+
+```{r courage-15-test, include = FALSE}
+pp_check(fit_gauss)
 ```
 
 ### 
@@ -814,19 +930,19 @@ In this case, XX
 <!-- If the fake data had looked very different from the real data, we have had a problem. But, for the most part, we conclude that, although not perfect, pp_check() shows that the fake outcomes generated by our model are like the actual outcome data. -->
 
 
-### Exercise 12
+### Exercise 16
 
 Use `library()` to load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
 
-```{r courage-12, exercise = TRUE}
+```{r courage-16, exercise = TRUE}
 
 ```
 
-```{r courage-12-hint-1, eval = FALSE}
+```{r courage-16-hint-1, eval = FALSE}
 library(gtsummary)
 ```
 
-```{r courage-12-test, include = FALSE}
+```{r courage-16-test, include = FALSE}
 library(gtsummary)
 ```
 
@@ -834,23 +950,23 @@ library(gtsummary)
 
 <!-- Drop some knowledge about gtsummary. Or say something more about your DGM. -->
 
-### Exercise 13
+### Exercise 17
 
 <!-- DK: This can be just one question or several, especially if you want to teach some more gtsummary or gt tricks. Note that you need to adjust the test to make sure it works. -->
 
-Run `tbl_regression()` on `fit_XX`. 
+Run `tbl_regression()` on `fit_gauss`. 
 
 
-```{r courage-13, exercise = TRUE}
+```{r courage-17, exercise = TRUE}
 
 ```
 
-```{r courage-13-hint-1, eval = FALSE}
+```{r courage-17-hint-1, eval = FALSE}
 tbl_regression(...)
 ```
 
-```{r courage-13-test, include = FALSE}
-# tbl_regression(fit_XX)
+```{r courage-17-test, include = FALSE}
+# tbl_regression(fit_gauss)
 ```
 
 ### 
@@ -858,13 +974,13 @@ tbl_regression(...)
 <!-- DK: Give something like the same sentence which you want the students to use at the end of the next question. -->
 
 
-### Exercise 14
+### Exercise 18
 
 Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add at least one sentence which describes the modelling approach which you are using, specifying at least the functional form and the dependent variable. Add at least one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
 
-```{r courage-14}
+```{r courage-18}
 question_text(NULL,
-	message = "XX",
+	message = "Using data from a 2012 survey of Boston-area commuters, we seek to measure the causal effect of exposure to Spanish-speakers on attitudes toward immigration among adults in Chicago and similar cities in 2024. There is some concern that the relationship has changed since our data was collected. We modeled att_end, a summary measure of attitude toward immigration measured on a 3 to 15 integer scale, as a linear function of treatment.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -876,16 +992,7 @@ question_text(NULL,
 ## Temperance
 ### 
 
-<!-- DK: Choose 1. -->
-
-*Temperance is a tree which as for its root very little contentment, and for its fruit calm and peace.* - Buddha
-*Temperance is the greatest of all virtues. It subdues every passion and emotion, and almost creates a Heaven upon Earth.* - Joseph Smith Jr.
 *Temperance is a bridle of gold; he, who uses it rightly, is more like a god than a man.* - Robert Burton
-*Temperance is the firm and moderate dominion of reason over passion and other unrighteous impulses of the mind.* - Marcus Tullius Cicero
-*Temperance to be a virtue must be free, and not forced.* - Philip Massinger
-*Temperance is simply a disposition of the mind which binds the passion.* - Thomas Aquinas
-
-<!--  -->
 
 ### Exercise 1
 
