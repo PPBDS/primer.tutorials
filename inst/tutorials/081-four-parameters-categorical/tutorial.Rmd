@@ -1,0 +1,873 @@
+---
+title: 'Four Parameters: Categorical'
+author: David Kane and Tanay Janmanchi
+tutorial:
+  id: four-parameters-categorical
+output:
+  learnr::tutorial:
+    progressive: yes
+    'allow_skip:': yes
+runtime: shiny_prerendered
+description: 'Chapter 8 Tutorial: Four Parameters: Categorical'
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(tutorial.helpers)
+library(tidyverse)
+library(brms)
+library(tidybayes)
+library(gtsummary)
+
+knitr::opts_chunk$set(echo = FALSE)
+options(tutorial.exercise.timelimit = 600, 
+        tutorial.storage = "local") 
+```
+
+```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
+```
+
+```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
+```
+
+<!-- This is the template tutorial for creating any tutorial which uses the Cardinal Virtues to answer a question given a data set. Although its primary use is for the main chapters in the Primer, it could be used for other assignments as well. The letters `XX` are used to indicate locations which require editing. Comments with instructions are interspersed. Read https://ppbds.github.io/primer/key-concepts.html for details on the Cardinal Virtues. -->
+
+<!-- There should be a bunch of quotes for each Cardinal Virtue. All quotes are listed at the introduction of each section. Select just one for each virtue in this tutorial. -->
+
+<!-- There are many opportunities for knowledge drops, especially after definition questions. Use them! Point out something about the details of the particular problem from the chapter. Recall that students often won't read the chapter, so we need to pull out the highlights. -->
+
+<!-- The more that questions force students to consult the chapter, the better. -->
+
+<!-- Key problems with current version: We need (?) to flesh out the Courage and Temperance sections. Key skills to practice each time including writing math formulas in Quarto and creating nice looking tables of regression results. -->
+
+<!-- Make sure to uncomment the tests once they are ready to work. -->
+
+## Introduction
+
+### 
+
+This tutorial covers [Chapter 8: Four Parameters: Categorical](https://ppbds.github.io/primer/four-parameters-categorical.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
+
+## Wisdom
+
+*The only true wisdom is in knowing you know nothing.*  - Socrates
+
+### Exercise 1
+
+In your own words, describe the key components of Wisdom for working on a data science problem.
+
+```{r wisdom-1}
+question_text(NULL,
+	message = "Wisdom requires the creation of a Preceptor Table, an examination of our data, and a determination, using the concept of validity, as to whether or not we can (reasonably!) assume that the two come from the same population.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 2
+
+Define a Preceptor Table.
+
+```{r wisdom-2}
+question_text(NULL,
+	message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, it is easy to calculate the quantities of interest.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Always start your data science work by determining what data you would like to have in order to answer the question easily.
+
+### Exercise 3
+
+Describe the key components of Preceptor Tables in general, without worrying about this specific problem.
+
+```{r wisdom-3}
+question_text(NULL,
+	message = "The rows of the Preceptor Table are the units. The outcome is at least one of the columns. If the problem is causal, there will be at least two (potential) outcome columns. The other columns are covariates. If the problem is causal, at least one of the covariates will be a treatment.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 4
+
+What are the units for this problem?
+
+```{r wisdom-4}
+question_text(NULL,
+	message = "Individual US voters",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 5
+
+What is/are the outcome/outcomes for this problem?
+
+```{r wisdom-5}
+question_text(NULL,
+	message = "Presidential voting behavior in 1992",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+This is what we observe.
+
+### Exercise 6
+
+What are the covariates for this problem?
+
+```{r wisdom-6}
+question_text(NULL,
+	message = "Only one, which is sex",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+Covariates are what we usually are comparing the outcome to.
+
+### Exercise 7
+
+What are the treatments, if any, for this problem?
+
+```{r wisdom-7}
+question_text(NULL,
+	message = "There are no treatments.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+Since this represents a categorical or predicative model, there are no treatments being observed.
+
+### Exercise 8
+
+What moment in time does the Preceptor Table refer to?
+
+```{r wisdom-8}
+question_text(NULL,
+	message = "Fall of 1992",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+This was during election season.
+
+<!-- DK: Next three questions are only included for a causal model. -->
+
+<!-- DK: End causal model section. If there is not one, you will need to run Format Tutorial Chunk Labels in order to renumber the exercises once you delete these.  -->
+
+### Exercise 9
+
+<!-- DK: It is a feature that this question almost forces students to go to the chapter and read about the data. -->
+
+Write one sentence describing the data you have to answer your question.
+
+```{r wisdom-9}
+question_text(NULL,
+	message = "The data has many variables, but only a will be used: 'year', 'sex' and 'pres_vote'",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+We see many variables in this data set, but, we do not need any of the other ones as they do not relate to our model.
+
+### Exercise 10
+
+Load the **tidyverse** package.
+
+```{r wisdom-10, exercise = TRUE}
+
+```
+
+```{r wisdom-10-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r wisdom-10-test, include = FALSE}
+library(tidyverse)
+```
+
+### 
+
+<!-- XX: Insert comments about the data. -->
+
+<!--# TJ: Is gtsummary needed here? -->
+
+<!-- DK: Load any other packages that are needed. (But make sure that they are also included in the setup chunk.) But save brms and tidybayes for the Courage section. -->
+
+<!-- DK: Consider adding more questions about EDA with this data. In particular, add at least one question about the dependent variable in the model along with one or more questions about covariates. If there is a treatment variable, we must include a question about it. -->
+
+<!-- Variable questions come in two types. First there are questions which require the student to run, say, summary() on the variable. Then, knowledge about the variable can be dropped. Second, there are questions which ask for a one sentence summary about the variable, something which could be used in our summary of the project. -->
+
+### Exercise 11
+
+What does the dependant variable represent in this data?
+
+```{r wisdom-11}
+question_text(NULL,
+	message = "The candidate who an individual that was surveyed voted for.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+The dependent variable is what we are measuring, so that would be the candidate which was voted.
+
+### Exercise 12
+
+<!--# TJ: I need help coming up with a question about the covariate variable -->
+
+### Exercise 13
+
+In your own words, define "validity" as we use the term.
+
+```{r wisdom-13}
+question_text(NULL,
+	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+We have two tables: the data from American National Election Studies and the Preceptor Table.
+
+### Exercise 14
+
+What can't we do if the assumption of validity is not true?
+
+```{r wisdom-14}
+question_text(NULL,
+	message = "We can't combine the Preceptor Table and the data in order to construct the Population Table.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 15
+
+Provide one reason why the assumption of validity might not hold for this problem.
+
+```{r wisdom-15}
+question_text(NULL,
+	message = "People may claim that they voted for one candidate when they really voted for another.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+More people claim to have voted for the winning candidate than the actual number of votes that they recieve.
+
+### Exercise 16
+
+<!-- DK: In creating your own answer to questions like this, check with the chapter. One might already be provided! If not, it is often useful to revisit the relevant section of the Key Concepts chapter in the Primer. -->
+
+<!-- Example: *Using data from a 2012 survey of Boston-area commuters, we seek to understand the relationship between income and political ideology in Chicago and similar cities in 2020. In particular, what percentage of individuals who make more than $100,000 per year are liberal?* -->
+
+Using data from the National Election Studies survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. In particular, were men or women more likely to vote for Ross Perot??
+
+```{r wisdom-16}
+question_text(NULL,
+	message = "Men were much more likely",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+## Justice
+
+### 
+
+<!-- DK: Choose one, as with each section introduction. -->
+
+*Justice is truth in action.* - Benjamin Disraeli *The arc of the moral universe is long, but it bends toward justice.* - Theodore Parker *Justice delayed is justice denied.* - William E. Gladstone *It is in justice that the ordering of society is centered.* - Aristotle *Charity is no substitute for justice withheld.* - Saint Augustine
+
+### Exercise 1
+
+In your own words, name the four key components of Justice for working on a data science problem.
+
+```{r justice-1}
+question_text(NULL,
+	message = "Justice concerns four topics: the Population Table, stability, representativeness, and unconfoundedness.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 2
+
+In your own words, define a Population Table.
+
+```{r justice-2}
+question_text(NULL,
+	message = "The Population Table includes a row for each unit/time combination in the underlying population from which both the Preceptor Table and the data are drawn.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 3
+
+Describe the Population Table for this problem. In particular, are any of the rows in the Preceptor Table also rows in the data? Are there other rows in the Population Table which are not from the Preceptor Table or the data? If so, describe some of those rows.
+
+```{r justice-3}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 4
+
+In your own words, define the assumption of "stability" when employed in the context of data science.
+
+```{r justice-4}
+question_text(NULL,
+	message = "Stability means that the relationship between the columns in the Population Table is the same for three categories of rows: the data, the Preceptor Table, and the larger population from which both are drawn.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+<!-- XX: Keep just one of these two. -->
+
+<!-- Stability is all about *time*. Is the relationship among the columns in the Population Table stable over time? In particular, is the relationship --- which is another way of saying "mathematical formula" --- at the time the data was gathered the same as the relationship at the (generally later) time references by the Preceptor Table. -->
+
+<!-- *The longer the time period covered by the Preceptor Table (and the data), the more suspect the assumption of stability becomes.*  -->
+
+### Exercise 5
+
+Provide one reason why the assumption of stability might not be true in this case.
+
+```{r justice-5}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 6
+
+In your own words, define the assumption of "representativeness" when employed in the context of data science.
+
+```{r justice-6}
+question_text(NULL,
+	message = "Representativeness, or the lack thereof, concerns two relationship, among the rows in the Population Table. The first is between the Preceptor Table and the other rows. The second is between our data and the other rows.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+<!-- XX: Keep one of these. -->
+
+<!-- Ideally, we would like both the Preceptor Table *and* our data to be random samples from the population. Sadly, this is almost never the case. -->
+
+<!-- Stability looks across time periods. Reprentativeness looks within time periods. -->
+
+<!-- The more expansive your Preceptor Table, the more important the assumption of representativeness becomes. -->
+
+### Exercise 7
+
+Provide one reason why the assumption of representativeness might not be true in this case.
+
+```{r justice-7}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 8
+
+In your own words, define the assumption of "unconfoundedness" when employed in the context of data science.
+
+```{r justice-8}
+question_text(NULL,
+	message = "Unconfoundedness means that the treatment assignment is independent of the potential outcomes, when we condition on pre-treatment covariates.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+<!-- XX: Keep one. -->
+
+<!-- This assumption is only relevant for causal models. We describe a model as "confounded" if this is not true.  -->
+
+<!-- The easiest way to ensure unconfoundedness is to assign treatment randomly. -->
+
+### Exercise 9
+
+<!-- DK: Delete this question for non-causal models. -->
+
+Provide one reason why the assumption of unconfoundedness might not be true (or relevant) in this case.
+
+```{r justice-9}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 10
+
+Summarize the state of your work so far in two or three sentences. Make reference to the data you have and to the question you are trying to answer. Feel free to copy from your answer at the end of the Wisdom Section. Mention at least one specific problem which casts doubt on your approach.
+
+```{r justice-10}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+## Courage
+
+### 
+
+*Courage is found in unlikely places.* - J.R.R. Tolkien *Courage is being scared to death, but saddling up anyway.* - John Wayne *Courage is going from failure to failure without losing enthusiasm.* - Winston Churchill *Courage is the commitment to begin without any guarantee of success.* - Johann Wolfgang von Goethe
+
+<!-- Questions about models, tests, and the DGM. -->
+
+### Exercise 1
+
+<!-- DK: Not sure I like this answer. -->
+
+In your own words, name the key goal of Courage and the process we use to get there.
+
+```{r courage-1}
+question_text(NULL,
+	message = "Courage selects the data generating mechanism. We first specify the mathematical formula which connects the outcome variable we are interested in with the other data that we have. We explore different models. We need to decide which variables to include and to estimate the values of unknown parameters. We check our models for consistency with the data we have. We avoid hypothesis tests. We select one model.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 2
+
+Load the **brms** package.
+
+```{r courage-2, exercise = TRUE}
+
+```
+
+```{r courage-2-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r courage-2-test, include = FALSE}
+library(brms)
+```
+
+### 
+
+<!-- XX: Some comments about this problem. -->
+
+### Exercise 3
+
+Load the **tidybayes** package.
+
+```{r courage-3, exercise = TRUE}
+
+```
+
+```{r courage-3-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r courage-3-test, include = FALSE}
+library(tidybayes)
+```
+
+### 
+
+<!-- XX: Some comments about this problem. -->
+
+<!-- XX: Might need an exercise which gets/creates/cleans the data you need for fitting the model. -->
+
+### Exercise 4
+
+Create a model using `brm()` from the **brms** package. Your arguments should XX.
+
+Assign the result to an object called `fit_XX`.
+
+<!-- Search and replace "fit_XX" as appropriate. -->
+
+<!-- Don't forget to create this model yourself in the setup chunk. Do this once, save the object, comment out that code and then just read_rds to create the object for his tutorial. -->
+
+<!-- Depending on code speed, you can run this function multiple times, without assigning the return value, looking at the printout, and seeing how things change. -->
+
+```{r courage-4, exercise = TRUE}
+
+```
+
+```{r courage-4-hint-1, eval = FALSE}
+
+```
+
+### 
+
+### Exercise 5
+
+Type `fit_XX` and hit "Run Code." This generates the same results as using `print(fit_XX)`.
+
+```{r courage-5, exercise = TRUE}
+
+```
+
+```{r courage-5-hint-1, eval = FALSE}
+print(...)
+```
+
+```{r courage-5-test, include = FALSE}
+# print(fit_XX)
+```
+
+### 
+
+<!-- XX Same some general words about the object. Note that we are about to go through the top 4 rows. -->
+
+<!-- Add summary() Exercise if it gives a different answer -->
+
+### Exercise 6
+
+Run `family()` on `fit_XX`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable.
+
+```{r courage-6, exercise = TRUE}
+
+```
+
+```{r courage-6-hint-1, eval = FALSE}
+family(...)
+```
+
+```{r courage-6-test, include = FALSE}
+# family(fit_XX)
+```
+
+### 
+
+<!-- DK: This is a great location for explanations which get much more detailed in later chapters. -->
+
+In this case, XX . . .
+
+### Exercise 7
+
+Run `formula()` on `fit_XX`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s).
+
+```{r courage-7, exercise = TRUE}
+
+```
+
+```{r courage-7-hint-1, eval = FALSE}
+formula(...)
+```
+
+```{r courage-7-test, include = FALSE}
+# formula(fit_XX)
+```
+
+### 
+
+In this case, XX . . .
+
+### Exercise 8
+
+Run `nobs()` on `fit_XX`. The `nobs()` function returns the **n**umber of **obs**ervations.
+
+```{r courage-8, exercise = TRUE}
+
+```
+
+```{r courage-8-hint-1, eval = FALSE}
+nobs(...)
+```
+
+```{r courage-8-test, include = FALSE}
+# nobs(fit_XX)
+```
+
+### 
+
+In this case, XX
+
+### Exercise 9
+
+Run `posterior_interval()` on `fit_XX`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
+
+```{r courage-9, exercise = TRUE}
+
+```
+
+```{r courage-9-hint-1, eval = FALSE}
+posterior_interval(...)
+```
+
+```{r courage-9-test, include = FALSE}
+# posterior_interval(fit_XX)
+```
+
+### 
+
+In this case, XX
+
+### Exercise 10
+
+Run `fixef()` on `fit_XX`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
+
+```{r courage-10, exercise = TRUE}
+
+```
+
+```{r courage-10-hint-1, eval = FALSE}
+fixef(...)
+```
+
+```{r courage-10-test, include = FALSE}
+# fixef(fit_XX)
+```
+
+### 
+
+In this case, XX
+
+<!-- DK: Consider adding questions about conditional_effects(), ranef() and other commands, if relevant. -->
+
+### Exercise 11
+
+Run `pp_check()` on `fit_XX`. The `pp_check()` runs a **p**osterior **p**redictive check.
+
+```{r courage-11, exercise = TRUE}
+
+```
+
+```{r courage-11-hint-1, eval = FALSE}
+pp_check(...)
+```
+
+```{r courage-11-test, include = FALSE}
+# pp_check(fit_XX)
+```
+
+### 
+
+In this case, XX
+
+<!-- If the fake data had looked very different from the real data, we have had a problem. But, for the most part, we conclude that, although not perfect, pp_check() shows that the fake outcomes generated by our model are like the actual outcome data. -->
+
+### Exercise 12
+
+Use `library()` to load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
+
+```{r courage-12, exercise = TRUE}
+
+```
+
+```{r courage-12-hint-1, eval = FALSE}
+library(gtsummary)
+```
+
+```{r courage-12-test, include = FALSE}
+library(gtsummary)
+```
+
+### 
+
+<!-- Drop some knowledge about gtsummary. Or say something more about your DGM. -->
+
+### Exercise 13
+
+<!-- DK: This can be just one question or several, especially if you want to teach some more gtsummary or gt tricks. Note that you need to adjust the test to make sure it works. -->
+
+Run `tbl_regression()` on `fit_XX`.
+
+```{r courage-13, exercise = TRUE}
+
+```
+
+```{r courage-13-hint-1, eval = FALSE}
+tbl_regression(...)
+```
+
+```{r courage-13-test, include = FALSE}
+# tbl_regression(fit_XX)
+```
+
+### 
+
+<!-- DK: Give something like the same sentence which you want the students to use at the end of the next question. -->
+
+### Exercise 14
+
+Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add at least one sentence which describes the modelling approach which you are using, specifying at least the functional form and the dependent variable. Add at least one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
+
+```{r courage-14}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+## Temperance
+
+### 
+
+<!-- DK: Choose 1. -->
+
+*Temperance is a tree which as for its root very little contentment, and for its fruit calm and peace.* - Buddha *Temperance is the greatest of all virtues. It subdues every passion and emotion, and almost creates a Heaven upon Earth.* - Joseph Smith Jr. *Temperance is a bridle of gold; he, who uses it rightly, is more like a god than a man.* - Robert Burton *Temperance is the firm and moderate dominion of reason over passion and other unrighteous impulses of the mind.* - Marcus Tullius Cicero *Temperance to be a virtue must be free, and not forced.* - Philip Massinger *Temperance is simply a disposition of the mind which binds the passion.* - Thomas Aquinas
+
+<!--  -->
+
+### Exercise 1
+
+In your own words, describe the use of Temperance in finishing your data science project.
+
+```{r temperance-1}
+question_text(NULL,
+	message = "Temperance guides us in the use of the data generating mechanism --- or the 'model' ---  we have created to answer the questions with which we began. We create posteriors for the quantities of interest.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 2
+
+Recall the question with which we began:
+
+> ...
+
+Pipe `fit_XX` to . . .
+
+```{r temperance-2, exercise = TRUE}
+
+```
+
+```{r temperance-2-hint-1, eval = FALSE}
+
+```
+
+```{r temperance-2-test, include = FALSE}
+
+```
+
+### 
+
+### Exercise 3
+
+Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
+
+```{r temperance-3}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 4
+
+Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval.
+
+```{r temperance-4}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+## Summary
+
+### 
+
+This tutorial covered [Chapter XX: XX](https://ppbds.github.io/primer/XX.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
+
+```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
+```
