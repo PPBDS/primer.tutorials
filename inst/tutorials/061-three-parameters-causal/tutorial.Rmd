@@ -34,7 +34,7 @@ options(tutorial.exercise.timelimit = 600,
 
 fit_gauss <- read_rds("data/fit_gauss.rds")
 
-ndata1 <- tibble(treatment = c("Treated", "Control"))
+ndata <- tibble(treatment = c("Treated", "Control"))
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -819,13 +819,11 @@ posterior_interval(fit_gauss)
 
 ### 
 
-<!-- GK: Not sure about the interpretation -->
-
-A confidence interval, and its associated confidence level, tells us how likely the truth is to lie within a specific range. In this case, we are 95% confident that the true value of each parameter to lie between each above range.
+We are 95% confident that the true value of each parameter lies within its associated confidence interval. Note that we might also use the term "uncertainty interval" to describe this range.
 
 ### Exercise 12
 
-Run `fixef()` on `fit_gauss`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
+Run `fixef()` on `fit_gauss`. The `fixef()` returns information about the **fix**ed **ef**fects in the model, meaning the estimated values for certain parameters.
 
 ```{r courage-12, exercise = TRUE}
 
@@ -841,9 +839,7 @@ fixef(fit_gauss)
 
 ### 
 
-<!-- GK: Add interpretation of the result  -->
-
-Our model is a fixed-effect model because we assume the relationship among the columns in the Population Table stable over time. In this case, the estimates of the fixed-effects parameters from the model is approximately $10$, with a $95%$ Confidence Interval between $9.2$ and $11$. 
+The precise definition of "fixed effects" is beyond the scope of this tutorial. See [here](https://statmodeling.stat.columbia.edu/2005/01/25/why_i_dont_use/) for extended discussion.
 
 
 ### Exercise 13
@@ -888,7 +884,7 @@ library(gtsummary)
 
 ### Exercise 15
 
-We will explore some functions within this package. Pipe `trains` to `tbl_summary()`. Put `include = c(att_end, treatment)` within the argument. Assign the result to an object called `table1`. Type `table1` in a separate line print out the result. 
+Pipe `trains` to `tbl_summary()`. Put `include = c(att_end, treatment)` within the argument. Assign the result to an object called `table1`. Type `table1` in a separate line print out the result. 
 
 ```{r courage-15, exercise = TRUE}
 
@@ -998,111 +994,348 @@ question_text(NULL,
 
 Note that the posteriors we create are never the “truth.” and the assumptions we made to create the model are never perfect. Yet with decisions made with flawed posteriors are almost always better than decisions made without them.
 
-<!-- Ex 2 fit_guass -->
-<!-- Ex 3 tibble(treatment = c("Treated", "Control")) -->
-<!-- Ex 4 ndata1 -->
-<!-- Ex 5 add_pred -->
-
 ### Exercise 2
 
 Recall the question with which we began:
 
 > What is the average treatment effect, of exposing people to Spanish-speakers, on their attitudes toward immigration?
 
-Pipe `fit_gauss` to `add_epred_draws()` with `newdata = tibble(treatment = c("Treated", "Control")))`
+We will be using the `add_epred_draws` from the `tidybayes` package to generate our prediction on the distribution of the average treatment effect. But first, type `fit_gauss` and hit "Run Code". 
 
 ```{r temperance-2, exercise = TRUE}
 
 ```
 
 ```{r temperance-2-hint-1, eval = FALSE}
-fit_gauss |> 
-  ...(
-    newdata = ...(treatment = c(..., ...)))
+fit_gauss 
 ```
 
 ```{r temperance-2-test, include = FALSE}
-fit_gauss |> 
-  add_epred_draws(
-    newdata = ndata1)
+fit_gauss 
 ```
 
 ### 
 
-We have 8,000 rows. The first four thousand rows are draws from the first row of newdata, meaning **treatment** equals **"Treated"**. The next four thousand rows are draws for **treatment** equals **"Control"**.
-
-### 
+We want to examine the behavior of our model with new data sets, data which was not used in model estimation. Therefore, the `add_epred_draws()` require a `newdata` argument.
 
 ### Exercise 3
 
-Continue the pipe with `pivot_wider()`, with the `id_cols = .draw, names_from = treatment, values_from = .epred` argument
+Create a tibble with the treatment column take on either the value "Treated" or "Control".
 
 ```{r temperance-3, exercise = TRUE}
 
 ```
 
+```{r temperance-3-hint-1, eval = FALSE}
+tibble(... = c(..., ...))
+```
+
+```{r temperance-3-test, include = FALSE}
+tibble(treatment = c("Treated", "Control"))
+```
+
+### 
+
+This will return a column named "Treatment" and two rows named "Treated" and "Control". We will use this new tibble to generate our model predictions.
+
+### Exercise 4
+
+We have created that tibble for you and store it in an object called ndata. Type `ndata` and hit "Run Code".
+
+```{r temperance-4, exercise = TRUE}
+
+```
+
+```{r temperance-4-hint-1, eval = FALSE}
+ndata
+```
+
+```{r temperance-4-test, include = FALSE}
+ndata
+```
+
+### 
+
+Creating the value for the `newdata` argument is tricky since we need to construct the treatment variable by hand. Even though treatment is a factor variable within `trains`, we can get away with using a simple character variable since either version would be transformed into a 0/1 variable by `add_epred_draws()`.
+
+### Exercise 5
+
+Pipe `fit_gauss` to `add_epred_draws()`. Set the `newdata` argument equals `ndata`.
+
+```{r temperance-5, exercise = TRUE}
+
+```
+
+```{r temperance-5-hint-1, eval = FALSE}
+... |> 
+  add_epred_draws(
+    ... = ndata
+  )
+```
+
+```{r temperance-5-test, include = FALSE}
+fit_gauss |> 
+  add_epred_draws(
+    newdata = ndata)
+```
+
+### 
+
+We have 8,000 rows. The first four thousand rows are draws from the first row of `ndata`, meaning `treatment` equals "Treated". The next four thousand rows are draws for `treatment` equals "Control".
+
+<!-- DK: Next question should use select(treatment, .draw, .epred) -->
+
+### Exercise 6
+
+In the current `newdata` tibble, the "Treated" and "Control" posteriors are stacked up on each other, which makes it difficult for us to calculate the average treatment effect. Continue the pipe with `pivot_wider()`, with the `id_cols = .draw, names_from = treatment, values_from = .epred` argument. 
+
+```{r temperance-6, exercise = TRUE}
+
+```
+
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r temperance-3-hint-1, eval = FALSE}
+```{r temperance-6-hint-1, eval = FALSE}
 ... |> 
   pivot_wider(...= .draw, names_from = ..., ... = .epred)
 ```
 
-```{r temperance-3-test, include = FALSE}
+```{r temperance-6-test, include = FALSE}
 fit_gauss |> 
   add_epred_draws(
-    newdata = tibble(treatment = c("Treated", "Control"))) |> 
+    newdata = ndata) |> 
   pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred)
 ```
 
 ### 
 
-The resulting table has only 4,000 rows because we have put the posteriors for Treated and Control next to each other.The easiest way to calculate the causal effect is to subtract the posterior for the outcome under Control from the posterior of the outcome under Treatment.
+The resulting table has only 4,000 rows because we have put the posteriors for Treated and Control next to each other.
 
 ### 
 
-### Exercise 4
+### Exercise 7
 
-Run this code to see the Posterior Distribution of the treatment effect. 
+The easiest way to calculate the causal effect is to subtract the posterior for the outcome under Control from the posterior of the outcome under Treatment. Continue the pipe with `mutate()`, and set `causal_effect = Treated - Control` as an argument.
 
-```{r temperance-4, exercise = TRUE}
+
+```{r temperance-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-7-hint-1, eval = FALSE}
+... |>
+  mutate(causal_effect = ... - ...)
+```
+
+```{r temperance-7-test, include = FALSE}
 fit_gauss |> 
   add_epred_draws(
-    newdata = tibble(treatment = c("Treated", "Control"))) |> 
+    newdata = ndata) |> 
+  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+  mutate(causal_effect = Treated - Control)
+```
+
+<!-- DK: Add   select(- .draw) |>  -->
+
+### 
+
+The `pivot_wider()` function will first take each unique value in the `.draw` column to become a unique row and then each unique value in the `treatment` column to become a separate column. Finally, the values from the `.epred` column will be used to fill in those newly created columns accordingly. 
+
+### Exercise 8
+
+Continue the pipe with `ggplot()`, mapping `x` to `causal_effect` in the `aes()` argument. This will return a graph with nothing in it as we have not mapped the data on. 
+
+```{r temperance-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-8-hint-1, eval = FALSE}
+... |> 
+  ggplot(...(x = ...))
+```
+
+```{r temperance-8-test, include = FALSE}
+fit_gauss |> 
+  add_epred_draws(
+    newdata = ndata) |> 
+  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+  mutate(causal_effect = Treated - Control) |> 
+  ggplot(aes(x = causal_effect))
+```
+
+### 
+
+### Exercise 9
+
+Add `geom_histogram()`, setting `y` equal `after_stat(count/sum(count))` within the `aes()` argument as we want to display the probability distribution of the causal effect.
+
+```{r temperance-9-ex, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-9-hint, eval = FALSE}
+... |> 
+  ggplot(aes(x = ...)) + 
+    geom_histogram(...(y = ...))
+```
+
+```{r temperance-9-test, include = FALSE}
+fit_gauss |> 
+  add_epred_draws(
+    newdata = ndata) |> 
   pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
   mutate(causal_effect = Treated - Control) |> 
   ggplot(aes(x = causal_effect)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100) +
-    labs(title = "Posterior for Average Treatment Effect",
+    geom_histogram(aes(y = after_stat(count/sum(count))))
+```
+
+###
+
+### Exercise 10
+
+Adjust the bin width by adding `bins = 100` to the `geom_histogram()` function.
+
+```{r temperance-10-ex, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-10-hint, eval = FALSE}
+... |> 
+  ggplot(...) + 
+    geom_histogram(aes(...), bins = ...)
+```
+
+```{r temperance-10-test, include = FALSE}
+fit_gauss |> 
+  add_epred_draws(
+    newdata = ndata) |> 
+  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+  mutate(causal_effect = Treated - Control) |> 
+  ggplot(aes(x = causal_effect)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))), 
+                   bins = 100)
+```
+
+###
+
+### Exercise 11
+
+Change the y-axis into the percentage format. Add `scale_y_continuous()`, setting the `labels` argument to `scales::percent_format()`.
+
+```{r temperance-11-ex, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-11-hint, eval = FALSE}
+... + 
+  geom_histogram(...) + 
+  scale_y_continuous(labels = ...)
+```
+
+```{r temperance-11-test, include = FALSE}
+fit_gauss |> 
+  add_epred_draws(
+    newdata = ndata) |> 
+  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+  mutate(causal_effect = Treated - Control) |> 
+  ggplot(aes(x = causal_effect)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))), 
+                   bins = 100) + 
+  scale_y_continuous(labels = scales::percent_format())
+```
+
+###
+
+### Exercise 12
+
+Change the theme of the graph by adding `theme_classic()`.
+
+```{r temperance-12-ex, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-12-hint, eval = FALSE}
+... + 
+  theme_classic()
+```
+
+```{r temperance-12-test, include = FALSE}
+fit_gauss |> 
+  add_epred_draws(
+    newdata = ndata) |> 
+  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+  mutate(causal_effect = Treated - Control) |> 
+  ggplot(aes(x = causal_effect)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))), 
+                   bins = 100) + 
+  scale_y_continuous(labels = scales::percent_format()) + 
+  theme_classic()
+```
+
+###
+
+### Exercise 13
+
+Lastly, add `title`, `subtitle`, labels for `x` and `y`. Remeber that this is what your graph should look like.
+
+```{r temperance-13-ex, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-13-hint, eval = FALSE}
+... + 
+  labs(title = ...,
+       subtitle = ...,
+       x = ...,
+       y = ...)
+```
+
+```{r temperance-13-test, include = FALSE}
+fit_gauss |> 
+  add_epred_draws(
+    newdata = ndata) |> 
+  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+  mutate(causal_effect = Treated - Control) |> 
+  ggplot(aes(x = causal_effect)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))), 
+                   bins = 100) + 
+  scale_y_continuous(labels = scales::percent_format()) + 
+  theme_classic() + 
+  labs(title = "Posterior for Average Treatment Effect",
          subtitle = "Exposure to Spanish-speakers shifts immigration attitudes rightward",
          x = "Difference in Attitude",
-         y = "Probability") +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
+         y = "Probability")
 ```
 
-```{r temperance-4-hint-1, eval = FALSE}
-
-```
-
-```{r temperance-4-test, include = FALSE}
-
-```
-
-### 
+###
 
 The posterior of the average causal effect is centered around $1.5$, with a $95%$ Confidence Interval from about $0.5$ to $2.5$. 
 
 ### 
 
-### Exercise 5
+<!-- Add a question or two about what 1.5 means. Start a new pipe with trains.Then select (att_end, party, treatment). Third, filter treatment == Control. Use summarize .by party. -->
+
+### Exercise 10
 
 Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI. 
 
-```{r temperance-5}
+```{r temperance-10}
 question_text(NULL,
-	message = "Using data from a 2012 survey of Boston-area commuters, we seek to measure the causal effect of exposure to Spanish-speakers on attitudes toward immigration among adults in Chicago and similar cities in 2024. There is some concern that the relationship has changed since our data was collected. We modeled att_end, a summary measure of attitude toward immigration measured on a 3 to 15 integer scale, as a linear function of treatment. The average causal effect of treatment was about 1.5, with a 95% confidence interval of 0.5 to 2.5. Hearing Spanish-speakers made people more conservative with regard to immigration.",
+	message = "Using data from a 2012 survey of Boston-area commuters, we seek to measure the causal effect of exposure to Spanish-speakers on attitudes toward immigration among adults in Chicago and similar cities in 2024. There is some concern that the relationship has changed since our data was collected. We modeled attitude toward immigration, measured on a 3 to 15 integer scale, as a linear function of treatment. The average causal effect of treatment was about 1.5, with a 95% confidence interval of 0.5 to 2.5. For context, the difference in attitude between Democrats and Republicans is about 1.7. So, the causal effect of 1.5 means that we would expect a treated Democrat to become almost as conservative on immigration as a typical Republican.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1111,11 +1344,13 @@ question_text(NULL,
 
 ### 
 
-### Exercise 6
+### Exercise 11
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval.
-<!-- GK: Not sure how to reasonable come up with a new confidence interval -->
-```{r temperance-6}
+
+<!-- DK: Wider confidence interval needed -->
+
+```{r temperance-11}
 question_text(NULL,
 	message = "As we assumed Stability in our model, which is certainly false, the estimates of the average treatment effect, of exposing people to Spanish-speakers, on their attitudes toward immigration might be wrong. A better estimate would be about 1.5, with a confidence interval of 0 to 3.  ",
 	answer(NULL, correct = TRUE),
