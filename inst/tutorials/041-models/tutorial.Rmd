@@ -1,5 +1,5 @@
 ---
-title: 'Models'
+title: Models
 author: David Kane
 tutorial:
   id: models
@@ -17,6 +17,7 @@ library(tutorial.helpers)
 library(tidyverse)
 library(brms)
 library(tidybayes)
+library(gtsummary)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
@@ -46,9 +47,9 @@ fit_bern <- read_rds("data/fit_bern.rds")
 
 <!-- SD: Honestly the writing parts need to be wayyyy shorter than they are currently, and it would be beneficial to just cut out some of the writing questions. Overall, this tutorial took about 3 hours to complete! -->
 
-<!-- DK: I left out the by-hand calculation of the confidence interval. Add it in? -->
+<!-- We left out the by-hand calculation of the confidence interval. Add it in? -->
 
-<!-- Sort of shame that the model takes so long to run. Maybe find an example with fewer observations? If we did, we could run the model many times, examining one-by-one what some of the arguments do. Might even do that here with subsets of the data. Annoyance would be that confidence intervals will be too wide if you do that. Best plan is to tel/show how intervals widen with less data, but to just keep using the one already-fitted model. -->
+<!-- Sort of shame that the model takes so long to run. Maybe find an example with fewer observations? If we did, we could run the model many times, examining one-by-one what some of the arguments do. Might even do that here with subsets of the data. Annoyance would be that confidence intervals will be too wide if you do that. Best plan is to tell/show how intervals widen with less data, but to just keep using the one already-fitted model. -->
 
 ## Introduction
 ### 
@@ -60,9 +61,13 @@ This tutorial covers [Chapter 4: Models](https://ppbds.github.io/primer/models.h
 
 *The only true wisdom is in knowing you know nothing.* - Socrates
 
+Our question:
+
+> *What proportion of all votes will be cast for Joe Biden in the 2024 election?*
+
 ### Exercise 1
 
-In your own words, describe the key components of Wisdom for working on a data science problem.
+In your own words, describe the key components of Wisdom when working on a data science problem.
 
 
 ```{r wisdom-1}
@@ -81,16 +86,20 @@ Define a Preceptor Table.
 
 ```{r wisdom-2}
 question_text(NULL,
-	message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, it is easy to calculate the quantities of interest.",
+	message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, we can easily calculate the quantities of interest.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
 
+### 
+
+Precisely describing the Preceptor Table for this problem is the first step in trying to solve it. 
+
 ### Exercise 3
 
-Describe the key components of Preceptor Tables in general, without worrying about this specific problem.
+Describe the key components of Preceptor Tables in general, without worrying about this specific problem. Use words like "units," "covariates," and "outcomes." 
 
 
 ```{r wisdom-3}
@@ -101,6 +110,11 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+### 
+
+<!-- DK: Knowledge drop. -->
+
 
 ### Exercise 4
 
@@ -121,9 +135,7 @@ Note that this is not all American adults or even all registered voters. To answ
 
 ### Exercise 5
 
-What is/are the outcome/outcomes for this problem?
-
-<!-- SD: This question was a bit confusing as there is only 2 rows, tricking the reader into think that there is only one outcome instead of the 2 options. On a side note, what about Independent Candidates? A reader could easily question this, making this scenario as a whole pretty confusing-->
+What is the outcome for this problem?
 
 ```{r wisdom-5}
 question_text(NULL,
@@ -136,32 +148,14 @@ question_text(NULL,
 
 ### 
 
-Looking at the question, this formulation is too broad. We don't actually need to know the name of the candidate. We just need to know if the vote was cast for Biden or not. The name of the candidate, if it was not Biden, is irrelevant to our question.
+Looking at the question, this formulation is too broad. We don't actually need to know the name of the candidate. We just need to know if the vote was cast for Biden or not. The name of the candidate, if it was not Biden, is irrelevant to our question. So, we can represent the outcome as 0 (did not vote for Biden) and 1 (did vote for Biden).
+
 
 ### Exercise 6
 
-What are the covariates for this problem?
-
-<!-- SD: Again, what about Independent? -->
-
-```{r wisdom-6}
-question_text(NULL,
-	message = "There are no covariates.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-If the question referred to who will win the election, then we would at least have to add a column for state of residence in order to tabulate electoral votes.
-
-### Exercise 7
-
 What are the treatments, if any, for this problem?
 
-```{r wisdom-7}
+```{r wisdom-6}
 question_text(NULL,
 	message = "There is no treatment.",
 	answer(NULL, correct = TRUE),
@@ -174,13 +168,12 @@ question_text(NULL,
 
 This is a predictive model, not a causal model, so there are no treatments, by definition. Recall that treatment is just a covariate which, given the question we are trying to answer, might at least in theory be manipulable.
 
-### Exercise 8
+### Exercise 7
 
-Write one sentence describing the data you have to answer your question.
+Write one sentence describing the data you have to answer your question. In any question related to polling, you always want to include the name of the polling organization, the date and the number of individuals successfully contacted.
 
-<!-- SD: addition to the instructions: "Write about the source & date of the data." -->
 
-```{r wisdom-8}
+```{r wisdom-7}
 question_text(NULL,
 	message = "We have data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, indicating which respondents intend to vote for Joe Biden and which do not.",
 	answer(NULL, correct = TRUE),
@@ -189,13 +182,11 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 9
+### Exercise 8
 
-In your own words, define "validity" as we use the term.
+In your own words, define "validity" as the term is used in the *Primer*.
 
-<!-- SD: This sentence is extremely confusing, as 'we' also relates to how 'we' speak in English. A better term would be "Data Scientists" instead of "we". -->
-
-```{r wisdom-9}
+```{r wisdom-8}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -204,13 +195,13 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 10
+### Exercise 9
 
 What can't we do if the assumption of validity is not true?
 
-<!-- SD:        ^ "with the data" -->
+<!-- DK: Fix as you see fit. -->
 
-```{r wisdom-10}
+```{r wisdom-9}
 question_text(NULL,
 	message = "We can't combine the Preceptor Table and the data in order to construct the Population Table.",
 	answer(NULL, correct = TRUE),
@@ -219,16 +210,17 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 11
+<!-- DK: knowledge drop -->
 
-Provide one reason why the assumption of validity might not <!-- SD:          ^ "(from the data)" -->
-hold for this problem.
+### Exercise 10
+
+Provide one reason why the assumption of validity might not hold for this problem.
 
 <!-- SD: without that insertion, I was thinking of how the real-life conditions might change between the time of this survey and the actual election -->
 
-```{r wisdom-11}
+```{r wisdom-10}
 question_text(NULL,
-	message = "There is not a one-to-one correspondence between our data (which is about an reported intention to vote for Biden) and our Preceptor Table (which records an actual vote).",
+	message = "XX.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -240,15 +232,20 @@ question_text(NULL,
 What we tell other people we will do is often not what we actually do. Consider a voter who is embarrassed about her support for Biden. Perhaps she perceives the interviewer as a Republican and doesn't care to admit to him, in March, her support for Biden. But, in November, in the privacy of the polling booth, she votes for Biden. In her case, the outcome from the data (what she told the pollster) did not have a *valid* correspondence with her behavior in the polling booth.
 
 
-### Exercise 12
+### Exercise 11
+
+<!-- DK: Change as you see fit. -->
 
 <!-- SD: {"Write a goal statement on how you will use this..."} instead of {Summarize the state of your...} -->
-Summarize the state of your work so far in one or two sentences. Make reference to the data you have and to the question you are trying to answer.                      <!--   ^ "(i.e. "we seek to)" -->
+
+Summarize the state of your work so far in one or two sentences. Make reference to the data you have and to the question you are trying to answer.  
+
+<!--   ^ "(i.e. "we seek to)" -->
 
 
-```{r wisdom-12}
+```{r wisdom-11}
 question_text(NULL,
-	message = "Using data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, we seek to understand what proportion of voters will support Biden in the 2024 election. In particular, we want to estimate the odds that, if we meet two voters, both will have voted for Biden?",
+	message = "Using data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, we seek to understand what proportion of voters will support Biden in the 2024 election. In particular, we want to estimate the proportion of all votes which will be cast for Joe Biden in the 2024 election.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -263,8 +260,10 @@ question_text(NULL,
 
 ### Exercise 1
 
-In your own words, name the four key components of Justice for working on a data science problem.
-<!-- SD:                                                  ^ "(without describing them!) -->
+DK: 
+
+In your own words, name the four key components of Justice (without describing them) for working on a data science problem.
+
 
 ```{r justice-1}
 question_text(NULL,
@@ -275,11 +274,14 @@ question_text(NULL,
 	rows = 6)
 ```
 
+<!-- DK: Knowledg drops -->
+
+
 ### Exercise 2
 
 In your own words, define a Population Table.
 
-<!-- SD: This is a bit confusing as the primer doesn't necessarily state this, and rather focuses on the data that we have, want to have, and don't care about -->
+<!-- SD: This is a bit confusing as the primer doesn't necessarily state this, and rather focuses on the data that we have, want to have, and don't care about DK: Untrue! Primer does state this explicitly, multiple times. -->
 
 ```{r justice-2}
 question_text(NULL,
@@ -306,7 +308,7 @@ question_text(NULL,
 ### Exercise 4
 
 In your own words, define the assumption of "stability" when employed in the context of data science.
-<!-- SD: THIS is the way that it should be put!!! Well done! -->
+
 
 ```{r justice-4}
 question_text(NULL,
@@ -403,6 +405,7 @@ question_text(NULL,
 ### Exercise 9
 
 Provide one reason why the assumption of unconfoundness might not be true (or relevant) in this case.
+
 <!-- SD: the correct answer: "Since this is a predictive model, we do not have to worry about unconfoundedness." -->
 
 ```{r justice-9}
@@ -749,7 +752,7 @@ The [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package includes m
 
 ### Exercise 15
 
-Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add at least one sentence which describes the modelling approach which you are using. Also add at least one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
+Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using. Then, add a sentence which tells us something about the model.
 
 ```{r courage-15}
 question_text(NULL,
@@ -927,8 +930,6 @@ question_text(NULL,
 
 ## Summary
 ### 
-
-
 
 This tutorial covered [Chapter 4: Models](https://ppbds.github.io/primer/models.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
 
