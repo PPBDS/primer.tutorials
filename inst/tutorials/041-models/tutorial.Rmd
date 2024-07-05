@@ -1,5 +1,5 @@
 ---
-title: 'Models'
+title: Models
 author: David Kane
 tutorial:
   id: models
@@ -17,6 +17,7 @@ library(tutorial.helpers)
 library(tidyverse)
 library(brms)
 library(tidybayes)
+library(gtsummary)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
@@ -44,9 +45,11 @@ fit_bern <- read_rds("data/fit_bern.rds")
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
 
-<!-- DK: I left out the by-hand calculation of the confidence interval. Add it in? -->
+<!-- SD: Honestly the writing parts need to be wayyyy shorter than they are currently, and it would be beneficial to just cut out some of the writing questions. Overall, this tutorial took about 3 hours to complete! -->
 
-<!-- Sort of shame that the model takes so long to run. Maybe find an example with fewer observations? If we did, we could run the model many times, examining one-by-one what some of the arguments do. Might even do that here with subsets of the data. -->
+<!-- We left out the by-hand calculation of the confidence interval. Add it in? -->
+
+<!-- Sort of shame that the model takes so long to run. Maybe find an example with fewer observations? If we did, we could run the model many times, examining one-by-one what some of the arguments do. Might even do that here with subsets of the data. Annoyance would be that confidence intervals will be too wide if you do that. Best plan is to tell/show how intervals widen with less data, but to just keep using the one already-fitted model. -->
 
 ## Introduction
 ### 
@@ -58,9 +61,13 @@ This tutorial covers [Chapter 4: Models](https://ppbds.github.io/primer/models.h
 
 *The only true wisdom is in knowing you know nothing.* - Socrates
 
+Our question:
+
+> *What proportion of all votes will be cast for Joe Biden in the 2024 election?*
+
 ### Exercise 1
 
-In your own words, describe the key components of Wisdom for working on a data science problem.
+In your own words, describe the key components of Wisdom when working on a data science problem.
 
 
 ```{r wisdom-1}
@@ -72,6 +79,8 @@ question_text(NULL,
 	rows = 6)
 ```
 
+
+
 ### Exercise 2
 
 Define a Preceptor Table.
@@ -79,16 +88,20 @@ Define a Preceptor Table.
 
 ```{r wisdom-2}
 question_text(NULL,
-	message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, it is easy to calculate the quantities of interest.",
+	message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, we can easily calculate the quantities of interest.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
 
+### 
+
+Precisely describing the Preceptor Table for this problem is the first step in trying to solve it. 
+
 ### Exercise 3
 
-Describe the key components of Preceptor Tables in general, without worrying about this specific problem.
+Describe the key components of Preceptor Tables in general, without worrying about this specific problem. Use words like "units," "covariates," and "outcomes." 
 
 
 ```{r wisdom-3}
@@ -100,11 +113,33 @@ question_text(NULL,
 	rows = 6)
 ```
 
+### 
+
+<!-- DK: Knowledge drop. -->
+
+
 ### Exercise 4
+
+Create a Github repo called `tutorial-4`. Connect it to an new R Project called `tutorial-4`. Edit the `.gitignore` file to ignore the Rproj file.
+
+In the Console, run `show_file(".gitignore")`. CP/CR. Don't forget to run `library(tutorial.helpers)` if you get a "function not found" error message.
+
+```{r wisdom-4}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+### Exercise 5
 
 What are the units for this problem?
 
-```{r wisdom-4}
+```{r wisdom-5}
 question_text(NULL,
 	message = "The units are individual voters.",
 	answer(NULL, correct = TRUE),
@@ -117,13 +152,11 @@ question_text(NULL,
 
 Note that this is not all American adults or even all registered voters. To answer our question, we only need information about actual voters. Any other rows would be superfluous.
 
-### Exercise 5
+### Exercise 6
 
-What is/are the outcome/outcomes for this problem?
+What is the outcome for this problem?
 
-<!-- SD: This question was a bit confusing as there is only 2 rows, tricking the reader into think that there is only one outcome instead of the 2 options. On a side note, what about Independent Candidates? A reader could easily question this, making this scenario as a whole pretty confusing-->
-
-```{r wisdom-5}
+```{r wisdom-6}
 question_text(NULL,
 	message = "The outcome is the candidate for whom the vote was cast.",
 	answer(NULL, correct = TRUE),
@@ -134,26 +167,8 @@ question_text(NULL,
 
 ### 
 
-Looking at the question, this formulation is too broad. We don't actually need to know the name of the candidate. We just need to know if the vote was cast for Biden or not. The name of the candidate, if it was not Biden, is irrelevant to our question.
+Looking at the question, this formulation is too broad. We don't actually need to know the name of the candidate. We just need to know if the vote was cast for Biden or not. The name of the candidate, if it was not Biden, is irrelevant to our question. So, we can represent the outcome as 0 (did not vote for Biden) and 1 (did vote for Biden).
 
-### Exercise 6
-
-What are the covariates for this problem?
-
-<!-- SD: Again, what about Independent? -->
-
-```{r wisdom-6}
-question_text(NULL,
-	message = "There are no covariates.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-If the question referred to who will win the election, then we would at least have to add a column for state of residence in order to tabulate electoral votes.
 
 ### Exercise 7
 
@@ -174,9 +189,8 @@ This is a predictive model, not a causal model, so there are no treatments, by d
 
 ### Exercise 8
 
-Write one sentence describing the data you have to answer your question.
+Write one sentence describing the data you have to answer your question. In any question related to polling, you always want to include the name of the polling organization, the date and the number of individuals successfully contacted.
 
-<!-- SD: addition to the instructions: "Write about the source & date of the data." -->
 
 ```{r wisdom-8}
 question_text(NULL,
@@ -189,9 +203,7 @@ question_text(NULL,
 
 ### Exercise 9
 
-In your own words, define "validity" as we use the term.
-
-<!-- SD: This sentence is extremely confusing, as 'we' also relates to how 'we' speak in English. A better term would be "Data Scientists" instead of "we". -->
+In your own words, define "validity" as the term is used in the *Primer*.
 
 ```{r wisdom-9}
 question_text(NULL,
@@ -206,7 +218,7 @@ question_text(NULL,
 
 What can't we do if the assumption of validity is not true?
 
-<!-- SD:        ^ "with the data" -->
+<!-- DK: Fix as you see fit. -->
 
 ```{r wisdom-10}
 question_text(NULL,
@@ -217,16 +229,16 @@ question_text(NULL,
 	rows = 6)
 ```
 
+<!-- DK: knowledge drop -->
+
 ### Exercise 11
 
-Provide one reason why the assumption of validity might not <!-- SD:          ^ "(from the data)" -->
-hold for this problem.
+Provide one reason why the assumption of validity might not hold for this problem.
 
-<!-- SD: without that insertion, I was thinking of how the real-life conditions might change between the time of this survey and the actual election -->
 
 ```{r wisdom-11}
 question_text(NULL,
-	message = "There is not a one-to-one correspondence between our data (which is about an reported intention to vote for Biden) and our Preceptor Table (which records an actual vote).",
+	message = "People sometimes don't vote for the person they claim they are going to vote for.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -240,13 +252,18 @@ What we tell other people we will do is often not what we actually do. Consider 
 
 ### Exercise 12
 
+<!-- DK: Change as you see fit. -->
+
 <!-- SD: {"Write a goal statement on how you will use this..."} instead of {Summarize the state of your...} -->
-Summarize the state of your work so far in one or two sentences. Make reference to the data you have and to the question you are trying to answer.                      <!--   ^ "(i.e. "we seek to)" -->
+
+Summarize the state of your work so far in one or two sentences. Make reference to the data you have and to the question you are trying to answer.  
+
+<!--   ^ "(i.e. "we seek to)" -->
 
 
 ```{r wisdom-12}
 question_text(NULL,
-	message = "Using data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, we seek to understand what proportion of voters will support Biden in the 2024 election. In particular, we want to estimate the odds that, if we meet two voters, both will have voted for Biden?",
+	message = "Using data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, we seek to understand what proportion of voters will support Biden in the 2024 election. In particular, we want to estimate the proportion of all votes which will be cast for Joe Biden in the 2024 election.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -261,8 +278,10 @@ question_text(NULL,
 
 ### Exercise 1
 
-In your own words, name the four key components of Justice for working on a data science problem.
-<!-- SD:                                                  ^ "(without describing them!) -->
+DK: 
+
+In your own words, name the four key components of Justice (without describing them) for working on a data science problem.
+
 
 ```{r justice-1}
 question_text(NULL,
@@ -273,11 +292,13 @@ question_text(NULL,
 	rows = 6)
 ```
 
+<!-- DK: Knowledg drops -->
+
+
 ### Exercise 2
 
 In your own words, define a Population Table.
 
-<!-- SD: This is a bit confusing as the primer doesn't necessarily state this, and rather focuses on the data that we have, want to have, and don't care about -->
 
 ```{r justice-2}
 question_text(NULL,
@@ -304,7 +325,7 @@ question_text(NULL,
 ### Exercise 4
 
 In your own words, define the assumption of "stability" when employed in the context of data science.
-<!-- SD: THIS is the way that it should be put!!! Well done! -->
+
 
 ```{r justice-4}
 question_text(NULL,
@@ -367,6 +388,8 @@ Provide one reason why the assumption of representativeness might not be true in
 
 <!-- SD: Missing correct answer, possibly because the primer shows multiple reasons but no direct copy-paste answer. -->
 
+<!-- DK: Give an answer. -->
+
 ```{r justice-7}
 question_text(NULL,
 	message = "XX",
@@ -382,8 +405,7 @@ In your own words, define the assumption of "unconfoundedness" when employed in 
 
 ```{r justice-8}
 question_text(NULL,
-	message = "Unconfoundedness means that the treatment assignment is independent of the potential outcomes, when we condition on pre-treatment covariates.",
-	# SD:                                 ^ ", and this assumption is only relevant for casual models."
+	message = "Unconfoundedness means that the treatment assignment is independent of the potential outcomes, when we condition on pre-treatment covariates. This assumption is only relevant for casual models.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -401,11 +423,12 @@ question_text(NULL,
 ### Exercise 9
 
 Provide one reason why the assumption of unconfoundness might not be true (or relevant) in this case.
+
 <!-- SD: the correct answer: "Since this is a predictive model, we do not have to worry about unconfoundedness." -->
 
 ```{r justice-9}
 question_text(NULL,
-	message = "Place correct answer here.",
+	message = "XX.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -434,7 +457,7 @@ question_text(NULL,
 
 ### Exercise 1
 
-<!-- DK: Not sure I like this answer. -->
+<!-- DK: Switch to Cardinal Virtues. -->
 <!-- SD: Potential Answer?: "Courage creates a mathematical model which connects the outcome variable to the covariates, if any. Then, using code, we create a fitted model, including posterior probability distributions for all the unknown parameters." -->
 
 In your own words, name the key goal of Courage and the process we use to get there.
@@ -531,7 +554,6 @@ fit_bern <- brm(formula = ...,
 
 This will take a little whole to run. It won't produce anything because of the `refresh` and `silent` arguments. 
 
-<!-- SD: Is there any way to allow the reader to progress without completing this? It just takes so much time so it would be nice for the reader to work on the next problem while this one still renders -->
 
 ### 
 
@@ -682,6 +704,8 @@ with $\epsilon_i \sim N(0, \sigma^2)$. $y_i$ is the height of male $i$. $\mu$ is
 
 Run `pp_check()` on `fit_bern` with the `type` argument set to `"bars"`.  The `pp_check()` runs a **p**osterior **p**redictive check.
 
+<!-- DK: Agreed on below. Do it. -->
+
 <!-- SD: It would be nice to include that pp_check() is a function from the *bayesplot* package, which is a completely different (from ggplot2) way of making graphs. This just clears the confusion. -->
 
 ```{r courage-12, exercise = TRUE}
@@ -747,7 +771,7 @@ The [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package includes m
 
 ### Exercise 15
 
-Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add at least one sentence which describes the modelling approach which you are using. Also add at least one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
+Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using. Then, add a sentence which tells us something about the model.
 
 ```{r courage-15}
 question_text(NULL,
@@ -761,7 +785,7 @@ question_text(NULL,
 ## Temperance
 ### 
 
-*Temperance is a tree which as for its root very little contentment, and for its fruit calm and peace.* - Buddha
+*Temperance is a tree which has for its root very little contentment, and for its fruit calm and peace.* - Buddha
 
 ### Exercise 1
 
@@ -786,7 +810,6 @@ To answer this question, we need to create the `newdata` object which we will us
 
 Type `tibble(.rows = 2)`. Hit "Run Code."
 
-<!-- SD: Note: this creates a tibble with 0 rows, and is indeed blank (but doesn't have 2 rows) -->
 
 ```{r temperance-2, exercise = TRUE}
 
@@ -802,7 +825,7 @@ tibble(.rows = 2)
 
 ### 
 
-This creates an empty tibble with two rows. Because `fit_bern` is such a simple model, one with no independent varibles, the `newdata` object is also extremely simple. In this case, we are interested in the two people we might meet (and who they voted for) so we need to rows in `newdata`.
+This creates an empty tibble with two rows. Because `fit_bern` is such a simple model, one with no independent variables, the `newdata` object is also extremely simple. In this case, we are interested in the two people we might meet (and who they voted for) so we need two rows in `newdata`.
 
 The number of rows in `newdata` corresponds to the number of units for which we seek to forecast the behavior/results.
 
@@ -854,7 +877,7 @@ fit_bern |>
 
 ### 
 
-Note that the tibble which is "spat" out at the end of this pipe is a grouped tibble. See the "Groups" label at the top. Unless we `ungroup()` the pipe, future commands will be executed on `.row = 1` rows separately from `.row = 2` rows.
+Note that the tibble which is "spat" out at the end of this pipe is a grouped tibble. See the "Groups" label at the top. Unless we `ungroup()` the pipe, future commands will be executed on `.row == 1` rows separately from `.row == 2` rows.
 
 ### Exercise 5
 
@@ -926,8 +949,6 @@ question_text(NULL,
 
 ## Summary
 ### 
-
-<!-- SD: Honestly the writing parts need to be wayyyy shorter than they are currently, and it would be beneficial to just cut out some of the writing questions. Overall, this tutorial took about 3 hours to complete! -->
 
 This tutorial covered [Chapter 4: Models](https://ppbds.github.io/primer/models.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
 

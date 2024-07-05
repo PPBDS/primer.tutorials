@@ -14,6 +14,7 @@ description: 'Chapter 9 Tutorial: Five Parameters'
 ```{r setup, include = FALSE}
 library(learnr)
 library(tutorial.helpers)
+library(gt)
 library(tidyverse)
 library(brms)
 library(tidybayes)
@@ -23,6 +24,34 @@ library(primer.data)
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
+
+df1 <- governors |> 
+  select(last_name, year, state, sex, lived_after, election_age)
+
+# fit_sex <- brm(
+#                data = df1,
+#                formula = lived_after ~ sex,
+#                silent = 2,
+#                refresh = 0,
+#                seed = 76
+#                )
+# 
+# write_rds(fit_sex, "data/fit_sex.rds")
+
+fit_sex <- read_rds("data/fit_sex.rds")
+
+# fit_all <- brm(data = df1,
+#                formula = lived_after ~ sex*election_age,
+#                silent = 2,
+#                refresh = 0,
+#                seed = 13)
+# 
+# write_rds(fit_all, "data/fit_all.rds")
+
+fit_all <- read_rds("data/fit_all.rds")
+
+newobs = tibble(sex = c("Male", "Female"), 
+                election_age = 50)
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -33,40 +62,17 @@ options(tutorial.exercise.timelimit = 600,
 
 <!-- DK: Key problems with current version: We need (?) to flesh out the Courage and Temperance sections. Key skills to practice each time including writing math formulas in Quarto and creating nice looking tables of regression results. -->
 
-<!-- DK: Make sure to uncomment the tests once they are ready to work. -->
-
-<!-- DK: First pass, don't hesitate to skip knowledge drops for which you don't have something to say. -->
-
 
 ## Introduction
 ### 
 
 This tutorial covers [Chapter 9: Five Parameters](https://ppbds.github.io/primer/XX.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
 
---
-
-
-Let’s learn about interactions. The effect of a treatment relative to a control is almost never uniform. The effect might be bigger in women than in men, smaller in the rich relative to the poor. The technical term for such effects is “heterogeneous,” which is just Ph.D.’ese for “different.” With enough data, all effects are heterogeneous. Causal effects, at least in the social science, always vary across units. To model this reality, we rely on interactions, on allowing the effect size to differ. The same applies for predictive models. The relationship between our outcome variable and a predictor variable is rarely constant. The relationship varies based on the values of other variables. To take account of interactions, we need models with at least 5 parameters.
-
-Follow the Cardinal Virtues and tackle each problem step by step. Remember the process: first we use Wisdom, next Justice, next Courage, and finally Temperance. Each Cardinal Virtue plays role in answering the question that we have at hand.
 
 ## Wisdom
 ### 
 
 *The only true wisdom is in knowing you know nothing.* - Socrates
-
-### Exercise 1
-
-In your own words, describe the key components of Wisdom for working on a data science problem. (hint: read the quote!)
-
-```{r wisdom-1}
-question_text(NULL,
-	message = "Wisdom requires the creation of a Preceptor Table, an examination of our data, and a determination, using the concept of validity, as to whether or not we can (reasonably!) assume that the two come from the same population. Wisdom provides the starting knowledge to initiate the process of solving the problem.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
 
 ### 
 
@@ -74,14 +80,13 @@ Consider the following question:
 
 *How long do political candidates live after the election?*
 
+### Exercise 1
 
-### Exercise 2
+In your own words, describe the key components of Wisdom for working on a data science problem. (hint: read the quote!)
 
-Define a Preceptor Table.
-
-```{r wisdom-2}
+```{r wisdom-1}
 question_text(NULL,
-	message = "A Preceptor Table is the smallest possible table of data with rows and columns so it's easy to calculate the quantities of interest.",
+	message = "Wisdom requires the creation of a Preceptor Table, an examination of our data, and a determination, using the concept of validity, as to whether or not we can (reasonably!) assume that the two come from the same population.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -90,34 +95,38 @@ question_text(NULL,
 
 ### 
 
-So far, simple, eh? So how does this tutorial differ from the last (and the one before that, etc.)?
+<!-- DK: Knowledge -->
 
-### Exercise 3
+### Exercise 2
 
-Describe the key components of Preceptor Tables in general, without worrying about this specific problem.
+Define a Preceptor Table.
 
-<!-- DK: Get rid of this. Use standard answer. -->
-
-```{r wisdom-3}
+```{r wisdom-2}
 question_text(NULL,
-	message = "To create our Preceptor Table, we examine:\
-
-Causal or predictive model: We have a predictive model since there is just one outcome: a candidate’s longevity.\
-
-Units: Our units for this scenario would be candidates because the questions are about the life expectancy of unique candidates.\
-
-Outcome: The number of years a candidate lives after the election.\
-
-Treatment: Since this is a predictive model there is no treatment per se. Any variable which one might consider a treatment is just another covariate in this context.\
-
-Covariates: We know a variety of information about each candidate.\
-
-Moment in Time: It is unclear to what moment in time the question refers. Is it interested in all candidates who are running in next election? All those running in the future? Any candidate who has or will run between 2000 and 2050?",
+	message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, it is easy to calculate the quantities of interest.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+### 
+
+### Exercise 3
+
+Describe the key components of Preceptor Tables in general, without worrying about this specific problem.
+
+
+```{r wisdom-3}
+question_text(NULL,
+	message = "The rows of the Preceptor Table are the units. The outcome is at least one of the columns. If the problem is causal, there will be at least two (potential) outcome columns. The other columns are covariates. If the problem is causal, at least one of the covariates will be a treatment.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+<!-- DK: Use code from primer. -->
 
 Here's our Preceptor Table:
 ![Preceptor Table](preceptor-table.png)
@@ -131,7 +140,7 @@ What are the units for this problem?
 
 ```{r wisdom-4}
 question_text(NULL,
-	message = "Recall from above: *Units: Our units for this scenario would be candidates because the questions are about the life expectancy of unique candidates.*",
+	message = "Our units for this problem would be individual candidates because the questions are about the life expectancy of those candidates.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -146,7 +155,7 @@ What is/are the outcome/outcomes for this problem?
 
 ```{r wisdom-5}
 question_text(NULL,
-	message = "Recall from above: *Outcome: The number of years a candidate lives after the election.*",
+	message = "The number of years a candidate lives after the election.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -155,13 +164,17 @@ question_text(NULL,
 
 ### 
 
+<!-- Knowledge: Talk about the data/paper. Above. -->
+
 ### Exercise 6
+
+<!-- DK: Update with new approach. -->
 
 What are the covariates for this problem?
 
 ```{r wisdom-6}
 question_text(NULL,
-	message = "Our covariates in this scenario would be 'Year of Election' and 'Age at Election' {as labelled in the Preceptor Table if you would read, but sadly, you don't :( }",
+	message = "Our covariates in this scenario would be 'Year of Election' and 'Age at Election'.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -176,7 +189,7 @@ What are the treatments, if any, for this problem?
 
 ```{r wisdom-7}
 question_text(NULL,
-	message = "Recall from above: *Treatment: Since this is a predictive model there is no treatment per se. Any variable which one might consider a treatment is just another covariate in this context.* You know, maybe you should refer back to that initial answer instead of relying on ChatGPT for your answers to these questions.",
+	message = "Since this is a predictive model there is no treatment per se. Any variable which one might consider a treatment is just another covariate in this context.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -185,13 +198,15 @@ question_text(NULL,
 
 ### 
 
+<!-- DK: Note how the paper actually uses winning the election as a non-randomly assigned treatment. -->
+
 ### Exercise 8
 
-What moment in time does the Preceptor Table refer to?
+What moment in time does the Preceptor Table refer to? (Obviously, you should refer to the *Primer* itself when answering questions like this.)
 
 ```{r wisdom-8}
 question_text(NULL,
-	message = "recall from above (again): *Moment in Time: It is unclear to what moment in time the question refers. Is it interested in all candidates who are running in next election? All those running in the future? Any candidate who has or will run between 2000 and 2050?*",
+	message = "Moment in Time: It is unclear to what moment in time the question refers. Is it interested in all candidates who are running in the next election? All those running in the future? Let's choose to focus in candidate longevity in this century.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -208,7 +223,7 @@ Write one sentence describing the data you have to answer your question.
 
 ```{r wisdom-9}
 question_text(NULL,
-	message = "Is your answer really correct? You decide.",
+	message = "XX",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -218,6 +233,8 @@ question_text(NULL,
 ### 
 
 ### Exercise 10
+
+<!-- DK: Split up into three questions. -->
 
 Load the **tidyverse** package, as well as the **primer.data** package, which includes the `governors` dataset. On the third line, use `head()` on `governors`.
 
@@ -241,19 +258,38 @@ The reason we used `head()` was to display only the first couple lines of `gover
 
 ### 
 
+### Exercise 11
+
+<!-- DK: No questions. Just instructions. -->
+
+Write down 3 things you observed from the data:
+
+```{r wisdom-11}
+question_text(NULL,
+	message = "A few things I noticed about this data:
+1) The data is sorted Alphabetically by State & by Year
+2) The first & last names are in separate columns
+3) A lot of the data is in the past century",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
 <!-- XX: Insert comments about the data. -->
-
-
+<!-- SD: I made this a question instead -->
 
 <!-- DK: Consider adding more questions about EDA with this data. In particular, add at least one question about the dependent variable in the model along with one or more questions about covariates. If there is a treatment variable, we must include a question about it. -->
 
 <!-- Variable questions come in two types. First there are questions which require the student to run, say, summary() on the variable. Then, knowledge about the variable can be dropped. Second, there are questions which ask for a one sentence summary about the variable, something which could be used in our summary of the project. -->
 
-### Exercise 11
+### Exercise 12
 
 In your own words, define "validity" as we use the term.
 
-```{r wisdom-11}
+```{r wisdom-12}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -266,11 +302,11 @@ question_text(NULL,
 
 Is the meaning of the columns consistent, i.e., can we assume validity? That is the heart of validity. To put it simply, does the `lived_after` column in our Preceptor Table equate to same column in our data set?
 
-### Exercise 12
+### Exercise 13
 
 What can't we do if the assumption of validity is not true?
 
-```{r wisdom-12}
+```{r wisdom-13}
 question_text(NULL,
 	message = "We can't combine the Preceptor Table and the data in order to construct the Population Table.",
 	answer(NULL, correct = TRUE),
@@ -281,13 +317,13 @@ question_text(NULL,
 
 ### 
 
-### Exercise 13
+### Exercise 14
 
 Provide one reason why the assumption of validity might hold for this problem.
 
-```{r wisdom-13}
+```{r wisdom-14}
 question_text(NULL,
-	message = "The only way to know if you were right is to check the corresponding section in the Primer. Too lazy? Looks like someone doesn't want to learn Data Science.",
+	message = "The assumption of validity seems reasonable. Our data and The Preceptor Table can “stack” on top of each other. We will assume that both are drawn from the same population.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -296,18 +332,14 @@ question_text(NULL,
 
 ### 
 
-### Exercise 14
-
-<!-- DK: In creating your own answer to questions like this, check with the chapter. One might already be provided! If not, it is often useful to revisit the relevant section of the Key Concepts chapter in the Primer. -->
-
-<!-- Example: *Using data from a 2012 survey of Boston-area commuters, we seek to understand the relationship between income and political ideology in Chicago and similar cities in 2020. In particular, what percentage of individuals who make more than $100,000 per year are liberal?* -->
+### Exercise 15
 
 Summarize the state of your work so far in one or two sentences. Make reference to the data you have and to the question you are trying to answer. 
 
 
-```{r wisdom-14}
+```{r wisdom-15}
 question_text(NULL,
-	message = "Fine, I'll give it to you: *Using data from all deceased gubernatorial candidates in the United States between 1945 and 2012, we seek to forecast candidate longevity post-election.*",
+	message = "Using data from all deceased gubernatorial candidates in the United States between 1945 and 2012, we seek to forecast candidate longevity post-election.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -343,7 +375,7 @@ In your own words, define a Population Table.
 
 ```{r justice-2}
 question_text(NULL,
-	message = "The Population Table is a structure which includes a row for every unit in the population. We generally break the rows in the Population Table into three categories: the data for units we have (the actual data set), the data for units which we actually want to have (the Preceptor Table), and the data for units we do not care about (the rest of the population, not included in the data or the Preceptor Table).",
+	message = "The Population Table includes a row for each unit/time combination in the underlying population from which both the Preceptor Table and the data are drawn.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -373,9 +405,11 @@ question_text(NULL,
 
 Provide one reason why the assumption of stability might not be true in this case.
 
+<!-- SD: This might not be the best answer. We should probably change it later but for the time being it's good enough. -->
+
 ```{r justice-4}
 question_text(NULL,
-	message = "Read the top sentence (in Italics). This is one example of why stability might not be true in this case.",
+	message = "Lifespan changes over time. In fact, between 1960 and 2015, life expectancy for the total population in the United States increased by almost 10 years. Therefore, our estimates for the future may need some adjustment — that is, to add years to our predicted life expectancy to account for a global change in lifespan over time.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -450,6 +484,9 @@ question_text(NULL,
 
 ### 
 
+Note: Your paragraph doesn't necessarily have to be as long as mine is :)
+
+
 ## Courage
 ### 
 
@@ -462,6 +499,7 @@ question_text(NULL,
 ### Exercise 1
 
 <!-- DK: Not sure I like this answer. -->
+<!-- SD: How about this?: Justice verifies the Population Table. Courage creates a mathematical model which connects the outcome variable to the covariates, if any. Then, using code, we create a fitted model, including posterior probability distributions for all the unknown parameters. -->
 
 In your own words, name the key goal of Courage and the process we use to get there.
 
@@ -478,7 +516,7 @@ question_text(NULL,
 
 ### Exercise 2
 
-Load the **brms** package. Remember, this should also be done in the console.
+Load the **brms** package. Load this into the console as well, as we will be using it later in the console.
 
 ```{r courage-2, exercise = TRUE}
 
@@ -514,14 +552,23 @@ library(tidybayes)
 
 ### 
 
+<!-- SD: Did we introduce the concept of Bayesian Models in an earlier chapter? If we didn't it would be nice to introduce what Bayesian Models are. -->
+
+This package also helps with the creation of Bayesian Models.
+
+
 <!-- XX: Some comments about this problem. -->
 
-<!-- XX: Might need an exercise which gets/creates/cleans the data you need for fitting the model. -->
+<!-- XX: Might need an exercise which gets/creates/cleans the data you need for fitting the model. - DONE -->
 
+
+<!-- DK: Question which adds all the libraries at once to the qmd and then show_file(). -->
 
 ### Exercise 4
 
-From the Console, execute `library(brms)`, followed by `?brm1`. Copy/paste the Description for the `brm()` function.
+From the Console, execute `?brm`. Copy/paste the Description for the `brm()` function.
+
+Note: If this returns an error, enter `library(brms)` into the console (you were supposed to do this in exercise 1).
 
 ```{r courage-4}
 question_text(NULL,
@@ -538,213 +585,260 @@ question_text(NULL,
 
 *Does sex help us to forecast longevity?*
 
-Create a model using `brm()` from the **brms** package (search `?brm` to learn how to use this). Your arguments should be `. 
+We will be creating a model using `brm()` from the **brms** package, but first, we need to set our data. Begin by setting a new variable called `df1`, and assign it to the `governors` dataset (we skimmed this earlier). Now, pipe this to `select()` with the following arguments: `last_name, year, state, sex, lived_after, election_age`.
 
-Assign the result to an object called `fit_sex`.
-
-<!-- Don't forget to create this model yourself in the setup chunk. Do this once, save the object, comment out that code and then just read_rds to create the object for his tutorial. -->
-
-<!-- Depending on code speed, you can run this function multiple times, without assigning the return value, looking at the printout, and seeing how things change. -->
 
 ```{r courage-5, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r courage-5-hint-1, eval = FALSE}
 
+```
+
+```{r courage-5-test, include = FALSE}
+df1 <- governors |> 
+  select(last_name, year, state, sex, lived_after, election_age)
 ```
 
 ### 
 
 ### Exercise 6
 
-Type `fit_sex` and hit "Run Code." This generates the same results as using `print(fit_sex)`.
+We will now be creating the model using `brm()` from the **brms** package. Begin with `brm()`, and then add the following arguments: `data = df1, formula = lived_after ~ sex, silent = 2, refresh = 0, seed = 76`. 
 
+Assign the result to an object called `fit_sex`.
+
+<!-- Don't forget to create this model yourself in the setup chunk. Do this once, save the object, comment out that code and then just read_rds to create the object for his tutorial. - DONE but commented -> need assistance from Preceptor -->
+
+<!-- Depending on code speed, you can run this function multiple times, without assigning the return value, looking at the printout, and seeing how things change. -->
 
 ```{r courage-6, exercise = TRUE}
 
 ```
 
 ```{r courage-6-hint-1, eval = FALSE}
-print(...)
+fit_sex <- brm(
+               data = ...,
+               formula = ...,
+               silent = ...,
+               refresh = ...,
+               seed = ...
+               )
 ```
 
 ```{r courage-6-test, include = FALSE}
-# print(fit_sex)
+fit_sex <- brm(
+               data = df1,
+               formula = lived_after ~ sex,
+               silent = 2,
+               refresh = 0,
+               seed = 76
+               )
 ```
 
 ### 
 
-<!-- XX Same some general words about the object. Note that we are about to go through the top 4 rows. -->
-
-<!-- Add summary() Exercise if it gives a different answer -->
-
 ### Exercise 7
 
-Run `family()` on `fit_sex`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable. 
+Type `fit_sex` and hit "Run Code." This generates the same results as using `print(fit_sex)`.
+
 
 ```{r courage-7, exercise = TRUE}
 
 ```
 
 ```{r courage-7-hint-1, eval = FALSE}
-family(...)
+...
 ```
 
 ```{r courage-7-test, include = FALSE}
-# family(fit_sex)
+print(fit_sex)
 ```
 
 ### 
 
-<!-- DK: This is a great location for explanations which get much more detailed in later chapters. -->
-
-In this case, XX . . .
+<!-- XX Same some general words about the object. Note that we are about to go through the top 4 rows. - DONE -->
+This suggests that, for female candidates (for whom sexMale equal 0), life expectancy after the election is about 16 years. However, there is a great deal of uncertainty associated with that estimate. The 95% confidence interval ranges from 10 to 22 years.
 
 ### Exercise 8
 
-Run `formula()` on `fit_sex`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s). 
+Run `family()` on `fit_sex`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable. 
 
 ```{r courage-8, exercise = TRUE}
 
 ```
 
 ```{r courage-8-hint-1, eval = FALSE}
-formula(...)
+family(...)
 ```
 
 ```{r courage-8-test, include = FALSE}
-# formula(fit_sex)
+family(fit_sex)
 ```
 
 ### 
 
-In this case, XX . . .
+<!-- DK: This is a great location for explanations which get much more detailed in later chapters. -->
+
+<!-- SD: This answer needs to be fixed later, but it gets the job done for the time being -->
+In this case, the `family()` function pointed out that the Gaussian family had some kind of blank value in their entry.
 
 ### Exercise 9
 
-Run `nobs()` on `fit_sex`. The `nobs()` function returns the **n**umber of **obs**ervations.
+Run `formula()` on `fit_sex`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s). 
 
 ```{r courage-9, exercise = TRUE}
 
 ```
 
 ```{r courage-9-hint-1, eval = FALSE}
-nobs(...)
+formula(...)
 ```
 
 ```{r courage-9-test, include = FALSE}
-# nobs(fit_sex)
+formula(fit_sex)
 ```
 
 ### 
 
-In this case, XX
+This directly prints out the formula that we set earlier when creating the model, which is the link between the person's sex vs. how long they lived after their term.
 
 ### Exercise 10
 
-Run `posterior_interval()` on `fit_sex`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
+Run `nobs()` on `fit_sex`. The `nobs()` function returns the **n**umber of **obs**ervations.
 
 ```{r courage-10, exercise = TRUE}
 
 ```
 
 ```{r courage-10-hint-1, eval = FALSE}
-posterior_interval(...)
+nobs(...)
 ```
 
 ```{r courage-10-test, include = FALSE}
-# posterior_interval(fit_sex)
+nobs(fit_sex)
 ```
 
 ### 
 
-In this case, XX
+`nobs()` is an extremely useful command that tells us the number of useful, non-error observations that we have in the data. In our case, it should have returned "1092" as its answer.
 
 
 ### Exercise 11
 
-Run `fixef()` on `fit_sex`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
+Run `posterior_interval()` on `fit_sex`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
 
 ```{r courage-11, exercise = TRUE}
 
 ```
 
 ```{r courage-11-hint-1, eval = FALSE}
-fixef(...)
+posterior_interval(...)
 ```
 
 ```{r courage-11-test, include = FALSE}
-# fixef(fit_sex)
+posterior_interval(fit_sex)
 ```
 
 ### 
 
-In this case, XX
+<!-- SD: The following was taken from Chapter 6 by Khang, and eventually we need to come up with something to write here across the board -->
+A confidence interval, and its associated confidence level, tells us how likely the truth is to lie within a specific range.
 
-<!-- DK: Consider adding questions about conditional_effects(), ranef() and other commands, if relevant. -->
 
 ### Exercise 12
 
-Run `pp_check()` on `fit_sex`. The `pp_check()` runs a **p**osterior **p**redictive check.
+Run `fixef()` on `fit_sex`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
 
 ```{r courage-12, exercise = TRUE}
 
 ```
 
 ```{r courage-12-hint-1, eval = FALSE}
-pp_check(...)
+fixef(...)
 ```
 
 ```{r courage-12-test, include = FALSE}
-# pp_check(fit_sex)
+fixef(fit_sex)
 ```
 
 ### 
 
-In this case, XX
+<!-- SD: Don't know if this is completely right -->
 
-<!-- If the fake data had looked very different from the real data, we have had a problem. But, for the most part, we conclude that, although not perfect, pp_check() shows that the fake outcomes generated by our model are like the actual outcome data. -->
+With this command, we see that the predicted lifespan for females is higher than males (~16 vs ~12.5 years after term). Additionally, the female estimate has a lower estimated error rate, at ~2.91% vs ~2.93% for males.
 
+<!-- DK: Consider adding questions about conditional_effects(), ranef() and other commands, if relevant. -->
 
 ### Exercise 13
 
-Use `library()` to load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
+Run `pp_check()` on `fit_sex`. The `pp_check()` runs a **p**osterior **p**redictive check.
 
 ```{r courage-13, exercise = TRUE}
 
 ```
 
 ```{r courage-13-hint-1, eval = FALSE}
-library(gtsummary)
+pp_check(...)
 ```
 
 ```{r courage-13-test, include = FALSE}
-library(gtsummary)
+pp_check(fit_sex)
 ```
 
 ### 
 
+<!-- SD: This was copied directly from the Primer -->
 
-Essentially, the `gtsummary` package is used to make more advanced tables and assist with their creation far beyond the capability of what is built-in to R.
+Our graph in the darker blue represents our actual data. As we can see with the lighter blue graph, our fitted model is able to generate a distribution that is similar when compared to the actual data.
+
+<!-- SD: The following was in the Template. It serves as a great addition to the above -->
+
+If the fake data had looked very different from the real data, we have had a problem. But, for the most part, we conclude that, although not perfect, pp_check() shows that the fake outcomes generated by our model are like the actual outcome data.
+
+
+<!-- DK: Add question to add model fitting code in new code chunk in qmd. Also include cache: true at the same time. -->
 
 ### Exercise 14
 
-<!-- DK: This can be just one question or several, especially if you want to teach some more gtsummary or gt tricks. Note that you need to adjust the test to make sure it works. -->
-
-Run `tbl_regression()` on `fit_sex`. 
-
+Use `library()` to load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
 
 ```{r courage-14, exercise = TRUE}
 
 ```
 
 ```{r courage-14-hint-1, eval = FALSE}
-tbl_regression(...)
+library(gtsummary)
 ```
 
 ```{r courage-14-test, include = FALSE}
-# tbl_regression(fit_sex)
+library(gtsummary)
+```
+
+### 
+
+Essentially, the `gtsummary` package is used to make more advanced tables and assist with their creation far beyond the capability of what is built-in to R.
+
+### Exercise 15
+
+<!-- DK: This can be just one question or several, especially if you want to teach some more gtsummary or gt tricks. Note that you need to adjust the test to make sure it works. -->
+
+Run `tbl_regression()` on `fit_sex`. 
+
+
+```{r courage-15, exercise = TRUE}
+
+```
+
+```{r courage-15-hint-1, eval = FALSE}
+tbl_regression(...)
+```
+
+```{r courage-15-test, include = FALSE}
+tbl_regression(fit_sex)
 ```
 
 ### 
@@ -752,11 +846,11 @@ tbl_regression(...)
 <!-- DK: Give something like the same sentence which you want the students to use at the end of the next question. -->
 
 
-### Exercise 15
+### Exercise 16
 
-Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add at least one sentence which describes the modelling approach which you are using, specifying at least the functional form and the dependent variable. Add at least one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
+Write a few sentences which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add at least one sentence which describes the modelling approach which you are using, specifying at least the functional form and the dependent variable. Add at least one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
 
-```{r courage-15}
+```{r courage-16}
 question_text(NULL,
 	message = "XX",
 	answer(NULL, correct = TRUE),
@@ -790,32 +884,149 @@ question_text(NULL,
 
 ### Exercise 2
 
-
 Recall the question with which we began:
 
 *How many years would we expect two gubernatorial candidates — one male and one female, both 10 years older than the average candidate — to live after the election?*
 
-Pipe `fit_all` to `add_epred_draws(newdata = newobs)`
+To answer this question, we will start a new pipe with a data module called 'fit_all'. Let's assign this to `brm()` with the following arguments: `data = df1`, `formula = lived_after ~ sex*election_age`, `silent = 2`, `refresh = 0`,  `seed = 13`. 
 
 ```{r temperance-2, exercise = TRUE}
 
 ```
 
 ```{r temperance-2-hint-1, eval = FALSE}
-
+fit_all <- ...(data = df1,
+               formula = ... ~ ...*election_age,
+               silent = ...,
+               refresh = ...,
+               seed = ...)
 ```
 
 ```{r temperance-2-test, include = FALSE}
-
+fit_all <- brm(data = df1,
+               formula = lived_after ~ sex*election_age,
+               silent = 2,
+               refresh = 0,
+               seed = 13)
 ```
 
 ### 
 
 ### Exercise 3
 
+Now we need to create a scenario for our model. To do this, we will first create an object that we will assign in the next step. Let's call it `newobs`, and let's set it equal to `tibble()`. Inside `tibble()`, set the arguments `sex = c("Male", "Female")` and `election_age = 50`.
+
+```{r temperance-3, exercise = TRUE}
+
+```
+
+```{r temperance-3-hint-1, eval = FALSE}
+newobs = tibble(... = c("...", "Female"), 
+                election_age = ...)
+```
+
+```{r temperance-3-test, include = FALSE}
+newobs = tibble(sex = c("Male", "Female"), 
+                election_age = 50)
+```
+
+### 
+
+### Exercise 4
+
+Now to tie it all together, we will pipe `fit_all` to `add_epred_draws()`. Inside this, we will add the argument `newdata = newobs`.
+
+```{r temperance-4, exercise = TRUE}
+
+```
+
+```{r temperance-4-hint-1, eval = FALSE}
+fit_... |> 
+  add_epred_draws(newdata = ...)
+```
+
+```{r temperance-4-test, include = FALSE}
+fit_all |> 
+  add_epred_draws(newdata = newobs)
+```
+
+### 
+
+Running this, you should get a list of people who entered office at the age of 50.
+
+### Exercise 5
+
+Now, where's the fun without a graph? In a couple steps, we will be producing this beautiful graph:
+
+```{r}
+fit_all |> 
+  add_epred_draws(newdata = newobs) |> 
+  ggplot(aes(.epred, fill = sex)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = 0.5, 
+                   bins = 100, 
+                   position = "identity") +
+    labs(title = "Posterior for Expected Years Lived Post-Election",
+         subtitle = "Male candidates live longer",
+         x = "Years",
+         y = "Probability") + 
+    scale_x_continuous(labels = 
+                         scales::number_format(accuracy = 1)) +
+    scale_y_continuous(labels = 
+                         scales::percent_format(accuracy = 1))
+```
+
+<!-- SD: I put it all in one exercise b/c I didn't want to waste the students' time, and also wanted to test how well they are able to follow directions. -->
+
+After copying the previous code, continue the pipe into `ggplot()`, setting aesthetics to `.epred, fill = sex`. Now add `geom_histogram()`, and inside this, add `aes(y = after_stat(count/sum(count)))`, `alpha = 0.5`, `bins = 100`, and `position = "identity"`. Now add `scale_x_continuous(labels = scales::number_format(accuracy = 1))` and `scale_y_continuous(labels = scales::percent_format(accuracy = 1))`, and end it off with `labs()`.
+
+```{r temperance-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-5-hint-1, eval = FALSE}
+... |> 
+  ggplot(...(.epred, fill = ...)) +
+    geom_histogram(...(y = after_stat(count/...(count))),
+                   alpha = ...elt(), 
+                   ... = 100, 
+                   position = "...") +
+    labs(...) + 
+    scale_x_continuous(... = 
+                         ...::number_format(... = 1)) +
+    scale_y_continuous(labels = 
+                         scales::..._format(accuracy = ...))
+```
+
+```{r temperance-5-test, include = FALSE}
+fit_all |> 
+  add_epred_draws(newdata = newobs) |> 
+  ggplot(aes(.epred, fill = sex)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   alpha = 0.5, 
+                   bins = 100, 
+                   position = "identity") +
+    labs(title = "Posterior for Expected Years Lived Post-Election",
+         subtitle = "Male candidates live longer",
+         x = "Years",
+         y = "Probability") + 
+    scale_x_continuous(labels = 
+                         scales::number_format(accuracy = 1)) +
+    scale_y_continuous(labels = 
+                         scales::percent_format(accuracy = 1))
+```
+
+### 
+
+If all goes well, we have successfully recreated the graph! If you get stuck, be sure to check the hint.
+
+### Exercise 6
+
 Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI. 
 
-```{r temperance-3}
+```{r temperance-6}
 question_text(NULL,
 	message = "You cannot edit this answer",
 	answer(NULL, correct = TRUE),
@@ -826,11 +1037,11 @@ question_text(NULL,
 
 ### 
 
-### Exercise 4
+### Exercise 7
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval.
 
-```{r temperance-4}
+```{r temperance-7}
 question_text(NULL,
 	message = "You cannot edit this answer",
 	answer(NULL, correct = TRUE),
