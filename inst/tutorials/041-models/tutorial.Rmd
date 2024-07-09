@@ -15,6 +15,7 @@ description: 'Chapter 4 Tutorial: Models'
 library(learnr)
 library(tutorial.helpers)
 library(tidyverse)
+library(gt)    # Need because library(gtsummary) does not load gt.
 library(brms)
 library(tidybayes)
 library(gtsummary)
@@ -97,11 +98,12 @@ In Chapter 3, we learned about sampling, the process of gathering data to answer
 
 *The only true wisdom is in knowing you know nothing.* - Socrates
 
-Our question:
+The general question we are interested in is the future results of the 2024 election, as seen from a survey conducted March 2024.
 
+Our specific question:
 
-<!-- SD: Should I change the question to the format "what is the relationship between ... and ..." or should I leave it as it is? -->
 > *What proportion of all votes will be cast for Joe Biden in the 2024 election?*
+
 
 ### Exercise 1
 
@@ -941,167 +943,104 @@ question_text(NULL,
 ## Temperance
 ### 
 
-*Temperance is a tree which has for its root very little contentment, and for its fruit calm and peace.* - Buddha
+<!-- XX: Discuss newdata objects slowly. "A newdata tibble must include columns for all the right-hand side variables --- all the "covariates" --- in the model, and with all the same variable names and, mostly, variable types." 
+
+First ask a question about which columns are needed in the newdata object. This might just be a written question. The answer is all the variables which are on the rightside of the formula. 
+
+Second, ask a question about which values you want those variables to have. That is not easy! Again, a written answer. For each row in the newdata tibble, you get a new posterior. How many posteriors do you want? 
+
+Third, give them the R code which creates the newdata object. All they need to do is run it. Asking them to create it, even after you help them figure out the columns (question 1) and rows (question 2) is too hard, at least until they get more experiences. 
+
+Fourth, inform them that you have, behind the scenes (which really means the setup code chunk), already assigned this tibble to the `ndata` object. In this question, they just type `ndata` to confirm. 
+
+The knowledge drops for all four of these questions allow you to explain/teach more about what goes in the argument for newdata and what does not. Explaining what other newdata objects would produce, if we used them, is a good idea.
+
+-->
+
+<!-- XX: Choose one. -->
+
+*Temperance is a tree which as for its root very little contentment, and for its fruit calm and peace.* - Buddha
+
 
 ### Exercise 1
 
-In your own words, describe the use of Temperance in finishing our data science project.
+In your own words, describe the use of Temperance in finishing your data science project.
 
 ```{r temperance-1}
 question_text(NULL,
-	message = "Temperance guides us in the use of the data generating mechanism --- or the 'model' ---  we have created to answer the questions with which we began. We create posteriors for the quantities of interest.",
+	message = "Temperance uses the Data Generating Mechanism to answer the question with which we began. Humility reminds us that this answer is always a lie.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
 
+### 
+
 ### Exercise 2
 
 Recall the question with which we began:
 
-> What are the odds, if we just look at two voters, both will have voted for Biden?
+> ...
 
-To answer this question, we need to create the `newdata` object which we will use with `fit_bern`. 
-
-Type `tibble(.rows = 2)`. Hit "Run Code."
-
+Pipe `fit_XX` to . . .
 
 ```{r temperance-2, exercise = TRUE}
 
 ```
 
 ```{r temperance-2-hint-1, eval = FALSE}
-tibble(... = 2)
+
 ```
 
+<!-- DK: Edit the below. -->
+
 ```{r temperance-2-test, include = FALSE}
-tibble(.rows = 2)
+fit_bern |> 
+  add_epred_draws(newdata = tibble(.rows = 1)) |> 
+  select(.epred) |> 
+  ggplot(aes(x = .epred)) +
+    geom_density(aes(y = after_stat(count/sum(count))))  +
+    labs(title = expression(paste("Posterior Distribution for  ", rho)),
+         subtitle = "There is a 95% chance for a value between XX and XX.",
+         x = expression(paste("Proportion, ", rho, ", of Red Beads in Urn")),
+         y = "Probability") +
+    scale_x_continuous(labels = scales::percent_format()) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
 ```
 
 ### 
-
-This creates an empty tibble with two rows. Because `fit_bern` is such a simple model, one with no independent variables, the `newdata` object is also extremely simple. In this case, we are interested in the two people we might meet (and who they voted for) so we need two rows in `newdata`.
-
-The number of rows in `newdata` corresponds to the number of units for which we seek to forecast the behavior/results.
 
 ### Exercise 3
 
-Pipe `fit_bern` to `add_predicted_draws()` with `newdata = tibble(.rows = 2)`.
+Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI. 
 
-
-```{r temperance-3, exercise = TRUE}
-
-```
-
-```{r temperance-3-hint-1, eval = FALSE}
-fit_bern |> 
-  ...(newdata = tibble(.rows = ...))
-```
-
-```{r temperance-3-test, include = FALSE}
-fit_bern |> 
-  add_predicted_draws(newdata = tibble(.rows = 2))
-```
-
-### 
-
-Note that there are 8,000 row, 4,000 for each individual, stacked on top of each other. The `.row` variable refers to the respective row in `newdata`.
-
-### Exercise 4
-
-Add `select(.row, .draw, .prediction)` to the pipe.
-
-<!-- SD: Note that this should be "Continue the pipe with..." instead of "Add..." for simplicity's sake -->
-
-```{r temperance-4, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-4-hint-1, eval = FALSE}
-... |> 
-  ...(.row, ..., .prediction) 
-```
-
-```{r temperance-4-test, include = FALSE}
-fit_bern |> 
-  add_predicted_draws(newdata = tibble(.rows = 2)) |> 
-  select(.row, .draw, .prediction) 
-```
-
-### 
-
-Note that the tibble which is "spat" out at the end of this pipe is a grouped tibble. See the "Groups" label at the top. Unless we `ungroup()` the pipe, future commands will be executed on `.row == 1` rows separately from `.row == 2` rows.
-
-### Exercise 5
-
-Continue the pipe with `pivot_wider()`, setting `values_from = .prediction` and `names_from = .row`.
-
-```{r temperance-5, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-5-hint-1, eval = FALSE}
-... |> 
-  pivot_wider(... = .prediction, names_from = ...)
-```
-
-```{r temperance-5-test, include = FALSE}
-fit_bern |> 
-  add_predicted_draws(newdata = tibble(.rows = 2)) |> 
-  select(.row, .draw, .prediction) |> 
-  pivot_wider(values_from = .prediction, names_from = .row)
-```
-
-### 
-
-`pivot_wider()` gets rid of the grouping automatically. We now have a column for each of our two individuals, represented by `1` and `2`. The tibble has 4,000 rows because this is the default number of draws we create with functions like `add_predicted_draws()`.
-
-<!-- DK: Sure would be nice to have a question which explains what this object means. -->
-
-### Exercise 6
-
-Continue the pipe with `mutate()`, setting "both = if_else(`1` & `2`, TRUE, FALSE)" as the argument. (Apologies for the formating of these instructions, The 1 and the 2 in this code must both be surrounded with backticks [`].)
-
-
-
-```{r temperance-6, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-6-hint-1, eval = FALSE}
-... |> 
-  mutate(both = if_else(`1` & `2`, TRUE, FALSE)) 
-```
-
-```{r temperance-6-test, include = FALSE}
-fit_bern |> 
-  add_predicted_draws(newdata = tibble(.rows = 2)) |> 
-  select(.row, .draw, .prediction) |> 
-  pivot_wider(values_from = .prediction, names_from = .row) |> 
-  mutate(both = if_else(`1` & `2`, TRUE, FALSE)) 
-```
-
-### 
-
-### Exercise 7
-
-Write a paragraph which summarizes your project. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI. 
-
-```{r temperance-7}
+```{r temperance-3}
 question_text(NULL,
-	message = "XX.",
+	message = "XX",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+### 
+
+### Exercise 4
+
+Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval.
+
+```{r temperance-4}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
 
 ## Summary
 ### 
