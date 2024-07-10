@@ -72,6 +72,9 @@ tibble(source = c("...", "...", "...","...",
   cols_align(align = "left", columns = c(source)) |>
   fmt_markdown(columns = everything())
 
+ndata <- fit_bern |> 
+  add_epred_draws(newdata = tibble(.rows = 1))
+
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -263,15 +266,69 @@ question_text(NULL,
 This is a predictive model, not a causal model, so there are no treatments, by definition. Recall that treatment is just a covariate which, given the question we are trying to answer, might at least in theory be manipulable.
 
 
-
 ### Exercise 9
+
+Every good Data Scientist is familiar with all of their data. Let's take a look at our data for today: 
+
+The data we have come from a YouGov poll [pdf](https://github.com/PPBDS/primer/blob/master/sources/you-gov-2024-03-12.pdf) of 1,559 US adult citizens, conducted March 10 - 12, 2024. 
+
+### 
+
+There are many questions in the poll. For the purpose of answering our question, the most relevant one is:
+
+*If an election for president were going to be held now and the Democratic nominee was Joe Biden and the Republican nominee was Donald Trump, would you vote for…*
+
+The allowed choice are “Joe Biden,” “Donald Trump,” “Other,” “Not Sure,” and “I would not vote.” 42% of those polled indicated Joe Biden. Although rounding makes it impossible to know for sure, we will assume that 655 of the 1,559 “US adult citizens” would vote for Biden. Run the following code to see what our data looks like in a data table.
+
+```{r wisdom-9, exercise = TRUE}
+#| echo: false
+tibble(poll_ID = c("1", "2", 
+                   "...", "200", "201", "...", "1,559"),
+       biden = c("0", "0", 
+                   "...", "1", "0", "...", "1")) |>
+  gt() |>
+    tab_header(title = "Polling Data") |> 
+    cols_label(poll_ID = "Poll ID",
+               biden = "Would Vote for Biden") |>
+    tab_style(cell_borders(sides = "right"),
+              location = cells_body(columns = c(poll_ID))) |>
+    cols_align(align = "center", columns = everything())
+```
+
+```{r wisdom-9-test, include = FALSE}
+#| echo: false
+tibble(poll_ID = c("1", "2", 
+                   "...", "200", "201", "...", "1,559"),
+       biden = c("0", "0", 
+                   "...", "1", "0", "...", "1")) |>
+  gt() |>
+    tab_header(title = "Polling Data") |> 
+    cols_label(poll_ID = "Poll ID",
+               biden = "Would Vote for Biden") |>
+    tab_style(cell_borders(sides = "right"),
+              location = cells_body(columns = c(poll_ID))) |>
+    cols_align(align = "center", columns = everything())
+```
+
+### 
+
+There are key differences between our data table and our Preceptor Table, despite their superficial similarities.
+
+1. Our Polling Data includes exactly 1,559 rows. We don’t know how many rows are in our Preceptor Table because we don’t know, today, how many people will vote in November 2024.
+
+2. The ID column is labeled “Voter ID” in the Preceptor Table and “Poll ID” in the Polling Data. The person labeled “2” in the first table, for example, has no necessary connection to the person labeled “2” in the second table. The numbers don’t mean anything. But, conceptually, having different labels helps to highlight the issue of sampling and concerns about representativeness, concerns which we will address under Justice.
+
+3. The variable labels differ. “Voted for Biden” is not the same thing as “Would Vote for Biden.” Indeed, the two columns represent very different things.
+
+
+### Exercise 10
 
 Write one sentence describing the data you have to answer your question. 
 
 In any question related to polling, you always want to include the name of the polling organization, the date and the number of individuals successfully contacted.
 
 
-```{r wisdom-9}
+```{r wisdom-10}
 question_text(NULL,
 	message = "We have data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, indicating which respondents intend to vote for Joe Biden and which do not.",
 	answer(NULL, correct = TRUE),
@@ -280,11 +337,13 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 10
+### Exercise 11
+
+Paste this sentence into your `models.qmd` file.
 
 Now type `show_file("models.qmd")` into the Console. CP/CR.
 
-```{r wisdom-10}
+```{r wisdom-11}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -298,11 +357,11 @@ question_text(NULL,
 Throughout this tutorial, we will be expanding on this sentence, and by the end, it will have become a fully fledged paragraph.
 
 
-### Exercise 11
+### Exercise 12
 
 In your own words, define "validity" as the term is used in the *Primer*.
 
-```{r wisdom-11}
+```{r wisdom-12}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -311,13 +370,13 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 12
+### Exercise 13
 
 What data can't we combine when forming the Population Table if the assumption of validity does not hold?
 
 <!-- DK: Fix as you see fit. - DONE -->
 
-```{r wisdom-12}
+```{r wisdom-13}
 question_text(NULL,
 	message = "We can't combine the Preceptor Table and the data in order to construct the Population Table.",
 	answer(NULL, correct = TRUE),
@@ -332,12 +391,12 @@ question_text(NULL,
 Recall that our Population Table is a synthesis of all our data, and is used to describe the population as a whole. If the data being recorded is wrong, then the overall representation of the population would also be wrong.
 
 
-### Exercise 13
+### Exercise 14
 
 Provide one reason why the assumption of validity might not hold for this problem.
 
 
-```{r wisdom-13}
+```{r wisdom-14}
 question_text(NULL,
 	message = "People sometimes don't vote for the person they claim they are going to vote for.",
 	answer(NULL, correct = TRUE),
@@ -351,18 +410,19 @@ question_text(NULL,
 What we tell other people we will do is often not what we actually do. Consider a voter who is embarrassed about her support for Biden. Perhaps she perceives the interviewer as a Republican and doesn't care to admit to him, in March, her support for Biden. But, in November, in the privacy of the polling booth, she votes for Biden. In her case, the outcome from the data (what she told the pollster) did not have a *valid* correspondence with her behavior in the polling booth.
 
 
-### Exercise 14
+### Exercise 15
 
 <!-- DK: Change as you see fit. - DONE -->
 
 *So what do we want to get out of this data?* 
+
 In one or two sentences, make a statement to this question that consists of 2 parts: 
 1) Where the data is from/collected
 2) What we intend to do with the data
 
 For the second part, start with something along the lines of "we seek to".
 
-```{r wisdom-14}
+```{r wisdom-15}
 question_text(NULL,
 	message = "Using data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, we seek to understand what proportion of voters will support Biden in the 2024 election. In particular, we want to estimate the proportion of all votes which will be cast for Joe Biden in the 2024 election.",
 	answer(NULL, correct = TRUE),
@@ -371,13 +431,13 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 15
+### Exercise 16
 
 Remember that sentence that we added in our `models.qmd` file? Replace that sentence with the paragraph above. Feel free to modify it and use parts of our sentence if it helps.
 
 Run `show_file("models.qmd")` in the Console. CP/CR.
 
-```{r wisdom-15}
+```{r wisdom-16}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -411,8 +471,6 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### 
-
 <!-- DK: Knowledge drops -->
 <!-- SD: What should I add here? -->
 
@@ -438,6 +496,7 @@ question_text(NULL,
 
 Here is our Population Table:
 ```{r}
+#| echo: false
 population_table
 ```
 
@@ -766,12 +825,12 @@ $$ biden_i  \sim Bernoulli(\rho) $$
 
 Each voter $i$ which we sample either supports Biden or they do not. If person $i$ supports Biden, the value drawn is `1`, which is the standard way of representing `TRUE`.
 
-The default link function for a Bernoulli model is logit, as in:
+<!-- The default link function for a Bernoulli model is logit, as in: -->
 
-$$
-\rho = \frac{e^{\beta_0}}{1 + e^{\beta_0}}
-$$
-By definition, the parameter $\rho$ is only allowed to take values between 0 and 1. We want to constrain the model so that only these values are even possible.
+<!-- $$ -->
+<!-- \rho = \frac{e^{\beta_0}}{1 + e^{\beta_0}} -->
+<!-- $$ -->
+<!-- By definition, the parameter $\rho$ is only allowed to take values between 0 and 1. We want to constrain the model so that only these values are even possible. -->
 
 ### Exercise 9
 
@@ -862,9 +921,9 @@ with $\epsilon_i \sim N(0, \sigma^2)$. $y_i$ is the height of male $i$. $\mu$ is
 
 Run `pp_check()` on `fit_bern` with the `type` argument set to `"bars"`.  The `pp_check()` runs a **p**osterior **p**redictive check.
 
-<!-- DK: Agreed on below. Do it. -->
+<!-- DK: Agreed on below. Do it. - DONE -->
 
-<!-- SD: It would be nice to include that pp_check() is a function from the *bayesplot* package, which is a completely different (from ggplot2) way of making graphs. This just clears the confusion. -->
+`pp_check()` is a function from the *bayesplot* package, which is a completely different way (from ggplot2) of making graphs.
 
 ```{r courage-13, exercise = TRUE}
 
@@ -940,24 +999,37 @@ question_text(NULL,
 	rows = 6)
 ```
 
+### Exercise 17
+
+Now replace your old paragraph in `models.qmd` with this new paragraph.
+
+Run `show_file("models.qmd")` in the Console. CP/CR.
+
+```{r courage-17}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
 ## Temperance
 ### 
 
-<!-- XX: Discuss newdata objects slowly. "A newdata tibble must include columns for all the right-hand side variables --- all the "covariates" --- in the model, and with all the same variable names and, mostly, variable types." 
+<!-- XX: Discuss newdata objects slowly. "A newdata tibble must include columns for all the right-hand side variables --- all the "covariates" --- in the model, and with all the same variable names and, mostly, variable types" - DONE
 
-First ask a question about which columns are needed in the newdata object. This might just be a written question. The answer is all the variables which are on the rightside of the formula. 
+First ask a question about which columns are needed in the newdata object. This might just be a written question. The answer is all the variables which are on the rightside of the formula. - DONE
 
 Second, ask a question about which values you want those variables to have. That is not easy! Again, a written answer. For each row in the newdata tibble, you get a new posterior. How many posteriors do you want? 
 
-Third, give them the R code which creates the newdata object. All they need to do is run it. Asking them to create it, even after you help them figure out the columns (question 1) and rows (question 2) is too hard, at least until they get more experiences. 
+Third, give them the R code which creates the newdata object. All they need to do is run it. Asking them to create it, even after you help them figure out the columns (question 1) and rows (question 2) is too hard, at least until they get more experiences. - DONE
 
-Fourth, inform them that you have, behind the scenes (which really means the setup code chunk), already assigned this tibble to the `ndata` object. In this question, they just type `ndata` to confirm. 
+Fourth, inform them that you have, behind the scenes (which really means the setup code chunk), already assigned this tibble to the `ndata` object. In this question, they just type `ndata` to confirm. - DONE
 
 The knowledge drops for all four of these questions allow you to explain/teach more about what goes in the argument for newdata and what does not. Explaining what other newdata objects would produce, if we used them, is a good idea.
 
 -->
-
-<!-- XX: Choose one. -->
 
 *Temperance is a tree which as for its root very little contentment, and for its fruit calm and peace.* - Buddha
 
@@ -977,70 +1049,130 @@ question_text(NULL,
 
 ### 
 
+Here's our Population Table from earlier:
+
+```{r}
+#| echo: false
+population_table
+```
+
+You might need to refer to this later.
+
+
 ### Exercise 2
 
-Recall the question with which we began:
+Let's understand what a `newdata` tibble is. A `newdata` tibble must include columns for all the right-hand side variables --- all the "covariates" --- in the model, and with all the same variable names and, mostly, variable types.
 
-> ...
+Based on this, which columns should we include in the `newdata` object?
 
-Pipe `fit_XX` to . . .
-
-```{r temperance-2, exercise = TRUE}
-
+```{r temperance-2}
+question_text(NULL,
+	message = "all the variables which are on the right side of the formula",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
 ```
-
-```{r temperance-2-hint-1, eval = FALSE}
-
-```
-
-<!-- DK: Edit the below. -->
-
-```{r temperance-2-test, include = FALSE}
-fit_bern |> 
-  add_epred_draws(newdata = tibble(.rows = 1)) |> 
-  select(.epred) |> 
-  ggplot(aes(x = .epred)) +
-    geom_density(aes(y = after_stat(count/sum(count))))  +
-    labs(title = expression(paste("Posterior Distribution for  ", rho)),
-         subtitle = "There is a 95% chance for a value between XX and XX.",
-         x = expression(paste("Proportion, ", rho, ", of Red Beads in Urn")),
-         y = "Probability") +
-    scale_x_continuous(labels = scales::percent_format()) +
-    scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
-```
-
-### 
 
 ### Exercise 3
 
-Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI. 
+Now let's create the `newdata` tibble. Run the code in the box to make sure it works.
 
-```{r temperance-3}
-question_text(NULL,
-	message = "XX",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
+```{r temperance-3, exercise = TRUE}
+fit_bern |> 
+  add_epred_draws(newdata = tibble(.rows = 1))
 ```
 
-### 
+```{r temperance-3-test, include = FALSE}
+fit_bern |> 
+  add_epred_draws(newdata = tibble(.rows = 1))
+```
 
 ### Exercise 4
 
-Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval.
+Behind the scenes, this tibble has already been assigned to us as `ndata`. Type this into the box below to make sure that it works.
 
-```{r temperance-4}
+```{r temperance-4, exercise = TRUE}
+
+```
+
+```{r temperance-4-hint-1, eval = FALSE}
+...
+```
+
+```{r temperance-4-test, include = FALSE}
+ndata
+```
+
+### Exercise 5
+
+Recall the question that we were answering:
+
+> What proportion of all votes will be cast for Joe Biden in the 2024 election?
+
+Let's make a graph to answer this question.
+
+Start by piping `ndata` to `select()`, selecting `.epred`.
+
+```{r temperance-5, exercise = TRUE}
+
+```
+
+```{r temperance-5-hint-1, eval = FALSE}
+ndata |> 
+  select(...)
+```
+
+<!-- DK: Edit the below. - DONE -->
+
+```{r temperance-5-test, include = FALSE}
+ndata |> 
+  select(.epred)
+```
+
+We do this so it only selects the `.epred` column, instead of displaying the entire dataset.
+
+
+### Exercise 6
+
+Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI. 
+
+```{r temperance-6}
 question_text(NULL,
-	message = "XX",
+	message = "Using data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, we seek to understand what proportion of voters will support Biden in the 2024 election. Biden’s popularity might change significantly over the course of the election campaign. In the poll, Biden’s support was much less than 50%. We estimate that Biden’s percentage of the vote in Election Day will be about 42%, plus or minus 2.5%.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
 
-### 
+### Exercise 7
+
+Now replace our previous paragraph with this paragraph.
+
+Run 
+
+```{r temperance-7}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### Exercise 8
+
+Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval.
+
+```{r temperance-8}
+question_text(NULL,
+	message = "",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
 
 ## Summary
 ### 
