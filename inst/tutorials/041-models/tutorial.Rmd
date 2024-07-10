@@ -15,6 +15,7 @@ description: 'Chapter 4 Tutorial: Models'
 library(learnr)
 library(tutorial.helpers)
 library(tidyverse)
+library(gt)    # Need because library(gtsummary) does not load gt.
 library(brms)
 library(tidybayes)
 library(gtsummary)
@@ -36,6 +37,40 @@ poll_data <- tibble(biden = c(rep(1, 655),
 # write_rds(fit_bern, "data/fit_bern.rds")
 
 fit_bern <- read_rds("data/fit_bern.rds")
+
+population_table <- 
+tibble(source = c("...", "...", "...","...",  
+                  "Data", "Data", "Data", "Data", "...",
+                  "...", "...", "...","...", 
+                  "Preceptor Table", "Preceptor Table", "Preceptor Table", "...",
+                  "...", "...", "..."),
+       time = c("February 2024", "February 2024", "February 2024", "...",
+                "March 2024", "March 2024", "March 2024", "March 2024", "...",
+                "October 2024", "October 2024", "October 2024", "...",
+                "November 2024", "November 2024", "November 2024", "...",
+                "December 2024", "December 2024", "December 2024"),
+       id = c("1", "200", "976", "...",
+              "1", "200", "...", "1559", "...",
+              "1", "200", "2025", "...",
+              "1", "200", "2078", "...",
+              "1", "200", "2300"),
+       biden = c("?", "?", "?", "...",
+              "0", "1", "...", "1", "...",
+              "?", "?", "?", "...",
+              "1", "0", "1", "...",
+              "?", "?", "?")) |>
+  gt() |>
+  cols_label(source = md("Source"),
+             time = md("Time"),
+             id = md("ID"),
+             biden = md("Biden")) |>
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = c(source))) |>
+  tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"),
+            locations = cells_column_labels(columns = c(source))) |>
+  cols_align(align = "center", columns = everything()) |>
+  cols_align(align = "left", columns = c(source)) |>
+  fmt_markdown(columns = everything())
 
 ```
 
@@ -63,9 +98,12 @@ In Chapter 3, we learned about sampling, the process of gathering data to answer
 
 *The only true wisdom is in knowing you know nothing.* - Socrates
 
-Our question:
+The general question we are interested in is the future results of the 2024 election, as seen from a survey conducted March 2024.
+
+Our specific question:
 
 > *What proportion of all votes will be cast for Joe Biden in the 2024 election?*
+
 
 ### Exercise 1
 
@@ -80,8 +118,6 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 6)
 ```
-
-
 
 ### Exercise 2
 
@@ -117,7 +153,8 @@ question_text(NULL,
 
 ### 
 
-<!-- DK: Knowledge drop. -->
+<!-- DK: Knowledge drop. - DONE -->
+The way I like to think of it is that the units are the objects that are being affected (rows), while the outcome column is how the units are being affected.
 
 
 ### Exercise 4
@@ -135,15 +172,49 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### 
-
 ### Exercise 5
 
-What are the units for this problem?
+In this new R Project, create a new Quarto Document, naming it `Models`. Now save the file as `models.qmd`. Note that the `.qmd` will be added automatically.
+
+Type `show_file("models.qmd")` into the Console. CP/CR.
 
 ```{r wisdom-5}
 question_text(NULL,
-	message = "The units are individual voters.",
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+If everything was done correctly, you should get a blank response.
+
+
+### Exercise 6
+
+Here is our Preceptor Table:
+```{r}
+#| echo: false
+tibble(voter_ID = c("1", "2", 
+                   "...", "200", "201", "...", "2078", "2079", "..."),
+       biden = c("0", "0", 
+                   "...", "1", "0", "...", "1", "0", "...")) |>
+  gt() |>
+    tab_header(title = "Preceptor Table") |> 
+    cols_label(voter_ID = "Voter ID",
+               biden = "Voted for Biden") |>
+    tab_style(cell_borders(sides = "right"),
+              location = cells_body(columns = c(voter_ID))) |>
+    cols_align(align = "center", columns = everything())
+```
+
+What are the units for this problem?
+
+```{r wisdom-6}
+question_text(NULL,
+	message = "The units are the individual voters.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -154,11 +225,11 @@ question_text(NULL,
 
 Note that this is not all American adults or even all registered voters. To answer our question, we only need information about actual voters. Any other rows would be superfluous.
 
-### Exercise 6
+### Exercise 7
 
 What is the outcome for this problem?
 
-```{r wisdom-6}
+```{r wisdom-7}
 question_text(NULL,
 	message = "The outcome is the candidate for whom the vote was cast.",
 	answer(NULL, correct = TRUE),
@@ -171,12 +242,14 @@ question_text(NULL,
 
 Looking at the question, this formulation is too broad. We don't actually need to know the name of the candidate. We just need to know if the vote was cast for Biden or not. The name of the candidate, if it was not Biden, is irrelevant to our question. So, we can represent the outcome as 0 (did not vote for Biden) and 1 (did vote for Biden).
 
+Realistically, then, this question only has 1 outcome. This means that the problem would be a predictive model.
 
-### Exercise 7
+
+### Exercise 8
 
 What are the treatments, if any, for this problem?
 
-```{r wisdom-7}
+```{r wisdom-8}
 question_text(NULL,
 	message = "There is no treatment.",
 	answer(NULL, correct = TRUE),
@@ -189,12 +262,16 @@ question_text(NULL,
 
 This is a predictive model, not a causal model, so there are no treatments, by definition. Recall that treatment is just a covariate which, given the question we are trying to answer, might at least in theory be manipulable.
 
-### Exercise 8
-
-Write one sentence describing the data you have to answer your question. In any question related to polling, you always want to include the name of the polling organization, the date and the number of individuals successfully contacted.
 
 
-```{r wisdom-8}
+### Exercise 9
+
+Write one sentence describing the data you have to answer your question. 
+
+In any question related to polling, you always want to include the name of the polling organization, the date and the number of individuals successfully contacted.
+
+
+```{r wisdom-9}
 question_text(NULL,
 	message = "We have data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, indicating which respondents intend to vote for Joe Biden and which do not.",
 	answer(NULL, correct = TRUE),
@@ -203,11 +280,29 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 9
+### Exercise 10
+
+Now type `show_file("models.qmd")` into the Console. CP/CR.
+
+```{r wisdom-10}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+Throughout this tutorial, we will be expanding on this sentence, and by the end, it will have become a fully fledged paragraph.
+
+
+### Exercise 11
 
 In your own words, define "validity" as the term is used in the *Primer*.
 
-```{r wisdom-9}
+```{r wisdom-11}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -216,13 +311,13 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 10
+### Exercise 12
 
-What can't we do if the assumption of validity is not true?
+What data can't we combine when forming the Population Table if the assumption of validity does not hold?
 
-<!-- DK: Fix as you see fit. -->
+<!-- DK: Fix as you see fit. - DONE -->
 
-```{r wisdom-10}
+```{r wisdom-12}
 question_text(NULL,
 	message = "We can't combine the Preceptor Table and the data in order to construct the Population Table.",
 	answer(NULL, correct = TRUE),
@@ -231,14 +326,18 @@ question_text(NULL,
 	rows = 6)
 ```
 
-<!-- DK: knowledge drop -->
+### 
 
-### Exercise 11
+<!-- DK: knowledge drop - DONE -->
+Recall that our Population Table is a synthesis of all our data, and is used to describe the population as a whole. If the data being recorded is wrong, then the overall representation of the population would also be wrong.
+
+
+### Exercise 13
 
 Provide one reason why the assumption of validity might not hold for this problem.
 
 
-```{r wisdom-11}
+```{r wisdom-13}
 question_text(NULL,
 	message = "People sometimes don't vote for the person they claim they are going to vote for.",
 	answer(NULL, correct = TRUE),
@@ -252,18 +351,18 @@ question_text(NULL,
 What we tell other people we will do is often not what we actually do. Consider a voter who is embarrassed about her support for Biden. Perhaps she perceives the interviewer as a Republican and doesn't care to admit to him, in March, her support for Biden. But, in November, in the privacy of the polling booth, she votes for Biden. In her case, the outcome from the data (what she told the pollster) did not have a *valid* correspondence with her behavior in the polling booth.
 
 
-### Exercise 12
+### Exercise 14
 
-<!-- DK: Change as you see fit. -->
+<!-- DK: Change as you see fit. - DONE -->
 
-<!-- SD: {"Write a goal statement on how you will use this..."} instead of {Summarize the state of your...} -->
+*So what do we want to get out of this data?* 
+In one or two sentences, make a statement to this question that consists of 2 parts: 
+1) Where the data is from/collected
+2) What we intend to do with the data
 
-Summarize the state of your work so far in one or two sentences. Make reference to the data you have and to the question you are trying to answer.  
+For the second part, start with something along the lines of "we seek to".
 
-<!--   ^ "(i.e. "we seek to)" -->
-
-
-```{r wisdom-12}
+```{r wisdom-14}
 question_text(NULL,
 	message = "Using data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, we seek to understand what proportion of voters will support Biden in the 2024 election. In particular, we want to estimate the proportion of all votes which will be cast for Joe Biden in the 2024 election.",
 	answer(NULL, correct = TRUE),
@@ -272,6 +371,26 @@ question_text(NULL,
 	rows = 6)
 ```
 
+### Exercise 15
+
+Remember that sentence that we added in our `models.qmd` file? Replace that sentence with the paragraph above. Feel free to modify it and use parts of our sentence if it helps.
+
+Run `show_file("models.qmd")` in the Console. CP/CR.
+
+```{r wisdom-15}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+Do you see how we evolved from that initial sentence to this wonderful statement? This is the beauty of Data Science, where we are given a vague question and we need to make it specific for our needs.
+
+
 ## Justice
 ### 
 
@@ -279,8 +398,6 @@ question_text(NULL,
 
 
 ### Exercise 1
-
-DK: 
 
 In your own words, name the four key components of Justice (without describing them) for working on a data science problem.
 
@@ -294,17 +411,23 @@ question_text(NULL,
 	rows = 6)
 ```
 
-<!-- DK: Knowledg drops -->
+### 
+
+<!-- DK: Knowledge drops -->
+<!-- SD: What should I add here? -->
 
 
 ### Exercise 2
 
 In your own words, define a Population Table.
 
-
+<!-- SD: Old answer:
+ "The Population Table includes a row for each unit/time combination in the underlying population from which both the Preceptor Table and the data are drawn." 
+ 
+This was bad, so I changed it. -->
 ```{r justice-2}
 question_text(NULL,
-	message = "The Population Table includes a row for each unit/time combination in the underlying population from which both the Preceptor Table and the data are drawn.",
+	message = "The Population Table assesses the overall opinion of the population, using the Preceptor Table and the Data to formulate rows for each unit/time combination. It then adds other relevant data from the same population to further assist in assessing the state of the population.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -312,6 +435,11 @@ question_text(NULL,
 ```
 
 ### Exercise 3
+
+Here is our Population Table:
+```{r}
+population_table
+```
 
 Describe the Population Table for this problem. In particular, are any of the rows in the Preceptor Table also rows in the data? Are there other rows in the Population Table which are not from the Preceptor Table or the data? If so, describe some of those rows.
 
@@ -323,6 +451,11 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+### 
+
+Notice how, although the Population Table is helping us by adding data, the data that it's adding isn't doesn't convey validity, i.e. it is measuring a different metric (in this case the voters' opinions from different time periods). We don't know if the voters' opinions changed over that time period, making the data invalid.
+
 
 ### Exercise 4
 
@@ -360,6 +493,7 @@ question_text(NULL,
 
 Stability might become important as we think about the actual process by which we might meet the two voters in our original question, but, in terms of the Population Table itself, there is no problem.
 
+
 ### Exercise 6
 
 In your own words, define the assumption of "representativeness" when employed in the context of data science.
@@ -376,30 +510,28 @@ question_text(NULL,
 
 ### 
 
-<!-- XX: Keep one of these. -->
+Ideally, we would like both the Preceptor Table *and* our data to be random samples from the population. Sadly, this is almost never the case.
 
-<!-- Ideally, we would like both the Preceptor Table *and* our data to be random samples from the population. Sadly, this is almost never the case. -->
-
-<!-- Stability looks across time periods. Reprentativeness looks within time periods. -->
-
-<!-- The more expansive your Preceptor Table, the more important the assumption of representativeness becomes. -->
 
 ### Exercise 7
 
 Provide one reason why the assumption of representativeness might not be true in this case.
 
-<!-- SD: Missing correct answer, possibly because the primer shows multiple reasons but no direct copy-paste answer. -->
-
-<!-- DK: Give an answer. -->
+<!-- DK: Give an answer. - DONE -->
 
 ```{r justice-7}
 question_text(NULL,
-	message = "XX",
+	message = "One concern might involve the process by which YouGov sampled potential voters in March. If that process were flawed, if the people it sampled were systematically different than the people it did not, then the assumption of representativeness would fail. Imagine that YouGov only polled residents in Washington DC. That would be bad, even if everyone polled answered truthfully. We would end up with data which was much more pro-Biden than the country as a whole.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+### 
+
+The assumption of representativeness is never completely true. We can only hope/assume that it is true enough that the inferences we draw from our data can be roughly applied to our question. Let’s assume that is this case.
+
 
 ### Exercise 8
 
@@ -416,21 +548,16 @@ question_text(NULL,
 
 ### 
 
-<!-- XX: Keep one. -->
+This assumption is only relevant for causal models. We describe a model as "confounded" if this is not true.
 
-<!-- This assumption is only relevant for causal models. We describe a model as "confounded" if this is not true.  -->
-
-<!-- The easiest way to ensure unconfoundedness is to assign treatment randomly. -->
 
 ### Exercise 9
 
 Provide one reason why the assumption of unconfoundness might not be true (or relevant) in this case.
 
-<!-- SD: the correct answer: "Since this is a predictive model, we do not have to worry about unconfoundedness." -->
-
 ```{r justice-9}
 question_text(NULL,
-	message = "XX.",
+	message = "Since this is a predictive model, we do not have to worry about unconfoundedness.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -439,16 +566,32 @@ question_text(NULL,
 
 ### Exercise 10
 
-Summarize the state of your work so far in two or three sentences. Make reference to the data you have and to the question you are trying to answer. Feel free to copy from your answer at the end of the Wisdom Section. Mention at least one specific problem which casts doubt on your approach. 
+1. Copy your work from the end of the Wisdom section. This is also in your `models.qmd` file.
 
+Modify your previous response to reflect the question we are trying to answer. Then, mention at least one specific problem which casts doubt on your approach. 
 
 ```{r justice-10}
 question_text(NULL,
-	message = "XX.",
+	message = "Using data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, we seek to understand what proportion of voters will support Biden in the 2024 election. Biden’s popularity might change significantly over the course of the election campaign.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
+```
+
+### Exercise 11
+
+Now replace everything in the `models.qmd` file with this new paragraph that you wrote. Feel free to modify your response and use elements from our model response.
+
+Run `show_file("models.qmd")` in the Console. CP/CR.
+
+```{r justice-11}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
 ```
 
 ## Courage
@@ -461,9 +604,10 @@ question_text(NULL,
 
 <!-- DK: Switch to Cardinal Virtues. -->
 <!-- SD: Potential Answer?: "Courage creates a mathematical model which connects the outcome variable to the covariates, if any. Then, using code, we create a fitted model, including posterior probability distributions for all the unknown parameters." -->
+<!-- SD: SO in the end, do I use this answer? -->
 
-In your own words, name the key goal of Courage and the process we use to get there.
-<!-- SD:                                       ^ "IN DATA SCIENCE!!!" IT'S SO CONFUSING OTHERWISE!!! -->
+In your own words, name the key goal of Courage in Data Science and the process we use to get there.
+
 ```{r courage-1}
 question_text(NULL,
 	message = "Courage selects the data generating mechanism. We first specify the mathematical formula which connects the outcome variable we are interested in with the other data that we have. We explore different models. We need to decide which variables to include and to estimate the values of unknown parameters. We check our models for consistency with the data we have. We avoid hypothesis tests. We select one model.",
@@ -509,23 +653,39 @@ library(...)
 library(tidybayes)
 ```
 
-### 
-
-<!-- XX: Some comments about this problem. -->
+<!-- XX: Some comments about this problem. - DONE -->
+<!-- SD: I added a whole problem for this -->
 
 
 ### Exercise 4
 
+To learn about what the `Tidybayes` package does, let's use the built-in help menu.
+
+First, load in the `Tidybayes` package into the Console.
+
+Now, type `?tidybayes` into the Console. Copy/Paste the first paragraph under the Details section.
+
+```{r courage-4}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### Exercise 5
+
 Run this code in order to generate the polling data.
 
-```{r courage-4, exercise = TRUE}
+```{r courage-5, exercise = TRUE}
 poll_data <- tibble(biden = c(rep(1, 655), 
                               rep(0, 904)))
 
 slice_sample(poll_data, n = 10)
 ```
 
-```{r courage-4-test, include = FALSE}
+```{r courage-5-test, include = FALSE}
 poll_data <- tibble(biden = c(rep(1, 655), 
                               rep(0, 904)))
 
@@ -536,16 +696,16 @@ slice_sample(poll_data, n = 10)
 
 We don't care exactly who voted for Biden and who did not. In that sense, the rows of the data (and the Preceptor Table) are "exchangeable," which means (roughly) that nothing changes if we re-arrange the IDs of any of the rows.
 
-### Exercise 5
+### Exercise 6
 
 Use `brm()` to fit a model, assigning the result to an object called `fit_bern`. Use the arguments: `formula = biden ~ 1`, `data = poll_data`, `family = bernoulli()`, `refresh = 0`, `silent = 2`, and `seed = 9`.
 
 
-```{r courage-5, exercise = TRUE}
+```{r courage-6, exercise = TRUE}
 
 ```
 
-```{r courage-5-hint-1, eval = FALSE}
+```{r courage-6-hint-1, eval = FALSE}
 fit_bern <- brm(formula = ...,
                 ... = poll_data,
                 family = bernoulli(),
@@ -554,27 +714,23 @@ fit_bern <- brm(formula = ...,
                 ... = 9)
 ```
 
-This will take a little whole to run. It won't produce anything because of the `refresh` and `silent` arguments. 
+This will take a little while to run. It won't produce anything because of the `refresh` and `silent` arguments. 
 
 
-### 
-
-You really ought to run all the code in the chapter, the better to understand the details of the effects of different arguments.
-
-### Exercise 6
+### Exercise 7
 
 Type `fit_bern` and hit "Run Code." This generates the same results as using `print(fit_bern)`.
 
 
-```{r courage-6, exercise = TRUE}
+```{r courage-7, exercise = TRUE}
 
 ```
 
-```{r courage-6-hint-1, eval = FALSE}
-print(...)
+```{r courage-7-hint-1, eval = FALSE}
+...
 ```
 
-```{r courage-6-test, include = FALSE}
+```{r courage-7-test, include = FALSE}
 print(fit_bern)
 ```
 
@@ -584,19 +740,19 @@ print(fit_bern)
 
 <!-- Add summary() Exercise if it gives a different answer -->
 
-### Exercise 7
+### Exercise 8
 
 Run `family()` on `fit_bern`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable. 
 
-```{r courage-7, exercise = TRUE}
+```{r courage-8, exercise = TRUE}
 
 ```
 
-```{r courage-7-hint-1, eval = FALSE}
+```{r courage-8-hint-1, eval = FALSE}
 family(...)
 ```
 
-```{r courage-7-test, include = FALSE}
+```{r courage-8-test, include = FALSE}
 family(fit_bern)
 ```
 
@@ -617,19 +773,19 @@ $$
 $$
 By definition, the parameter $\rho$ is only allowed to take values between 0 and 1. We want to constrain the model so that only these values are even possible.
 
-### Exercise 8
+### Exercise 9
 
 Run `formula()` on `fit_bern`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s). 
 
-```{r courage-8, exercise = TRUE}
+```{r courage-9, exercise = TRUE}
 
 ```
 
-```{r courage-8-hint-1, eval = FALSE}
+```{r courage-9-hint-1, eval = FALSE}
 formula(...)
 ```
 
-```{r courage-8-test, include = FALSE}
+```{r courage-9-test, include = FALSE}
 formula(fit_bern)
 ```
 
@@ -637,19 +793,19 @@ formula(fit_bern)
 
 In this case, we have the simplest possible formula. `biden`, which is a zero/one binary variable is a function of a constant. There are no independent variables.
 
-### Exercise 9
+### Exercise 10
 
 Run `nobs()` on `fit_bern`. The `nobs()` function returns the **n**umber of **obs**ervations.
 
-```{r courage-9, exercise = TRUE}
+```{r courage-10, exercise = TRUE}
 
 ```
 
-```{r courage-9-hint-1, eval = FALSE}
+```{r courage-10-hint-1, eval = FALSE}
 nobs(...)
 ```
 
-```{r courage-9-test, include = FALSE}
+```{r courage-10-test, include = FALSE}
 nobs(fit_bern)
 ```
 
@@ -657,19 +813,19 @@ nobs(fit_bern)
 
 In this case, the number of observations is `r scales::comma(nobs(fit_bern))`. 
 
-### Exercise 10
+### Exercise 11
 
 Run `posterior_interval()` on `fit_bern`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
 
-```{r courage-10, exercise = TRUE}
+```{r courage-11, exercise = TRUE}
 
 ```
 
-```{r courage-10-hint-1, eval = FALSE}
+```{r courage-11-hint-1, eval = FALSE}
 posterior_interval(...)
 ```
 
-```{r courage-10-test, include = FALSE}
+```{r courage-11-test, include = FALSE}
 posterior_interval(fit_bern)
 ```
 
@@ -678,19 +834,19 @@ posterior_interval(fit_bern)
 There are several parameters in the model, almost all of them so-called "nuisance" parameters, meaning that we don't care about them. Their particular values don't really help us to directly calculate any quantity of interest.
 
 
-### Exercise 11
+### Exercise 12
 
 Run `fixef()` on `fit_bern`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
 
-```{r courage-11, exercise = TRUE}
+```{r courage-12, exercise = TRUE}
 
 ```
 
-```{r courage-11-hint-1, eval = FALSE}
+```{r courage-12-hint-1, eval = FALSE}
 fixef(...)
 ```
 
-```{r courage-11-test, include = FALSE}
+```{r courage-12-test, include = FALSE}
 fixef(fit_bern)
 ```
 
@@ -702,7 +858,7 @@ $$ biden_i =  \mu + \epsilon_i $$
 
 with $\epsilon_i \sim N(0, \sigma^2)$. $y_i$ is the height of male $i$. $\mu$ is true proportion of Biden voters. $\epsilon_i$ is the "error term," the difference between the vote of person $i$ and the true proportion of Biden voters.
 
-### Exercise 12
+### Exercise 13
 
 Run `pp_check()` on `fit_bern` with the `type` argument set to `"bars"`.  The `pp_check()` runs a **p**osterior **p**redictive check.
 
@@ -710,15 +866,15 @@ Run `pp_check()` on `fit_bern` with the `type` argument set to `"bars"`.  The `p
 
 <!-- SD: It would be nice to include that pp_check() is a function from the *bayesplot* package, which is a completely different (from ggplot2) way of making graphs. This just clears the confusion. -->
 
-```{r courage-12, exercise = TRUE}
+```{r courage-13, exercise = TRUE}
 
 ```
 
-```{r courage-12-hint-1, eval = FALSE}
+```{r courage-13-hint-1, eval = FALSE}
 pp_check(...,  type = "...")
 ```
 
-```{r courage-12-test, include = FALSE}
+```{r courage-13-test, include = FALSE}
 pp_check(fit_bern,  type = "bars")
 ```
 
@@ -729,19 +885,19 @@ In this case, there are two possible outcomes: 0/1. The actual values in the dat
 If the fake data had looked very different from the real data, we have had a problem.  
 
 
-### Exercise 13
+### Exercise 14
 
 Use `library()` to load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
 
-```{r courage-13, exercise = TRUE}
+```{r courage-14, exercise = TRUE}
 
 ```
 
-```{r courage-13-hint-1, eval = FALSE}
+```{r courage-14-hint-1, eval = FALSE}
 library(gtsummary)
 ```
 
-```{r courage-13-test, include = FALSE}
+```{r courage-14-test, include = FALSE}
 library(gtsummary)
 ```
 
@@ -749,20 +905,20 @@ library(gtsummary)
 
 Read [this tutorial](https://www.danieldsjoberg.com/gtsummary/articles/tbl_regression.html) for an introduction to `tbl_regression()`, the most important function in the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
 
-### Exercise 14
+### Exercise 15
 
 Run `tbl_regression()` on `fit_bern` with `intercept = TRUE`. 
 
 
-```{r courage-14, exercise = TRUE}
+```{r courage-15, exercise = TRUE}
 
 ```
 
-```{r courage-14-hint-1, eval = FALSE}
+```{r courage-15-hint-1, eval = FALSE}
 tbl_regression(..., intercept = TRUE)
 ```
 
-```{r courage-14-test, include = FALSE}
+```{r courage-15-test, include = FALSE}
 tbl_regression(fit_bern, intercept = TRUE)
 ```
 
@@ -771,11 +927,11 @@ tbl_regression(fit_bern, intercept = TRUE)
 The [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package includes many functions for formatting our table. The better your work looks, the more seriously people will take it.
 
 
-### Exercise 15
+### Exercise 16
 
 Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using. Then, add a sentence which tells us something about the model.
 
-```{r courage-15}
+```{r courage-16}
 question_text(NULL,
 	message = "XX.",
 	answer(NULL, correct = TRUE),
@@ -787,167 +943,104 @@ question_text(NULL,
 ## Temperance
 ### 
 
-*Temperance is a tree which has for its root very little contentment, and for its fruit calm and peace.* - Buddha
+<!-- XX: Discuss newdata objects slowly. "A newdata tibble must include columns for all the right-hand side variables --- all the "covariates" --- in the model, and with all the same variable names and, mostly, variable types." 
+
+First ask a question about which columns are needed in the newdata object. This might just be a written question. The answer is all the variables which are on the rightside of the formula. 
+
+Second, ask a question about which values you want those variables to have. That is not easy! Again, a written answer. For each row in the newdata tibble, you get a new posterior. How many posteriors do you want? 
+
+Third, give them the R code which creates the newdata object. All they need to do is run it. Asking them to create it, even after you help them figure out the columns (question 1) and rows (question 2) is too hard, at least until they get more experiences. 
+
+Fourth, inform them that you have, behind the scenes (which really means the setup code chunk), already assigned this tibble to the `ndata` object. In this question, they just type `ndata` to confirm. 
+
+The knowledge drops for all four of these questions allow you to explain/teach more about what goes in the argument for newdata and what does not. Explaining what other newdata objects would produce, if we used them, is a good idea.
+
+-->
+
+<!-- XX: Choose one. -->
+
+*Temperance is a tree which as for its root very little contentment, and for its fruit calm and peace.* - Buddha
+
 
 ### Exercise 1
 
-In your own words, describe the use of Temperance in finishing our data science project.
+In your own words, describe the use of Temperance in finishing your data science project.
 
 ```{r temperance-1}
 question_text(NULL,
-	message = "Temperance guides us in the use of the data generating mechanism --- or the 'model' ---  we have created to answer the questions with which we began. We create posteriors for the quantities of interest.",
+	message = "Temperance uses the Data Generating Mechanism to answer the question with which we began. Humility reminds us that this answer is always a lie.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
 
+### 
+
 ### Exercise 2
 
 Recall the question with which we began:
 
-> What are the odds, if we just look at two voters, both will have voted for Biden?
+> ...
 
-To answer this question, we need to create the `newdata` object which we will use with `fit_bern`. 
-
-Type `tibble(.rows = 2)`. Hit "Run Code."
-
+Pipe `fit_XX` to . . .
 
 ```{r temperance-2, exercise = TRUE}
 
 ```
 
 ```{r temperance-2-hint-1, eval = FALSE}
-tibble(... = 2)
+
 ```
 
+<!-- DK: Edit the below. -->
+
 ```{r temperance-2-test, include = FALSE}
-tibble(.rows = 2)
+fit_bern |> 
+  add_epred_draws(newdata = tibble(.rows = 1)) |> 
+  select(.epred) |> 
+  ggplot(aes(x = .epred)) +
+    geom_density(aes(y = after_stat(count/sum(count))))  +
+    labs(title = expression(paste("Posterior Distribution for  ", rho)),
+         subtitle = "There is a 95% chance for a value between XX and XX.",
+         x = expression(paste("Proportion, ", rho, ", of Red Beads in Urn")),
+         y = "Probability") +
+    scale_x_continuous(labels = scales::percent_format()) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    theme_classic()
 ```
 
 ### 
-
-This creates an empty tibble with two rows. Because `fit_bern` is such a simple model, one with no independent variables, the `newdata` object is also extremely simple. In this case, we are interested in the two people we might meet (and who they voted for) so we need two rows in `newdata`.
-
-The number of rows in `newdata` corresponds to the number of units for which we seek to forecast the behavior/results.
 
 ### Exercise 3
 
-Pipe `fit_bern` to `add_predicted_draws()` with `newdata = tibble(.rows = 2)`.
+Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI. 
 
-
-```{r temperance-3, exercise = TRUE}
-
-```
-
-```{r temperance-3-hint-1, eval = FALSE}
-fit_bern |> 
-  ...(newdata = tibble(.rows = ...))
-```
-
-```{r temperance-3-test, include = FALSE}
-fit_bern |> 
-  add_predicted_draws(newdata = tibble(.rows = 2))
-```
-
-### 
-
-Note that there are 8,000 row, 4,000 for each individual, stacked on top of each other. The `.row` variable refers to the respective row in `newdata`.
-
-### Exercise 4
-
-Add `select(.row, .draw, .prediction)` to the pipe.
-
-<!-- SD: Note that this should be "Continue the pipe with..." instead of "Add..." for simplicity's sake -->
-
-```{r temperance-4, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-4-hint-1, eval = FALSE}
-... |> 
-  ...(.row, ..., .prediction) 
-```
-
-```{r temperance-4-test, include = FALSE}
-fit_bern |> 
-  add_predicted_draws(newdata = tibble(.rows = 2)) |> 
-  select(.row, .draw, .prediction) 
-```
-
-### 
-
-Note that the tibble which is "spat" out at the end of this pipe is a grouped tibble. See the "Groups" label at the top. Unless we `ungroup()` the pipe, future commands will be executed on `.row == 1` rows separately from `.row == 2` rows.
-
-### Exercise 5
-
-Continue the pipe with `pivot_wider()`, setting `values_from = .prediction` and `names_from = .row`.
-
-```{r temperance-5, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-5-hint-1, eval = FALSE}
-... |> 
-  pivot_wider(... = .prediction, names_from = ...)
-```
-
-```{r temperance-5-test, include = FALSE}
-fit_bern |> 
-  add_predicted_draws(newdata = tibble(.rows = 2)) |> 
-  select(.row, .draw, .prediction) |> 
-  pivot_wider(values_from = .prediction, names_from = .row)
-```
-
-### 
-
-`pivot_wider()` gets rid of the grouping automatically. We now have a column for each of our two individuals, represented by `1` and `2`. The tibble has 4,000 rows because this is the default number of draws we create with functions like `add_predicted_draws()`.
-
-<!-- DK: Sure would be nice to have a question which explains what this object means. -->
-
-### Exercise 6
-
-Continue the pipe with `mutate()`, setting "both = if_else(`1` & `2`, TRUE, FALSE)" as the argument. (Apologies for the formating of these instructions, The 1 and the 2 in this code must both be surrounded with backticks [`].)
-
-
-
-```{r temperance-6, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-6-hint-1, eval = FALSE}
-... |> 
-  mutate(both = if_else(`1` & `2`, TRUE, FALSE)) 
-```
-
-```{r temperance-6-test, include = FALSE}
-fit_bern |> 
-  add_predicted_draws(newdata = tibble(.rows = 2)) |> 
-  select(.row, .draw, .prediction) |> 
-  pivot_wider(values_from = .prediction, names_from = .row) |> 
-  mutate(both = if_else(`1` & `2`, TRUE, FALSE)) 
-```
-
-### 
-
-### Exercise 7
-
-Write a paragraph which summarizes your project. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI. 
-
-```{r temperance-7}
+```{r temperance-3}
 question_text(NULL,
-	message = "XX.",
+	message = "XX",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+### 
+
+### Exercise 4
+
+Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval.
+
+```{r temperance-4}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
 
 ## Summary
 ### 
