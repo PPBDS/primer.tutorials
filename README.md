@@ -87,7 +87,7 @@ updates will come out as you use these tutorials.
 
 If you wish to stay up-to-date with the latest version, it is
 recommended that you regularly re-install this tutorial package by
-running the following 2 lines of code in your **R console**:
+running the following 2 lines of code in your **R Console**:
 
 ``` r
 remove.packages("primer.tutorials")
