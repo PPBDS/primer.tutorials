@@ -18,10 +18,53 @@ library(tidyverse)
 library(primer.data)
 library(brms)
 library(broom.mixed)
+library(patchwork)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
+
+x <- kenya |> 
+  filter(rv13 > 0)
+
+rv_p <- x |> 
+  ggplot(aes(rv13)) + 
+    geom_histogram(bins = 100) +
+    labs(x = "Registered Voters",
+         y = NULL) 
+
+log_rv_p <- x |> 
+  ggplot(aes(log(rv13))) + 
+    geom_histogram(bins = 100) +
+    labs(x = "Log of Registered Voters",
+         y = NULL) +
+    expand_limits(y = c(0, 175))
+
+no_na_nhanes <- nhanes |> 
+  select(height, age) |> 
+  drop_na() 
+
+nhanes_1 <- brm(height ~ age,
+               data = no_na_nhanes,
+               family = gaussian(),
+               silent = 2,
+               refresh = 0,
+               seed = 16)
+write_rds(nhanes_1, "data/nhanes_1.rds")
+
+nhanes_1 <- read_rds("data/nhanes_1.rds")
+
+linear <- no_na_nhanes |> 
+  ggplot(aes(x = age, y = height)) +
+    geom_point(alpha = 0.1) +
+    geom_line(aes(y = fitted(nhanes_1)[, "Estimate"]),
+             color = "red",
+             linewidth = 2) +
+    labs(title = "Age and Height",
+         subtitle = "Children are shorter, but a linear fit is poor",
+         x = "Age",
+         y = "Height (cm)",
+         caption = "Data source: NHANES")
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -205,7 +248,8 @@ fixef(fit_1)
 
 ### 
 
-<!-- GK: Should we ask students to explain the meaning of the coefficient?  -->
+<!-- GK: Should we ask students to explain the meaning of the coefficient? Yes. -->
+
 The value of $\beta_0$, the intercept in the regression, is `r scales::comma(round(fixef(fit_1)["Intercept", "Estimate"], 0))`. This represent the estimated average income for a person with an age of zero, which is awkward and useless since there are no people of zero age in our data. 
 
 ### Exercise 9
@@ -276,6 +320,480 @@ fixef(fit_1_c)
 
 The intercept, `r scales::comma(round(fixef(fit_1_c)["Intercept", "Estimate"], 0))`, is the expected income for someone with `c_age = 0`, i.e., someone of an average age in the data, which is around `r round(mean(trains$age), 0)`.
 
+### 
+
+Centering — changing a variable via addition/subtraction — often makes the intercept easier to interpret. Scaling — changing a variable via multiplication/division — often makes it easier to interpret coefficients. 
+
+### Exercise 12
+
+The most common scaling method is to divide the variable by its standard deviation. Start a pipe with `trains` to `mutate` with the argument `s_age = age / sd(age)`. Assign the result to a new object called `trains_3`.
+
+```{r transforming-variables-12, exercise = TRUE}
+
+```
+
+```{r transforming-variables-12-hint-1, eval = FALSE}
+... <- trains |> 
+  mutate(... = age / ...(age))
+```
+
+```{r transforming-variables-12-test, include = FALSE}
+trains_3 <- trains |> 
+  mutate(s_age = age / sd(age))
+```
+
+### 
+
+### Exercise 13
+
+Create a model using `brm()` from the **brms**. Use the argument `formula = income ~ s_age`, `data = trains_3`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 16`. Assign the result to an object called `fit_1_s`. 
+
+```{r transforming-variables-13, exercise = TRUE}
+
+```
+
+```{r transforming-variables-13-hint-1, eval = FALSE}
+... <- brm(formula = ..., 
+               ... = trains_3,
+               family = ...,
+               ... = 2,
+               refresh = ...,
+               seed = ...)
+```
+
+```{r transforming-variables-13-test, include = FALSE}
+fit_1_s <- brm(formula = income ~ s_age, 
+               data = trains_3,
+               family = gaussian(),
+               silent = 2,
+               refresh = 0,
+               seed = 16)
+```
+
+### 
+
+### Exercise 14
+
+Run `fixef()` on `fit_1_s` and hit "Run Code."
+
+```{r transforming-variables-14, exercise = TRUE}
+
+```
+
+```{r transforming-variables-14-hint-1, eval = FALSE}
+fixef(...)
+```
+
+```{r transforming-variables-14-test, include = FALSE}
+fixef(fit_1_s)
+```
+
+### 
+
+### Exercise 15
+
+The most common transformation applies both centering and scaling. Start a pipe with `trains` to `mutate` with the argument `z_age = scale(age)`. Assign the result to a new object called `trains_4`.
+
+```{r transforming-variables-15, exercise = TRUE}
+
+```
+
+```{r transforming-variables-15-hint-1, eval = FALSE}
+... <- ... |> 
+  mutate(z_age = scale(...))
+```
+
+```{r transforming-variables-15-test, include = FALSE}
+trains_4 <- trains |> 
+  mutate(z_age = scale(age))
+```
+
+### 
+
+### Exercise 16
+
+Create a model using `brm()` from the **brms**. Use the argument `formula = income ~ z_age`, `data = trains_4`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 16`. Assign the result to an object called `fit_1_z`. 
+
+```{r transforming-variables-16, exercise = TRUE}
+
+```
+
+```{r transforming-variables-16-hint-1, eval = FALSE}
+... <- brm(formula = ..., 
+              ... = trains_4,
+               family = ...,
+               ... = 2,
+               refresh = ...,
+               ... = 16)
+
+```
+
+```{r transforming-variables-16-test, include = FALSE}
+fit_1_z <- brm(formula = income ~ z_age, 
+               data = trains_4,
+               family = gaussian(),
+               silent = 2,
+               refresh = 0,
+               seed = 16)
+
+```
+
+### 
+
+### Exercise 17
+
+Run `fixef()` on `fit_1_z` and hit "Run Code". 
+
+```{r transforming-variables-17, exercise = TRUE}
+
+```
+
+```{r transforming-variables-17-hint-1, eval = FALSE}
+fixef(...)
+```
+
+```{r transforming-variables-17-test, include = FALSE}
+fixef(fit_1_z)
+```
+
+### 
+
+### Exercise 18
+
+It is often helpful to take the log of predictor variables, especially in cases in which their distribution is skewed. We will be using the `kenya` data set from **primer.data**. Type `kenya` and hit "Run Code".
+
+```{r transforming-variables-18, exercise = TRUE}
+
+```
+
+```{r transforming-variables-18-hint-1, eval = FALSE}
+kenya
+```
+
+```{r transforming-variables-18-test, include = FALSE}
+kenya
+```
+
+### 
+
+### Exercise 19
+
+Pipe `kenya` to `summary()` to return some statistics about the data.
+
+```{r transforming-variables-19, exercise = TRUE}
+
+```
+
+```{r transforming-variables-19-hint-1, eval = FALSE}
+... |> 
+  summary()
+```
+
+```{r transforming-variables-19-test, include = FALSE}
+kenya |> 
+  summary()
+```
+
+### 
+
+Let's say we are interested in the number of registered voters `rv13`. The summary shows that there is no missing values (NAs) in this column, however, there are rows with 0 voters, resulting in the min equals 0.
+
+### Exercise 20
+
+To fix this, pipe `kenya` to the command `filter()` with the argument `rv13 > 0`. Assign the result to an object called `x`. 
+
+```{r transforming-variables-20, exercise = TRUE}
+
+```
+
+```{r transforming-variables-20-hint-1, eval = FALSE}
+... <- ... |> 
+  filter(... > 0)
+```
+
+```{r transforming-variables-20-test, include = FALSE}
+x <- kenya |> 
+  filter(rv13 > 0)
+```
+
+### 
+
+### Exercise 21
+
+Next, we will look at the distribution of `rv13` in the our data. Behind the scene, we have created the graph for you. Type `rv_p` and hit "Run Code"
+
+```{r transforming-variables-21, exercise = TRUE}
+
+```
+
+```{r transforming-variables-21-hint-1, eval = FALSE}
+rv_p
+```
+
+```{r transforming-variables-21-test, include = FALSE}
+rv_p
+```
+
+### 
+
+### Exercise 22
+
+Now let's see how the distribution looks like after transforming `rv13` into the log version. Type `log_rv_p` and hit "Run Code".
+
+```{r transforming-variables-22, exercise = TRUE}
+
+```
+
+```{r transforming-variables-22-hint-1, eval = FALSE}
+log_rv_p
+```
+
+```{r transforming-variables-22-test, include = FALSE}
+log_rv_p
+```
+
+### 
+
+### Exercise 23
+
+Let's put the two distribution next to each other to see the differences. Type `rv_p` and `log_rv_p`, connect them by `+`. Hit "Run Code"
+
+```{r transforming-variables-23, exercise = TRUE}
+
+```
+
+```{r transforming-variables-23-hint-1, eval = FALSE}
+... + ...
+```
+
+```{r transforming-variables-23-test, include = FALSE}
+rv_p + log_rv_p
+```
+
+### 
+
+### Exercise 24
+
+Lastly, add `title`, `subtitle` for the graph using the command `plot_annotation()`. Remember that this is what your graph should look like. 
+
+```{r}
+rv_p + log_rv_p +
+  plot_annotation(title = 'Registered Votes In Kenya Communities',
+                  subtitle = "Taking logs helps us deal with outliers")
+```
+
+```{r transforming-variables-24, exercise = TRUE}
+
+```
+
+```{r transforming-variables-24-hint-1, eval = FALSE}
+... + ... + 
+  plot_annotation(title = ..., 
+                  subtitle = ...)
+```
+
+```{r transforming-variables-24-test, include = FALSE}
+rv_p + log_rv_p +
+  plot_annotation(title = 'Registered Votes In Kenya Communities',
+                  subtitle = "Taking logs helps us deal with outliers")
+```
+
+### 
+
+### Exercise 25
+
+Instead of simply transforming variables, we can add more terms which are transformed versions of a variable. We will be using the `nhanes` data set. Type `nhanes` and hit "Run Code."
+
+```{r transforming-variables-25-ex, exercise = TRUE}
+
+```
+
+```{r transforming-variables-25-hint, eval = FALSE}
+nhanes
+```
+
+```{r transforming-variables-25-test, include = FALSE}
+nhanes
+```
+
+###
+
+### Exercise 26
+
+Consider the relation of `height` to `age` in `nhanes`. Pipe `nhanes` to `select()` with `height` and `age` as the arguments. 
+
+```{r transforming-variables-26-ex, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r transforming-variables-26-hint, eval = FALSE}
+... |> 
+  select(..., ...)
+```
+
+```{r transforming-variables-26-test, include = FALSE}
+nhanes |> 
+  select(height, age)
+```
+
+###
+<!-- Add knowledge drop about the data -->
+
+### Exercise 27
+
+Let’s start by dropping the missing values. Copy your previous code, continue the pipe with `drop_na()`. Pipe the result to an object called `no_na_nhanes`.
+
+```{r transforming-variables-27-ex, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r transforming-variables-27-hint, eval = FALSE}
+... <- nhanes |> 
+  select(..., ...) |> 
+  ...
+```
+
+```{r transforming-variables-27-test, include = FALSE}
+no_na_nhanes <- nhanes |> 
+  select(height, age) |> 
+  drop_na() 
+```
+
+###
+
+### Exercise 28
+
+Let's create a model to study the relationship between `height` and `age`. Create a model using `brm()` from the **brms**. Use the argument `formula = height ~ age`, `data = no_na_nhanes`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 16`. Assign the result to an object called `nhanes_1`. 
+
+```{r transforming-variables-28-ex, exercise = TRUE}
+
+```
+
+```{r transforming-variables-28-hint, eval = FALSE}
+... <- brm(formula = ...,
+                data = ...,
+                family = ...,
+                ... = 2,
+                refresh = ...,
+                ... = 16)
+```
+
+```{r transforming-variables-28-test, include = FALSE}
+nhanes_1 <- brm(height ~ age,
+                data = no_na_nhanes,
+                family = gaussian(),
+                silent = 2,
+                refresh = 0,
+                seed = 16)
+```
+
+###
+
+### Exercise 29
+
+How accurate our model is can be determined by whether it represent the pattern of our data. Behind the scene, we have fitted the 
+
+```{r transforming-variables-29-ex, exercise = TRUE}
+
+```
+
+```{r transforming-variables-29-hint, eval = FALSE}
+
+```
+
+```{r transforming-variables-29-test, include = FALSE}
+
+```
+
+###
+
+
+
+
+## Selecting variables
+### 
+
+### Exercise 1
+
+```{r selecting-variables-1, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r selecting-variables-1-hint-1, eval = FALSE}
+
+```
+
+```{r selecting-variables-1-test, include = FALSE}
+
+```
+
+### Exercise 2
+
+```{r selecting-variables-2, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r selecting-variables-2-hint-1, eval = FALSE}
+
+```
+
+```{r selecting-variables-2-test, include = FALSE}
+
+```
+
+### 
+
+## Comparing models in theory
+### 
+
+### Exercise 1
+
+```{r comparing-models-in-theory-1, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r comparing-models-in-theory-1-hint-1, eval = FALSE}
+
+```
+
+```{r comparing-models-in-theory-1-test, include = FALSE}
+
+```
+
+### 
+
+## Comparing models in practice 
+### 
+
+### Exercise 1
+
+```{r comparing-models-in-practice-1, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r comparing-models-in-practice-1-hint-1, eval = FALSE}
+
+```
+
+```{r comparing-models-in-practice-1-test, include = FALSE}
+
+```
+
+### 
+
+### 
 
 ```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
 ```
