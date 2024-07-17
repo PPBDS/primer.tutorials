@@ -18,6 +18,7 @@ library(tidyverse)
 library(brms)
 library(tidybayes)
 library(gtsummary)
+library(gt)
 library(primer.data)
 
 knitr::opts_chunk$set(echo = FALSE)
@@ -250,7 +251,7 @@ Describe in words the Preceptor Table for this problem.
 
 ```{r wisdom-10}
 question_text(NULL,
-	message = "XX. Make sure your words given an excellent description of the Preceptor Table which you are about to show the student.",
+	message = "The Preceptor Table has one row for each voter, one output column for which party was voted and one covariate, sex.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -261,8 +262,27 @@ question_text(NULL,
 
 The Preceptor Table for this problem looks something like this:
 
-<!-- XX. Show the Preceptor Table. You can just copy/paste the code from the Primer. -->
-
+```{r}
+#| echo: false
+tibble(ID = c("1", "2", "...", "10", "11", "...", "103,754,865"),
+       vote = c("Democrat", "Third Party", "...", "Republican", "Democrat", "...", "Republican"),
+       sex = c("M", "F", "...", "F", "F", "...", "M")) |>
+  
+  gt() |>
+  tab_header(title = "Preceptor Table") |> 
+  cols_label(ID = md("ID"),
+             vote = md("Vote"),
+             sex = md("Sex")) |>
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = c(ID))) |>
+  tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
+            locations = cells_column_labels(columns = c(ID))) |>
+  cols_align(align = "center", columns = everything()) |>
+  cols_align(align = "left", columns = c(ID)) |>
+  fmt_markdown(columns = everything()) |>
+  tab_spanner(label = "Outcome", columns = c(vote)) |>
+  tab_spanner(label = "Covariate", columns = c(sex))
+```
 
 ### Exercise 11
 
@@ -500,17 +520,21 @@ This gets rid of NA values
 
 ### Exercise 24
 
-Finish the pipe with `mutate()`. Set the `pres_vote` argument to `case_when()`. Inside of `case_when()`, change `pres_vote` from the name of the political party to the name of the candidate that was voted. (Look in the textbook to find the associated political parties).
+Finish the pipe with `mutate()`. Set the `pres_vote` argument to `case_when()`. Inside of `case_when()`, change `pres_vote` from the name of the political party to the name of the candidate that was voted.
 
-<!-- Good news. We did this for you! Just hit run code. -->
+Good news. We did this for you! Just hit run code.
 
-<!-- TJ: Are these good directions? -->
 
 ```{r wisdom-24, exercise = TRUE}
-# nes |> 
-#   filter(year == 1992) |>
-#   select(pres_vote, sex) |>
-#   drop_na()
+nes |> 
+  filter(year == 1992) |>
+  select(pres_vote, sex) |>
+  drop_na() |> 
+  mutate(pres_vote = case_when(
+    pres_vote == "Democrat" ~ "Clinton",
+    pres_vote == "Republican" ~ "Bush",
+    pres_vote == "Third Party" ~ "Perot",
+  ))
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
@@ -589,7 +613,7 @@ This is the data we will use to create our model.
 
 ### Exercise 26
 
-Create a new code chunk. Add `#| label: cleaning`, `#| echo: FALSE` and `#| message: FALSE` to the top of it once again. Copy and paste the code to above into the code chunk. Render the document.
+Create a new code chunk. Add `#| label: cleaning`, `#| echo: FALSE` and `#| message: FALSE` to the top of it once again. Copy and paste the code to above into the code chunk. Render the document, `Command/Control + Shift + K`.
 
 In the console, run: `tutorial.helpers::show_file("analysis.qmd, start = -12")`. CP/CR
 
@@ -702,9 +726,52 @@ It can be constructed if the validity assumption is (mostly) true. It includes a
 
 ### Exercise 3
 
-In your own words, define the assumption of "stability" when employed in the context of data science.
+Here is our Population Table:
+
+```{r}
+#| echo: false
+tibble(source = c("PT/Data", "PT/Data", "PT", "PT", "PT", "PT", "...", "PT/Data", "PT/Data", "PT",  "PT",  "...", "PT/Data"),
+       ID = c("1", "2", "3", "4", "5", "6", "...", "10", "11", "12", "13", "...", "103,754,865"),
+       vote = c("Democrat", "Third Party", "Republican", "Democrat", "Democrat", "Democrat",  "...", "Republican", "Democrat", "Democrat", "Republican", "...", "Republican"),
+       sex = c("M", "F", "M", "F", "F", "M", "...", "F", "F", "...", "F", "...", "M")) |>
+  
+  gt() |>
+  tab_header(title = "Population Table") |> 
+  cols_label(source = md("Source"),
+             ID = md("ID"),
+             vote = md("Vote"),
+             sex = md("Sex")) |>
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = c(ID))) |>
+  tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
+            locations = cells_column_labels(columns = c(ID))) |>
+  cols_align(align = "center", columns = everything()) |>
+  cols_align(align = "left", columns = c(ID)) |>
+  fmt_markdown(columns = everything()) |>
+  tab_spanner(label = "Outcome", columns = c(vote)) |>
+  tab_spanner(label = "Covariate", columns = c(sex))
+```
+
+Describe the Population Table for this problem. In particular, are any of the rows in the Preceptor Table also rows in the data? Are there other rows in the Population Table which are not from the Preceptor Table or the data? If so, describe some of those rows.
 
 ```{r justice-3}
+question_text(NULL,
+	message = "Each row in the Population Table corresponds to a person/date combination. None of the rows for the Preceptor Table and the data overlap. Rows from the overall population feature dates outside the survey dates and the election.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+We are not interested in these voters outside of the 1992 election. So, this Population Table, unlike most, does not require a `Time` column. The Preceptor Table and the data come from the same moment in time. Of course, this is not literally true. Recall: **The `Time` column is always a lie.**
+
+### Exercise 4
+
+In your own words, define the assumption of "stability" when employed in the context of data science.
+
+```{r justice-4}
 question_text(NULL,
 	message = "Stability means that the relationship between the columns in the Population Table is the same for three categories of rows: the data, the Preceptor Table, and the larger population from which both are drawn.",
 	answer(NULL, correct = TRUE),
@@ -718,13 +785,13 @@ question_text(NULL,
 Stability is all about *time*. Is the relationship among the columns in the Population Table stable over time? In particular, is the relationship --- which is another way of saying "mathematical formula" --- at the time the data was gathered the same as the relationship at the (generally later) time references by the Preceptor Table.
 
 
-### Exercise 4
+### Exercise 5
 
 Provide one reason why the assumption of stability might not be true in this case.
 
-```{r justice-4}
+```{r justice-5}
 question_text(NULL,
-	message = "Some voters cast their ballots weeks before election day.",
+	message = "Not all voters voted at the same moment in time.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -733,14 +800,14 @@ question_text(NULL,
 
 ### 
 
-Which would mean that the Preceptor Table and the data do not come from the same moment in time.
+Some voters cast their ballots weeks before Election Day. Some NES participants were surveyed right after the election. Some were survey later. We sweep all these complications under the mythical moment in time which we assert is the same for both the data and the Preceptor Table.
 
 
-### Exercise 5
+### Exercise 6
 
 In your own words, define the assumption of "representativeness" when employed in the context of data science.
 
-```{r justice-5}
+```{r justice-6}
 question_text(NULL,
 	message = "Representativeness, or the lack thereof, concerns two relationship, among the rows in the Population Table. The first is between the Preceptor Table and the other rows. The second is between our data and the other rows.",
 	answer(NULL, correct = TRUE),
@@ -755,11 +822,11 @@ Ideally, we would like both the Preceptor Table *and* our data to be random samp
 
 
 
-### Exercise 6
+### Exercise 7
 
 Provide one reason why the assumption of representativeness might not be true in this case.
 
-```{r justice-6}
+```{r justice-7}
 question_text(NULL,
 	message = "The assumption of representativeness might not be true because the sample of our data is not random enough.",
 	answer(NULL, correct = TRUE),
@@ -774,11 +841,11 @@ The sample that we are using may not accurately represent the rest of the popula
 
 
 
-### Exercise 7
+### Exercise 8
 
 In your own words, define the assumption of "unconfoundedness" when employed in the context of data science.
 
-```{r justice-7}
+```{r justice-8}
 question_text(NULL,
 	message = "Unconfoundedness means that the treatment assignment is independent of the potential outcomes, when we condition on pre-treatment covariates.",
 	answer(NULL, correct = TRUE),
@@ -792,14 +859,12 @@ question_text(NULL,
 Because this is a predictive, not causal, model, the assumption of unconfoundedness is irrelevant.
 
 
-### Exercise 8
+### Exercise 9
 
 Summarize the state of your work so far in two or three sentences. Make reference to the data you have and to the question you are trying to answer. Feel free to copy from your answer at the end of the Wisdom Section. Mention at least one specific problem which casts doubt on your approach. 
 
 
-
-
-```{r justice-8}
+```{r justice-9}
 question_text(NULL,
 	message = "Using data from the National Election Studies (NES) survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. Our results might be biased by differential non-response among different categories of voters.",
 	answer(NULL, correct = TRUE),
@@ -807,6 +872,8 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+Edit the summary paragraph in `analysis.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`, and then commit/push.
 
 ## Courage
 ### 
@@ -816,11 +883,11 @@ question_text(NULL,
 
 ### Exercise 1
 
-In your own words, name the key goal of Courage and the process we use to get there.
+In your own words, describe the components of the virtue of Courage for analyzing data.
 
 ```{r courage-1}
 question_text(NULL,
-	message = "Courage selects the data generating mechanism. We first specify the mathematical formula which connects the outcome variable we are interested in with the other data that we have. We explore different models. We need to decide which variables to include and to estimate the values of unknown parameters. We check our models for consistency with the data we have. We avoid hypothesis tests. We select one model.",
+	message = "Courage begins with the exploration and testing of different models. It concludes with the creation of a Data Generating Mechanism.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -845,6 +912,10 @@ library(...)
 library(brms)
 ```
 
+### 
+
+We use the **brms** package to build Bayesian models (“brms” stands for Bayesian regression models.)
+
 ### Exercise 3
 
 Load the **tidybayes** package
@@ -864,6 +935,8 @@ library(tidybayes)
 ```
 
 ### 
+
+The **tidybayes** package makes working with the fitted models easier. 
 
 ### Exercise 4
 
@@ -975,6 +1048,12 @@ formula(...)
 # formula(fit_nes)
 ```
 
+###
+
+In this case, we have the simplest possible formula. `pres_vote` and `sex` are both categorical variables. `pres_vote` is the dependant variable and `sex` is the independant variable.
+
+<!-- TJ: Is this a good knowledge drop? -->
+
 ### Exercise 9
 
 Run `nobs()` on `fit_nes`. The `nobs()` function returns the **n**umber of **obs**ervations.
@@ -997,9 +1076,11 @@ In this case, `fit_nes` has 1658 recorded observations
 
 ### Exercise 10
 
-<!-- TJ: I need help with this section -->
+<!-- TJ: Did I do this correctly? I mostly just copied from the Primer -->
 
 Write the mathematical formula for your model, using $\LaTeX$ math notation.
+
+<!-- TJ: Also, won't it be tough for them to use LaTeX math notation? -->
 
 ```{r courage-10}
 question_text(NULL,
@@ -1012,13 +1093,56 @@ question_text(NULL,
 
 ### 
 
-Add the formula to `analysis.qmd`. `Command/Ctrl + Shift + K`. Ensure that the formula is looks correct. 
+Because we have three possible outcomes, and because there is no natural ordering among the outcomes, a *categorical* model is the most natural choice.
 
+$$ vote_i  \sim Categorical(\rho_{bush}, \rho_{clinton}, \rho_{perot}) $$
+###
+
+The vote of person $i$ takes on one of three possible values: Bush (Republican), Clinton (Democrat) or Perot (Third Party). The probability of each outcome is given by the respective $\rho$. And, by definition:
+
+$$ \rho_{bush} + \rho_{clinton} + \rho_{perot} = 1 $$
+So, once we know two of the probabilities, we know the third. That means that we can't estimate them separately. If we do, we run the risk of violating this equality. We must estimate them together. Fortunately, **brms** takes care of all the details.
+
+###
+
+Recall the logit link function from the Bernoulli model in @sec-models:
+
+$$
+\rho = \frac{e^{\beta_0}}{1 + e^{\beta_0}}
+$$
+###
+
+We need to expand this in two ways: First, we have to allow for variables (in this case, the sex of the voter) to influence the probability. 
+
+
+$$
+\rho = \frac{e^{\beta_0 + \beta_1 {male}}}{1 + e^{\beta_0 + \beta_1 {male}}}
+$$
+
+The logit link function can be expanded just like a simple linear regression. We just add more terms, along with their associated coefficients. Regardless of how complex this term becomes, $\rho$ will remain bounded between 0 and 1.
+
+###
+
+Second, we need to allow for three different $\rho$'s. This is the Categorical model:
+
+$$
+\begin{aligned}
+\rho_{clinton} &=& \frac{e^{\beta_{0, clinton} + \beta_{1, clinton} male}}{1 + e^{\beta_{0, clinton} + \beta_{1, clinton} male}}\\
+\rho_{perot} &=& \frac{e^{\beta_{0, perot} + \beta_{1, perot} male}}{1 + e^{\beta_{0, perot} + \beta_{1, perot} male}}\\
+\rho_{bush}  &=& 1 - \rho_{clinton} - \rho_{perot}
+\end{aligned}
+$$
+
+There is no longer just one $\beta_0$ and one $\beta_1$. Instead, there is $\beta_0$ for Clinton, labeled as $\beta_{0, clinton}$ and a $\beta_0$ for Perot, labeled as $\beta_{0, perot}$. The same applies to $\beta_1$. These parameters need to be different because being male has a different connection to the probability for voting for Clinton than it does for the probability for voting for Perot. We can't have a separate $\beta_0$ and $\beta_1$ for Bush because $\rho_{bush}$ is fully defined once we know $\rho_{clinton}$ and $\rho_{perot}$.
+
+###
+
+Add the formula to `analysis.qmd`. `Command/Ctrl + Shift + K`. Ensure that the formula is looks correct. 
 
 
 ### Exercise 11
 
-Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assining the result to `fit_nes`. 
+Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assigning the result to `fit_nes`. 
 
 `Command/Ctrl + Shift + K`. It may take some time to render `analysis.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `analysis.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
 
@@ -1214,11 +1338,11 @@ Data science projects almost always begin with a broad topic of interest. Yet, i
 
 ### Exercise 3
 
-To answer our question, we need to create a `newdata` object. Which variables do we need to include in this object?
+To answer our question, we need to create a `newdata` object. Which variables (e.g., which columns) do we need to include in this object?
 
 ```{r temperance-3}
 question_text(NULL,
-	message = "We just want the sex variable",
+	message = "All the variables which are on the right side of the formula in `fit_nes`",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1226,6 +1350,8 @@ question_text(NULL,
 ```
 
 ### 
+
+A `newdata` tibble must include columns for all the right-hand side variables --- all the "covariates" --- in the model, and with all the same variable names and, mostly, variable types.
 
 ### Exercise 4
 
@@ -1233,7 +1359,7 @@ How many rows do we need in the `newdata` object? Recall that each row will gene
 
 ```{r temperance-4}
 question_text(NULL,
-	message = "2 rows",
+	message = "6 rows",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1242,13 +1368,17 @@ question_text(NULL,
 
 ### 
 
+We want to know how "different" units behave, where the very definition of "different" is that they do not have identical values for all the variables used in `fit_nes`.
+
+<!-- TJ: Need help -->
+
 ### Exercise 5
 
 Which values do you want the variables in your `newdata` object to have? This is not easy! 
 
 ```{r temperance-5}
 question_text(NULL,
-	message = "We want the sex values of Male and Female",
+	message = "XX",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1338,7 +1468,7 @@ fit_nes |>
 
 ### 
 
-Now we can see here tha there are a total of 24,000 rows. Each posterior has 4,000 rows, so why are there 24,000? Since we have two different values for `sex` (Male and Female) and three different values for `.category` (Bush, Clinton and Perot). So, if we multiply 4,000 by 6, we get a total of 24,000 rows.
+It's crucial to understand the value of the `add_epred_draws()` function. For starters, it generates a series of predicted values from the posterior distribution for the new data. These predictions represent the distribution of the intercept's expected value.
 
 <!-- TJ: Will expand on this explanation -->
 
@@ -1517,12 +1647,12 @@ fit_nes |>
 
 ### Exercise 16
 
-Create a new code chunk in `analysis.qmd`. Label it with `label: plot`. Copy/paste the code which creates your graphic. `Command/Ctrl + Shift + K` to ensure that it all works as intended.
+Create a new code chunk in `analysis.qmd`. Label it with `label: plot`. Copy/paste the code which creates your graphic. Don't forget to add the code to create the `ndata` tibble. `Command/Ctrl + Shift + K` to ensure that it all works as intended.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("XX.qmd", start = -13)
+tutorial.helpers::show_file("analysis.qmd", start = -13)
 ```
 
 CP/CR.
@@ -1540,7 +1670,7 @@ question_text(NULL,
 
 ### Exercise 17
 
-Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
+Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
 
 
 ```{r temperance-17}
@@ -1554,7 +1684,9 @@ question_text(NULL,
 
 ### 
 
-<!-- TJ: Need help with the QoI question -->
+Edit the summary paragraph in `analysis.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
+
+<!-- TJ: Where do I get the data on the QoI. There is nothing in the chapter that tells what this is. -->
 
 
 ### Exercise 18
@@ -1576,9 +1708,15 @@ question_text(NULL,
 
 ### Exercise 19
 
-<!-- DK: Publish after the switch of the material. -->
+Rearrange the material in `analysis.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
-Publish `analysis.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd")
+```
+
+CP/CR.
 
 ```{r temperance-19}
 question_text(NULL,
@@ -1591,17 +1729,13 @@ question_text(NULL,
 
 ### 
 
+Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
+
 ### Exercise 20
 
-Rearrange the material in `analysis.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
+<!-- DK: Publish after the switch of the material. -->
 
-At the Console, run:
-
-```
-tutorial.helpers::show_file("analysis.qmd")
-```
-
-CP/CR.
+Publish `analysis.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
 
 ```{r temperance-20}
 question_text(NULL,
@@ -1611,10 +1745,6 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 3)
 ```
-
-### 
-
-Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
 
 ## Summary
 ### 
