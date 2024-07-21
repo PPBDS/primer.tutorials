@@ -20,12 +20,19 @@ library(brms)
 library(tidybayes)
 library(gtsummary)
 library(primer.data)
-library(ggdist)
-library(broom.mixed)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
+
+data <- shaming |> mutate(p_00 = (primary_00 == "Yes"), p_02 = (primary_02 == "Yes"),
+       p_04 = (primary_04 == "Yes"), g_00 = (general_00 == "Yes"),
+       g_02 = (general_02 == "Yes"), g_04 = (general_04 == "Yes"),
+civ_engage = p_00 + p_02 + p_04 + g_00 + g_02 + g_04,
+voter_class = case_when(civ_engage %in% c(5, 6) ~ "Always Vote",
+                        civ_engage %in% c(3, 4) ~ "Sometimes Vote",
+                        civ_engage %in% c(1, 2) ~ "Rarely Vote"),
+voter_class = factor(voter_class, levels = c("Rarely Vote", "Sometimes Vote", "Always Vote")), age_z = as.numeric(scale(age))) |> rename(voted = primary_06) |> select(voted, treatment, sex, age_z, civ_engage, voter_class) |> drop_na()
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -82,12 +89,16 @@ Would be nice if part of the testing would run all the object creation code so t
 
 This tutorial covers [Chapter 10: N Parameters](https://ppbds.github.io/primer/n-parameters.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
 
+In this tutorial, we will consider models with many parameters and the complexities that arise therefrom.
+
+As our models grow in complexity, we need to pay extra attention to basic assumptions like validity, stability, representativeness, and unconfoundedness. It is easy to jump right in and start interpreting. It is harder, but necessary, to ensure that our models are really answering our questions.
+
 ## Wisdom
 ### 
 
 *All we can know is that we know nothing. And that’s the height of human wisdom.* - Leo Tolstoy
 
-In this tutorial, we will consider models with many parameters and the complexities that arise therefrom. 
+Imagine you are a Republican running for Governor in Texas. You need to allocate your campaign spending intelligently. For example, you want to do a better job of getting your voters to vote.
 
 ### 
 
@@ -154,7 +165,7 @@ question_text(NULL,
 
 ### 
 
-<!-- XX knowledge drop -->
+The more experience you get as a data scientist, the more that you will come to understand that the Four Cardinal Virtues are not a one-way path. Instead, we circle round and round. Our initial question, instead of being fixed forever, is modified as we learn more about the data, and as we experiment with different modeling approaches.
 
 ### Exercise 4
 
@@ -236,9 +247,7 @@ question_text(NULL,
 
 ### 
 
-<!-- XX: A good knowledge drop for this exercise might involve other outcomes which might be useful for related questions. For example, if the outcome for a presidential election are votes cast than, with a slightly different question, the outcomes might be the electoral votes. We want to show them the interplay between the exact question and which outcomes define the Preceptor Table. -->
-
-<!-- Specifying the Preceptor Table forces us to think clearly about the units and outcomes implied by the question. The resulting discussion sometimes leads us to modify the question we started with. No data science project follows a single direction. We always backtrack. There is a dialogue. -->
+The outcomes in a Preceptor Table refer to a moment in time. In this case, the outcome occurs on Election Day in 2026. The covariates and treatments must be measured before the outcome, otherwise they can’t be modeled as connected with the outcome.
 
 ### Exercise 8
 
@@ -277,7 +286,7 @@ question_text(NULL,
 There are many types of political campaign strategies used to try to increase the voter engagement. Our question is focusing on postcards. But if we were concerned with the effect of website advertisement, then our treatments would be the types of advertisement.  
 ### Exercise 10
 
-What moment in time does the Preceptor Table refer to?
+What moment in time does the Preceptor Table refer to? It might be helpful to refer to the [N Parameters chapter](https://ppbds.github.io/primer/n-parameters.html).
 
 ```{r wisdom-10}
 question_text(NULL,
@@ -290,7 +299,11 @@ question_text(NULL,
 
 ### 
 
-<!-- XX knowledge drop -->
+The moment in time is usually found in the question we are trying to answer. 
+
+We can include the time in our question:
+
+> *What is the causal effect of postcards on voting in the 2026 Texas election?*
 
 ### Exercise 11
 
@@ -394,13 +407,13 @@ tibble(ID = c("1", "2", "...", "10", "11", "...", "N"),
 
 <!-- XX: It is a feature that this question almost forces students to go to the chapter and read about the data. This entire sentence will not be included in your summary at the end of Wisdom, but bits of it will be mentioned. -->
 
-Write one sentence describing the data you have to answer your question. 
+Write a couple sentences describing the data you have to answer your question. 
 
 Running `?shaming` in the console after loading the **primer.data** package will help you answer this question. 
 
 ```{r wisdom-15}
 question_text(NULL,
-	message = "This is a data set corresponding to the paper 'Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment' by Gerber, Green, and Larimer (2008). The aim of the study was to find out whether and to what extent people are motivated to vote by social pressure. To answer this question, the authors conducted a field experiment prior to the August 2006 primary election in Michigan. A total of 180,000 households were randomly assigned to either a control group or one of four treatment groups.",
+	message = "This data set is from a field experiment prior to the August 2006 primary election in Michigan. A total of 180,000 households were randomly assigned to either a control group or one of four treatment groups. The participants' past poitical engagement is also measured.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -410,6 +423,10 @@ question_text(NULL,
 ### 
 
 <!-- XX. Insert a question or two which accomplishes the second chunk of QMD work. This begins with the creation of an `analysis.qmd` file (although you can use any name for it), its rendering to ensure that your computer setup is correct. The addition of *_files to the .gitignore so that we do not commit those junk files. It ends with a commit and push. show_file(".gitignore", start = -5) is not a bad last question. -->
+
+We can update our question:
+
+> *What is the causal effect of postcards on voting in the 2026 Texas gubernatorial election? Do those effects vary by political engagement?*
 
 ### Exercise 16
 
@@ -431,7 +448,262 @@ library(tidyverse)
 
 <!-- XX: Insert comments about the data. This continues to be the primary type of knowledge drop. These comments can also be sophisticated, especially in the way that they connect the data to the Preceptor Table and to the population. -->
 
-<!-- XX: Load any other packages that are needed, one package per question. (But make sure that they are also included in the setup chunk.) primer.data, for example, is often needed. But save brms and tidybayes for the Courage section. -->
+### Exercise 17
+
+Load the **primer.data** package.
+
+```{r wisdom-17, exercise = TRUE}
+
+```
+
+```{r wisdom-17-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r wisdom-17-test, include = FALSE}
+library(primer.data)
+```
+
+### 
+
+<!-- XX: Insert comments about the data. This continues to be the primary type of knowledge drop. These comments can also be sophisticated, especially in the way that they connect the data to the Preceptor Table and to the population. -->
+
+### Exercise 18
+
+Run `glimpse()` on `shaming`. 
+
+```{r wisdom-18, exercise = TRUE}
+
+```
+
+```{r wisdom-18-hint-1, eval = FALSE}
+glimpse(...)
+```
+
+```{r wisdom-18-test, include = FALSE}
+glimpse(shaming)
+```
+
+### 
+
+`glimpse()` gives us a look at the raw data contained within the `shaming` data set. At the very top of the output, we can see the number of rows and columns, or observations and variables, respectively. We see that there are 344,084 observations, with each row corresponding to a unique respondent.
+
+### Exercise 19
+
+Pipe `shaming` to `count()` with `treament` inside of it.
+
+```{r wisdom-19, exercise = TRUE}
+
+```
+
+```{r wisdom-19-hint-1, eval = FALSE}
+shaming |> count(...)
+```
+
+```{r wisdom-19-test, include = FALSE}
+shaming |> count(treatment)
+```
+
+### 
+
+Four types of treatments were used in the experiment, with voters receiving one of the four types of mailing. All of the mailing treatments carried the message, “DO YOUR CIVIC DUTY - VOTE!”.
+
+### Exercise 20
+
+Pipe `shaming` to the following:
+         
+```
+mutate(p_00 = (primary_00 == "Yes"), p_02 = (primary_02 == "Yes"),
+       p_04 = (primary_04 == "Yes"), g_00 = (general_00 == "Yes"),
+       g_02 = (general_02 == "Yes"), g_04 = (general_04 == "Yes"),
+civ_engage = p_00 + p_02 + p_04 + g_00 + g_02 + g_04,
+voter_class = case_when(civ_engage %in% c(5, 6) ~ "Always Vote",
+                        civ_engage %in% c(3, 4) ~ "Sometimes Vote",
+                        civ_engage %in% c(1, 2) ~ "Rarely Vote"),
+voter_class = factor(voter_class, levels = c("Rarely Vote", "Sometimes Vote", "Always Vote")), age_z = as.numeric(scale(age))) 
+```
+
+```{r wisdom-20, exercise = TRUE}
+
+```
+
+```{r wisdom-20-hint-1, eval = FALSE}
+x <- shaming |> mutate(...)
+```
+
+```{r wisdom-20-test, include = FALSE}
+x <- shaming |> mutate(p_00 = (primary_00 == "Yes"),
+         p_02 = (primary_02 == "Yes"),
+         p_04 = (primary_04 == "Yes"),
+         g_00 = (general_00 == "Yes"),
+         g_02 = (general_02 == "Yes"),
+         g_04 = (general_04 == "Yes"),
+         civ_engage = p_00 + p_02 + p_04 + 
+                      g_00 + g_02 + g_04,
+         voter_class = case_when(civ_engage %in% c(5, 6) ~ "Always Vote",
+                                 civ_engage %in% c(3, 4) ~ "Sometimes Vote",
+                                 civ_engage %in% c(1, 2) ~ "Rarely Vote"),
+         voter_class = factor(voter_class, levels = c("Rarely Vote", 
+                                                      "Sometimes Vote", 
+                                                      "Always Vote")),
+         age_z = as.numeric(scale(age)))
+```
+
+### 
+
+<!-- XX: Insert comments about the data. This continues to be the primary type of knowledge drop. These comments can also be sophisticated, especially in the way that they connect the data to the Preceptor Table and to the population. -->
+
+### Exercise 21
+
+Continue the pipe to `rename()` with `voted` being set to `primary_06`.
+         
+```{r wisdom-21, exercise = TRUE}
+
+```
+
+<button onclick="transfer_code(this)">Copy previous code</button>
+
+```{r wisdom-21-hint-1, eval = FALSE}
+... |> rename(voted = primary_06)
+```
+
+```{r wisdom-21-test, include = FALSE}
+
+```
+
+### 
+
+<!-- XX: Insert comments about the data. This continues to be the primary type of knowledge drop. These comments can also be sophisticated, especially in the way that they connect the data to the Preceptor Table and to the population. -->
+
+### Exercise 22
+
+Continue the pipe to `select()` and choose `voted`, `treatment`, `sex`, `age_z`, `civ_engage`, and `voter_class`. Then finally finish this pipe with `drop_na()`.
+         
+```{r wisdom-22, exercise = TRUE}
+
+```
+
+<button onclick="transfer_code(this)">Copy previous code</button>
+
+```{r wisdom-22-hint-1, eval = FALSE}
+... |> select(voted, treatment, sex, age_z, civ_engage, voter_class) |> drop_na()
+```
+
+```{r wisdom-22-test, include = FALSE}
+
+```
+
+### 
+
+Set all of this to an object `data`. When you run again, nothing should print out because the code is being set to an object.
+
+### Exercise 23
+
+Start a new pipe with `data` to `sample_frac()` with `0.5` as the parameter.
+         
+```{r wisdom-23, exercise = TRUE}
+
+```
+
+```{r wisdom-23-hint-1, eval = FALSE}
+data |> sample_frac(...)
+```
+
+```{r wisdom-23-test, include = FALSE}
+data |> sample_frac(0.5)
+```
+
+### 
+
+<!-- XX -->
+
+### Exercise 24
+
+Continue the pipe to `ggpot()` with `x` set to `civ_engage` and `y` set to `voted` inside `aes()`. Also add `geom_jitter()` with `alpha` set to `0.03` and `height` set to `0.1`.
+         
+```{r wisdom-24, exercise = TRUE}
+
+```
+
+<button onclick="transfer_code(this)">Copy previous code</button>
+
+```{r wisdom-24-hint-1, eval = FALSE}
+... |> 
+  ggplot(aes(...)) +
+    geom_jitter(...)
+```
+
+```{r wisdom-24-test, include = FALSE}
+
+```
+
+### 
+
+<!-- XX -->
+
+### Exercise 25
+
+Using the previous code, add `scale_x_continuous()` with `breaks` set to `1:6` and also add `scale_y_continuous()` with `breaks` set to `c(0, 1)` and `labels` set to `c("No", "Yes")`.
+         
+```{r wisdom-25, exercise = TRUE}
+
+```
+
+<button onclick="transfer_code(this)">Copy previous code</button>
+
+```{r wisdom-25-hint-1, eval = FALSE}
+... +
+    scale_x_continuous(breaks = 1:6) + 
+    scale_y_continuous(breaks = c(0, 1), labels = c("No", "Yes"))
+```
+
+```{r wisdom-25-test, include = FALSE}
+
+```
+
+### 
+
+<!-- XX -->
+
+### Exercise 26
+
+Finally, using the previous code, add the `labs()` layer.
+         
+```{r wisdom-26, exercise = TRUE}
+
+```
+
+<button onclick="transfer_code(this)">Copy previous code</button>
+
+```{r wisdom-26-hint-1, eval = FALSE}
+
+```
+
+```{r wisdom-26-test, include = FALSE}
+
+```
+
+### 
+
+The graph should look like this:
+
+```{r}
+#| echo: false
+
+data |>
+  sample_frac(0.05) |> 
+  ggplot(aes(x = civ_engage, y = voted)) +
+    geom_jitter(alpha = 0.03, height = 0.1) +
+    scale_x_continuous(breaks = 1:6) + 
+    scale_y_continuous(breaks = c(0, 1), labels = c("No", "Yes")) +
+    labs(title = "Civic Engagement and Voting Behavior in Michigan",
+         subtitle = "Past voting predicts future voting.",
+         x = "Civic Engagement",
+         y = "Voted in 2006 Primary Election",
+         caption = "Random sample of 5% of the data from Gerber, Green, and Larimer (2008)")
+```
+
+Although this plot is pleasing, we need to create an actual model with this data in order to answer our questions.
 
 <!-- XX: It is now time for the third set of QMD edits. Add a new code chunk, the setup chunk, to the QMD. Copy/paste all the library commands to it. Render. Note all the ugliness. Add #| message: false. Add execute: echo: false to the YAML header. Add #| label: setup. Render again. Everything looks nice. Again, these could be several questions in the earlier tutorials or just one long question later. Ends with show_file("analysis.qmd", start = -5). This will be the most common ending question in QMD-editing exercises to come. -->
 
@@ -458,11 +730,11 @@ nes_92 <- nes |>
 -->
 
 
-### Exercise 17
+### Exercise 27
 
 In your own words, define "validity" as we use the term.
 
-```{r wisdom-17}
+```{r wisdom-27}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -473,17 +745,17 @@ question_text(NULL,
 
 ### 
 
-<!-- XX -->
+In order to consider the two data sets to be drawn from the same population, the columns from one must have a valid correspondence with the columns in the other.
 
-### Exercise 18
+### Exercise 28
 
 Provide one reason why the assumption of validity might not hold for this problem.
 
 <!-- This is an important question, as are the similar questions for other assumptions! Spend some time making sure that your example answer is a good one. -->
 
-```{r wisdom-18}
+```{r wisdom-28}
 question_text(NULL,
-	message = "Voting in a primary election in 2006 in Michigan is not the same thing as voting in a general election in Texas in 2026. Primary elections are less newsworthy and, usually, less competitive. Our client, the gubernatorial candidate, has already won his primary. The outcome he cares about is voting in a general elections. Treatments which might, or might not, affect participation in a primary are irrelevant. Moreover, the political culture of Texas and Michigan are very different. The meaning and importance of voting is not identical across states, nor over time.",
+	message = "Voting in a primary election in 2006 in Michigan is not the same thing as voting in a general election in Texas in 2026. Primary elections are less newsworthy and, usually, less competitive. We cannot assume tha the two elections are similar enough for us to make connections between them.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -492,9 +764,9 @@ question_text(NULL,
 
 ### 
 
-<!-- XX -->
+Fortunately, at least for our continued use of this example, we will assume that validity holds. The outcome variable in our data and in our Preceptor Table are close enough — even though one is for a primary election while the other is for a general election — that we can just stack them. At the back of our minds we should remember that the answer that we will find will be nowhere close to being 100% accurate. 
 
-### Exercise 19
+### Exercise 29
 
 <!-- XX: In creating your own answer to questions like this, check with the chapter. One might already be provided! If not, it is often useful to revisit the relevant section of the Key Concepts chapter in the Primer. -->
 
@@ -504,7 +776,7 @@ question_text(NULL,
 
 Summarize the state of your work so far in one sentence. Make reference to the data you have and to the specific question you are trying to answer. 
 
-```{r wisdom-19}
+```{r wisdom-29}
 question_text(NULL,
 	message = "Using the data from an experiment to find out whether and to what extent people are motivated to vote by social pressure, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026.",
 	answer(NULL, correct = TRUE),
@@ -520,13 +792,7 @@ Edit you answer as you see fit, but do not copy/paste our answer exactly. Add th
 ## Justice
 ### 
 
-<!-- XX: Choose one. -->
-
-*Justice is truth in action.* - Benjamin Disraeli
-*The arc of the moral universe is long, but it bends toward justice.* - Theodore Parker
-*Justice delayed is justice denied.* - William E. Gladstone
 *It is in justice that the ordering of society is centered.* - Aristotle
-*Charity is no substitute for justice withheld.* - Saint Augustine
 
 ### Exercise 1
 
@@ -1149,9 +1415,11 @@ question_text(NULL,
 
 ### 
 
+<!-- XX -->
+
 ### Exercise 4
 
-How many rows do we need in the `newdata` object? Recall that each row will generate a posterior for something. That is, if you have two rows in your `newdata` object, you will get two posteriors. It is up to you to determine what those two posteriors are and what you want to do with them.
+Which values do you want the variables in your `newdata` object to have? This is not easy! 
 
 ```{r temperance-4}
 question_text(NULL,
@@ -1166,24 +1434,29 @@ question_text(NULL,
 
 ### Exercise 5
 
-Which values do you want the variables in your `newdata` object to have? This is not easy! 
+Here is the R code which creates the `newdata` object: `tibble(whatever) code here`. Type it into the code exercise block and hit "Run Code."
 
-```{r temperance-5}
-question_text(NULL,
-	message = "XX",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
+<!-- Asking students to create this object --- even after you help them figure out the columns, rows and values --- is too hard, at least until they get more experiences. Your knowledge drop, for this question and the next, should give them advice on the broad topic of how they can create newdata objects themselves. -->
+
+```{r temperance-5, exercise = TRUE}
+
+```
+
+```{r temperance-5-hint-1, eval = FALSE}
+
+```
+
+```{r temperance-5-test, include = FALSE}
+
 ```
 
 ### 
 
 ### Exercise 6
 
-Here is the R code which creates the `newdata` object: `tibble(whatever) code here`. Type it into the code exercise block and hit "Run Code."
+Behind the scenes, we have created the `ndata` object using this code. To confirm, type `ndata` and hit "Run Code."
 
-<!-- Asking students to create this object --- even after you help them figure out the columns, rows and values --- is too hard, at least until they get more experiences. Your knowledge drop, for this question and the next, should give them advice on the broad topic of how they can create newdata objects themselves. -->
+<!-- Of course, you need to have added the code to create `ndata` in the setup chunk at the top of the file. -->
 
 ```{r temperance-6, exercise = TRUE}
 
@@ -1201,9 +1474,7 @@ Here is the R code which creates the `newdata` object: `tibble(whatever) code he
 
 ### Exercise 7
 
-Behind the scenes, we have created the `ndata` object using this code. To confirm, type `ndata` and hit "Run Code."
-
-<!-- Of course, you need to have added the code to create `ndata` in the setup chunk at the top of the file. -->
+Now that we have the `newdata` object, we can create a pipe which uses out fitted model to answer our question. Begin by typing `fit_postcard_vote` and clicking "Run Code."
 
 ```{r temperance-7, exercise = TRUE}
 
@@ -1219,13 +1490,20 @@ Behind the scenes, we have created the `ndata` object using this code. To confir
 
 ### 
 
+<!-- XX: Again, the main point of knowledge drops is this area is to explain to students why the newdata object looks the way it does and what it will produce. A great way to teach is via example. That is, explaining that if we had another way with these values, then we would get this posterior. Or, explaining what would be produced if we used add_epred instead of add_predict, and vice verse. -->
+
+
 ### Exercise 8
 
-Now that we have the `newdata` object, we can create a pipe which uses out fitted model to answer our question. Begin by typing `fit_postcard_vote` and clicking "Run Code."
+Pipe `fit_postcard_vote` to [XX: either `add_epred_draws()` or `add_predicted_draws()`] with the argument `newdata = ndata`.
+
+
 
 ```{r temperance-8, exercise = TRUE}
 
 ```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r temperance-8-hint-1, eval = FALSE}
 
@@ -1237,36 +1515,11 @@ Now that we have the `newdata` object, we can create a pipe which uses out fitte
 
 ### 
 
-<!-- XX: Again, the main point of knowledge drops is this area is to explain to students why the newdata object looks the way it does and what it will produce. A great way to teach is via example. That is, explaining that if we had another way with these values, then we would get this posterior. Or, explaining what would be produced if we used add_epred instead of add_predict, and vice verse. -->
-
-
-### Exercise 9
-
-Pipe `fit_postcard_vote` to [XX: either `add_epred_draws()` or `add_predicted_draws()`] with the argument `newdata = ndata`.
-
-
-
-```{r temperance-9, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-9-hint-1, eval = FALSE}
-
-```
-
-```{r temperance-9-test, include = FALSE}
-
-```
-
-### 
-
 <!-- XX: How do students know whether to use add_epred_draws or add_predicted_draws? This is non-trivial. On some level, we just tell them with the above command. (We don't make them guess.) But we also address this issue explicitly in various knowledg drops, especially this one. -->
 
 <!-- XX: Insert as many questions as necessary to build a nice-looking example of your final plot. In early chapters, this is simple since our questions are simple. They are just one posterior. In later chapters, they become more complex, with the inclusion of several posteriors, as well as manipulation of them to calculate causal effects and whatnot. See the voting postcard example. -->
 
-### Exercise 10
+### Exercise 9
 
 Create a new code chunk in `causal_effect.qmd`. Label it with `label: plot`. Copy/paste the code which creates your graphic. `Command/Ctrl + Shift + K` to ensure that it all works as intended.
 
@@ -1278,7 +1531,7 @@ tutorial.helpers::show_file("causal_effect.qmd", start = -8)
 
 CP/CR.
 
-```{r temperance-10}
+```{r temperance-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1289,13 +1542,13 @@ question_text(NULL,
 
 ### 
 
-### Exercise 11
+### Exercise 10
 
 Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
 
 <!-- XX: Most of the time, there will be some measure of uncertainty associated with your QoI. But not always! The most common counter-example involves a question which asks about the odds or probability of something happening. We would answer such a question by simulating the event with `add_predicted_draws()`. We would then calculate the odds/probability of something happening by seeing how many of the 4,000 draws met the criteria for the event. Assume that was 40%. So, we think that there is a 40% chance that event A will happen. Yet there is no uncertainty associated with that estimate because it, itself, is an expression of uncertainty. (DK: Flesh this out further.) -->
 
-```{r temperance-11}
+```{r temperance-10}
 question_text(NULL,
 	message = "XX",
 	answer(NULL, correct = TRUE),
@@ -1311,11 +1564,11 @@ Edit the summary paragrpah in `causal_effect.qmd` as you see fit, but do not cop
 
 <!-- XX: Again, spend time to make your recommended paragraph perfect. Study the examples in https://ppbds.github.io/primer/cardinal-virtues.html closely. -->
 
-### Exercise 12
+### Exercise 11
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-12}
+```{r temperance-11}
 question_text(NULL,
 	message = "XX: This is another example in which the quality of your answer is important. You might or might not suggest an alternate estimate. I always adjust the estimate toward my own subjective sense of a longrun average and/or typical value and/or zero. But that is not necessary. However, you should always increase the confidence interval since the assumptions of your model are always false.",
 	answer(NULL, correct = TRUE),
@@ -1326,11 +1579,11 @@ question_text(NULL,
 
 ### 
 
-### Exercise 13
+### Exercise 12
 
 Publish `causal_effect.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
 
-```{r temperance-13}
+```{r temperance-12}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1341,7 +1594,7 @@ question_text(NULL,
 
 ### 
 
-### Exercise 14
+### Exercise 13
 
 Rearrange the material in `causal_effect.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
@@ -1353,7 +1606,7 @@ tutorial.helpers::show_file("causal_effect.qmd")
 
 CP/CR.
 
-```{r temperance-14}
+```{r temperance-13}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
