@@ -170,8 +170,6 @@ fit_att_start <- read_rds("data/fit_att_start.rds")
 ## Introduction
 ### 
 
-STILL A ROUGHT DRAFT. DO NOT START THIS TURORIAL YET!
-
 This tutorial covers [Chapter 7: Mechanics](https://ppbds.github.io/primer/mechanics.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
 
 In our haste to make progress — to get all the way through the process of building, interpreting and using models — we have given short shrift to some of the messy details of model building and evaluation. This chapter fills in those lacunae.
@@ -203,6 +201,8 @@ library(brms)
 
 ### 
 
+Since `income` is a continuous variable, we use the **brms** package to build Bayesian regression models. A model that establishes the relationship between two variables is called a **simple regression** model. 
+
 ### Exercise 2
 
 Load the **tidyverse** package.
@@ -220,6 +220,10 @@ library(tidyverse)
 ```
 
 ### 
+
+The general form of the **simple regression** model is: 
+$$ Y = \beta_0  + \beta_1 X + \epsilon_i$$
+The model is **simple** not only because there is only one variable in the right side of the equation, but also because `X` is not an exponential variable and thus the relationship between `X` and `Y` is constant, or linear. Thus, we can also call it **linear regression**.
 
 ### Exercise 3
 
@@ -239,6 +243,8 @@ library(primer.data)
 
 ### 
 
+$\beta_0$ and $beta_1$ are the coefficients, when we interpret coefficients, it is important to know the difference between *across unit* and *within unit comparisons*. The former refers to comparing two different units but not looking at causal relationship while the latter looks at that one unit under treatment versus when under control.
+
 ### Exercise 4
 
 We will also be using a new package, **broom.mixed**, which allows us to tidy regression data for plotting. Load the **broom.mixed** package.
@@ -257,6 +263,8 @@ library(broom.mixed)
 
 ### 
 
+In terms of the Preceptor tables, *within unit comparison* is looking at one **row** of data, we are comparing **one unit**, or (in this case) one person, to itself under two conditions (control versus treatment). Meanwhile, *across unit comparison* is looking at multiple rows of data, with a focus on differences across columns, without making any causal claims.
+
 ### Exercise 5
 
 Type `trains` and hit "Run Code".
@@ -274,6 +282,8 @@ trains
 ```
 
 ### 
+
+The model we are using only takes one variables, `age`, on the right hand side to predict `income`. However, are there any other variables in the data set that can also predict `income`, or potentially affect the relationship bettween `age` and `income`? We will discuss it in the following sections.
 
 ### Exercise 6
 
@@ -297,9 +307,11 @@ fit_1 <- brm(... = income ~ age,
 
 ### 
 
+Since the model is linear, we assume that the relationship between `income` and `age` is stable. However, this is not true in reality, the effect when our age increases from 5 to 6 versus from 17 to 18, or 40-41 is not the same.
+
 ### Exercise 7
 
-Type `fit_1` and hit "Run Code."
+Type `fit_1` and hit "Run Code." This will return a table of regression result.
 
 ```{r transforming-variables-7, exercise = TRUE}
 
@@ -314,6 +326,8 @@ fit_1
 ```
 
 ### 
+
+In the Regression Coefficients section, we can see that the model returns the estimates and theirs 95% Confidence Interval for the `Intercept`, ($\beta_0$), and `age` ($\beta_1$). Recall that when calculating our quantity of interest, which is the coefficients in this case, we need to come up with a posterior probability distribution for our estimates.
 
 ### Exercise 8
 
@@ -355,6 +369,7 @@ trains_2 <- trains |>
 
 ### 
 
+By doing this, we are subtracting the mean of a variable `age` in the data set from each of its values. The new distribution will be centered around zero meaning that it will have a mean of zero, but it will retain the same spread (standard deviation) and shape as the original distribution.
 
 ### Exercise 10
 
@@ -373,22 +388,43 @@ fit_1_c <- brm(formula = ...,
                seed = 16)
 ```
 
-
 ### 
+
+Using this centered version of age does not change the predictions or residuals in the model, but it does make the intercept easier to interpret. 
 
 ### Exercise 11
 
-Run `fixef()` on `fit_1_c` and hit "Run Code."
+Type `fit_1_c` and hit "Run Code." This will return a table of regression result.
 
 ```{r transforming-variables-11, exercise = TRUE}
 
 ```
 
 ```{r transforming-variables-11-hint-1, eval = FALSE}
-fixef(fit_1_c)
+fit_1_c
 ```
 
 ```{r transforming-variables-11-test, include = FALSE}
+fit_1_c
+```
+
+### 
+
+Note that the estimate for the `Intercept` in this model is higher than that of the previous model that use the original values of `age` because the intercept now represents the expected value of the outcome variable `income` when `age` is at its mean value (instead of zero).
+
+### Exercise 12
+
+Run `fixef()` on `fit_1_c` and hit "Run Code."
+
+```{r transforming-variables-12, exercise = TRUE}
+
+```
+
+```{r transforming-variables-12-hint-1, eval = FALSE}
+fixef(fit_1_c)
+```
+
+```{r transforming-variables-12-test, include = FALSE}
 fixef(fit_1_c)
 ```
 
@@ -400,35 +436,37 @@ The intercept, `r scales::comma(round(fixef(fit_1_c)["Intercept", "Estimate"], 0
 
 Centering — changing a variable via addition/subtraction — often makes the intercept easier to interpret. Scaling — changing a variable via multiplication/division — often makes it easier to interpret coefficients. 
 
-### Exercise 12
-
-The most common scaling method is to divide the variable by its standard deviation. Start a pipe with `trains` to `mutate` with the argument `s_age = age / sd(age)`. Assign the result to a new object called `trains_3`.
-
-```{r transforming-variables-12, exercise = TRUE}
-
-```
-
-```{r transforming-variables-12-hint-1, eval = FALSE}
-... <- trains |> 
-  mutate(... = age / ...(age))
-```
-
-```{r transforming-variables-12-test, include = FALSE}
-trains_3 <- trains |> 
-  mutate(s_age = age / sd(age))
-```
-
-### 
-
 ### Exercise 13
 
-Create a model using `brm()` from the **brms**. Use the argument `formula = income ~ s_age`, `data = trains_3`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 16`. Assign the result to an object called `fit_1_s`. 
+The most common scaling method is to divide the variable by its standard deviation. Start a pipe with `trains` to `mutate` with the argument `s_age = age / sd(age)`. Assign the result to a new object called `trains_3`.
 
 ```{r transforming-variables-13, exercise = TRUE}
 
 ```
 
 ```{r transforming-variables-13-hint-1, eval = FALSE}
+... <- trains |> 
+  mutate(... = age / ...(age))
+```
+
+```{r transforming-variables-13-test, include = FALSE}
+trains_3 <- trains |> 
+  mutate(s_age = age / sd(age))
+```
+
+### 
+
+By doing this, we are scaling the variable `age` so that its values are measured in terms of standard deviations from the mean. 
+
+### Exercise 14
+
+Create a model using `brm()` from the **brms**. Use the argument `formula = income ~ s_age`, `data = trains_3`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 16`. Assign the result to an object called `fit_1_s`. 
+
+```{r transforming-variables-14, exercise = TRUE}
+
+```
+
+```{r transforming-variables-14-hint-1, eval = FALSE}
 ... <- brm(formula = ..., 
                ... = trains_3,
                family = ...,
@@ -439,53 +477,81 @@ Create a model using `brm()` from the **brms**. Use the argument `formula = inco
 
 ### 
 
-### Exercise 14
-
-Run `fixef()` on `fit_1_s` and hit "Run Code."
-
-```{r transforming-variables-14, exercise = TRUE}
-
-```
-
-```{r transforming-variables-14-hint-1, eval = FALSE}
-fixef(...)
-```
-
-```{r transforming-variables-14-test, include = FALSE}
-fixef(fit_1_s)
-```
-
-### 
+`s_age` is age scaled by its own standard deviation. A change in one unit of `s_age` is the same as a change in one standard deviation of the `age`, which is about 12.
 
 ### Exercise 15
 
-The most common transformation applies both centering and scaling. Start a pipe with `trains` to `mutate` with the argument `z_age = scale(age)`. Assign the result to a new object called `trains_4`.
+Type `fit_1_s` and hit "Run Code." This will return a table of regression result.
 
 ```{r transforming-variables-15, exercise = TRUE}
 
 ```
 
 ```{r transforming-variables-15-hint-1, eval = FALSE}
-... <- ... |> 
-  mutate(z_age = scale(...))
+
 ```
 
 ```{r transforming-variables-15-test, include = FALSE}
-trains_4 <- trains |> 
-  mutate(z_age = scale(age))
+
 ```
 
 ### 
 
+In a standardized form, the coefficients of a regression model can be interpreted as the effect of a one standard deviation change in the predictor variable on the outcome variable. The interpretation of $\beta_1$ is now: 
+
+> $When comparing two people, one about 1 standard deviation worth of years older than the other, we expect the older person to earn about 11,000 dollars more.$
+
 ### Exercise 16
 
-Create a model using `brm()` from the **brms**. Use the argument `formula = income ~ z_age`, `data = trains_4`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 16`. Assign the result to an object called `fit_1_z`. 
+Run `fixef()` on `fit_1_s` and hit "Run Code."
 
 ```{r transforming-variables-16, exercise = TRUE}
 
 ```
 
 ```{r transforming-variables-16-hint-1, eval = FALSE}
+fixef(...)
+```
+
+```{r transforming-variables-16-test, include = FALSE}
+fixef(fit_1_s)
+```
+
+### 
+
+But, because we scaled without centering, the intercept is now back to the (nonsensical) meaning of the expected income for people of age 0.
+
+### Exercise 17
+
+The most common transformation applies both centering and scaling. Start a pipe with `trains` to `mutate` with the argument `z_age = scale(age)`. Assign the result to a new object called `trains_4`.
+
+```{r transforming-variables-17, exercise = TRUE}
+
+```
+
+```{r transforming-variables-17-hint-1, eval = FALSE}
+... <- ... |> 
+  mutate(z_age = scale(...))
+```
+
+```{r transforming-variables-17-test, include = FALSE}
+trains_4 <- trains |> 
+  mutate(z_age = scale(age))
+```
+
+### 
+
+The base R function `scale()` subtracts the mean and divides by the standard deviation. A variable so transformed is a “z-score,” meaning a variable with a mean of zero and a standard deviation of one.
+
+### Exercise 18
+
+Create a model using `brm()` from the **brms**. Use the argument `formula = income ~ z_age`, `data = trains_4`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 16`. Assign the result to an object called `fit_1_z`. 
+
+```{r transforming-variables-18, exercise = TRUE}
+
+```
+
+```{r transforming-variables-18-hint-1, eval = FALSE}
 ... <- brm(formula = ..., 
               ... = trains_4,
                family = ...,
@@ -495,60 +561,88 @@ Create a model using `brm()` from the **brms**. Use the argument `formula = inco
 
 ```
 
-
-
 ### 
 
-### Exercise 17
-
-Run `fixef()` on `fit_1_z` and hit "Run Code". 
-
-```{r transforming-variables-17, exercise = TRUE}
-
-```
-
-```{r transforming-variables-17-hint-1, eval = FALSE}
-fixef(...)
-```
-
-```{r transforming-variables-17-test, include = FALSE}
-fixef(fit_1_z)
-```
-
-### 
-
-### Exercise 18
-
-It is often helpful to take the log of predictor variables, especially in cases in which their distribution is skewed. We will be using the `kenya` data set from **primer.data**. Type `kenya` and hit "Run Code".
-
-```{r transforming-variables-18, exercise = TRUE}
-
-```
-
-```{r transforming-variables-18-hint-1, eval = FALSE}
-kenya
-```
-
-```{r transforming-variables-18-test, include = FALSE}
-kenya
-```
-
-### 
+Using *z*-scores makes interpretation easier, especially when we seek to compare the importance of different predictors. Note that, when using *z*-scores, we would often phrase this comparison in terms of “sigmas.” One person is “one sigma” older than another person means that they are one standard deviation older. 
 
 ### Exercise 19
 
-Pipe `kenya` to `summary()` to return some statistics about the data.
+Type `fit_1_z` and hit "Run Code." This will return a table of regression result.
 
 ```{r transforming-variables-19, exercise = TRUE}
 
 ```
 
 ```{r transforming-variables-19-hint-1, eval = FALSE}
+fit_1_z
+```
+
+```{r transforming-variables-19-test, include = FALSE}
+fit_1_z
+```
+
+### 
+
+The two parameters are easy to interpret after this transformation.
+
+*The expected income of someone of average age, which is about `r round(mean(trains$age))` in this study, is about `r scales::comma(round(fixef(fit_1_z)["Intercept", "Estimate"], -3))` dollars.*
+
+*When comparing two individuals who differ in age by one standard deviation, which is about `r round(sd(trains$age))` years in this study, the older person is expected to earn about `r scales::comma(round(fixef(fit_1_z)["z_age", "Estimate"], -3))` dollars more than the younger.*
+
+### Exercise 20
+
+Run `fixef()` on `fit_1_z` and hit "Run Code". 
+
+```{r transforming-variables-20, exercise = TRUE}
+
+```
+
+```{r transforming-variables-20-hint-1, eval = FALSE}
+fixef(...)
+```
+
+```{r transforming-variables-20-test, include = FALSE}
+fixef(fit_1_z)
+```
+
+### 
+
+Note that the term "sigma" might be confusing since we already using the word “sigma” to mean $\sigma$, the standard deviation of $\epsilon_i$. You will hear the same word "sigma" applied to both concepts, even in the same sentence. Determine meaning by context.
+
+### Exercise 21
+
+It is often helpful to take the log of predictor variables, especially in cases in which their distribution is skewed. We will be using the `kenya` data set from **primer.data**. Type `kenya` and hit "Run Code".
+
+```{r transforming-variables-21, exercise = TRUE}
+
+```
+
+```{r transforming-variables-21-hint-1, eval = FALSE}
+kenya
+```
+
+```{r transforming-variables-21-test, include = FALSE}
+kenya
+```
+
+### 
+
+Whether or not to take log of the variables may depend on the conventions in your field. If everyone does X, then you should probably do X, unless you have a good reason not to and need to explain it prominently.
+
+### Exercise 22
+
+Pipe `kenya` to `summary()` to return some statistics about the data.
+
+```{r transforming-variables-22, exercise = TRUE}
+
+```
+
+```{r transforming-variables-22-hint-1, eval = FALSE}
 ... |> 
   summary()
 ```
 
-```{r transforming-variables-19-test, include = FALSE}
+```{r transforming-variables-22-test, include = FALSE}
 kenya |> 
   summary()
 ```
@@ -557,81 +651,89 @@ kenya |>
 
 Let's say we are interested in the number of registered voters `rv13`. The summary shows that there is no missing values (NAs) in this column, however, there are rows with 0 voters, resulting in the min equals 0.
 
-### Exercise 20
-
-To fix this, pipe `kenya` to the command `filter()` with the argument `rv13 > 0`. Assign the result to an object called `x`. 
-
-```{r transforming-variables-20, exercise = TRUE}
-
-```
-
-```{r transforming-variables-20-hint-1, eval = FALSE}
-... <- ... |> 
-  filter(... > 0)
-```
-
-```{r transforming-variables-20-test, include = FALSE}
-x <- kenya |> 
-  filter(rv13 > 0)
-```
-
-### 
-
-### Exercise 21
-
-Next, we will look at the distribution of `rv13` in the our data. Behind the scene, we have created the graph for you. Type `rv_p` and hit "Run Code"
-
-```{r transforming-variables-21, exercise = TRUE}
-
-```
-
-```{r transforming-variables-21-hint-1, eval = FALSE}
-rv_p
-```
-
-```{r transforming-variables-21-test, include = FALSE}
-rv_p
-```
-
-### 
-
-### Exercise 22
-
-Now let's see how the distribution looks like after transforming `rv13` into the log version. Type `log_rv_p` and hit "Run Code".
-
-```{r transforming-variables-22, exercise = TRUE}
-
-```
-
-```{r transforming-variables-22-hint-1, eval = FALSE}
-log_rv_p
-```
-
-```{r transforming-variables-22-test, include = FALSE}
-log_rv_p
-```
-
-### 
-
 ### Exercise 23
 
-Let's put the two distribution next to each other to see the differences. Type `rv_p` and `log_rv_p`, connect them by `+`. Hit "Run Code"
+To fix this, pipe `kenya` to the command `filter()` with the argument `rv13 > 0`. Assign the result to an object called `x`. 
 
 ```{r transforming-variables-23, exercise = TRUE}
 
 ```
 
 ```{r transforming-variables-23-hint-1, eval = FALSE}
-... + ...
+... <- ... |> 
+  filter(... > 0)
 ```
 
 ```{r transforming-variables-23-test, include = FALSE}
+x <- kenya |> 
+  filter(rv13 > 0)
+```
+
+### 
+
+You should generally only take the log of variables for which all the values are strictly positive. The log of a negative number is not defined.
+
+### Exercise 24
+
+Next, we will look at the distribution of `rv13` in the our data. Behind the scene, we have created the graph for you. Type `rv_p` and hit "Run Code"
+
+```{r transforming-variables-24, exercise = TRUE}
+
+```
+
+```{r transforming-variables-24-hint-1, eval = FALSE}
+rv_p
+```
+
+```{r transforming-variables-24-test, include = FALSE}
+rv_p
+```
+
+### 
+
+Using the raw data, the distribution is heavily right-skewed. However, we do not know the “true” model, who is to say that a model using the raw value is right or wrong?
+
+### Exercise 25
+
+Now let's see how the distribution looks like after transforming `rv13` into the log version. Type `log_rv_p` and hit "Run Code".
+
+```{r transforming-variables-25, exercise = TRUE}
+
+```
+
+```{r transforming-variables-25-hint-1, eval = FALSE}
+log_rv_p
+```
+
+```{r transforming-variables-25-test, include = FALSE}
+log_rv_p
+```
+
+### 
+
+The distribution after taking log is more symmetric and closer to a normal distribution. Check whether or not this choice meaningfully affects the answer to your question.
+
+### Exercise 26
+
+Let's put the two distribution next to each other to see the differences. Type `rv_p` and `log_rv_p`, connect them by `+`. Hit "Run Code"
+
+```{r transforming-variables-26, exercise = TRUE}
+
+```
+
+```{r transforming-variables-26-hint-1, eval = FALSE}
+... + ...
+```
+
+```{r transforming-variables-26-test, include = FALSE}
 rv_p + log_rv_p
 ```
 
 ### 
 
-### Exercise 24
+Our inferences are often fairly "robust" to small changes in the model. If you get the same answer with `rv13` as from `log_rv13`, then no one cares which you use.
+
+### Exercise 27
 
 Lastly, add `title`, `subtitle` for the graph using the command `plot_annotation()`. Remember that this is what your graph should look like. 
 
@@ -641,17 +743,17 @@ rv_p + log_rv_p +
                   subtitle = "Taking logs helps us deal with outliers")
 ```
 
-```{r transforming-variables-24, exercise = TRUE}
+```{r transforming-variables-27, exercise = TRUE}
 
 ```
 
-```{r transforming-variables-24-hint-1, eval = FALSE}
+```{r transforming-variables-27-hint-1, eval = FALSE}
 ... + ... + 
   plot_annotation(title = ..., 
                   subtitle = ...)
 ```
 
-```{r transforming-variables-24-test, include = FALSE}
+```{r transforming-variables-27-test, include = FALSE}
 rv_p + log_rv_p +
   plot_annotation(title = 'Registered Votes In Kenya Communities',
                   subtitle = "Taking logs helps us deal with outliers")
@@ -659,65 +761,69 @@ rv_p + log_rv_p +
 
 ### 
 
-### Exercise 25
+Most professionals, when presented with data distributed like `rv13`, would take the log. Professionals (irrationally?) hate outliers. Any transformation which makes a distribution look more normal is generally considered a good idea.
+
+### Exercise 28
 
 Instead of simply transforming variables, we can add more terms which are transformed versions of a variable. We will be using the `nhanes` data set. Type `nhanes` and hit "Run Code."
 
-```{r transforming-variables-25, exercise = TRUE}
+```{r transforming-variables-28, exercise = TRUE}
 
 ```
 
-```{r transforming-variables-25-hint-1, eval = FALSE}
+```{r transforming-variables-28-hint-1, eval = FALSE}
 nhanes
 ```
 
-```{r transforming-variables-25-test, include = FALSE}
+```{r transforming-variables-28-test, include = FALSE}
 nhanes
 ```
 
 ### 
 
-### Exercise 26
+The following exercises are built up in the way that the more complex our model is, the better predictions they made and better answer to our questions. Complexity in this case can be referred to the number of variables we put into our formulas, whether we transform them or use their raw versions, etc.
+
+### Exercise 29
 
 Consider the relation of `height` to `age` in `nhanes`. Pipe `nhanes` to `select()` with `height` and `age` as the arguments. 
 
-```{r transforming-variables-26, exercise = TRUE}
+```{r transforming-variables-29, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r transforming-variables-26-hint-1, eval = FALSE}
+```{r transforming-variables-29-hint-1, eval = FALSE}
 ... |> 
   select(..., ...)
 ```
 
-```{r transforming-variables-26-test, include = FALSE}
+```{r transforming-variables-29-test, include = FALSE}
 nhanes |> 
   select(height, age)
 ```
 
 ### 
 
-<!-- Add knowledge drop about the data -->
+Is `age` the best predictor of `height`? In the data set their are other potential variables such as `race` and `sex`, which one should we select, and which one should we discard? We will see in the later sections.
 
-### Exercise 27
+### Exercise 30
 
 Let’s start by dropping the missing values. Copy your previous code, continue the pipe with `drop_na()`. Pipe the result to an object called `no_na_nhanes`.
 
-```{r transforming-variables-27, exercise = TRUE}
+```{r transforming-variables-30, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r transforming-variables-27-hint-1, eval = FALSE}
+```{r transforming-variables-30-hint-1, eval = FALSE}
 ... <- nhanes |> 
   select(..., ...) |> 
   ...
 ```
 
-```{r transforming-variables-27-test, include = FALSE}
+```{r transforming-variables-30-test, include = FALSE}
 no_na_nhanes <- nhanes |> 
   select(height, age) |> 
   drop_na() 
@@ -725,15 +831,17 @@ no_na_nhanes <- nhanes |>
 
 ### 
 
-### Exercise 28
+When building models, we rely on assumptions to construct the mathematical formula to illustrate the relationship between variables. The less assumptions we need to make about our model, the more robust it gets in terms of reflecting the true underlying patterns in the data.
+
+### Exercise 31
 
 Let's create a model to study the relationship between `height` and `age`. Create a model using `brm()` from the **brms**. Use the argument `formula = height ~ age`, `data = no_na_nhanes`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 16`. Assign the result to an object called `nhanes_1`. 
 
-```{r transforming-variables-28, exercise = TRUE}
+```{r transforming-variables-31, exercise = TRUE}
 
 ```
 
-```{r transforming-variables-28-hint-1, eval = FALSE}
+```{r transforming-variables-31-hint-1, eval = FALSE}
 ... <- brm(formula = ...,
                 data = ...,
                 family = ...,
@@ -744,11 +852,13 @@ Let's create a model to study the relationship between `height` and `age`. Creat
 
 ### 
 
-### Exercise 29
+This model assumes the relationship between `age` and `height` is always constant, meaning that `height` always increases as `age` increases. That is not a very good model, obviously, we will see the reason why.
+
+### Exercise 32
 
 How accurate our model is can be determined by whether it represent the pattern of our data. Hit "Run Code". 
 
-```{r transforming-variables-29, exercise = TRUE}
+```{r transforming-variables-32, exercise = TRUE}
 no_na_nhanes |> 
   ggplot(aes(x = age, y = height)) +
     geom_point(alpha = 0.1) +
@@ -762,7 +872,7 @@ no_na_nhanes |>
          caption = "Data source: NHANES")
 ```
 
-```{r transforming-variables-29-test, include = FALSE}
+```{r transforming-variables-32-test, include = FALSE}
 no_na_nhanes |> 
   ggplot(aes(x = age, y = height)) +
     geom_point(alpha = 0.1) +
@@ -778,17 +888,17 @@ no_na_nhanes |>
 
 ### 
 
-That is not a very good model, obviously. Adding a quadratic term makes it better.
+From the graph, before the age of 20, the data points gathered and formed a steep line, indicating that during this time period, people grow up really fast as their ages increase. However, after 20, there is little increase or even no increase in `height` as `age` increases. The red line created by the model did not capture this pattern. 
 
-### Exercise 30
+### Exercise 33
 
 Run the `brm()` command. Use the argument `formula = height ~ age + I(age^2)`, `data = no_na_nhanes`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 27`. Assign the result to an object called `nhanes_2`. 
 
-```{r transforming-variables-30, exercise = TRUE}
+```{r transforming-variables-33, exercise = TRUE}
 
 ```
 
-```{r transforming-variables-30-hint-1, eval = FALSE}
+```{r transforming-variables-33-hint-1, eval = FALSE}
 ... <- brm(... = height ~ age + I(age^2),
                 data = ...,
                 ... = gaussian(),
@@ -799,13 +909,13 @@ Run the `brm()` command. Use the argument `formula = height ~ age + I(age^2)`, `
 
 ### 
 
-Note the need for `I()` in creating the squared term within the `formula` argument.
+Note the need for `I()` in creating the squared term within the `formula` argument. Adding a quadratic term makes it better since we allow our model to get rid of the assumption of linear relationship, which is not true between the two variables. 
 
-### Exercise 31
+### Exercise 34
 
 Let's see whether this model is better in terms of demonstrating the relationship between `age` and `height` in our data set. Hit "Run Code".
 
-```{r transforming-variables-31, exercise = TRUE}
+```{r transforming-variables-34, exercise = TRUE}
 no_na_nhanes |> 
   ggplot(aes(x = age, y = height)) +
     geom_point(alpha = 0.1) +
@@ -818,7 +928,7 @@ no_na_nhanes |>
          caption = "Data source: NHANES")
 ```
 
-```{r transforming-variables-31-test, include = FALSE}
+```{r transforming-variables-34-test, include = FALSE}
 no_na_nhanes |> 
   ggplot(aes(x = age, y = height)) +
     geom_point(alpha = 0.1) +
@@ -835,15 +945,15 @@ no_na_nhanes |>
 
 This line looks better, but not the best we could do. We have not used our background knowledge that people don't get any taller after age 18 or so. 
 
-### Exercise 32
+### Exercise 35
 
 Let's create variables which capture that break. Run the `brm()` command. Use the argument `formula = height ~ I(ifelse(age > 18, 18, age))`, `data = no_na_nhanes`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 87`. Assign the result to an object called `nhanes_3`. 
 
-```{r transforming-variables-32, exercise = TRUE}
+```{r transforming-variables-35, exercise = TRUE}
 
 ```
 
-```{r transforming-variables-32-hint-1, eval = FALSE}
+```{r transforming-variables-35-hint-1, eval = FALSE}
 ... <- brm(... = ... ~ I(ifelse(age > 18, 18, age)),
                 data = ...,
                 ... = gaussian(),
@@ -852,16 +962,15 @@ Let's create variables which capture that break. Run the `brm()` command. Use th
                 seed = ...)
 ```
 
-
 ### 
 
-<!-- Add knowledge drop about `ifelse` -->
+Using the `ifelse()` command, we check every values of `age` in the data set, an original value is used if it is smaller than 18, every value greater than that threshold will be recorded as 18. The model does not understand the fact that people will (generally) not grow after the age of 18 so we need to manipulate this by "letting" it know that age-related changes in height are relevant only up to age 18.
 
-### Exercise 33
+### Exercise 36
 
 Let's see how this model does in terms of demonstrating the relationship between the two variables. Hit "Run Code". 
 
-```{r transforming-variables-33, exercise = TRUE}
+```{r transforming-variables-36, exercise = TRUE}
 no_na_nhanes |> 
   ggplot(aes(x = age, y = height)) +
     geom_point(alpha = 0.1) +
@@ -874,7 +983,7 @@ no_na_nhanes |>
          caption = "Data source: NHANES")
 ```
 
-```{r transforming-variables-33-test, include = FALSE}
+```{r transforming-variables-36-test, include = FALSE}
 no_na_nhanes |> 
   ggplot(aes(x = age, y = height)) +
     geom_point(alpha = 0.1) +
@@ -889,7 +998,7 @@ no_na_nhanes |>
 
 ### 
 
-<!-- Knowledge drop about the importance of domain knowledge -->
+The new line correctly captures the pattern in our data, note that models only do what we tell them to do. We are the captains of our souls and using the knowledge we have to transform variables as needed.
 
 ## Selecting variables
 ### 
@@ -936,8 +1045,6 @@ trains |>
 
 ### 
 
-<!-- Knowledge drop describing the selected variables. -->
-
 We also keep X if the underlying theory/observation suggests that X has a meaningfully connection to the outcome variable. It can also be the case when it is standard in your field to include X in such regressions, or simply just because your boss wants to include X. 
 
 ### Exercise 3
@@ -957,51 +1064,59 @@ Run the `brm()` command. Use the argument `formula = att_end ~ treatment + att_s
                    seed = ...)
 ```
 
-
 ### 
 
 `att_end`, the variable before the tilde, is our outcome. The explanatory variables are `treatment`, which says whether a commuter relieved treatment or control conditions, and `att_start`, which measures attitude at the start of the study.
 
 ### Exercise 4
 
-Run `fixef()` on `fit_1_model`. Hit "Run Code". 
+Type `fit_1_model` and hit "Run Code." 
 
 ```{r selecting-variables-4, exercise = TRUE}
 
 ```
 
 ```{r selecting-variables-4-hint-1, eval = FALSE}
-fixef(...)
+fit_1_model
 ```
 
 ```{r selecting-variables-4-test, include = FALSE}
+fit_1_model
+```
+
+### 
+
+A variable is worth including in our model depends on whether it has a large and well-estimated coefficient. This means, roughly, that the 95% confidence interval excludes zero.
+
+### Exercise 5
+
+Run `fixef()` on `fit_1_model`. Hit "Run Code". 
+
+```{r selecting-variables-5, exercise = TRUE}
+
+```
+
+```{r selecting-variables-5-hint-1, eval = FALSE}
+fixef(...)
+```
+
+```{r selecting-variables-5-test, include = FALSE}
 fixef(fit_1_model)
 ```
 
 ### 
 
-### Exercise 5
-
-How do we decide which variables are useful? First, let’s interpret our coefficients. In your own words, explain the coefficient of the Intercept. 
-
-```{r selecting-variables-5}
-question_text(NULL,
-	message = "The 95% confidence interval for `att_end`, our outcome, is equal to the coefficient -2.34- plus or minus two standard errors. This shows the estimate for the `att_end` where the commuters were under treatment and **were not** in the control group.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
+The 95% confidence interval for the coefficient of `treatmentControl` is -1.43 to -0.45. This means that, if I compare two people, one of whom received the treatment (i.e., heard Spanish speakers on the platform) and one of whom did not, then we would expect the one who did not (i.e., the one who was a "control" in our experiment) to have a lower score after the experiment. 
 
 ### Exercise 6
 
-In your own words, explain what 
+How do we decide which variables are useful? First, let’s interpret our coefficients. In your own words, describe the magnitude of the relationship between the variable `treatmentControl` and our outcome variable, `att_end`. 
+
+(Hint: Look at the sign of the estimate for that coefficient.)
 
 ```{r selecting-variables-6}
 question_text(NULL,
-	message = "Place correct answer here.",
+	message = "The point estimate for `treatmentControl` is -0.95, indicating the negative effect of being in the control group (not being exposed to Spanish-speakers) on the attitude towards immigration at the end of the experiment.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1010,37 +1125,90 @@ question_text(NULL,
 
 ### 
 
-<!-- Add questions and knowledge drop about interpreting the coefficients -->
+The variable `treatmentControl` represents the *offset* in `att_end` from the estimate for our `Intercept`, which is for the group of people that were in the Control group. This means that, compared with the predicted `att_end` for groups under treatment, those in the control group have a predicted attitude that is almost one entire point lower.
 
 ### Exercise 7
 
+In your own words, describe the magnitude of the relationship between `att_start` and `att_end`. Again, look at the sign of the estimated coefficient.
+
+```{r selecting-variables-7}
+question_text(NULL,
+	message = "The estimated coefficient for `att_start` is positive, indicating that the attitude at the end of the experiment is higher for every one unit increase in `att_start`.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Recall that we keep variables that have "large" coefficient, which can only be defined in the context of the specific model. Speaking roughly, removing a variable with a large coefficient meaningfully changes the predictions of the model.
+
+### Exercise 8
+
+Referring back to our regression table result for `fit_1_model`, what is the 95% Confidence Interval for `treatmentControl`. Round it up to 2 decimal places.
+
+```{r selecting-variables-8}
+question_text(NULL,
+	message = "The 95% CI for `treatmentControl` is [-1.44; -0.45].",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+The 95% CI of this variables excludes zero, suggesting that it is a worthy variable to include in our model. 
+
+### Exercise 9
+
+What is the 95% Confidence Interval for `att_start`. Round it up to 2 decimal places.
+
+```{r selecting-variables-9}
+question_text(NULL,
+	message = "The 95% CI for `att_start` is [0.72; 0.88].",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Applying the same requirement that the 95% Confidence Interval does NOT include zero, `att_start` is also a meaningful variable to our model. Therefore, our conclusion is to keep both variables, `treatment` and `att_start`. 
+
+### Exercise 10
+
 Let's us now consider `income` as a function of `age` and `liberal`, a proxy for political party. Pipe `trains` to `select()` with `income`, `age`, `liberal` as the arguments. 
 
-```{r selecting-variables-7, exercise = TRUE}
+```{r selecting-variables-10, exercise = TRUE}
 
 ```
 
-```{r selecting-variables-7-hint-1, eval = FALSE}
+```{r selecting-variables-10-hint-1, eval = FALSE}
 ... |> 
   select(..., ..., ...)
 ```
 
-```{r selecting-variables-7-test, include = FALSE}
+```{r selecting-variables-10-test, include = FALSE}
 trains |> 
   select(income, age, liberal)
 ```
 
 ### 
 
-### Exercise 8
+The rule of thumb is to keep variables for which the estimated coefficient is more than two standard errors away from zero. Some of these variables won’t “matter” much to the model since their coefficients, although well-estimated, are small enough that removing the variable from the model will not affect the model’s predictions very much.
+
+### Exercise 11
 
 Run the `brm()` command. Use the argument `formula = income ~ age + liberal`, `data = trains`, `family = gaussian()`, `silent = 2`, `refresh = 0`, `seed = 16`. Pipe the result to an object called `fit_2_model`. 
 
-```{r selecting-variables-8, exercise = TRUE}
+```{r selecting-variables-11, exercise = TRUE}
 
 ```
 
-```{r selecting-variables-8-hint-1, eval = FALSE}
+```{r selecting-variables-11-hint-1, eval = FALSE}
 ... <- brm(... = income ~ age + liberal,
                    data = ...,
                    ... = gaussian(),
@@ -1049,29 +1217,101 @@ Run the `brm()` command. Use the argument `formula = income ~ age + liberal`, `d
                    seed = ...)
 ```
 
+### 
+
+The variable before the tilde, `income`, is our outcome. The explanatory variables are `liberal`, a logical value of TRUE or FALSE, and `age`, a numeric variable. 
+
+### Exercise 12
+
+Type `fit_2_model` and hit "Run Code." 
+
+```{r selecting-variables-12, exercise = TRUE}
+
+```
+
+```{r selecting-variables-12-hint-1, eval = FALSE}
+fit_2_model
+```
+
+```{r selecting-variables-12-test, include = FALSE}
+fit_2_model
+```
 
 ### 
 
-### Exercise 9
+The `Intercept` is estimating income where `liberal == FALSE`. Therefore, it is the estimated income for commuters that are not liberals and who have `age = 0`. The estimate for `age` is showing the increase in income with every additional year of age.
+
+### Exercise 13
 
 Run `fixef()` on `fit_2_model`.
 
-```{r selecting-variables-9, exercise = TRUE}
+```{r selecting-variables-13, exercise = TRUE}
 
 ```
 
-```{r selecting-variables-9-hint-1, eval = FALSE}
+```{r selecting-variables-13-hint-1, eval = FALSE}
 fixef(...)
 ```
 
-```{r selecting-variables-9-test, include = FALSE}
+```{r selecting-variables-13-test, include = FALSE}
 
 fixef(fit_2_model)
 ```
 
 ### 
 
-<!-- Add exercises and knowledge drop about interpreting and choosing variables -->
+The estimate for `liberalTRUE` represents the offset in predicted income for commuters who *are* liberal. To find the estimate, we must add the coefficient to our `(Intercept)` value. We see that, on average, liberal commuters make less money. 
+
+### Exercise 14
+
+In your own words, describe the magnitude of the relationship between `liberalTRUE` and `income`. Again, look at the sign of the estimated coefficient.
+
+```{r selecting-variables-14}
+question_text(NULL,
+	message = "The coefficient for `liberalTRUE` is -32.434 (negative), indicating that the liberals in our data set make less on average than non-liberals.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+It is important to note that we are not looking at a causal relationship for either `liberal` or `age`. We are noting the differences between two groups, without considering causality, recall the differences between *across unit* comparison and *within unit* comparison. 
+
+### Exercise 15
+
+What is the 95% Confidence Interval for `liberalTRUE`. Round it up to 2 decimal places.
+
+```{r selecting-variables-15}
+question_text(NULL,
+	message = "The 95% CI for `liberalTRUE` is [-59756.45; -5266.50].",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+With rough mental math, we see that the 95% confidence interval excludes 0. Therefore, `liberal` is a helpful variable.
+
+### Exercise 16
+
+What is the 95% Confidence Interval for `age`. Round it up to 2 decimal places.
+
+```{r selecting-variables-16}
+question_text(NULL,
+	message = "The 95% CI for `age` is [-22.75; 2177.09].",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+The variable `age`, however, does not appear to have a meaningful impact on our `Intercept` since its coefficient is low and the 95% confidence interval *does not* exclude 0. Therefore, keep `liberal`, `age` is not that meaningful so it is really a matter of preference at this point. 
 
 ## Comparing models in theory
 ### 
@@ -1095,8 +1335,9 @@ fit_liberal <- brm(... = att_end ~ liberal,
                    seed = ...)
 ```
 
-
 ### 
+
+A better model not only makes better predictions on the current data set but also makes better prediction on the new data. For instance, if we were to predict how someone’s attitude changes toward immigration among Boston commuters based on political affiliation, we would want to go out and test our theories on new Boston commuters.
 
 ### Exercise 2
 
@@ -1116,6 +1357,8 @@ fixef(fit_liberal)
 
 ### 
 
+The magnitude between `liberalTRUE` and `att_end` is negative, which make sense. People who are liberal have more liberal attitudes about immigration, so we would expect their `att_end` scores to be lower. 
+
 ### Exercise 3
 
 Consider another model which seeks to explain the attitudes towards immigration among Boston commuters, using `att_start` as the explanatory variable. Run the `brm()` command. Use the argument `formula = att_end ~  att_start`, `data = trains`, `family = gaussian()`, `silent = 2`, `refresh = 0`, `seed = 37`. Pipe the result to an object called `fit_att_start`. 
@@ -1133,7 +1376,9 @@ Consider another model which seeks to explain the attitudes towards immigration 
                      seed = ...)
 ```
 
-### 
+###
+
+When thinking of generalize our model's prediction to new data, it is important to consider what is relevant new data in the context of the modeling problem. Some models are used to predict the future and, in those cases, we can wait and eventually observe the future and check how good our model is for making predictions.
 
 ### Exercise 4
 
@@ -1152,6 +1397,8 @@ fixef(fit_att_start)
 ```
 
 ### 
+
+We would also expect people to provide similar answers in two surveys administered a week or two apart. It makes sense that those with higher (more conservative) values for `att_start` would also have higher values for `att_end`.
 
 ### Exercise 5
 
@@ -1172,6 +1419,8 @@ trains |>
 ```
 
 ### 
+
+By doing this, we are creating a new column named `pred_liberal` that takes on the predicted values for `att_end` generated by the `fit_liberal` model. Adding `[, "Estimate"]` extracts just the "Estimate" column from the predictions, ignoring other columns like standard errors or confidence intervals.
 
 ### Exercise 6
 
@@ -1196,6 +1445,8 @@ trains |>
 
 ### 
 
+The `att_end` column represents the actual attitude towards immigration at the end of the experiment, while the `pred_liberal` generate the predicted values for `att_end`. Note that there are rows when the prediction match the actual values, but that's not always the case.
+
 ### Exercise 7
 
 Copy your previous code in exercise 5, continue the pipe with `ggplot()`. Map `x` to `pred_liberal`, `y` to `att_end` in the `aes()` argument. This will return a plain graph with two axes. 
@@ -1216,6 +1467,8 @@ trains |>
 ```
 
 ### 
+
+Each data point in the `x` axes is the predicted value for `att_end` of an individual and correspond to the actual value in the `y` axes. For some individuals, these are perfect predictions, but for others, they are poor predictions.
 
 ### Exercise 8
 
@@ -1240,6 +1493,8 @@ trains |>
 ```
 
 ### 
+
+Because there are only two possible values for `liberal` --- TRUE and FALSE --- there are only two predictions which this model will make: about 10 for `liberal == FALSE` and about 8 for `liberal == TRUE`. (The points in the above plot are jittered.)
 
 ### Exercise 9
 
@@ -1294,6 +1549,8 @@ trains |>
 
 ### 
 
+As we can see, the model isn't great at predicting attitude end. (Note the two individuals who are `liberal == TRUE`, and who the model thinks will have `att_end == 8`, but who have `att_end == 15`. The model got them both very, very wrong.)
+
 ### Exercise 11
 
 Finally, add `title`, `subtitle`, labels for `x` and `y`. Remember that your graph should look like this. 
@@ -1340,9 +1597,11 @@ trains |>
 
 ### 
 
+The most sensible way to test a model is to use the model to make predictions and compare those predictions to new data. After fitting the model using `brm()`, we would use `posterior_predict()` to obtain simulations representing the predictive distribution for new cases.
+
 ### Exercise 12
 
-Consider another model, using `att_start` to forecast `att_end`. Pipe `trains` to `mutate()` with the argument `pred_liberal = fitted(fit_att_start)[,"Estimate"]`. 
+Consider another model, using `att_start` to forecast `att_end`. Pipe `trains` to `mutate()` with the argument `pred_as = fitted(fit_att_start)[,"Estimate"]`. 
 
 ```{r comparing-models-in-theory-12, exercise = TRUE}
 
@@ -1355,14 +1614,16 @@ Consider another model, using `att_start` to forecast `att_end`. Pipe `trains` t
 
 ```{r comparing-models-in-theory-12-test, include = FALSE}
 trains |> 
-  mutate(pred_liberal = fitted(fit_att_start)[,"Estimate"])
+  mutate(pred_as = fitted(fit_att_start)[,"Estimate"])
 ```
 
 ### 
 
+Similar to the previous model, we will create a new columns that contain the predicted values for `att_end`, but from a different model `fitt_att_start`. Then we also compare our predictions with the actual values.
+
 ### Exercise 13
 
-Copy the previous code, continue the pipe to `select()` and choose `pred_liberal` and `att_end` as the argument. 
+Copy the previous code, continue the pipe to `select()` and choose `pred_as` and `att_end` as the argument. 
 
 ```{r comparing-models-in-theory-13, exercise = TRUE}
 
@@ -1372,20 +1633,22 @@ Copy the previous code, continue the pipe to `select()` and choose `pred_liberal
 
 ```{r comparing-models-in-theory-13-hint-1, eval = FALSE}
 ... |> 
-  select(pred_liberal, att_end)
+  select(pred_as, att_end)
 ```
 
 ```{r comparing-models-in-theory-13-test, include = FALSE}
 trains |> 
-  mutate(pred_liberal = fitted(fit_att_start)[,"Estimate"]) |> 
-  select(pred_liberal, att_end)
+  mutate(pred_as = fitted(fit_att_start)[,"Estimate"]) |> 
+  select(pred_as, att_end)
 ```
 
-### 
+###
+
+Note that the predictions can either larger or smaller, or in some cases, equal to the actual values. If our predicted variable is smaller than the actual value, then we have underestimated the actual value, and vice versa. 
 
 ### Exercise 14
 
-Copy your previous code in exercise 12, continue the pipe with `ggplot()`. Map `x` to `pred_liberal`, `y` to `att_end` in the `aes()` argument. This will return a plain graph with two axes. 
+Copy your previous code in exercise 12, continue the pipe with `ggplot()`. Map `x` to `pred_as`, `y` to `att_end` in the `aes()` argument. This will return a plain graph with two axes. 
 
 ```{r comparing-models-in-theory-14, exercise = TRUE}
 
@@ -1398,11 +1661,13 @@ Copy your previous code in exercise 12, continue the pipe with `ggplot()`. Map `
 
 ```{r comparing-models-in-theory-14-test, include = FALSE}
 trains |> 
-  mutate(pred_liberal = fitted(fit_att_start)[,"Estimate"]) |> 
-  ggplot(aes(x = pred_liberal, y = att_end))
+  mutate(pred_as = fitted(fit_att_start)[,"Estimate"]) |> 
+  ggplot(aes(x = pred_as, y = att_end))
 ```
 
 ### 
+
+Because `att_end` takes on `r length(unique(trains$att_end))` unique values, the model makes `r length(unique(trains$att_end))` unique predictions. Some of those predictions are perfect! But others are very wrong.
 
 ### Exercise 15
 
@@ -1421,34 +1686,40 @@ Copy the previous code, add `geom_jitter()` as another layer. Set `width` equal 
 
 ```{r comparing-models-in-theory-15-test, include = FALSE}
 trains |> 
-  mutate(pred_liberal = fitted(fit_att_start)[,"Estimate"]) |> 
-  ggplot(aes(x = pred_liberal, y = att_end)) +
+  mutate(pred_as = fitted(fit_att_start)[,"Estimate"]) |> 
+  ggplot(aes(x = pred_as, y = att_end)) +
     geom_jitter(width = 0.05, height = 0.2, alpha = 0.5)
 ```
 
+###
+
+Note that when we map on the data point, it spread through out the graph instead of only centering around specific values like the previous model. This is because `liberal` only takes 2 variable (0 and 1), while `att_start` can vary, which leads to more variation in the predicted values. 
+
 ### Exercise 16
 
-Copy the previous code, add `geom_abline()` as another layer. Set `intercept` equal 0, `slope` equal 1, and `color` equal "red". This will insert a red line where our preductions are correct using `geom_abline()` with an intercept, slope and color.
+Copy the previous code, add `geom_abline()` as another layer. Set `intercept` equal 0, `slope` equal 1, and `color` equal "red". This will insert a red line where our predictions are correct using `geom_abline()` with an intercept, slope and color.
 
-```{r comparing-models-in-theory-16-ex, exercise = TRUE}
+```{r comparing-models-in-theory-16, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-16-hint, eval = FALSE}
+```{r comparing-models-in-theory-16-hint-1, eval = FALSE}
 
 ```
 
 ```{r comparing-models-in-theory-16-test, include = FALSE}
 trains |> 
-  mutate(pred_liberal = fitted(fit_att_start)[,"Estimate"]) |> 
-  ggplot(aes(x = pred_liberal, y = att_end)) +
+  mutate(pred_as = fitted(fit_att_start)[,"Estimate"]) |> 
+  ggplot(aes(x = pred_as, y = att_end)) +
     geom_jitter(width = 0.05, height = 0.2, alpha = 0.5) + 
     geom_abline(intercept = 0, slope = 1, color = "red")
 ```
 
-###
+### 
+
+Note the individual with a predicted `att_end` of around 9 but with an actual value of `15`. That is a big miss!
 
 ### Exercise 17
 
@@ -1456,8 +1727,8 @@ Finally, add `title`, `subtitle`, labels for `x` and `y` axes for your graph. Re
 
 ```{r}
 trains |> 
-  mutate(pred_liberal = fitted(fit_att_start)[,"Estimate"]) |> 
-  ggplot(aes(x = pred_liberal, y = att_end)) +
+  mutate(pred_as = fitted(fit_att_start)[,"Estimate"]) |> 
+  ggplot(aes(x = pred_as, y = att_end)) +
     geom_jitter(width = 0.05, height = 0.2, alpha = 0.5) + 
   geom_abline(intercept = 0, slope = 1, color = "red") +
     labs(title = "Modeling Attitude Toward Immigration",
@@ -1466,14 +1737,13 @@ trains |>
          y = "True Attitude")
 ```
 
-
-```{r comparing-models-in-theory-17-ex, exercise = TRUE}
+```{r comparing-models-in-theory-17, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-17-hint, eval = FALSE}
+```{r comparing-models-in-theory-17-hint-1, eval = FALSE}
 ... + 
   labs(title = ..., 
        subtitle = ...,
@@ -1483,8 +1753,8 @@ trains |>
 
 ```{r comparing-models-in-theory-17-test, include = FALSE}
 trains |> 
-  mutate(pred_liberal = fitted(fit_att_start)[,"Estimate"]) |> 
-  ggplot(aes(x = pred_liberal, y = att_end)) +
+  mutate(pred_as = fitted(fit_att_start)[,"Estimate"]) |> 
+  ggplot(aes(x = pred_as, y = att_end)) +
     geom_jitter(width = 0.05, height = 0.2, alpha = 0.5) + 
   geom_abline(intercept = 0, slope = 1, color = "red") +
     labs(title = "Modeling Attitude Toward Immigration",
@@ -1493,7 +1763,7 @@ trains |>
          y = "True Attitude")
 ```
 
-###
+### 
 
 Rather than looking at individual cases, we need to look at the errors for all the predictions. Fortunately, a prediction error is the same thing as a residual, which is easy enough to calculate.
 
@@ -1501,11 +1771,11 @@ Rather than looking at individual cases, we need to look at the errors for all t
 
 Pipe `trains` to `select()` with `att_end`, `att_start`, and `liberal`. 
 
-```{r comparing-models-in-theory-18-ex, exercise = TRUE}
+```{r comparing-models-in-theory-18, exercise = TRUE}
 
 ```
 
-```{r comparing-models-in-theory-18-hint, eval = FALSE}
+```{r comparing-models-in-theory-18-hint-1, eval = FALSE}
 ... |> 
   ...(..., ..., ...)
 ```
@@ -1515,19 +1785,21 @@ trains |>
   select(att_end, att_start, liberal)
 ```
 
-###
+### 
+
+A residual is the difference between the observed value of the dependent variable (actual value) and the predicted value (fitted value) produced by a regression model.
 
 ### Exercise 19
 
 Continue the pipe with `mutate()`. Set `pred_lib` equal `fitted(fit_liberal)[,"Estimate"]` as the argument. 
 
-```{r comparing-models-in-theory-19-ex, exercise = TRUE}
+```{r comparing-models-in-theory-19, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-19-hint, eval = FALSE}
+```{r comparing-models-in-theory-19-hint-1, eval = FALSE}
 ... |> 
   mutate(... = fitted(...)[,"Estimate"])
 ```
@@ -1538,19 +1810,24 @@ trains |>
   mutate(pred_lib = fitted(fit_liberal)[,"Estimate"])
 ```
 
-###
+### 
+
+In mathematical terms, for each observation $i$: 
+
+$$Residual = y_i - \hat{y_i} $$
+$y_i$ is the actual value of the dependent variable, which is `att_end` and $\hat{y_i}$ is the predicted value of `att_end` generated from the model.
 
 ### Exercise 20
 
 Add another column `resid_lib` equal `pred_lib - att_end` to the current tibble using the `mutate()` command. 
 
-```{r comparing-models-in-theory-20-ex, exercise = TRUE}
+```{r comparing-models-in-theory-20, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-20-hint, eval = FALSE}
+```{r comparing-models-in-theory-20-hint-1, eval = FALSE}
 ...|> 
   mutate(resid_lib = pred_lib - att_end)
 ```
@@ -1562,20 +1839,21 @@ trains |>
   mutate(resid_lib = pred_lib - att_end)
 ```
 
-###
+### 
+
+Larger residual means larger deviations from the actual values. Smaller residuals indicate a model that fits the data well.
 
 ### Exercise 21
 
-
 Continue the pipe with `mutate()`, create a new column called `pred_as` and set it equal to `fitted(fit_att_start)[,"Estimate"]`.
 
-```{r comparing-models-in-theory-21-ex, exercise = TRUE}
+```{r comparing-models-in-theory-21, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-21-hint, eval = FALSE}
+```{r comparing-models-in-theory-21-hint-1, eval = FALSE}
 ... |> 
   mutate(pred_as = fitted(fit_att_start)[,"Estimate"])
 ```
@@ -1588,19 +1866,21 @@ trains |>
   mutate(pred_as = fitted(fit_att_start)[,"Estimate"])
 ```
 
-###
+### 
+
+Sadly, it is not wise to simply select the model which fits the data best because doing so can be misleading. We are using our data to select parameters and then, after using the data once, turning around and “checking” to see how well your model fits the data. It better fit! 
 
 ### Exercise 22
 
 Finally, calculate the residual when using `att_start` to forecast `att_end`. Using `mutate()`, add `resid_as` and set it equal to `pred_as - att_end`.
 
-```{r comparing-models-in-theory-22-ex, exercise = TRUE}
+```{r comparing-models-in-theory-22, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-22-hint, eval = FALSE}
+```{r comparing-models-in-theory-22-hint-1, eval = FALSE}
 
 ```
 
@@ -1613,31 +1893,117 @@ trains |>
   mutate(resid_as = pred_as - att_end)
 ```
 
-###
+### 
+
+*If the only criteria we cared about was how well the model predicts using the data on which the parameters were estimated, then a model with more parameters will always be better*. But that is not what truly matters. What matters is how well the model works on data which was not used to create the model.
 
 ### Exercise 23
 
+Let's look at the square root of the average squared error. Pipe `trains` to `select` to take out `att_end`, `att_start` and `liberal`.
 
-```{r comparing-models-in-theory-23-ex, exercise = TRUE}
+```{r comparing-models-in-theory-23, exercise = TRUE}
+
+```
+
+```{r comparing-models-in-theory-23-hint-1, eval = FALSE}
+... |> 
+  ...(..., ..., ...) 
+```
+
+```{r comparing-models-in-theory-23-test, include = FALSE}
+trains |> 
+  select(att_end, att_start, liberal) 
+```
+
+### 
+
+There are many different measures of the error which we might calculate. The squared difference is most common for historical reasons: it was the mathematically most tractable in the pre-computer age. 
+
+### Exercise 24
+
+Continue the pipe with `mutate()`. Create a column named `lib_err` and set it equal to `(fitted(fit_liberal)[,"Estimate"] - att_end)^2`.
+
+```{r comparing-models-in-theory-24-ex, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-23-hint, eval = FALSE}
+```{r comparing-models-in-theory-24-hint, eval = FALSE}
+... |>
+  ...(... = (fitted(...)[,"Estimate"] - ...)^2)
+```
+
+```{r comparing-models-in-theory-24-test, include = FALSE}
+trains |> 
+  select(att_end, att_start, liberal) |> 
+  mutate(lib_err = (fitted(fit_liberal)[,"Estimate"] - att_end)^2) 
+```
+
+###
+
+Since the residuals can be negative, we will get the zero value when trying to sum them up, or cannot take the square root of the difference. Thus, we square them up so that all values are positive.
+
+### Exercise 25
+
+Continue the pipe with `mutate()`. Create a column named `as_err` and set it equal to `(fitted(fit_att_start)[,"Estimate"] - att_end)^2`.
+
+```{r comparing-models-in-theory-25-ex, exercise = TRUE}
 
 ```
 
-```{r comparing-models-in-theory-23-test, include = FALSE}
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r comparing-models-in-theory-25-hint, eval = FALSE}
+... |> 
+  ...(... = (fitted(...)[,"Estimate"] - ...)^2)
+```
+
+```{r comparing-models-in-theory-25-test, include = FALSE}
+trains |> 
+  select(att_end, att_start, liberal) |> 
+  mutate(lib_err = (fitted(fit_liberal)[,"Estimate"] - att_end)^2) |> 
+  mutate(as_err = (fitted(fit_att_start)[,"Estimate"] - att_end)^2)
+```
+
+###
+
+Having calculated a squared difference for each observation, we can sum them or take their average or take the square root of their average. 
+
+### Exercise 26
+
+Continue the pipe with `summarize()`. The first argument is `lib_sigma` and set it equal to `sqrt(mean(lib_err))`, the second argument is `as_sigma` and set it equal to `sqrt(mean(as_err))`.
+
+```{r comparing-models-in-theory-26-ex, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r comparing-models-in-theory-26-hint, eval = FALSE}
+... |> 
+  summarize(lib_sigma = ...,
+            as_sigma = ...)
+```
+
+```{r comparing-models-in-theory-26-test, include = FALSE}
+trains |> 
+  select(att_end, att_start, liberal) |> 
+  mutate(lib_err = (fitted(fit_liberal)[,"Estimate"] - att_end)^2) |> 
+  mutate(as_err = (fitted(fit_att_start)[,"Estimate"] - att_end)^2) |> 
+  summarize(lib_sigma = sqrt(mean(lib_err)),
+            as_sigma = sqrt(mean(as_err))) 
 
 ```
 
 ###
 
-
+The better model is the one with smaller square root of the residual. The `as_sigma` has a lower value compared to `lib_sigma` and thus it is a better model. 
 
 ## Comparing models in practice 
 ### 
+
+In cross validation, part of the data is used to fit the model, while the rest of the data is used as a proxy for future data. We can hold out individual observations, called leave-one-out (LOO) cross validation; or groups of observations, called leave-one-group-out cross validation; or use past data to predict future observations, called leave-future-out cross validation. 
 
 ### Exercise 1
 
@@ -1657,16 +2023,18 @@ fixef(fit_liberal)
 
 ### 
 
+In essence: *One piece of data is excluded from our model, the model is re-fit, the model attempts to predict the value of the missing piece, we compare the true value to the predicted value, and we assess the accuracy of our model's prediction.* This process occurs for each piece of data, allowing us to assess the model's accuracy in making predictions.
+
 ### Exercise 2
 
 Now, we will perform `loo()` on our model and look at the results. Run the `loo()` command on `fit_liberal` and pipe the result to an object called `loo_liberal`.
 Type `loo_liberal` in a separate line and hit "Run Code". 
 
-```{r comparing-models-in-practice-2-ex, exercise = TRUE}
+```{r comparing-models-in-practice-2, exercise = TRUE}
 
 ```
 
-```{r comparing-models-in-practice-2-hint, eval = FALSE}
+```{r comparing-models-in-practice-2-hint-1, eval = FALSE}
 ... <- loo(...)
 
 loo_liberal
@@ -1678,17 +2046,19 @@ loo_liberal <- loo(fit_liberal)
 loo_liberal
 ```
 
-###
+### 
+
+`elpd_loo` is the estimated log score along with a standard error representing uncertainty due to using only 115 data points, `p_loo` is the estimated “effective number of parameters” in the model. `looic` is the LOO information criterion, −2 elpd_loo, which we compute for comparability to deviance.
 
 ### Exercise 3
 
 Let’s turn our attention to our second model. To begin, let’s observe the qualities of `fit_att_start` once again. Run `fixef()` on `fit_att_start` to print out the previous result. 
 
-```{r comparing-models-in-practice-3-ex, exercise = TRUE}
+```{r comparing-models-in-practice-3, exercise = TRUE}
 
 ```
 
-```{r comparing-models-in-practice-3-hint, eval = FALSE}
+```{r comparing-models-in-practice-3-hint-1, eval = FALSE}
 fixef(...)
 ```
 
@@ -1696,18 +2066,20 @@ fixef(...)
 fixef(fit_att_start)
 ```
 
-###
+### 
+
+Basically, when we run `loo()`, we are telling R to take a piece of data out of our data set, re-estimate all parameters, and then predict the value for the missing piece of data. The value for `elpd_loo()` is based off of how *close* our estimate was to the truth and thus inform us of the effectiveness of our model in predicting data it has not seen before. 
 
 ### Exercise 4
 
 Great! Now, let’s perform `loo()` on this model. Run the `loo()` command on `fit_att_start` and pipe the result to an object called `loo_att_start`.
 Type `loo_att_start` in a separate line and hit "Run Code". 
 
-```{r comparing-models-in-practice-4-ex, exercise = TRUE}
+```{r comparing-models-in-practice-4, exercise = TRUE}
 
 ```
 
-```{r comparing-models-in-practice-4-hint, eval = FALSE}
+```{r comparing-models-in-practice-4-hint-1, eval = FALSE}
 ... <- loo(...) 
 
 loo_att_start
@@ -1719,19 +2091,19 @@ loo_att_start <- loo(fit_att_start)
 loo_att_start
 ```
 
-###
+### 
 
-The `elpd_loo` value for this model is higher than the `elpd_loo` for att_liberal, implying that this model is superior. However, we can’t see our estimates together. Is there a simpler way to calculate which model is better? 
+The closer our value of `elpd_loo` is to 0, the more effective our model performs. The `elpd_loo` value for this model is higher than the `elpd_loo` for `att_liberal` (closer to zero), implying that this model is superior. 
 
 ### Exercise 5
 
 To compare the two models directly, we can use the function `loo_compare` with our two `loo` objects created above. This will calculate the difference in `elpd_loo()` between our models for us, making our job easier. Run the command `loo_compare()` with `loo_att_start` and `loo_liberal` as the arguments. 
 
-```{r comparing-models-in-practice-5-ex, exercise = TRUE}
+```{r comparing-models-in-practice-5, exercise = TRUE}
 
 ```
 
-```{r comparing-models-in-practice-5-hint, eval = FALSE}
+```{r comparing-models-in-practice-5-hint-1, eval = FALSE}
 loo_compare(..., ...)
 ```
 
@@ -1739,7 +2111,26 @@ loo_compare(..., ...)
 loo_compare(loo_att_start, loo_liberal)
 ```
 
+### 
+
+When the better model is compared to itself, the values of `elpd_diff` and `att_start` will be 0. The following rows show the offset in `elpd` and `se` values between the less effective model, `fit_liberal`, and the more effective model, `fit_att_start`
+
+### Exercise 6
+
+In one or two sentences, summarize our work so far, stating which model is better and conclude the better variable between `att_start` and `liberal` in terms of predicting the attitude towards immigration at the end of the experiment (`att_end`).
+
+```{r comparing-models-in-practice-6-ex}
+question_text(NULL,
+	message = "The better model is clear: `fit_att_start`. Therefore, the attitude at the start of the `trains` study is more significant to predicting final attitude when compared with the variable `liberal`, which is an analog for political affiliation.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
 ###
+
+What do we do when the value of `loo_compare()` is small? As a general practice, when `elpd_diff` is less than 4, there is no advantage to one model over the other. 
 
 ## Summary
 ### 
