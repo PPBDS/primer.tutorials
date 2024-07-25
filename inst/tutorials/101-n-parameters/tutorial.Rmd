@@ -25,14 +25,39 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
-data <- shaming |> mutate(p_00 = (primary_00 == "Yes"), p_02 = (primary_02 == "Yes"),
-       p_04 = (primary_04 == "Yes"), g_00 = (general_00 == "Yes"),
-       g_02 = (general_02 == "Yes"), g_04 = (general_04 == "Yes"),
+set.seed(9)
+
+ch10_data <- shaming |> 
+  mutate(p_00 = (primary_00 == "Yes"), 
+         p_02 = (primary_02 == "Yes"),
+         p_04 = (primary_04 == "Yes"), 
+         g_00 = (general_00 == "Yes"),
+         g_02 = (general_02 == "Yes"), 
+         g_04 = (general_04 == "Yes"),
 civ_engage = p_00 + p_02 + p_04 + g_00 + g_02 + g_04,
 voter_class = case_when(civ_engage %in% c(5, 6) ~ "Always Vote",
                         civ_engage %in% c(3, 4) ~ "Sometimes Vote",
                         civ_engage %in% c(1, 2) ~ "Rarely Vote"),
-voter_class = factor(voter_class, levels = c("Rarely Vote", "Sometimes Vote", "Always Vote")), age_z = as.numeric(scale(age))) |> rename(voted = primary_06) |> select(voted, treatment, sex, age_z, civ_engage, voter_class) |> drop_na()
+voter_class = factor(voter_class, levels = 
+                       c("Rarely Vote", "Sometimes Vote", "Always Vote")), 
+age_z = as.numeric(scale(age))) |> 
+  rename(voted = primary_06) |> 
+  select(voted, treatment, sex, age_z, civ_engage, voter_class) |> 
+  drop_na() |> 
+  slice_sample(prop = 0.1)
+
+
+# fit_postcard_vote <- brm(formula = voted ~ age_z + sex + 
+#                            treatment + voter_class + treatment*voter_class, 
+#                          data = ch10_data, 
+#                          family = gaussian(), 
+#                          refresh = 0, 
+#                          silent = 2, 
+#                          seed = 19)
+# 
+# write_rds(fit_postcard_vote, "data/fit_postcard_vote.rds")
+
+fit_postcard_vote <- read_rds("data/fit_postcard_vote.rds")
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -41,48 +66,9 @@ voter_class = factor(voter_class, levels = c("Rarely Vote", "Sometimes Vote", "A
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
 
-<!-- Instructions to Users of this Template: -->
+<!-- DK: The model fitting process can't take more than a minute or two. The easiest way to speed things up is to just use a random subset of the data. Update ch10_data creation code. -->
 
-<!-- This is the template tutorial for creating any tutorial which uses the Cardinal Virtues to answer a question given a data set. Although its primary use is for the main chapters in the Primer, it could be used for independent tutorials as well. The letters `XX` are used to indicate locations which require editing. Comments with instructions are interspersed. Read https://ppbds.github.io/primer/cardinal-virtues.html for details on the Cardinal Virtues. -->
-
-<!-- The tutorial is not done until you deal with, and remove, every XX. In general, XX will either mark a comment, which you should delete entirely once you have read it, or it will mark an object which you need to replace with the name that you have chosen. -->
-
-<!-- How much hand-holding you do depends on tutorial number. For tutorial 4, we would want to provide the same sort of questions and verbiage as we see in Project #2 in the RStudio and Github tutorial. For tutorial 10, we can go much more quickly. -->
-
-<!-- Note that the questions are a mixture of our three types: code, written (with answer) and written (without answer). The last is only (?) used for questions in which we ask the student to run a command like `show_file()`. Otherwise, we always provide an excellent written answer because students will generally look closely at our answer because they are concerned about whether or not their written answer matches ours. -->
-
-<!-- Whenever you tell a student to make a change in the QMD, you should tell them to `Command/Ctrl + Shift + K` in order to render the document. This will also cause it to be saved. This is good practice for catching bugs early. (Professionals do this.) Then, the last step in these exercises is often some version of show_file() and then CP/CR. -->
-
-<!-- Make use of, e.g., `show_file("tutorial-6.qmd", start = -5)` to get just the last 5 lines of the QMD. We don't want students to copy/paste the whole document. We also don't need to ensure that we get whatever it is that was just changed. We never look! Instead, we are just plausibly threatening to look.  -->
-
-<!-- There are many opportunities for knowledge drops, especially after definition questions. Use them! Point out something about the details of the particular problem from the chapter. Recall that students generally won't read the chapter, so we need to pull out the highlights. -->
-
-<!-- Most of the questions in the Temperance section relate to constructing a graphic. This leads lots of opportunities for knowledge drops. This is a good place to mention items from Courage which you might not have had room for in that section. -->
-
-<!-- Make sure to uncomment the test code chunks once you have created the necessary objects. -->
-
-<!-- Always create any modeling objects and then save them in data/ by hand. Then, when building the tutorial, just read in the object. See the below example. This is also discussed in Instructions for Writing Tutorials.
-
-Note that the commented code is run once, by hand, but saved so that it could be modified in the future. The fit_gauss assignment is run every time one hits Run Tutorial. But it is fast, so there is no cost. -->
-
-<!-- #fit_gauss <- brm(formula = att_end ~ treatment, -->
-<!-- #             data = trains, -->
-<!-- #             family = gaussian(), -->
-<!-- #             silent = 2, -->
-<!-- #             refresh = 0, -->
-<!-- #             seed = 9) -->
-<!-- #write_rds(fit_gauss, "data/fit_gauss.rds") -->
-
-<!-- fit_gauss <- read_rds("data/fit_gauss.rds") -->
-
-<!-- Future improvements to make in this document:
-
-Turn it into a vignette at some point? 
-
-In the same way that we give several quotes to choose from at the start of each section, we ought to give several different knowledge drops to choose from, in order of sophistication, for many of the standard questions, especially related to things like families and link functions. No need for authors to reinvent the wheel. 
-
-Would be nice if part of the testing would run all the object creation code so that we can be sure all that code works. But that would have to be during testing only. We don't want that code to execute during Run Tutorial because it often takes too long.
--->
+<!-- DK: Make The Question section. Read the randomling discussion template_tutorial. Look at Chapter 9 example. -->
 
 ## Introduction
 ### 
@@ -106,7 +92,7 @@ For this tutorial, our general question is:
 
 > *How can campaigns influence voters?*
 
-<!-- DK: How many people will do this? Zero! -->
+
 
 We will be looking at the shaming tibble from the [**primer.data**](https://ppbds.github.io/primer.data/) package, sourced from “[Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment](https://doi.org/10.1017/S000305540808009X)” by Gerber, Green, and Larimer (2008).
 
@@ -648,22 +634,22 @@ x <- shaming |> mutate(p_00 = (primary_00 == "Yes"),
 
 ### 
 
-Set all of this to an object `data`. When you run again, nothing should print out because the code is being set to an object.
+Set all of this to an object `ch10_data`. When you run again, nothing should print out because the code is being set to an object.
 
 ### Exercise 24
 
-Start a new pipe with `data` to `sample_frac()` with `0.5` as the parameter.
+Start a new pipe with `ch10_data` to `sample_frac()` with `0.5` as the parameter.
          
 ```{r wisdom-24, exercise = TRUE}
 
 ```
 
 ```{r wisdom-24-hint-1, eval = FALSE}
-data |> sample_frac(...)
+ch10_data |> sample_frac(...)
 ```
 
 ```{r wisdom-24-test, include = FALSE}
-data |> sample_frac(0.5)
+ch10_data |> sample_frac(0.5)
 ```
 
 ### 
@@ -687,7 +673,7 @@ Continue the pipe to `ggpot()` with `x` set to `civ_engage` and `y` set to `vote
 ```
 
 ```{r wisdom-25-test, include = FALSE}
-data |> sample_frac(0.5) |> 
+ch10_data |> sample_frac(0.5) |> 
   ggplot(aes(x = civ_engage, y = voted)) +
     geom_jitter(alpha = 0.03, height = 0.1)
 ```
@@ -713,7 +699,7 @@ Using the previous code, add `scale_x_continuous()` with `breaks` set to `1:6` a
 ```
 
 ```{r wisdom-26-test, include = FALSE}
-data |> sample_frac(0.5) |> 
+ch10_data |> sample_frac(0.5) |> 
   ggplot(aes(x = civ_engage, y = voted)) +
     geom_jitter(alpha = 0.03, height = 0.1) +
     scale_x_continuous(breaks = 1:6) + 
@@ -740,7 +726,7 @@ Finally, using the previous code, add the `labs()` layer.
 ```
 
 ```{r wisdom-27-test, include = FALSE}
-data |> sample_frac(0.5) |> 
+ch10_data |> sample_frac(0.5) |> 
   ggplot(aes(x = civ_engage, y = voted)) +
     geom_jitter(alpha = 0.03, height = 0.1) +
     scale_x_continuous(breaks = 1:6) + 
@@ -759,7 +745,7 @@ The graph should look like this:
 ```{r}
 #| echo: false
 
-data |>
+ch10_data |>
   sample_frac(0.05) |> 
   ggplot(aes(x = civ_engage, y = voted)) +
     geom_jitter(alpha = 0.03, height = 0.1) +
@@ -776,7 +762,7 @@ Although this plot is pleasing, we need to create an actual model with this data
 
 ### Exercise 28
 
-Add the code from Exercise 23 to have a `data` object in a new code chunk in `causal_effect.qmd`. Also add the code from the previous exercise to add the graph in the file. Render the file. 
+Add the code from Exercise 23 to have a `ch10_data` object in a new code chunk in `causal_effect.qmd`. Also add the code from the previous exercise to add the graph in the file. Render the file. 
 
 In the Console, run:
 
@@ -980,11 +966,9 @@ This assumption is only relevant for causal models. We describe a model as "conf
 
 Provide one reason why the assumption of unconfoundedness might not be true (or relevant) in this case.
 
-<!-- MK: not sure if this is the best reason, does this make sense as a reason why unconfoundedness might not be true or is this more of validity?-->
-
 ```{r justice-8}
 question_text(NULL,
-	message = "XX.",
+	message = "The experiment should be randomized, but there is a posibility that the people who ran the experiment did not actually make it fully randomized. It is easy to lie and say that there was randomization, but we can not know for sure if this was truly random assignment.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1015,16 +999,7 @@ Edit the summary paragraph in `causal_effect.qmd` as you see fit, but do not cop
 ## Courage
 ### 
 
-<!-- XX: Choose one. -->
-
-*Courage is found in unlikely places.* - J.R.R. Tolkien
 *Courage is being scared to death, but saddling up anyway.* - John Wayne
-*Courage is going from failure to failure without losing enthusiasm.* - Winston Churchill
-*Courage is the commitment to begin without any guarantee of success.* - Johann Wolfgang von Goethe
-
-
-<!-- Questions about models, tests, and the DGM. -->
-
 
 ### Exercise 1
 
@@ -1040,6 +1015,8 @@ question_text(NULL,
 ```
 
 ### 
+
+We first specify the mathematical formula which connects the outcome variable we are interested in with the other data that we have. We need to decide which variables to include and to estimate the values of unknown parameters. We check our models for consistency with the data we have. We avoid hypothesis tests.
 
 ### Exercise 2
 
@@ -1059,7 +1036,7 @@ library(brms)
 
 ### 
 
-<!-- XX: The Courage section of each chapter is the most complex because modeling is hard. Use opportunities for knowledge drops, like this one, judiciously. -->
+Given that the outcome variable is 0/1, a logistic model is the obvious choice. However, in this case, a linear model with a normal error term provides more or less the same answer.
 
 ### Exercise 3
 
@@ -1078,6 +1055,12 @@ library(tidybayes)
 ```
 
 ### 
+
+It is time to look at interactions! We will create a model that estimates `voted` as a function of `age_z`, `sex`, `treatment`, `voter_class`, and the interaction between treatment and voter classification. 
+
+The math (very long): 
+
+$$y_{i} = \beta_{0} + \beta_{1} age\_z + \beta_{2}male_i + \beta_{3}civic\_duty_i + \\ \beta_{4}hawthorne_i + \beta_{5}self_i + \beta_{6}neighbors_i + \\ \beta_{7}Sometimes\ vote_i + \beta_{8}Always\ vote_i + \\ \beta_{9}civic\_duty_i Sometimes\ vote_i + \beta_{10}hawthorne_i Sometimes\ vote_i + \\ \beta_{11}self_i Sometimes\ vote_i + \beta_{11}neighbors_i Sometimes\ vote_i + \\ \beta_{12}civic\_duty_i Always\ vote_i + \beta_{13}hawthorne_i Always\ vote_i + \\ \beta_{14}self_i Always\ vote_i + \beta_{15}neighbors_i Always\ vote_i + \epsilon_{i}$$
 
 ### Exercise 4
 
@@ -1100,34 +1083,27 @@ question_text(NULL,
 
 ### 
 
-<!-- XX: For a knowledge drop, there is nothing wrong with discussion regular expressions, which is the magic which allows us to just pull out the two lines in the QMD which we want. But better would just be more Courage knowledge drops. -->
-
+There are two ways to formalize the model: with and without the variable names. The former is related to the concept of Justice as we acknowledge that the model is constructed via the linear sum of `n` parameters times the value for `n` variables, along with an error term. In other words, it is a linear model.
 
 ### Exercise 5
 
-Create a model using `brm()` from the **brms** package. Your arguments should be XX. 
-
-<!-- Search and replace "fit_postcard_vote" as appropriate. As a convention, the name of a fitted model object should always start with `fit_`. -->
-
-<!-- Don't forget to create this model yourself in the setup chunk. Do this once, save the object, comment out that code and then just read_rds to create the object for his tutorial. -->
-
+Create a model using `brm()` from the **brms** package. Your arguments should be `formula = voted ~ age_z + sex + treatment + voter_class + treatment*voter_class`, `data = ch10_data`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 19`. 
 
 ```{r courage-5, exercise = TRUE}
 
 ```
 
 ```{r courage-5-hint-1, eval = FALSE}
-
+brm(...)
 ```
 
-<!-- XX: Note how there is no test case. If there were one, then a student would fit the model each time she hit "Run Tutorial." That takes too much time. -->
-
 ### 
+
+The second type of formal notation, more associated with the virtue Courage, includes the actual variable names we are using. The trickiest part is the transformation of character/factor variables into indicator variables, meaning variables with 0/1 values. Because `treatment` has 5 levels, we need 4 indicator variables. The fifth level is incorporated in the intercept.
 
 ### Exercise 6
 
 Behind the scenes, we have assigned the result of the `brm()` call to an object named `fit_postcard_vote`. Type `fit_postcard_vote` and hit "Run Code." This generates the same results as using `print(fit_postcard_vote)`.
-
 
 ```{r courage-6, exercise = TRUE}
 
@@ -1138,13 +1114,12 @@ fit_postcard_vote
 ```
 
 ```{r courage-6-test, include = FALSE}
-# fit_postcard_vote
+fit_postcard_vote
 ```
 
 ### 
 
-<!-- XX Same some general words about the object. Note that we are about to go through the top 4 rows. -->
-
+<!-- XX Say some general words about the object. Note that we are about to go through the top 4 rows. -->
 
 ### Exercise 7
 
@@ -1159,18 +1134,12 @@ family(...)
 ```
 
 ```{r courage-7-test, include = FALSE}
-# family(fit_postcard_vote)
+family(fit_postcard_vote)
 ```
 
 ### 
 
-<!-- XX: This is a great location for explanations which get much more detailed in later chapters. That is, we want students to have a more sophisticated understanding of probability distributions, and there use in modeling, as we move through the Primer.
-
-But, at a minimum, you would comment about how the family that is shown --- which is either gaussian, bernoulli or categorical --- is determined by the family argument which you passed in to the brm() call, and that you determined that by looking at the distribution of the output variable. Continuous means gaussian, 2 possible values means bernoullu, and 2+ possible values means categorical.
-
--->
-
-In this case, XX . . .
+In this case, the family is gaussian, which means the distribution of the output variable is continuous. The family is determined by the `family` argument which you passed in to the `brm()` call.
 
 ### Exercise 8
 
@@ -1185,7 +1154,7 @@ formula(...)
 ```
 
 ```{r courage-8-test, include = FALSE}
-# formula(fit_postcard_vote)
+formula(fit_postcard_vote)
 ```
 
 ### 
@@ -1205,7 +1174,7 @@ nobs(...)
 ```
 
 ```{r courage-9-test, include = FALSE}
-# nobs(fit_postcard_vote)
+nobs(fit_postcard_vote)
 ```
 
 ### 
@@ -1214,24 +1183,34 @@ In this case, XX
 
 ### Exercise 10
 
-Write the mathematical formula for your model, using $\LaTeX$ math notation.
+Add mathematical formula for your model, using $\LaTeX$ math notation to `causal_effect.qmd`.
+
+```
+$$y_{i} = \beta_{0} + \beta_{1} age\_z + \beta_{2}male_i + \beta_{3}civic\_duty_i + \\ \beta_{4}hawthorne_i + \beta_{5}self_i + \beta_{6}neighbors_i + \\ \beta_{7}Sometimes\ vote_i + \beta_{8}Always\ vote_i + \\ \beta_{9}civic\_duty_i Sometimes\ vote_i + \beta_{10}hawthorne_i Sometimes\ vote_i + \\ \beta_{11}self_i Sometimes\ vote_i + \beta_{11}neighbors_i Sometimes\ vote_i + \\ \beta_{12}civic\_duty_i Always\ vote_i + \beta_{13}hawthorne_i Always\ vote_i + \\ \beta_{14}self_i Always\ vote_i + \beta_{15}neighbors_i Always\ vote_i + \epsilon_{i}$$
+```
+
+`Command/Ctrl + Shift + K`. Ensure that the formula looks correct. 
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("causal_effect.qmd", start = -8)
+```
+
+CP/CR.
 
 ```{r courage-10}
 question_text(NULL,
-	message = "XX",
 	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 6)
+	rows = 3)
 ```
-
-### 
-
-Add the formula to `causal_effect.qmd`. `Command/Ctrl + Shift + K`. Ensure that the formula is looks correct. 
 
 ### Exercise 11
 
-Create a new code chunk in `causal_effect.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assining the result to `fit_postcard_vote`. 
+Create a new code chunk in `causal_effect.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assigning the result to `fit_postcard_vote`. 
 
 `Command/Ctrl + Shift + K`. It may take some time to render `causal_effect.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `causal_effect.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
 
@@ -1256,6 +1235,8 @@ question_text(NULL,
 
 ### 
 
+<!-- XX -->
+
 ### Exercise 12
 
 Run `posterior_interval()` on `fit_postcard_vote`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
@@ -1269,13 +1250,12 @@ posterior_interval(...)
 ```
 
 ```{r courage-12-test, include = FALSE}
-# posterior_interval(fit_postcard_vote)
+posterior_interval(fit_postcard_vote)
 ```
 
 ### 
 
 In this case, XX . . .
-
 
 ### Exercise 13
 
@@ -1290,7 +1270,7 @@ fixef(...)
 ```
 
 ```{r courage-13-test, include = FALSE}
-# fixef(fit_postcard_vote)
+fixef(fit_postcard_vote)
 ```
 
 ### 
@@ -1312,7 +1292,7 @@ pp_check(...)
 ```
 
 ```{r courage-14-test, include = FALSE}
-# pp_check(fit_postcard_vote)
+pp_check(fit_postcard_vote)
 ```
 
 ### 
@@ -1320,7 +1300,6 @@ pp_check(...)
 In this case, XX
 
 <!-- If the fake data had looked very different from the real data, we have had a problem. But, for the most part, we conclude that, although not perfect, pp_check() shows that the fake outcomes generated by our model are like the actual outcome data. -->
-
 
 ### Exercise 15
 
@@ -1346,8 +1325,7 @@ library(gtsummary)
 
 <!-- XX: This can be just one question or several, especially if you want to teach some more gtsummary or gt tricks. Make any adjustments to this question, like `intercept = TRUE`, so that this question works. -->
 
-Pipe `fit_postcard_vote` to `tbl_regression()`.
-
+Pipe `fit_postcard_vote` to `tbl_regression(intercept = TRUE, estimate_fun = function(x) style_sigfig(x, digits = 3))`.
 
 ```{r courage-16, exercise = TRUE}
 
@@ -1355,12 +1333,12 @@ Pipe `fit_postcard_vote` to `tbl_regression()`.
 
 ```{r courage-16-hint-1, eval = FALSE}
 fit_postcard_vote |> 
-  tbl_...()
+  tbl_regression()
 ```
 
 ```{r courage-16-test, include = FALSE}
-# fit_postcard_vote |> 
-#   tbl_regression()
+fit_postcard_vote |> 
+  tbl_regression(intercept = TRUE, estimate_fun = function(x) style_sigfig(x, digits = 3))
 ```
 
 ### 
@@ -1368,7 +1346,6 @@ fit_postcard_vote |>
 <!-- XX: Drop some knowledge about what you have learned by looking at the resulting table. Of course, you could have learned the same thing when you first took a look at fit_postcard_vote. But the table makes it easier to see the relationships between the variables and the outcome. With luck, students will take the hint when they answer the next question. -->
 
 <!-- https://www.danieldsjoberg.com/gtsummary/articles/tbl_regression.html -->
-
 
 ### Exercise 17
 
@@ -1384,6 +1361,8 @@ question_text(NULL,
 ```
 
 ### 
+
+<!-- XX -->
 
 ### Exercise 18
 
