@@ -39,22 +39,21 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
-approve_data <- ces |>
+x <- ces |>
   filter(year == 2020) |>
   select(faminc, ideology, approval_ch, education) |>
-  drop_na()
+  drop_na() |> 
+  slice_sample(n = 2000)
 
 # Adjust/remove the cores argument depending on your machine, without a lot of
 # cores, this can take a while.
 
 # fit_approve <- brm(formula = approval_ch ~ ideology + faminc + education,
-#                    data = approve_data,
+#                    data = x,
 #                    family = cumulative(),
 #                    refresh = 0,
 #                    silent = 2,
-#                    seed = 19,
-#                    cores = 8)
-# 
+#                    seed = 19)
 # write_rds(fit_approve, "data/fit_approve.rds")
  
 fit_approve <- read_rds("data/fit_approve.rds")
@@ -66,6 +65,10 @@ fit_approve <- read_rds("data/fit_approve.rds")
 
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
+
+<!-- DK: Add here a discussion about the data sampling and model fitting issues we explored. -->
+
+<!-- DK: All data manipulation in EDA section. -->
 
 ## Introduction
 ### 
@@ -638,18 +641,18 @@ ces |> filter(year == 2020) |> select(approval_ch, education, faminc, ideology) 
 
 ### 
 
-Behind the scenes of this tutorial, we have created an object called `approve_data` using the previous code. 
+Behind the scenes of this tutorial, we have created an object called `x` using the previous code. 
 
 ### Exercise 20
 
-To see the object that was created in the background, run `approve_data`.
+To see the object that was created in the background, run `x`.
 
 ```{r wisdom-20, exercise = TRUE}
 
 ```
 
 ```{r wisdom-20-hint-1, eval = FALSE}
-approve_data
+# x
 ```
 
 ### 
@@ -658,7 +661,7 @@ There are now only 54,839 rows which is significantly fewer than the whole `ces`
 
 ### Exercise 21
 
-In `analysis.qmd`, add a new code chunk. Copy the code from two exercises ago which prepares the data and paste it in the code chunk. Set the code to an object called `approve_data`. 
+In `analysis.qmd`, add a new code chunk. Copy the code from two exercises ago which prepares the data and paste it in the code chunk. Set the code to an object called `x`. 
 
 Render the file. In the Console, run:
 
@@ -683,7 +686,7 @@ The CES is a 50,000+ person national stratified sample survey administered by Yo
 
 ### Exercise 22
 
-Pipe `approve_data` to `summary()`.
+Pipe `x` to `summary()`.
 
 ```{r wisdom-22, exercise = TRUE}
 
@@ -694,7 +697,7 @@ summary(...)
 ```
 
 ```{r wisdom-22-test, include = FALSE}
-summary(approve_data)
+# summary(x)
 ```
 
 ### 
@@ -703,20 +706,20 @@ We can see some information about our data. Most people have a family income bet
 
 ### Exercise 23
 
-Pipe `approve_data` to `ggplot()` with `x` set to `ideology` and `fill` set to `approval_ch`. Then add a layer of `geom_bar`.
+Pipe `x` to `ggplot()` with `x` set to `ideology` and `fill` set to `approval_ch`. Then add a layer of `geom_bar`.
 
 ```{r wisdom-23, exercise = TRUE}
 
 ```
 
 ```{r wisdom-23-hint-1, eval = FALSE}
-approve_data |>
+x |>
   ggplot(aes(...)) +
   geom_bar()
 ```
 
 ```{r wisdom-23-test, include = FALSE}
-approve_data |>
+x |>
   ggplot(aes(x = ideology, fill = approval_ch)) +
   geom_bar()
 ```
@@ -740,7 +743,7 @@ Using the previous code, add `labs()`.
 ```
 
 ```{r wisdom-24-test, include = FALSE}
-approve_data |>
+x |>
   ggplot(aes(x = ideology, fill = approval_ch)) +
   geom_bar() +
   labs(title = "Relationship Between President Approval and Political Ideology in 2020",
@@ -758,7 +761,7 @@ The graph should look like this:
 ```{r}
 #| echo: false
 
-approve_data |>
+x |>
   ggplot(aes(x = ideology, fill = approval_ch)) +
   geom_bar() +
   labs(title = "Relationship Between President Approval and Political Ideology",
@@ -1111,7 +1114,7 @@ question_text(NULL,
 
 Before we create the model, we need to make our data even smaller because `brm()` takes a very long time to run when the data is large.
 
-To solve this issue, create a new object called `brm_data` and set it to `approve_data |> slice_sample(prop = 0.2)`. 
+To solve this issue, create a new object called `brm_data` and set it to `x |> slice_sample(prop = 0.2)`. 
 
 On a new line, call on the `brm_data` object. 
 
@@ -1120,18 +1123,22 @@ On a new line, call on the `brm_data` object.
 ```
 
 ```{r courage-5-hint-1, eval = FALSE}
-brm_data <- approve_data |> slice_sample(...)
+brm_data <- x |> 
+  slice_sample(...)
 brm_data
 ```
 
 ```{r courage-5-test, include = FALSE}
-brm_data <- approve_data |> slice_sample(prop = 0.2)
+brm_data <- x |> 
+  slice_sample(prop = 0.2)
 brm_data
 ```
 
 ### 
 
-The `brm_data` object only has 20% of the data from `approve_data`. This will make the `brm()` call run much faster.
+The `brm_data` object only has 20% of the data from `x`. This will make the `brm()` call run much faster.
+
+<!-- DK: Split above into two questioms. First, build the pipe. Second, tell them you have assigned the result of the pipe to an object, have them print that object. Name of object should be `x` or something similarly short and bland. Or, rather, do all this earlier.-->
 
 ### Exercise 6
 
@@ -1151,7 +1158,7 @@ The cumulative family leads to ordinal regression.
 
 ### Exercise 7
 
-Behind the scenes, we have used `brm()` to create an object named `fit_approve`. This version was created using `approve_data` so it has more rows than the one you created in the previous exercise.
+Behind the scenes, we have used `brm()` to create an object named `fit_approve`. This version was created using `x` so it has more rows than the one you created in the previous exercise.
 
 Type `fit_approve` and hit "Run Code." This generates the same results as using `print(fit_approve)`.
 
