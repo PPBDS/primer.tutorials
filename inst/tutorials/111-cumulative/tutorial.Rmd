@@ -58,6 +58,10 @@ x <- ces |>
  
 fit_approve <- read_rds("data/fit_approve.rds")
 
+
+ndata <- expand_grid(ideology = unique(x$ideology),
+                     education = unique(x$education),
+                     faminc = unique(x$faminc))
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -65,8 +69,6 @@ fit_approve <- read_rds("data/fit_approve.rds")
 
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
-
-<!-- DK: Add here a discussion about the data sampling and model fitting issues we explored. -->
 
 <!-- Sometimes brm() takes very long because the data is very large. In order to combat this problem, we can randomly choose a set amount from the data using slice_sample(). When we used slice_sample(n = 2000) and compared the outcome of the brm to the brm with the whole data, the results of the estimation were very similar. The key difference was the confidence interval; the confidence interval for the model with the larger data was smaller than the confidence interval for the smaller data. For our purposes, the data with only 2,000 observations was accurate enough for us to use. This might be different for different types of models. -->
 
@@ -1110,7 +1112,7 @@ question_text(NULL,
 
 ### 
 
-The `|` regular expression in the `show_file()` call allows us to just pull out the two lines in the QMD which we want. 
+The `|` regular expression in the `show_file()` call allows us to just pull out the two lines in the QMD which we want. The `|` is used like or, so the code returns any lines that have `brms` or `tidybayes`.
 
 ### Exercise 5
 
@@ -1148,7 +1150,7 @@ fit_approve
 
 ### 
 
-Using 2,000 observations from the data instead of the whole data should not make a huge difference in the model because we chose a random sample and because 2,000 rows should be enough to make an acurate model for our purposes. 
+Using 2,000 observations from the data instead of the whole data should not make a huge difference in the model because we chose a random sample and because 2,000 rows should be enough to make an accurate model for our purposes. 
 
 ### Exercise 7
 
@@ -1168,7 +1170,7 @@ family(fit_approve)
 
 ### 
 
-In this case, the family is cumulative which can be used to create ordinal regression.
+In this case, the family is cumulative which can be used to create ordinal regression. The family is determined by the left side variable in the formula. 
 
 ### Exercise 8
 
@@ -1208,9 +1210,7 @@ nobs(fit_approve)
 
 ### 
 
-In this case, there should be 54,839 observations.
-
-Again, `fit_approve` will have more rows than the one you have created because you used only 2,000 observations from the data to save time while creating the fit object using `brm()`.
+In this case, there should be 2,000 observations because we used `slice_sample()` to only select 2,000 random observations.
 
 ### Exercise 10
 
@@ -1222,10 +1222,11 @@ Add mathematical formula for your model, using $\LaTeX$ math notation to `analys
 
 <!-- cumulative(link = "logit", link_disc = "log", threshold = "flexible") -->
 
-$$ approval\_ch_i  \sim Cumulative(\rho_{strong\_approval},  \rho_{\_approval}, \rho_{strong\_approval} ... XX) $$        
+$$ approval\_ch_i  \sim Cumulative(\rho_{Strongly Approve},  \rho_{Approve / Somewhat Approve}, \rho_{Neither Approve Nor Disapprove}, \rho_{Disapprove / Somewhat Disapprove}, \rho_{Strongly Disapprove}) $$        
 Approvals add to 1.
 
 $$\rho_{strong\_approval} \sim logit(ideology_i,  faminc_i, education_i)$$
+
 Reminder:
 
 $$
@@ -1367,7 +1368,7 @@ fit_approve |>
   tbl_regression()
 ```
 
-<!-- DK: Warn them that there will be an warning message which says: Unable to identify the list of variables. You can ignore this.  -->
+There will be a warning message which says: Unable to identify the list of variables. You can ignore this. 
 
 ### 
 
@@ -1416,15 +1417,7 @@ question_text(NULL,
 ## Temperance
 ### 
 
-<!-- XX: Choose one. -->
-
-*Temperance is a tree which as for its root very little contentment, and for its fruit calm and peace.* - Buddha
 *Temperance is the greatest of all virtues. It subdues every passion and emotion, and almost creates a Heaven upon Earth.* - Joseph Smith Jr.
-*Temperance is a bridle of gold; he, who uses it rightly, is more like a god than a man.* - Robert Burton
-*Temperance is the firm and moderate dominion of reason over passion and other unrighteous impulses of the mind.* - Marcus Tullius Cicero
-*Temperance to be a virtue must be free, and not forced.* - Philip Massinger
-*Temperance is simply a disposition of the mind which binds the passion.* - Thomas Aquinas
-
 
 ### Exercise 1
 
@@ -1441,13 +1434,15 @@ question_text(NULL,
 
 ### 
 
+Temperance guides us in the use of the model we have created to answer the questions with which we began. 
+
 ### Exercise 2
 
 What is the general topic we are investigating? What is the specific question we are trying to answer? 
 
 ```{r temperance-2}
 question_text(NULL,
-	message = "XX: Should be exactly how you started the Wisdom section.",
+	message = "What is the relationship between the approval of the president and an individual's ideology?",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1464,7 +1459,7 @@ To answer our question, we need to create a `newdata` object. Which variables (e
 
 ```{r temperance-3}
 question_text(NULL,
-	message = "XX",
+	message = "We will inclue ideology, education and faminc.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1473,18 +1468,15 @@ question_text(NULL,
 
 ### 
 
-<!-- XX: Must be all the right hand side variables in fit_approve. And note that the type must (maybe not always . . .) match, like if `treatment` is a factor in the original data used to create fit_approve then it must (?) be a factor in ndata. -->
-
+We saw from the `fit_approve` that `faminc` does not have any relationship with `approval`. We will have it in our `newdata` object but we will not include it in our graph.
 
 ### Exercise 4
-
-<!-- XX: Sometimes useful to think about this question and the number of posterior questions together, or event to reverse them. -->
 
 Which values do you want the variables in your `newdata` object to have? This is not easy! At the very least, one of the rows should have values which allow you to answer your original question. But, now that you have a model, there are many questions which you might want to answer, the better to get a fuller understanding.
 
 ```{r temperance-4}
 question_text(NULL,
-	message = "XX",
+	message = "The ideology would have all of the political ideologies listed in the data, this is Very Liberal, Liberal, Moderate, Conservative, Very Conservative, and Not Sure. Education will have all of the education leves: No HS, High School Graduate, Some College, 2-Year, 4-Year, and Post-Grad. Faminc will have all ranges of family income: Less than 10k, 10k - 20k, 20k - 30k, 30k - 40k, 40k - 50k, 50k - 60k, 60k - 70k, 70k - 80k, 80k - 100k, 100k - 120k, 120k - 150k, and 150k+",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1493,48 +1485,44 @@ question_text(NULL,
 
 ### 
 
-<!-- XX: Chapter 10 is a great example of this in its full complexity. We want to know how "different" units behave, where the very definition of "different" is that they do not have identical values for all the variables used in fit_approve. -->
-
-<!-- For example, one row in ndata will generally represent the answer to the specific question we started with. But that is just the posterior for one sort of unit. There are lots of different units! Which others might we be interested in? We can generate posteriors for each of them, and then, in some cool graphic, display all those posteriors together. -->
-
-<!-- Note that, previously, this document claimed that the number of rows in ndata corresponded to the number of posteriors you wanted to calculate. But that is not true! -->
+We can choose any value for `faminc` and that would not change our estimates of the predictions as there is no relationship between `faminc` and `approval`. 
 
 ### Exercise 5
 
-Here is the R code which creates the `newdata` object: `tibble(whatever) code here`. Type it into the code exercise block and hit "Run Code."
-
-<!-- Asking students to create this object --- even after you help them figure out the columns, rows and values --- is too hard, at least until they get more experiences. Your knowledge drop, for this question and the next, should give them advice on the broad topic of how they can create newdata objects themselves. -->
+Here is the R code which creates the `newdata` object: `expand_grid(ideology = unique(x$ideology), education = unique(x$education), faminc = unique(x$faminc))`. Type it into the code exercise block and hit "Run Code."
 
 ```{r temperance-5, exercise = TRUE}
 
 ```
 
 ```{r temperance-5-hint-1, eval = FALSE}
-
+expand_grid(...)
 ```
 
 ```{r temperance-5-test, include = FALSE}
-
+expand_grid(ideology = unique(x$ideology),
+            education = unique(x$education),
+            faminc = unique(x$faminc))
 ```
 
 ### 
 
+<!-- XX -->
+
 ### Exercise 6
 
 Behind the scenes, we have created the `ndata` object using this code. To confirm, type `ndata` and hit "Run Code."
-
-<!-- Of course, you need to have added the code to create `ndata` in the setup chunk at the top of the file. -->
 
 ```{r temperance-6, exercise = TRUE}
 
 ```
 
 ```{r temperance-6-hint-1, eval = FALSE}
-
+ndata
 ```
 
 ```{r temperance-6-test, include = FALSE}
-
+ndata
 ```
 
 ### 
@@ -1550,23 +1538,20 @@ Now that we have the `newdata` object, we can create a pipe which uses out fitte
 ```
 
 ```{r temperance-7-hint-1, eval = FALSE}
-
+fit_approve
 ```
 
 ```{r temperance-7-test, include = FALSE}
-
+fit_approve
 ```
 
 ### 
 
 <!-- XX: Again, the main point of knowledge drops is this area is to explain to students why the newdata object looks the way it does and what it will produce. A great way to teach is via example. That is, explaining that if we had another way with these values, then we would get this posterior. Or, explaining what would be produced if we used add_epred instead of add_predict, and vice verse. -->
 
-
 ### Exercise 8
 
-Pipe `fit_approve` to [XX: either `add_epred_draws()` or `add_predicted_draws()`] with the argument `newdata = ndata`. 
-
-
+Pipe `fit_approve` to `add_predicted_draws()` with the argument `newdata = ndata`. 
 
 ```{r temperance-8, exercise = TRUE}
 
@@ -1575,11 +1560,13 @@ Pipe `fit_approve` to [XX: either `add_epred_draws()` or `add_predicted_draws()`
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r temperance-8-hint-1, eval = FALSE}
-
+fit_approve |>
+  add_predicted_draws(...)
 ```
 
 ```{r temperance-8-test, include = FALSE}
-
+fit_approve |>
+  add_predicted_draws(newdata = ndata)
 ```
 
 ### 
@@ -1613,6 +1600,8 @@ question_text(NULL,
 
 ### 
 
+<!-- XX -->
+
 ### Exercise 10
 
 Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
@@ -1632,7 +1621,6 @@ question_text(NULL,
 
 Edit the summary paragraph in `analysis.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
-
 <!-- XX: Again, spend time to make your recommended paragraph perfect. Study the examples in https://ppbds.github.io/primer/cardinal-virtues.html closely. -->
 
 ### Exercise 11
@@ -1649,6 +1637,8 @@ question_text(NULL,
 ```
 
 ### 
+
+<!-- XX -->
 
 ### Exercise 12
 
@@ -1693,7 +1683,7 @@ question_text(NULL,
 ## Summary
 ### 
 
-This tutorial covered [Chapter XX: XX](https://ppbds.github.io/primer/XX.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
+This tutorial covered topics that were not explicitly in [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
 
 ```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
 ```
