@@ -1054,7 +1054,9 @@ library(brms)
 
 ### 
 
-Given that the outcome is an ordered factor variable, we will be making an ordinal regression model. 
+Because `approval` is an ordinal variable, we assume that an individual's approval is produced from a Cumulative distribution.
+
+$$ approval_i  \sim Cumulative(\rho_{strongly\_positive}, \rho_{positive}, \rho_{neutral}, \rho_{negative}, \rho_{strongly\_negative}) $$
 
 ### Exercise 3
 
@@ -1074,14 +1076,28 @@ library(tidybayes)
 
 ### 
 
-We will create a model that estimates `approval` as a function of `faminc`, `ideology`, and `education`.
+Because we are using a Cumulative distribution, the link function is logit. That is:
+
+$$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 x_1 + \dots)}}$$
+Of course, the probabilities for each of the different levels of approval need to add to 1, by definition.
+
+$$\rho_{strongly\_positive} + \rho_{positive} + \rho_{neutral} + \rho_{negative} + \rho_{strongly\_negative} = 1$$
+
 
 ### Exercise 4
 
-Add `library(brms)` and `library(tidybayes)` to `analysis.qmd`. `Command/Ctrl + Shift + K`. At the Console, run:
+Add `library(brms)` and `library(tidybayes)` to the `setup` code chunk in `XX.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `XX.qmd`. `Command/Ctrl + Shift + K`. 
+
 
 ```
-tutorial.helpers::show_file("analysis.qmd", pattern = "brms|tidybayes")
+$$ approval_i  \sim Cumulative(\rho_{strongly\_positive}, \rho_{positive}, \rho_{neutral}, \rho_{negative}, \rho_{strongly\_negative})$$
+$$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 x_1 + \dots)}}$$
+```
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("XX.qmd", pattern = "brms|tidybayes|\\$\\$")
 ```
 
 CP/CR.
@@ -1097,7 +1113,9 @@ question_text(NULL,
 
 ### 
 
-The `|` regular expression in the `show_file()` call allows us to just pull out the two lines in the QMD which we want. The `|` is used like or, so the code returns any lines that have `brms` or `tidybayes`.
+Of course, our model must make use of the variables we actually have. Consider:
+
+<!-- DK: Add math stuff here from template tutorial . . . -->
 
 ### Exercise 5
 
@@ -1197,34 +1215,8 @@ nobs(fit_approve)
 
 In this case, there should be 2,000 observations because we used `slice_sample()` to only select 2,000 random observations.
 
+
 ### Exercise 10
-
-Add mathematical formula for your model, using $\LaTeX$ math notation to `analysis.qmd`.
-
-<!-- MK: What is the proper math notation for this model? -->
-
-<!-- Check out 4 parameters categorical. Do it like there! -->
-
-<!-- cumulative(link = "logit", link_disc = "log", threshold = "flexible") -->
-
-$$ approval_i  \sim Cumulative(\rho_{Strongly Approve}, \\ \rho_{Approve / Somewhat Approve}, \\ \rho_{Neither Approve Nor Disapprove}, \\ \rho_{Disapprove / Somewhat Disapprove}, \\ \rho_{Strongly Disapprove}) $$        
-Approvals add to 1.
-
-$$\rho_{strong\_approval} \sim logit(ideology_i,  faminc_i, education_i)$$
-
-Reminder:
-
-$$
-\rho = \frac{1}{1 + e^{-(\beta_0 + \beta_1 x_1 + \ldots) }}
-$$
-
-<!-- There are generally two parts for a statistical model: family and link function. The family is the probability distribution which generates the randomness in our data. The link function is the mathematical formula which links our data to the unknown parameters in the probability distribution. -->
-
-### 
-
-Add the formula to `analysis.qmd`. `Command/Ctrl + Shift + K`. Ensure that the formula is looks correct.
-
-### Exercise 11
 
 Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assigning the result to `fit_approve`. 
 
@@ -1238,7 +1230,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r courage-11}
+```{r courage-10}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1253,19 +1245,19 @@ By including `cache: true` you cause Quarto to cache the results of the chunk. T
 
 To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
 
-### Exercise 12
+### Exercise 11
 
 Run `posterior_interval()` on `fit_approve`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
 
-```{r courage-12, exercise = TRUE}
+```{r courage-11, exercise = TRUE}
 
 ```
 
-```{r courage-12-hint-1, eval = FALSE}
+```{r courage-11-hint-1, eval = FALSE}
 posterior_interval(...)
 ```
 
-```{r courage-12-test, include = FALSE}
+```{r courage-11-test, include = FALSE}
 posterior_interval(fit_approve)
 ```
 
@@ -1273,19 +1265,19 @@ posterior_interval(fit_approve)
 
 In this case, `faminc` has 0 included inside the 95% confidence interval, this means that we are not sure if family income has a positive or negative relationship with presidential approval. 
 
-### Exercise 13
+### Exercise 12
 
 Run `fixef()` on `fit_approve`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
 
-```{r courage-13, exercise = TRUE}
+```{r courage-12, exercise = TRUE}
 
 ```
 
-```{r courage-13-hint-1, eval = FALSE}
+```{r courage-12-hint-1, eval = FALSE}
 fixef(...)
 ```
 
-```{r courage-13-test, include = FALSE}
+```{r courage-12-test, include = FALSE}
 fixef(fit_approve)
 ```
 
@@ -1295,13 +1287,13 @@ In this case, we can again see that family income has no correlation with presid
 
 <!-- MK: do the questions and the answers make sense. -->
 
-### Exercise 14
+### Exercise 13
 
-Write a sentence interpreting the `0.17` estimate for `educationHighSchoolGraduate`.
+Write a sentence interpreting the `-0.34` estimate for `educationHighSchoolGraduate`.
 
-```{r courage-14}
+```{r courage-13}
 question_text(NULL,
-	message = "When comparing high school graduates with other education levels, high school graduates have a 0.17 value for approval, meaning that they are more likely to have more approval for the president, relative to other education levels because the estimates for the other educational levels are all negative.",
+	message = "When comparing (only) high school graduates with people who are in other education categories, high school graduates have a -0.34 value for approval, meaning that they are more likely to have more approval for the president, relative to other education levels because the estimates for the other educational levels are all negative.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1312,13 +1304,13 @@ question_text(NULL,
 
 Since `education` is not a binary variable, interpreting the estimates becomes a little more complex. Larger coefficients (either positive or negative) indicate a stronger relationship between the predictor and the latent approval score.
 
-### Exercise 15
+### Exercise 14
 
 Write a sentence interpreting the `0.27` to `1.44` confidence interval for `ideologyLiberal`. 
 
-```{r courage-15}
+```{r courage-14}
 question_text(NULL,
-	message = "We do not know the true value for the coefficient for ideologyLiberal, but we can be 95% confident that it lies somewhere between 0.27  and 1.44.",
+	message = "We do not know the true value for the coefficient for ideologyLiberal, but we can be 95% confident that it lies somewhere between 0.27 and 1.44.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1329,11 +1321,11 @@ question_text(NULL,
 
 If the credible interval does not include zero, the effect is likely to be significant.
 
-### Exercise 16
+### Exercise 15
 
 Write a sentence interpreting the `6.23` estimate for `ideologyVeryConservative`.
 
-```{r courage-16}
+```{r courage-15}
 question_text(NULL,
 	message = "If we compare people who are very conservative with the other ideologies, the very conservative people have, on average, a 6.23 more approval toward the president, adjusting for other individual characteristics.",
 	answer(NULL, correct = TRUE),
@@ -1348,19 +1340,19 @@ Positive coefficients suggest that higher values of the predictor increase the l
 
 Negative coefficients suggest that higher values of the predictor decrease the likelihood of higher approval categories.
 
-### Exercise 17
+### Exercise 16
 
 Run `pp_check()` on `fit_approve`. The `pp_check()` runs a **p**osterior **p**redictive check.
 
-```{r courage-17, exercise = TRUE}
+```{r courage-16, exercise = TRUE}
 
 ```
 
-```{r courage-17-hint-1, eval = FALSE}
+```{r courage-16-hint-1, eval = FALSE}
 pp_check(...)
 ```
 
-```{r courage-17-test, include = FALSE}
+```{r courage-16-test, include = FALSE}
 pp_check(fit_approve)
 ```
 
@@ -1370,19 +1362,19 @@ This might take some time.
 
 In this case, there is a peak at when the x-axis is at 1. 
 
-### Exercise 18
+### Exercise 17
 
 Use `library()` to load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
 
-```{r courage-18, exercise = TRUE}
+```{r courage-17, exercise = TRUE}
 
 ```
 
-```{r courage-18-hint-1, eval = FALSE}
+```{r courage-17-hint-1, eval = FALSE}
 library(gtsummary)
 ```
 
-```{r courage-18-test, include = FALSE}
+```{r courage-17-test, include = FALSE}
 library(gtsummary)
 ```
 
@@ -1390,20 +1382,20 @@ library(gtsummary)
 
 The *gtsummary* package provides an elegant and flexible way to create publication-ready analytical and summary tables using the R programming language. The *gtsummary* package summarizes data sets, regression models, and more, using sensible defaults with highly customizable capabilities.
 
-### Exercise 19
+### Exercise 18
 
 Pipe `fit_approve` to `tbl_regression()`.
 
-```{r courage-19, exercise = TRUE}
+```{r courage-18, exercise = TRUE}
 
 ```
 
-```{r courage-19-hint-1, eval = FALSE}
+```{r courage-18-hint-1, eval = FALSE}
 fit_approve |> 
   tbl_...()
 ```
 
-```{r courage-19-test, include = FALSE}
+```{r courage-18-test, include = FALSE}
 fit_approve |>
   tbl_regression()
 ```
@@ -1414,11 +1406,11 @@ There will be a warning message which says: Unable to identify the list of varia
 
 Beta for very conservative is 5.6 but it is 0.84 for liberal. This makes sense when taking into consideration what we noticed during the EDA: in 2020, conservatives supported the president more than liberals.  
 
-### Exercise 20
+### Exercise 19
 
 Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using, specifying the functional form and the dependent variable. Add one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
 
-```{r courage-20}
+```{r courage-19}
 question_text(NULL,
 	message = "Using the CES, which is one of the largest political surveys in the United States, we seek to understand the relationship between presidential approval and political ideology in 2020. One concern is that survey respondents might be systematically different from other Americans. We are using a cumulative model for ordinal regression.",
 	answer(NULL, correct = TRUE),
@@ -1431,7 +1423,7 @@ question_text(NULL,
 
 One relationship we have noticed is that conservatives tend to support the 2020 president more than liberals. 
 
-### Exercise 21
+### Exercise 20
 
 Update `analysis.qmd`. First, add `library(gtsummary)` to the `setup` code chunk,. Second, add the mathematical formula, in $\LaTeX$ and surrounded by double dollar signs, for your model. Third, add a new code chunk which creates the table of model parameters. `Command/Ctrl + Shift + K` to ensure that everything works.
 
@@ -1443,7 +1435,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r courage-21}
+```{r courage-20}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
