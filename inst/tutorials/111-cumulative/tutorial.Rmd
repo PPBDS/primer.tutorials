@@ -643,7 +643,7 @@ To see the object that was created in the background, run `x`.
 ```
 
 ```{r wisdom-20-hint-1, eval = FALSE}
-# x
+x
 ```
 
 ### 
@@ -688,7 +688,7 @@ summary(...)
 ```
 
 ```{r wisdom-22-test, include = FALSE}
-# summary(x)
+summary(x)
 ```
 
 ### 
@@ -1083,11 +1083,9 @@ Of course, the probabilities for each of the different levels of approval need t
 
 $$\rho_{strongly\_positive} + \rho_{positive} + \rho_{neutral} + \rho_{negative} + \rho_{strongly\_negative} = 1$$
 
-
 ### Exercise 4
 
-Add `library(brms)` and `library(tidybayes)` to the `setup` code chunk in `XX.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `XX.qmd`. `Command/Ctrl + Shift + K`. 
-
+Add `library(brms)` and `library(tidybayes)` to the `setup` code chunk in `analysis.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `analysis.qmd`. `Command/Ctrl + Shift + K`. 
 
 ```
 $$ approval_i  \sim Cumulative(\rho_{strongly\_positive}, \rho_{positive}, \rho_{neutral}, \rho_{negative}, \rho_{strongly\_negative})$$
@@ -1097,7 +1095,7 @@ $$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 x_1 + \dots)}}$$
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("XX.qmd", pattern = "brms|tidybayes|\\$\\$")
+tutorial.helpers::show_file("analysis.qmd", pattern = "brms|tidybayes|\\$\\$")
 ```
 
 CP/CR.
@@ -1115,7 +1113,9 @@ question_text(NULL,
 
 Of course, our model must make use of the variables we actually have. Consider:
 
-<!-- DK: Add math stuff here from template tutorial . . . -->
+<!-- MK: Is this correct or should I add more variables? -->
+
+$$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 ideologyLiberal+\beta_2 ideologyModerate + \dots)}}$$
 
 ### Exercise 5
 
@@ -1215,7 +1215,6 @@ nobs(fit_approve)
 
 In this case, there should be 2,000 observations because we used `slice_sample()` to only select 2,000 random observations.
 
-
 ### Exercise 10
 
 Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assigning the result to `fit_approve`. 
@@ -1285,7 +1284,7 @@ fixef(fit_approve)
 
 In this case, we can again see that family income has no correlation with presidential approval. 
 
-<!-- MK: do the questions and the answers make sense. -->
+<!-- MK: do the answers and the knowledge drops make sense. -->
 
 ### Exercise 13
 
@@ -1293,7 +1292,7 @@ Write a sentence interpreting the `-0.34` estimate for `educationHighSchoolGradu
 
 ```{r courage-13}
 question_text(NULL,
-	message = "When comparing (only) high school graduates with people who are in other education categories, high school graduates have a -0.34 value for approval, meaning that they are more likely to have more approval for the president, relative to other education levels because the estimates for the other educational levels are all negative.",
+	message = "When comparing (only) high school graduates with people who are in other education categories, high school graduates have a -0.34 value for approval, meaning that they are less likely to have more approval for the president, relative to the intercept, which for education is no high school.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1319,7 +1318,9 @@ question_text(NULL,
 
 ### 
 
-If the credible interval does not include zero, the effect is likely to be significant.
+If the credible interval does not include zero, the effect is likely to be significant. 
+
+The intercept is always the first value for any variable. For example, the intercept for `education` is `No HS`, and intercept for `ideology` is `Very Liberal`. This is why these values do not show up with `fixef(fit_approve)`. 
 
 ### Exercise 15
 
@@ -1327,7 +1328,7 @@ Write a sentence interpreting the `6.23` estimate for `ideologyVeryConservative`
 
 ```{r courage-15}
 question_text(NULL,
-	message = "If we compare people who are very conservative with the other ideologies, the very conservative people have, on average, a 6.23 more approval toward the president, adjusting for other individual characteristics.",
+	message = "If we compare people who are very conservative with the intercept, the very conservative people have, on average, a 6.23 more approval toward the president, adjusting for other individual characteristics.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1628,12 +1629,56 @@ fit_approve |>
 
 ### 
 
-<!-- XX: How do students know whether to use add_epred_draws or add_predicted_draws? This is non-trivial. On some level, we just tell them with the above command. (We don't make them guess.) But we also address this issue explicitly in various knowledg drops, especially this one. -->
+We use `add_epred_draws()` for expected values: we are not interested in any specific individual, the individual value is irrelevant. 
 
+We use `add_predicted_draws()` for predicted values: we care, not about the average, but about this specific person.
+
+Both functions return draws from a posterior probability distribution, but the unknown number which underlies the posterior are very different.
 
 <!-- XX: Insert as many questions as necessary to build a nice-looking example of your final plot. In early chapters, this is simple since our questions are simple. They are just one posterior. In later chapters, they become more complex, with the inclusion of several posteriors, as well as manipulation of them to calculate causal effects and whatnot. See the voting postcard example. -->
 
 ### Exercise 10
+
+Finish the graph with `labs()`. 
+
+```{r temperance-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-10-hint-1, eval = FALSE}
+... +
+  labs(...)
+```
+
+```{r temperance-10-test, include = FALSE}
+fit_approve |>
+  add_predicted_draws(newdata = ndata)
+```
+
+### 
+
+The graph should look like this: 
+
+```{r}
+#| echo: false
+
+# MK: What should the graph look like, I can't seem to fit all 4 variables in 1 graph without makeing it too hard to read. I have excluded faminc for this graph. 
+
+fit_approve |>
+  add_predicted_draws(newdata = ndata) |>
+  ggplot(aes(x = education, fill = ideology)) +
+  geom_bar(position = "dodge") +
+  facet_wrap(~ .prediction) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  labs(title = "Ideology by Education, Faceted by Approval",
+          x = "Education", fill = "Ideology")
+
+```
+
+### Exercise 11
 
 Create a new code chunk in `analysis.qmd`. Label it with `label: plot`. Copy/paste the code which creates your graphic. Don't forget that, at the top of this chunk, you must include code which creates the `ndata` object.
 
@@ -1647,7 +1692,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r temperance-10}
+```{r temperance-11}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1660,15 +1705,15 @@ question_text(NULL,
 
 <!-- XX -->
 
-### Exercise 11
+### Exercise 12
 
 Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
 
 <!-- XX: Most of the time, there will be some measure of uncertainty associated with your QoI. But not always! The most common counter-example involves a question which asks about the odds or probability of something happening. We would answer such a question by simulating the event with `add_predicted_draws()`. We would then calculate the odds/probability of something happening by seeing how many of the 4,000 draws met the criteria for the event. Assume that was 40%. So, we think that there is a 40% chance that event A will happen. Yet there is no uncertainty associated with that estimate because it, itself, is an expression of uncertainty.  -->
 
-```{r temperance-11}
+```{r temperance-12}
 question_text(NULL,
-	message = "XX",
+	message = "Using the CES, which is one of the largest political surveys in the United States, we seek to understand the relationship between presidential approval and political ideology in 2020. One concern is that survey respondents might be systematically different from other Americans. We are using a cumulative model for ordinal regression. People who are very conservative are more likely to approve the president higher by about 5.6 compared to people who are very liberal. We are 95% confident that the true value is between 4.9 and 6.2.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1679,15 +1724,13 @@ question_text(NULL,
 
 Edit the summary paragraph in `analysis.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
-<!-- XX: Again, spend time to make your recommended paragraph perfect. Study the examples in https://ppbds.github.io/primer/cardinal-virtues.html closely. -->
+### Exercise 13
 
-### Exercise 12
+Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted. 
 
-Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
-
-```{r temperance-12}
+```{r temperance-13}
 question_text(NULL,
-	message = "XX: This is another example in which the quality of your answer is important. You might or might not suggest an alternate estimate. I always adjust the estimate toward my own subjective sense of a longrun average and/or typical value and/or zero. But that is not necessary. However, you should always increase the confidence interval since the assumptions of your model are always false.",
+	message = "Our estimates and confidence intervals might not be wrong because the data is not perfect. We have noticed some potential problems such as in validity; people could be lying about thier approval of the president or misidentifying their ideology. These concerns can cause our findings to be inaccurate. The true estimate and confidence interval might be different. The interval would be bigger because we have uncertainties about the data.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1696,9 +1739,9 @@ question_text(NULL,
 
 ### 
 
-<!-- XX -->
+There is almost always uncertainty associated with our conclusions. It is important to notice and acknowledge the potential problems with the data. 
 
-### Exercise 13
+### Exercise 14
 
 Rearrange the material in `analysis.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
@@ -1710,7 +1753,7 @@ tutorial.helpers::show_file("analysis.qmd")
 
 CP/CR.
 
-```{r temperance-13}
+```{r temperance-14}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1723,11 +1766,11 @@ question_text(NULL,
 
 Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
 
-### Exercise 14
+### Exercise 15
 
 Publish `analysis.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
 
-```{r temperance-14}
+```{r temperance-15}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
