@@ -32,6 +32,7 @@ x <- ces |>
   drop_na() |> 
   slice_sample(n = 2000)
 
+
 # Adjust/remove the cores argument depending on your machine, without a lot of
 # cores, this can take a while.
 
@@ -46,9 +47,14 @@ x <- ces |>
 fit_approve <- read_rds("data/fit_approve.rds")
 
 
-ndata <- expand_grid(ideology = unique(x$ideology),
-                     education = unique(x$education),
-                     faminc = unique(x$faminc))
+ndata <-
+  expand_grid(ideology = c("Very Liberal",
+                           "Liberal",
+                           "Moderate",
+                           "Conservative",
+                           "Very Conservative"),
+              education = unique(x$education),
+              faminc = unique(x$faminc))
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -1113,8 +1119,6 @@ question_text(NULL,
 
 Of course, our model must make use of the variables we actually have. Consider:
 
-<!-- MK: Is this correct or should I add more variables? -->
-
 $$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 ideologyLiberal+\beta_2 ideologyModerate + \dots)}}$$
 
 ### Exercise 5
@@ -1284,15 +1288,13 @@ fixef(fit_approve)
 
 In this case, we can again see that family income has no correlation with presidential approval. 
 
-<!-- MK: do the answers and the knowledge drops make sense. -->
-
 ### Exercise 13
 
 Write a sentence interpreting the `-0.34` estimate for `educationHighSchoolGraduate`.
 
 ```{r courage-13}
 question_text(NULL,
-	message = "When comparing (only) high school graduates with people who are in other education categories, high school graduates have a -0.34 value for approval, meaning that they are less likely to have more approval for the president, relative to the intercept, which for education is no high school.",
+	message = "When comparing (only) high school graduates with people who didn't go to high school, high school graduates have a 0.34 lower value for approval, meaning that they are less likely to have more approval for the president.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1301,15 +1303,19 @@ question_text(NULL,
 
 ### 
 
-Since `education` is not a binary variable, interpreting the estimates becomes a little more complex. Larger coefficients (either positive or negative) indicate a stronger relationship between the predictor and the latent approval score.
+Positive coefficients suggest that higher values of the predictor increase the likelihood of higher approval categories.
+
+Negative coefficients suggest that higher values of the predictor decrease the likelihood of higher approval categories.
+
+Larger coefficients (either positive or negative) indicate a stronger relationship between the predictor and the latent approval score.
 
 ### Exercise 14
 
-Write a sentence interpreting the `0.27` to `1.44` confidence interval for `ideologyLiberal`. 
+Write a sentence interpreting the `-0.86` to `0.17` confidence interval for `educationHighSchoolGraduate`. 
 
 ```{r courage-14}
 question_text(NULL,
-	message = "We do not know the true value for the coefficient for ideologyLiberal, but we can be 95% confident that it lies somewhere between 0.27 and 1.44.",
+	message = "We do not know the true value for the coefficient for educationHighSchoolGraduate, but we can be 95% confident that it lies somewhere between -0.86 and 0.17.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1318,7 +1324,7 @@ question_text(NULL,
 
 ### 
 
-If the credible interval does not include zero, the effect is likely to be significant. 
+If the credible interval includes zero, the effect is less likely to be significant. 
 
 The intercept is always the first value for any variable. For example, the intercept for `education` is `No HS`, and intercept for `ideology` is `Very Liberal`. This is why these values do not show up with `fixef(fit_approve)`. 
 
@@ -1337,9 +1343,9 @@ question_text(NULL,
 
 ### 
 
-Positive coefficients suggest that higher values of the predictor increase the likelihood of higher approval categories.
+`Intercept[1]`, `Intercept[2]`, and so on are intercepts that are used as cut points or thresholds that separate the different levels of the ordinal outcome variable (`approval`). 
 
-Negative coefficients suggest that higher values of the predictor decrease the likelihood of higher approval categories.
+In ordinal regression, these intercepts define the points on the latent variable scale at which the response variable transitions from one category to the next.The probability of falling into a specific category is determined by the relationship between these intercepts and the predictors.
 
 ### Exercise 16
 
@@ -1509,7 +1515,7 @@ Which values do you want the variables in your `newdata` object to have? This is
 
 ```{r temperance-4}
 question_text(NULL,
-	message = "The ideology would have all of the political ideologies listed in the data, this is Very Liberal, Liberal, Moderate, Conservative, Very Conservative, and Not Sure. Education will have all of the education leves: No HS, High School Graduate, Some College, 2-Year, 4-Year, and Post-Grad. Faminc will have all ranges of family income: Less than 10k, 10k - 20k, 20k - 30k, 30k - 40k, 40k - 50k, 50k - 60k, 60k - 70k, 70k - 80k, 80k - 100k, 100k - 120k, 120k - 150k, and 150k+",
+	message = "The ideology would have most of the political ideologies listed in the data, this is Very Liberal, Liberal, Moderate, Conservative, and Very Conservative, we will not include not sure because it is not important. Education will have all of the education leves: No HS, High School Graduate, Some College, 2-Year, 4-Year, and Post-Grad. Faminc will have all ranges of family income: Less than 10k, 10k - 20k, 20k - 30k, 30k - 40k, 40k - 50k, 50k - 60k, 60k - 70k, 70k - 80k, 80k - 100k, 100k - 120k, 120k - 150k, and 150k+",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1522,7 +1528,7 @@ We can choose any value for `faminc` and that would not change our estimates of 
 
 ### Exercise 5
 
-Here is the R code which creates the `newdata` object: `expand_grid(ideology = unique(x$ideology), education = unique(x$education), faminc = unique(x$faminc))`. Type it into the code exercise block and hit "Run Code."
+Here is the R code which creates the `newdata` object: `expand_grid(ideology = c("Very Liberal", "Liberal", "Moderate", "Conservative", "Very Conservative"), education = unique(x$education), faminc = unique(x$faminc))`. Type it into the code exercise block and hit "Run Code."
 
 ```{r temperance-5, exercise = TRUE}
 
@@ -1533,7 +1539,11 @@ expand_grid(...)
 ```
 
 ```{r temperance-5-test, include = FALSE}
-expand_grid(ideology = unique(x$ideology),
+expand_grid(ideology = c("Very Liberal",
+                           "Liberal",
+                           "Moderate",
+                           "Conservative",
+                           "Very Conservative"),
             education = unique(x$education),
             faminc = unique(x$faminc))
 ```
@@ -1605,7 +1615,7 @@ fit_approve
 
 ### 
 
-<!-- XX -->
+Our `ndata` object includes `faminc` but we do not have to include it in our graph. As we previously discovered, family income does not have any significant relationship with `approval`.
 
 ### Exercise 9
 
@@ -1664,17 +1674,26 @@ The graph should look like this:
 ```{r}
 #| echo: false
 
-# MK: What should the graph look like, I can't seem to fit all 4 variables in 1 graph without making it too hard to read. I have excluded faminc for this graph. 
-
 fit_approve |>
-  add_predicted_draws(newdata = ndata) |>
-  ggplot(aes(x = education, fill = ideology)) +
-  geom_bar(position = "dodge") +
-  facet_wrap(~ .prediction) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-  labs(title = "Ideology by Education, Faceted by Approval",
-          x = "Education", fill = "Ideology")
+   add_predicted_draws(newdata = ndata) |>
+   filter(.prediction %in% c("Strongly Approve", "Strongly Disapprove")) |> 
+   ggplot(aes(x = education, fill = ideology)) +
+   geom_bar(aes(y = after_stat(prop), group = ideology), position = "dodge") +
+   facet_wrap(~ .prediction, nrow = 2,
+              labeller = labeller(c("Strongly Approve",
+                                       "Strongly Disapprove"))) +
+   scale_x_discrete(labels = c("No HS" = "No HS",
+                               "High School Graduate" = "HS",
+                               "Some College" = "Some College",
+                               "2-Year" = "2_Year",
+                               "4-Year" = "4-Year",
+                               "Post-Grad" = "Post-Grad")) +
+   scale_y_continuous(labels = scales::percent_format()) +
+   theme_minimal() +
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+   labs(title = "Ideology by Education, Faceted by Approval",
+        x = "Education", fill = "Ideology", y = "Probability")
+
 
 ```
 
@@ -1703,13 +1722,11 @@ question_text(NULL,
 
 ### 
 
-<!-- XX -->
+We could have made many graphs with this data to highlight different things. It is important to only keep information in that is useful and has relationships with the outcome variable. 
 
 ### Exercise 12
 
 Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
-
-<!-- XX: Most of the time, there will be some measure of uncertainty associated with your QoI. But not always! The most common counter-example involves a question which asks about the odds or probability of something happening. We would answer such a question by simulating the event with `add_predicted_draws()`. We would then calculate the odds/probability of something happening by seeing how many of the 4,000 draws met the criteria for the event. Assume that was 40%. So, we think that there is a 40% chance that event A will happen. Yet there is no uncertainty associated with that estimate because it, itself, is an expression of uncertainty.  -->
 
 ```{r temperance-12}
 question_text(NULL,
