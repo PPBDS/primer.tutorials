@@ -33,28 +33,17 @@ library(gt)
 # the tutorial.
 
 library(tidyverse)
-library(brms)
-library(tidybayes)
-library(gtsummary)
+library(tidymodels)
+library(broom)
+library(marginaleffects)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
-# XX: Never include setup code that takes more than a few seconds to run. For
-# example, using brm() takes too much time. Instead, do the below. See
+# XX: Never include setup code that takes more than a few seconds to run. See
 # https://ppbds.github.io/tutorial.helpers/articles/instructions.html#data for
 # background.
-
-# fit_height <- brm(height ~ age,
-#                   data = no_na_nhanes,
-#                   family = gaussian(),
-#                   silent = 2,
-#                   refresh = 0,
-#                   seed = 16)
-# write_rds(fit_height, "data/fit_height.rds")
-
-# fit_height <- read_rds("data/fit_height.rds")
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -75,32 +64,23 @@ options(tutorial.exercise.timelimit = 600,
 
 <!-- Once you decide the appropriate replacement for `fit_XX` and `XX.qmd`, you can do a global replace to fix them all. -->
 
-<!-- We sometimes connect XX to another word or phrase, as in [XX: unit] or `[XX: the tibble]`. In these cases, the XX indicates that this is something that you need to replace and the other words/symbols are there to guide you as to what the replacement should be. But you delete everything within the backets. For example, you might replace [XX: unit] with "candidate" (with no quotation marks) or whatever the type of unit we have in this problem. Similarly, `[XX: the tibble]` would be replaced with `trains` or whatever tibble is used in this tutorial. In both cases, we provide the correct punctuation. The word "candidate" would not have any punctuation since it is just a word in a sentence. But a tibble like `trains` needs to be surrounded by backticks. -->
+<!-- We sometimes connect XX to another word or phrase, as in [XX: unit] or `[XX: the tibble]`. In these cases, the XX indicates that this is something that you need to replace and the other words/symbols are there to guide you as to what the replacement should be. But you delete everything within the backets. For example, you might replace [XX: unit] with "candidate" (with no quotation marks) or whatever the type of unit we have in this problem. Similarly, `[XX: the tibble]` would be replaced with `trains` or whatever tibble is used in this tutorial. In both cases, we provide the correct punctuation. The word "candidate" would not have any punctuation since it is just a word in a sentence. But a tibble like `trains` needs to be surrounded by backticks, like any other tibble. -->
 
-<!-- Whenever creating an object which will be used in later questions, never have students do the assignment themselves. Instead, have a series of one or more questions which create the object, often by building a pipe line-by-line, with each step creating output which can be examined and discussed. Then, when the creation is done, have a last question which says, more or less, "Behind the scenes, we have assigned the result of the pipe [or whatever function call was used] to the object `fit_obj`. To confirm, type `fit_obj` and hit "Run Code." -->
+<!-- Whenever creating an object which will be used in later questions, never have students do the assignment themselves. Instead, have a series of one or more questions which create the object, often by building a pipe line-by-line, with each step creating output which can be examined and discussed. Then, when the creation is done, have a last question which says, more or less, 'Behind the scenes, we have assigned the result of the pipe [or whatever function call was used] to the object `fit_obj`. To confirm, type `fit_obj` and hit "Run Code."' -->
 
-<!-- Note that the questions are a mixture of our three types: code, written (with answer) and written (without answer). The last is only (?) used for questions in which we ask the student to run a command like `show_file()`. Otherwise, we always provide an excellent written answer because students will generally look closely at our answer because they are concerned about whether or not their written answer matches ours. -->
+<!-- Note that the questions are a mixture of our three types: code, written (with answer) and written (without answer). The last is only used for questions in which we ask the student to run a command like `show_file()`. Otherwise, we always provide an excellent written answer because students will generally look closely at our answer because they are concerned about whether or not their written answer matches ours. -->
 
-<!-- A plot, especially of the outcome or key covariate, often makes for an excellent knowledge drop. Just have a code chunk with no code chunk label. -->
+<!-- A plot, especially of the outcome or key covariate, often makes for an excellent knowledge drop. Just have a code chunk with no code chunk label, just ```{r} ```. -->
 
-<!-- Whenever you tell a student to make a change in the QMD, you should tell them to `Command/Ctrl + Shift + K` in order to render the document. This will also cause it to be saved. This is good practice for catching bugs early. (Professionals do this.) Then, the last step in these exercises is often some version of show_file() and then CP/CR. -->
+<!-- Whenever you tell a student to make a change in the QMD, you should tell them to `Command/Ctrl + Shift + K` in order to render the document. (This will also cause it to be saved.) This is good practice for catching bugs early. (Professionals do this.) Then, the last step in these exercises is often some version of show_file() and then CP/CR. -->
 
 <!-- Make use of, e.g., `show_file("tutorial-6.qmd", start = -5)` to get just the last 5 lines of the QMD. We don't want students to copy/paste the whole document. We also don't need to ensure that we get whatever it is that was just changed. We never look! Instead, we are just plausibly threatening to look.  -->
 
-<!-- Most of the questions in the Temperance section relate to constructing a graphic. This leads lots of opportunities for knowledge drops. This is a good place to mention items from Courage which you might not have had room for in that section. -->
-
 <!-- Make sure to uncomment the test code chunks once you have created the necessary objects. -->
 
-<!-- Future Improvements To Make in This Document -->
-
-<!-- In the same way that we give several quotes to choose from at the start of each section, we ought to give several different knowledge drops to choose from, in order of sophistication, for many of the standard questions, especially related to things like families and link functions. No need for authors to reinvent the wheel.  -->
+<!-- Things which DK is considering adding: -->
 
 <!-- We might also consider splitting up some of the Virtues into separate topics. After all, 20+ questions in a single topic is a bit much. -->
-
-<!-- Would be nice if part of the testing would run all the object creation code so that we can be sure all that code works. But that would have to be during testing only. We don't want that code to execute during Run Tutorial because it often takes too long. -->
-
-
-<!-- Things which DK is considering adding: -->
 
 <!-- The specific question is always either causal or predictive. (Note that few people use the term "predictive." We just use it to distinguish from "causal." Maybe "non-causal" would be a better term. If it is causal, you should use key causal language in the question, like "What is the causal effect of . . ." If the model is non-causal, the question should clearly compare two groups of units. "What is the difference in immigration attitudes between Democrats and Republicans?") -->
 
@@ -108,14 +88,9 @@ options(tutorial.exercise.timelimit = 600,
 
 <!-- The question can not specify values for more than one covariate, simply because you do not know what covariates will be included in the model until to create it. Indeed, there is an argument that the question should not mention any covariates! But, we recommend the use of one. First, you must mention the covariate (i.e., the treatment) in a causal model. Second, it is not unreasonable to specify, before you start, a covariate whose connection, if any, to the outcome is of special interest. -->
 
-
 <!-- The question just gets you started. It leads to the creation of the model.  -->
 
-<!-- All data manipulation in EDA, including data shrinking, but that would be accompanied by a discussion of 1,000 observations per parameter. -->
-
 <!-- Recall this line:  Need to ensure that, in the Courage section, students go through all three and understand how they are connected. Need to remind students about categorical variables turning into multiple 0/1 variables. Need to remind students that we can think in terms of individual rows or in terms of vectors. -->
-
-<!-- Consider adding the model creation and saving code to a separate model.R script. Then, in analysis.R, you could just read it in. Would also be useful, in at least some tutorials, to highlight using a small sample of the data in initial fitting. -->
 
 <!-- In the modern world, all parameters are nuisance parameters. -->
 
@@ -123,15 +98,17 @@ options(tutorial.exercise.timelimit = 600,
 
 <!-- The first sentence in the summary paragraph should be a simple reference to the overall topic and, perhaps, mention why it is important. This orients the reader to why the subject matters. The second sentence almost always begins "Using data from ...." and then gives a few words about the data source, followed by a comma. The rest of the sentence is something, "I/we explore the relationship between Y and X" where Y is the concept of the outcome variable, not the specific variable name in your data. -->
 
-<!-- * General introduction to the topic. Almost always along the lines of either a rhetorical question or a claim that Y is important or changing or interesting or . . . -->
+<!-- Five sentences: -->
 
-<!-- * Using data from (mention date, collection method (?) and organization (if famous)), I/we seek to understand outcome variable, which (give some information about outcome variable.), in order to (estimate the causal effect | compare two groups) for when/where. -->
+<!-- 1) General introduction to the topic. Almost always along the lines of either a rhetorical question or a claim that Y is important or changing or interesting or . . . -->
 
-<!-- * Tell me a weakness involving the key assumptions. Be wary of using technical terms. -->
+<!-- 2) "Using data from (mention date, collection method (?) and organization (if famous)), I/we seek to understand outcome variable, which (give some information about outcome variable.), in order to (estimate the causal effect | compare two groups) for when/where. -->
 
-<!-- * I/we model Y (the concept of the outcome, not the variable name; we almost never use any variable names, just like we never mention specific R code) as a linear/logistic/ordinal function of X (and maybe other covariates.) -->
+<!-- 3) Mention a weakness involving the key assumptions. Be wary of using technical terms. -->
 
-<!-- * Tell me a QoI and the uncertainty associated with it. -->
+<!-- 4) "I/we model Y (the concept of the outcome, not the variable name; we almost never use any variable names, just like we never mention specific R code) as a linear/logistic/ordinal function of X (and maybe other covariates.)"  -->
+
+<!-- 5) Describe a QoI, provide an estimate and the uncertainty associated with it. -->
 
 ## Introduction
 ### 
