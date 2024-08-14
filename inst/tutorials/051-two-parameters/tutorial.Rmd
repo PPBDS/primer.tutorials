@@ -19,32 +19,27 @@ library(gt)
 library(tidyverse)
 library(primer.data)
 library(skimr)
-library(brms)
-library(tidybayes)
-library(gtsummary)
+library(tidymodels)
+library(marginaleffects)
+library(broom)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
-ch5 <- nhanes |>
-  filter(sex == "Male", age >= 18) |>
-  select(height) |>
-  drop_na()
+x <- nhanes |>
+  filter(age >= 18) |>
+  select(height, sex) |>
+  drop_na() |> 
+  slice_sample(n = 50)
 
-# fit_male_height <- brm(formula = height ~ 1,
-#              data = ch5,
-#              family = gaussian(),
-#              silent = 2,
-#              refresh = 0,
-#              seed = 12)
-# 
-# write_rds(fit_male_height, "data/fit_male_height.rds")
-
-fit_male_height <- read_rds("data/fit_male_height.rds")
+fit_height <- linear_reg() |> 
+  set_engine("lm") |> 
+  fit(height ~ sex, data = x)
 
 ndata <- tibble(.rows = 1)
 
+# plot_predictions(fit_height, newdata = tibble(sex = unique(x$sex)), condition = "sex")
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -1191,7 +1186,7 @@ In data science, we deal with words, math, and code, but the most important of t
 
 ### Exercise 2
 
-Load the **brms** package.
+Load the **tidymodels** package.
 
 ```{r courage-2, exercise = TRUE}
 
@@ -1202,7 +1197,7 @@ library(...)
 ```
 
 ```{r courage-2-test, include = FALSE}
-library(brms)
+library(tidymodels)
 ```
 
 ### 
@@ -1213,7 +1208,7 @@ $$ height \sim Normal(\mu, \sigma^2)$$
 
 ### Exercise 3
 
-Load the **tidybayes** package.
+Load the **broom** package.
 
 ```{r courage-3, exercise = TRUE}
 
@@ -1224,7 +1219,7 @@ library(...)
 ```
 
 ```{r courage-3-test, include = FALSE}
-library(tidybayes)
+library(broom)
 ```
 
 ### 
@@ -1240,7 +1235,8 @@ with $\epsilon_i \sim N(0, \sigma^2)$. $y_i$ is the height of male $i$. $\mu$ is
 
 ### Exercise 4
 
-Add `library(brms)` and `library(tidybayes)` to the `setup` code chunk in `analysis.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `analysis.qmd`. `Command/Ctrl + Shift + K`. 
+Add `library(tidymodels)` and `library(broom)` to the `setup` code chunk in `XX.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `XX.qmd`. `Command/Ctrl + Shift + K`. 
+
 
 ```
 $$ height \sim Normal(\mu, \sigma^2)$$
@@ -1250,7 +1246,7 @@ $$ \mu =  \beta_0 + \beta_1 x_1 + \dots $$
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("analysis.qmd", pattern = "brms|tidybayes|\\$\\$")
+tutorial.helpers::show_file("XX.qmd", pattern = "tidymodels|broom|\\$\\$")
 ```
 
 CP/CR.
@@ -1273,20 +1269,63 @@ Since our covariate `sex` is a categorical variable, we cannot have words in mat
 
 ### Exercise 5
 
-Create a model using `brm()` from the **brms** package. Your arguments are `formula = height ~ 1`, `data = ch5`, `family = gaussian()`, `silent = 2`, `refresh = 0`, and `seed = 12`.
-
-<!-- Do not forget to create this model yourself in the setup chunk. Do this once, save the object, comment out that code and then just read_rds to create the object for this tutorial. -->
-
-<!-- Depending on code speed, you can run this function multiple times, without assigning the return value, looking at the printout, and seeing how things change. -->
-
-<!-- AC: ch5 doesn't exist in the qmd yet. Perhaps going back to Wisdom 22 and adding something about putting it into the qmd would help. Though that would also mess up the "Copy previous code" for the next exercise.  -->
+Start to create the model by using `linear_reg()`.
 
 ```{r courage-5, exercise = TRUE}
 
 ```
 
 ```{r courage-5-hint-1, eval = FALSE}
-brm(...)
+linear_reg()
+```
+
+```{r courage-5-test, include = FALSE}
+linear_reg()
+```
+
+### 
+
+### Exercise 6
+
+Continue the pipe with `set_engine("lm")`.
+
+```{r courage-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-6-hint-1, eval = FALSE}
+... |> 
+  set_engine("...")
+```
+
+```{r courage-6-test, include = FALSE}
+linear_reg() |> 
+  set_engine("lm")
+```
+
+### 
+
+### Exercise 7
+
+Continue the pipe to `fit(height ~ 1, data = x)`.
+
+```{r courage-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-7-hint-1, eval = FALSE}
+... |> 
+  fit(... ~ 1, ... = x)
+```
+
+```{r courage-7-test, include = FALSE}
+linear_reg() |> 
+  set_engine("lm") |> 
+  fit(height ~ 1, data = x)
 ```
 
 ### 
@@ -1295,98 +1334,94 @@ brm(...)
 
 * There is a direct connection between the mathematical form of the model created under Justice and the code we use to fit the model under Courage. `height ~ 1` is the code equivalent of $y_i =  \mu$. 
 
-### Exercise 6
-
-Behind the scenes of this tutorial, an object called `fit_male_height` has been created which has the result of the `brm()` call from the code above. Type `fit_male_height` and hit "Run Code". This generates the same results as using `print(fit_male_height)`.
-
-```{r courage-6, exercise = TRUE}
-
-```
-
-```{r courage-6-hint-1, eval = FALSE}
-fit_male_height 
-```
-
-```{r courage-6-test, include = FALSE}
-fit_male_height
-```
-
-### 
-
-Note:
-
-* We will be looking at this print out many times in the rest of the *Primer*. You will get used to it. The header information about Family, Links and so on just confirms what we already know. Still, you want to check this to make sure you did not make a mistake in the call to `brm()`.
-
-* The "Estimate" of 175.87 makes sense. After all, the simple mean of the `height` in the data is: 175.8707
-
-```{r}
-#| code-fold: false
-mean(ch5$height)
-```
-
-### Exercise 7
-
-Run `family()` on `fit_male_height`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable.
-
-```{r courage-7, exercise = TRUE}
-
-```
-
-```{r courage-7-hint-1, eval = FALSE}
-family(...)
-```
-
-```{r courage-7-test, include = FALSE}
-family(fit_male_height)
-```
-
-### 
-
-In this case, setting `family = gaussian()` implies that $\epsilon_i \sim N(0, \sigma^2)$, just as we assumed. That is not a coincidence! If $\epsilon_i$ had a different distribution, we would need to use a different statistical family. 
-
 ### Exercise 8
 
-Run `formula()` on `fit_male_height`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s).
+Behind the scenes of this tutorial, an object called `fit_height` has been created which has the result of the code above. Type `fit_height` and hit "Run Code". This generates the same results as using `print(fit_height)`.
 
 ```{r courage-8, exercise = TRUE}
 
 ```
 
 ```{r courage-8-hint-1, eval = FALSE}
-formula(...)
+fit_height 
 ```
 
 ```{r courage-8-test, include = FALSE}
-formula(fit_male_height)
+fit_height
 ```
 
 ### 
 
-In this case, the key parameter is the "Intercept," which is the same thing as $\mu$ in the mathematical description of the model and the same thing as `1` when we set `formula = height ~ 1`. In other words, we are speaking three languages here: English ("Intercept"), math ($\mu$), and code (`height ~ 1`). But all three languages are referring to the same underlying concept.
+* The "Estimate" of 175.87 makes sense. After all, the simple mean of the `height` in the data is: 175.8707
+
+```{r}
+#| code-fold: false
+mean(x$height)
+```
 
 ### Exercise 9
 
-Run `nobs()` on `fit_male_height`. The `nobs()` function returns the **n**umber of **obs**ervations.
+Run `family()` on `fit_height`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable.
 
 ```{r courage-9, exercise = TRUE}
 
 ```
 
 ```{r courage-9-hint-1, eval = FALSE}
-nobs(...)
+family(...)
 ```
 
 ```{r courage-9-test, include = FALSE}
-nobs(fit_male_height)
+# family(fit_height)
+```
+
+### 
+
+In this case, setting `family = gaussian()` implies that $\epsilon_i \sim N(0, \sigma^2)$, just as we assumed. That is not a coincidence! If $\epsilon_i$ had a different distribution, we would need to use a different statistical family. 
+
+### Exercise 10
+
+Run `formula()` on `fit_height`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s).
+
+```{r courage-10, exercise = TRUE}
+
+```
+
+```{r courage-10-hint-1, eval = FALSE}
+formula(...)
+```
+
+```{r courage-10-test, include = FALSE}
+# formula(fit_height)
+```
+
+### 
+
+In this case, the key parameter is the "Intercept," which is the same thing as $\mu$ in the mathematical description of the model and the same thing as `1` when we set `formula = height ~ 1`. In other words, we are speaking three languages here: English ("Intercept"), math ($\mu$), and code (`height ~ 1`). But all three languages are referring to the same underlying concept.
+
+### Exercise 11
+
+Run `nobs()` on `fit_height`. The `nobs()` function returns the **n**umber of **obs**ervations.
+
+```{r courage-11, exercise = TRUE}
+
+```
+
+```{r courage-11-hint-1, eval = FALSE}
+nobs(...)
+```
+
+```{r courage-11-test, include = FALSE}
+# nobs(fit_height)
 ```
 
 ### 
 
 The output should be 3658. This is the number of observations or, in other words, it is the number of rows.
 
-### Exercise 10
+### Exercise 12
 
-Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assigning the result to `fit_male_height`. 
+Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assigning the result to `fit_height`. 
 
 `Command/Ctrl + Shift + K`. It may take some time to render `analysis.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `analysis.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
 
@@ -1400,7 +1435,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r courage-10}
+```{r courage-12}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1411,49 +1446,49 @@ question_text(NULL,
 
 ### 
 
-### Exercise 11
+### Exercise 13
 
-Run `posterior_interval()` on `fit_male_height`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
+Run `posterior_interval()` on `fit_height`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
 
-```{r courage-11, exercise = TRUE}
+```{r courage-13, exercise = TRUE}
 
 ```
 
-```{r courage-11-hint-1, eval = FALSE}
+```{r courage-13-hint-1, eval = FALSE}
 posterior_interval(...)
 ```
 
-```{r courage-11-test, include = FALSE}
-posterior_interval(fit_male_height)
+```{r courage-13-test, include = FALSE}
+# posterior_interval(fit_height)
 ```
 
 ### 
 
-### Exercise 12
+### Exercise 14
 
-Run `fixef()` on `fit_male_height`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
+Run `fixef()` on `fit_height`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
 
-```{r courage-12, exercise = TRUE}
+```{r courage-14, exercise = TRUE}
 
 ```
 
-```{r courage-12-hint-1, eval = FALSE}
+```{r courage-14-hint-1, eval = FALSE}
 fixef(...)
 ```
 
-```{r courage-12-test, include = FALSE}
-fixef(fit_male_height)
+```{r courage-14-test, include = FALSE}
+# fixef(fit_height)
 ```
 
 ### 
 
 If a parameter’s estimated value is more than 2 or 3 standard errors away from zero, we generally keep that parameter (and its associated variable) in the model. This is, probably, a variable which “matters.” The main exception to this rule is a parameter whose value is so close to zero that changes in its associated variable, within the general range of that variable, can’t change the value of the outcome by much.
 
-### Exercise 13
+### Exercise 15
 
 Write a sentence interpreting the 175.8698 estimate for Intercept.
 
-```{r courage-13}
+```{r courage-15}
 question_text(NULL,
 	message = "Our (best) guess/estimate as to the average height of all males in the population is 178.8698 centimeters. In other words, the mean of the posterior for average height of male in the population is 178.8698 centimeters.",
 	answer(NULL, correct = TRUE),
@@ -1464,13 +1499,13 @@ question_text(NULL,
 
 ### 
 
-$\mu$ is not the average height of the men in the sample. We can calculate that directly. It is `r mean(ch5$height)`. Instead, $\mu$ is the average height of men in the *population*. Recall that the population is the universe of people/units/whatever about which we seek to draw conclusions. On some level, this seems simple. On a deeper level, it is very subtle. Each case is a different and the details matter.
+$\mu$ is not the average height of the men in the sample. We can calculate that directly. It is `r mean(x$height)`. Instead, $\mu$ is the average height of men in the *population*. Recall that the population is the universe of people/units/whatever about which we seek to draw conclusions. On some level, this seems simple. On a deeper level, it is very subtle. Each case is a different and the details matter.
 
-### Exercise 14
+### Exercise 16
 
 Write a sentence interpreting the ~ 0.12 standard error for the estimate.
 
-```{r courage-14}
+```{r courage-16}
 question_text(NULL,
 	message = "The end points of our confidence interval are simply the estimate plus/minus two times the standard error (0.12).",
 	answer(NULL, correct = TRUE),
@@ -1484,11 +1519,11 @@ question_text(NULL,
 $\sigma$ is an estimate for the standard deviation of the errors,  i.e., variability in height after accounting for the mean. 
 Parameters like $\sigma$ in this context are *nuisance* or *auxiliary* parameters in which we still estimate their posterior distributions, but we don't really care what those posteriors look like.
 
-### Exercise 15
+### Exercise 17
 
 Write a sentence interpreting the confidence interval for Intercept.
 
-```{r courage-15}
+```{r courage-17}
 question_text(NULL,
 	message = "We do not know the true value for the average height of all males in the population, but we can by 95% confident that it lies somewhere between 175.63 and 176.11.",
 	answer(NULL, correct = TRUE),
@@ -1501,42 +1536,42 @@ question_text(NULL,
 
 Because we are Bayesians, we believe that there is a true value and that the confidence or uncertainty interval includes it at the stated level. This is different from the Frequentists' perception that if we followed the same approach in 100 similar problems then, 95% of the time, our confidence interval would include the true value. 
 
-### Exercise 16
+### Exercise 18
 
-Run `pp_check()` on `fit_male_height`. The `pp_check()` runs a **p**osterior **p**redictive check.
+Run `pp_check()` on `fit_height`. The `pp_check()` runs a **p**osterior **p**redictive check.
 
-```{r courage-16, exercise = TRUE}
+```{r courage-18, exercise = TRUE}
 
 ```
 
-```{r courage-16-hint-1, eval = FALSE}
+```{r courage-18-hint-1, eval = FALSE}
 pp_check(...)
 ```
 
-```{r courage-16-test, include = FALSE}
-pp_check(fit_male_height)
+```{r courage-18-test, include = FALSE}
+# pp_check(fit_height)
 ```
 
 ### 
 
-In this case, note how similar our actual data, $y$, is to the 10 versions of the replicated data, $y_rep$. They are close enough that we are happy to use `fit_male_height`. However, the match is not perfect! The actual data is slightly more "peaked" and also features some weird bumps in the tails, especially around 200 cm. It would be possible, but not easy, to1 modify our model to match the actual data more closely. For now, we will just accept `fit_male_height` as our data generating mechanism.
+In this case, note how similar our actual data, $y$, is to the 10 versions of the replicated data, $y_rep$. They are close enough that we are happy to use `fit_height`. However, the match is not perfect! The actual data is slightly more "peaked" and also features some weird bumps in the tails, especially around 200 cm. It would be possible, but not easy, to1 modify our model to match the actual data more closely. For now, we will just accept `fit_height` as our data generating mechanism.
 
 <!-- If the fake data had looked very different from the real data, we have had a problem. But, for the most part, we conclude that, although not perfect, pp_check() shows that the fake outcomes generated by our model are like the actual outcome data. -->
 
-### Exercise 17
+### Exercise 19
 
 Use `library()` to load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
 
-```{r courage-17, exercise = TRUE}
+```{r courage-19, exercise = TRUE}
 
 ```
 
-```{r courage-17-hint-1, eval = FALSE}
+```{r courage-19-hint-1, eval = FALSE}
 library(gtsummary)
 ```
 
-```{r courage-17-test, include = FALSE}
-library(gtsummary)
+```{r courage-19-test, include = FALSE}
+# library(gtsummary)
 ```
 
 ### 
@@ -1551,21 +1586,21 @@ with $\epsilon_i \sim N(0, 0.75^2)$.
 
 <!-- To learn more about **gtsummary**, type `?gtsummary` in the Console, this will open up a description page. Make sure to load the **gtsummary** package in the Console first.  -->
 
-### Exercise 18
+### Exercise 20
 
-Run `tbl_regression()` on `fit_male_height` and set `intercept` equal to `TRUE` inside `tbl_regression()`.
+Run `tbl_regression()` on `fit_height` and set `intercept` equal to `TRUE` inside `tbl_regression()`.
 
-```{r courage-18, exercise = TRUE}
+```{r courage-20, exercise = TRUE}
 
 ```
 
-```{r courage-18-hint-1, eval = FALSE}
+```{r courage-20-hint-1, eval = FALSE}
 tbl_regression(...)
 ```
 
-```{r courage-18-test, include = FALSE}
-fit_male_height |> 
-  tbl_regression(intercept = TRUE)
+```{r courage-20-test, include = FALSE}
+# fit_height |> 
+#   tbl_regression(intercept = TRUE)
 ```
 
 ### 
@@ -1575,13 +1610,13 @@ This is what the table should look like:
 ```{r}
 #| echo: false
 
-fit_male_height |> 
-  tbl_regression(intercept = TRUE)
+# fit_height |> 
+#   tbl_regression(intercept = TRUE)
 ```
 
 We can see some important numbers from our data in this table, such as the average height of 176 cm.
 
-### Exercise 19
+### Exercise 21
 
 Copy the code from above and put it in a new code chunk in the `analysis.qmd` file. Render the file and in the Console, run: 
 
@@ -1591,7 +1626,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -5)
 
 CP/CR.
 
-```{r courage-19}
+```{r courage-21}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1604,11 +1639,11 @@ question_text(NULL,
 
 The output in the `analysis.qmd` preview should have the same table from the previous question. Again, this table provides important numbers from the data we are working with. 
 
-### Exercise 20
+### Exercise 22
 
 Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice section. Add at least one sentence which describes the modelling approach which you are using, specifying at least the functional form and the dependent variable. 
 
-```{r courage-20}
+```{r courage-22}
 question_text(NULL,
 	message = "Knowing about the average height of adult men is important since it is a reasonable benchmark for us to assess our own growth.
 Using the nhanes data set from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to understand height, which is of each individual in the data set and measured in centimeters, in order to estimate the average height of all men in the world right now. Since the participation for the survey is voluntary, it could mean that, for example, taller men are more likely to answer this question, thus reduces representativeness of the data. We model height as a continuous variable that follows normal distribution.",
@@ -1620,7 +1655,7 @@ Using the nhanes data set from the National Health and Nutrition Examination Sur
 
 ### 
 
-### Exercise 21
+### Exercise 23
 
 <!-- GK: Should we specify to student which mathematical formula to include since there have been a lot -->
 
@@ -1634,7 +1669,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r courage-21}
+```{r courage-23}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1783,18 +1818,18 @@ question_text(NULL,
 
 ### Exercise 8
 
-Now that we have the `ndata` object, we can create a pipe which uses out fitted model to answer our question. Begin by typing `fit_male_height` and clicking "Run Code."
+Now that we have the `ndata` object, we can create a pipe which uses out fitted model to answer our question. Begin by typing `fit_height` and clicking "Run Code."
 
 ```{r temperance-8, exercise = TRUE}
 
 ```
 
 ```{r temperance-8-hint-1, eval = FALSE}
-fit_male_height
+fit_height
 ```
 
 ```{r temperance-8-test, include = FALSE}
-fit_male_height
+fit_height
 ```
 
 ### 
@@ -1807,7 +1842,7 @@ Both functions return draws from a posterior probability distribution, but the u
 
 ### Exercise 9
 
-Pipe `fit_male_height` to `add_predicted_draws()` with the argument `newdata = ndata`.
+Pipe `fit_height` to `add_predicted_draws()` with the argument `newdata = ndata`.
 
 ```{r temperance-9, exercise = TRUE}
 
@@ -1821,8 +1856,8 @@ Pipe `fit_male_height` to `add_predicted_draws()` with the argument `newdata = n
 ```
 
 ```{r temperance-9-test, include = FALSE}
-fit_male_height |> 
-  add_predicted_draws(newdata = ndata)
+# fit_height |> 
+#   add_predicted_draws(newdata = ndata)
 ```
 
 ### 
@@ -1846,11 +1881,11 @@ Continue the pipe to `ggplot()` with `x` set to `.prediction` inside `aes()`. Th
 ```
 
 ```{r temperance-10-test, include = FALSE}
-fit_male_height |> 
-  add_predicted_draws(newdata = ndata) |> 
-  ggplot(aes(x = .prediction)) +
-    geom_histogram(aes(y = after_stat(count / sum(count))),
-                   bins = 100)
+# fit_height |> 
+#   add_predicted_draws(newdata = ndata) |> 
+#   ggplot(aes(x = .prediction)) +
+#     geom_histogram(aes(y = after_stat(count / sum(count))),
+#                    bins = 100)
 ```
 
 ### 
@@ -1873,16 +1908,16 @@ Add a layer of `labs()` with a `title`, `subtitle`, `x`, `y`, and `caption`.
 ```
 
 ```{r temperance-11-test, include = FALSE}
-fit_male_height |> 
-  add_predicted_draws(newdata = ndata) |> 
-  ggplot(aes(x = .prediction)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100) +
-    labs(title = "Posterior for Height of Random Male",
-         subtitle = "Uncertainty for a single individual is much greater than for the expected value",
-         x = "Height (cm)",
-         y = "Probability",
-         caption = "Data source: NHANES")
+# fit_height |> 
+#   add_predicted_draws(newdata = ndata) |> 
+#   ggplot(aes(x = .prediction)) +
+#     geom_histogram(aes(y = after_stat(count/sum(count))),
+#                    bins = 100) +
+#     labs(title = "Posterior for Height of Random Male",
+#          subtitle = "Uncertainty for a single individual is much greater than for the expected value",
+#          x = "Height (cm)",
+#          y = "Probability",
+#          caption = "Data source: NHANES")
 ```
 
 ### 
@@ -1892,16 +1927,16 @@ At this point, the graph should look like this:
 ```{r}
 #| echo: false
 
-fit_male_height |> 
-  add_predicted_draws(newdata = ndata) |> 
-  ggplot(aes(x = .prediction)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100) +
-    labs(title = "Posterior for Height of Random Male",
-         subtitle = "Uncertainty for a single individual is much greater than for the expected value",
-         x = "Height (cm)",
-         y = "Probability",
-         caption = "Data source: NHANES")
+# fit_height |> 
+#   add_predicted_draws(newdata = ndata) |> 
+#   ggplot(aes(x = .prediction)) +
+#     geom_histogram(aes(y = after_stat(count/sum(count))),
+#                    bins = 100) +
+#     labs(title = "Posterior for Height of Random Male",
+#          subtitle = "Uncertainty for a single individual is much greater than for the expected value",
+#          x = "Height (cm)",
+#          y = "Probability",
+#          caption = "Data source: NHANES")
 ```
 
 ### Exercise 12
@@ -1921,18 +1956,18 @@ Finally, add `scale_x_continuous()` and `scale_y_continuous()`. Inside `scale_x_
 ```
 
 ```{r temperance-12-test, include = FALSE}
-fit_male_height |> 
-  add_predicted_draws(newdata = ndata) |> 
-  ggplot(aes(x = .prediction)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100) +
-    labs(title = "Posterior for Height of Random Male",
-         subtitle = "Uncertainty for a single individual is much greater than for the expected value",
-         x = "Height (cm)",
-         y = "Probability",
-         caption = "Data source: NHANES") + 
-    scale_x_continuous(labels = scales::number_format()) +
-    scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+# fit_height |> 
+#   add_predicted_draws(newdata = ndata) |> 
+#   ggplot(aes(x = .prediction)) +
+#     geom_histogram(aes(y = after_stat(count/sum(count))),
+#                    bins = 100) +
+#     labs(title = "Posterior for Height of Random Male",
+#          subtitle = "Uncertainty for a single individual is much greater than for the expected value",
+#          x = "Height (cm)",
+#          y = "Probability",
+#          caption = "Data source: NHANES") + 
+#     scale_x_continuous(labels = scales::number_format()) +
+#     scale_y_continuous(labels = scales::percent_format(accuracy = 1))
 ```
 
 ### 
@@ -1970,7 +2005,7 @@ We can calculate the exact probability by manipulating the tibble of draws direc
 
 ### Exercise 14
 
-Start a new pipe with `fit_male_height` to `add_predicted_draws()` with the argument `newdata = ndata`.
+Start a new pipe with `fit_height` to `add_predicted_draws()` with the argument `newdata = ndata`.
 
 ```{r temperance-14, exercise = TRUE}
 
@@ -1982,8 +2017,8 @@ Start a new pipe with `fit_male_height` to `add_predicted_draws()` with the argu
 ```
 
 ```{r temperance-14-test, include = FALSE}
-fit_male_height |> 
-  add_predicted_draws(newdata = ndata)
+# fit_height |> 
+#   add_predicted_draws(newdata = ndata)
 ```
 
 ### 
@@ -2006,9 +2041,9 @@ Continue the pipe to `mutate()`. Inside, have `tall` set to `if_else()`. Have pa
 ```
 
 ```{r temperance-15-test, include = FALSE}
-fit_male_height |> 
-  add_predicted_draws(newdata = tibble(.rows = 1)) |> 
-  mutate(tall = if_else(.prediction > 180, TRUE, FALSE))
+# fit_height |> 
+#   add_predicted_draws(newdata = tibble(.rows = 1)) |> 
+#   mutate(tall = if_else(.prediction > 180, TRUE, FALSE))
 ```
 
 ### 
@@ -2031,10 +2066,10 @@ Finish up the pipe with `summarize()`. Inside, have `odds` set to `mean()` with 
 ```
 
 ```{r temperance-16-test, include = FALSE}
-fit_male_height |> 
-  add_predicted_draws(newdata = tibble(.rows = 1)) |> 
-  mutate(tall = if_else(.prediction > 180, TRUE, FALSE)) |>
-  summarize(odds = mean(tall))
+# fit_height |> 
+#   add_predicted_draws(newdata = tibble(.rows = 1)) |> 
+#   mutate(tall = if_else(.prediction > 180, TRUE, FALSE)) |>
+#   summarize(odds = mean(tall))
 ```
 
 ### 
