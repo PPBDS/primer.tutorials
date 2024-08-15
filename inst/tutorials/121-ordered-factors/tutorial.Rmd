@@ -17,33 +17,25 @@ library(tutorial.helpers)
 library(gt)
 library(primer.data)
 library(tidyverse)
-library(brms)
-library(tidybayes)
-library(gtsummary)
+library(marginaleffects)
+library(broom)
+library(tidymodels)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
-# XX: Never include setup code that takes more than a few seconds to run. For
-# example, using brm() takes too much time. Instead, do the below, and see the
-# relevant discussion in instructions.html.
-
 colleges_2 <- colleges |>
   select(tuition, grad_rate, selectivity) |>
    filter(tuition > 2)
 
-ndata <- expand_grid(tuition = c(2.63, 3.73), selectivity = unique(colleges_2$selectivity))
+ndata <- expand_grid(tuition = c(2.63, 3.73), 
+                     selectivity = unique(colleges_2$selectivity))
 
-# fit_colleges <- brm(formula = grad_rate ~ tuition + selectivity,
-#     family = gaussian(),
-#     data = colleges_2,
-#     silent = 2,
-#     refresh = 0)
-# 
-# write_rds(fit_colleges, "data/colleges_1.rds")
-
-fit_colleges <- read_rds("data/colleges_1.rds")
+linear_reg() |>
+    set_engine("lm") |>
+    fit(grad_rate ~ tuition + selectivity, 
+        data = colleges_2)
 
 ```
 
@@ -103,7 +95,7 @@ library(primer.data)
 
 ### 
 
-A version of the data from Opportunity Insights is available in the `college` tibble.
+A version of the data from Opportunity Insights is available in the `colleges` tibble.
 
 ### Exercise 3
 
@@ -140,7 +132,7 @@ question_text(NULL,
 
 `grad_rate` is the rate of graduation at that college/university from the year 2013.
 
-There are many acceptable answers that we could measure, but, for this tutorial we will stick wil `grad_rate`.
+There are many acceptable answers that we could measure, but, for this tutorial we will stick with `grad_rate`.
 
 ### Exercise 5
 
@@ -317,7 +309,6 @@ question_text(NULL,
 ```
 
 ### 
-
 
 ### Exercise 2
 
@@ -546,6 +537,7 @@ question_text(NULL,
 ```
 
 ### 
+
 Continuing with `impv_food`. We can either give funds to schools to improve their food or we cannot give funds, we can't do both.
 
 
@@ -1092,7 +1084,7 @@ A statistical model consists of two parts: the *probability family* and the *lin
 
 ### Exercise 2
 
-Load the **brms** package.
+Load the **tidymodels** package.
 
 ```{r courage-2, exercise = TRUE}
 
@@ -1103,7 +1095,7 @@ library(...)
 ```
 
 ```{r courage-2-test, include = FALSE}
-library(brms)
+library(tidymodels)
 ```
 
 ### 
@@ -1112,13 +1104,11 @@ Because `grad_rate` is a continuous variable, we assume that an individual's att
 
 $$ grad\_rate_i \sim Normal(\mu, \sigma^2)$$
 
-<!-- XX: The Courage section of each chapter is the most complex because modeling is hard. Use opportunities for knowledge drops, like this one, judiciously. -->
-
 <!-- DK: See template. Many changes! -->
 
 ### Exercise 3
 
-Load the **tidybayes** package.
+Load the **broom** package.
 
 ```{r courage-3, exercise = TRUE}
 
@@ -1129,7 +1119,7 @@ library(...)
 ```
 
 ```{r courage-3-test, include = FALSE}
-library(tidybayes)
+library(broom)
 ```
 
 ### 
@@ -1140,7 +1130,7 @@ $$ \mu =  \beta_0 + \beta_1tuition + \beta_2selectivity $$
 
 ### Exercise 4
 
-Add `library(brms)` and `library(tidybayes)` to the `setup` code chunk in `analysis.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `analysis.qmd`. `Command/Ctrl + Shift + K`. 
+Add `library(tidymodels)` and `library(broom)` to the `setup` code chunk in `analysis.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `analysis.qmd`. `Command/Ctrl + Shift + K`. 
 
 
 ```
@@ -1156,7 +1146,7 @@ $$ \mu =  \beta_0 + \beta_1tuition + \beta_2selectivity $$
 <!-- TJ: Is formula ok? -->
 
 ```
-tutorial.helpers::show_file("analysis.qmd", pattern = "brms|tidybayes|\\$\\$")
+tutorial.helpers::show_file("analysis.qmd", pattern = "tidymodels|broom|\\$\\$")
 ```
 
 CP/CR.
@@ -1188,111 +1178,101 @@ $$\rho_{clinton} = \frac{1}{1 + e^{-(\beta_{0, clinton} + \beta_{1, clinton} mal
 
 ### Exercise 5
 
-Create a model using `brm()` from the **brms** package. Your arguments should be `formula = grad_rate ~ tuition + selectivity`, `family = gaussian()`, `data = colleges_2`, `silent = 2`, `refresh = 0` and `seed = 9`. 
-
+Because our outcome variable is continuous, start to create the model by using `linear_reg()`.
 
 ```{r courage-5, exercise = TRUE}
 
 ```
 
 ```{r courage-5-hint-1, eval = FALSE}
-brm(formula = ...,
-    family = ...,
-    data = ...,
-    silent = ...,
-    refresh = ...,
-    seed = ...)
+linear_reg()
+```
+
+```{r courage-5-test, include = FALSE}
+linear_reg()
 ```
 
 ### 
 
-In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters.
-
+In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
 
 ### Exercise 6
 
-Behind the scenes, we have assigned the result of the `brm()` call to an object named `fit_colleges`. Type `fit_colleges` and hit "Run Code." This generates the same results as using `print(fit_colleges)`.
-
+Continue the pipe with `set_engine("lm")`.
 
 ```{r courage-6, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r courage-6-hint-1, eval = FALSE}
-fit_colleges
+... |> 
+  set_engine("...")
 ```
 
 ```{r courage-6-test, include = FALSE}
-fit_colleges
+linear_reg() |>
+  set_engine("lm")
 ```
 
 ### 
 
-We see a lot of numbers and messages being thrown at us at once, so lets look at this model piece by piece. First, we are going to go through the top 4 rows.
+`"lm"` is not the only engine. Since we have a linear regression model, we could use `"glmnet"`, but, that would require us to load up another package, whereas `"lm"` uses standard base R.
+
+<!-- TJ: Is this a good enough knowledge drop -->
 
 ### Exercise 7
 
-Run `family()` on `fit_colleges`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable. 
+Continue the pipe to `fit(grad_rate ~ tuition + selectivity, data = colleges_2)`.
 
 ```{r courage-7, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r courage-7-hint-1, eval = FALSE}
-family(...)
+... |> 
+  fit(..., 
+      data = ...)
 ```
 
 ```{r courage-7-test, include = FALSE}
-family(fit_colleges)
+linear_reg() |>
+    set_engine("lm") |>
+    fit(grad_rate ~ tuition + selectivity, 
+        data = colleges_2)
 ```
 
 ### 
 
-A gaussian model means that the left-hand side variable `grad_rate` is continuous, meaning there are an infinite number of values for it. If we had a fixed number of potential values, we would use either the bernoulli or categorical families.
+The first argument is the formula. Our left hand side variable `grad_rate` is the dependant variable, or what we are trying to measure. Our right hand side variables `tuition` and `selectivity` are the independant variables. The second argument is the data we will use, which is `colleges_2`.
 
 ### Exercise 8
 
-Run `formula()` on `fit_colleges`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s). 
+Behind the scenes of this tutorial, an object called `fit_colleges` has been created which is the result of the code above. Type `fit_colleges` and hit "Run Code." This generates the same results as using `print(fit_colleges)`.
+
 
 ```{r courage-8, exercise = TRUE}
 
 ```
 
 ```{r courage-8-hint-1, eval = FALSE}
-formula(...)
+fit_colleges
 ```
 
 ```{r courage-8-test, include = FALSE}
-formula(fit_colleges)
+fit_colleges
 ```
 
 ### 
 
-Our left hand side variable `grad_rate` is the dependant variable, or what we are trying to measure. Our right hand side variables `tuition` and `selectivity` are the independant variables.
+The other messages displayed aren't as important as the coefficients, which we will need.
 
 ### Exercise 9
 
-Run `nobs()` on `fit_colleges`. The `nobs()` function returns the **n**umber of **obs**ervations.
-
-```{r courage-9, exercise = TRUE}
-
-```
-
-```{r courage-9-hint-1, eval = FALSE}
-nobs(...)
-```
-
-```{r courage-9-test, include = FALSE}
-nobs(fit_colleges)
-```
-
-### 
-
-You may be asking, "Doesn't the `colleges` dataset have data from 950 colleges?" Well, yes! But, recall we filtered out `tuition` to be at least 20k plus per year, which removed 408 schools from our dataset.
-
-### Exercise 10
-
-Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assigning the result to `fit_colleges`. 
+Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_colleges`. 
 
 `Command/Ctrl + Shift + K`. It may take some time to render `analysis.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `analysis.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
 
@@ -1306,7 +1286,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r courage-10}
+```{r courage-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1317,54 +1297,31 @@ question_text(NULL,
 
 ### 
 
-Be sure not to edit your `model` code chunk, as it will have to render everything again and take a long time.
+### Exercise 10
+
+Run `tidy()` on `fit_colleges` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
+
+```{r courage-10, exercise = TRUE}
+
+```
+
+```{r courage-10-hint-1, eval = FALSE}
+tidy(..., conf.int = ...)
+```
+
+```{r courage-10-test, include = FALSE}
+tidy(fit_colleges, conf.int = TRUE)
+```
+
+### 
+
+By using `tidy()`, we are able to view each coefficient and its corresponding uncertainty. This is useful for when we write our paragraph at the end.
 
 ### Exercise 11
 
-Run `posterior_interval()` on `fit_colleges`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
-
-```{r courage-11, exercise = TRUE}
-
-```
-
-```{r courage-11-hint-1, eval = FALSE}
-posterior_interval(...)
-```
-
-```{r courage-11-test, include = FALSE}
-posterior_interval(fit_colleges)
-```
-
-### 
-
-We do not know the true value for any of these coefficients are, but we are 95% confident that it lies somewhere between these intervals.
-
-
-### Exercise 12
-
-Run `fixef()` on `fit_colleges`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
-
-```{r courage-12, exercise = TRUE}
-
-```
-
-```{r courage-12-hint-1, eval = FALSE}
-fixef(...)
-```
-
-```{r courage-12-test, include = FALSE}
-fixef(fit_colleges)
-```
-
-### 
-
-`fixef()` gives us the important regression coefficients needed to interpret our model.
-
-### Exercise 13
-
 What does the `Intercept` represent?
 
-```{r courage-13}
+```{r courage-11}
 question_text(NULL,
 	message = "The `Intercept` is the overall predicted graduation rate for all the colleges in our model.",
 	answer(NULL, correct = TRUE),
@@ -1375,13 +1332,13 @@ question_text(NULL,
 
 ### 
 
-The `Intercept` shows us that the predicted graduation rate for these colleges is around 36.2%. 
+The `Intercept` shows us that the predicted graduation rate for all the colleges in our data set is around 36.2%. 
 
-### Exercise 14
+### Exercise 12
 
 Write a sentence about the `tuition` coefficient.
 
-```{r courage-14}
+```{r courage-12}
 question_text(NULL,
 	message = "For every $10,000 extra a college charges in tuition, the graduation rate increases by approximately 8.9% from the intercept value of 36.2%",
 	answer(NULL, correct = TRUE),
@@ -1394,11 +1351,11 @@ question_text(NULL,
 
 `tuition` is continuous, each time it goes up by a value of 1 (which remember, corresponds to 10k in tuition), our graduation rate increases by the `Estimate`.
 
-### Exercise 15
+### Exercise 13
 
 Write a sentence about the confidence interval for `tuition.`
 
-```{r courage-15}
+```{r courage-13}
 question_text(NULL,
 	message = "We never know what the true value is for the `tuition` coefficient, but we are 95% certain that it lies between 0.07 and 0.1.",
 	answer(NULL, correct = TRUE),
@@ -1411,13 +1368,13 @@ question_text(NULL,
 
 We are never sure what the true value for a coefficient is, but, we can be pretty sure that it lies in this interval. This is especially helpful for stating any uncertainty with your value when writing your final paragraph.
 
-### Exercise 16
+### Exercise 14
 
-Write a sentence explaining the `selectivity.L` coefficient.
+Write a sentence explaining the `selectivity` coefficient.
 
-```{r courage-16}
+```{r courage-14}
 question_text(NULL,
-	message = "`selectivity.L` shows the linear effect of moving from Non-selective to Elite",
+	message = "As `selectivity` goes from 'Non-selective' to 'Elite', graduation rates seem to rise.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1426,127 +1383,13 @@ question_text(NULL,
 
 ### 
 
-<!-- TJ: I have never used ordered factors, so I need help -->
-<!-- TJ: Doing some research on ordered factors in brm(). will finish this later -->
+The four coefficients for `selectivity` show the different relationships on `grad_rate` as `selectivity` goes from `"Non-selective"` to `"Elite"`. `selectivity.L"` show the linear relationship, `selectivity.Q` shows the quadratic relationship and so on. These coefficients are too difficult to interpret, so we will not try to decipher them. But, we can see by the mostly positive values that higher selectivity does seem to positively impact graduation rates.
 
-<!-- XX: Add at least three questions which require the student to interpret the meanings of a parameter estimate and/or its associated confidence interval. This is something that students are very bad at! And so we need to give them practice, both by asking them to do it and by providing excellent answers. These questions also feature good opportunities to knowledge drop about the meaning of intervals (confidence verus uncertainty) and about Frequentist versus Bayesian interpretations. See -->
-
-<!-- Let's me give a couple of questions/answers to serve as examples, all based on this display. This is good for linear (meaning the Gaussian family) models. For other models, see the comments below. -->
-
-<!-- fit_obj <- brm(formula = att_end ~ sex + treatment + age, data = trains) -->
-
-<!-- > round(fixef(fit_obj), 2) -->
-<!--                  Estimate Est.Error  Q2.5 Q97.5 -->
-<!-- Intercept           10.99      0.95  9.17 12.83 -->
-<!-- sexMale             -0.83      0.54 -1.88  0.22 -->
-<!-- treatmentControl    -1.42      0.54 -2.45 -0.32 -->
-<!-- age                 -0.01      0.02 -0.06  0.03 -->
-
-<!-- Q: Write a sentence interpreting the -0.34 estimate for sexMale. -->
-
-<!-- A: When comparing men with women, men have a 0.83 lower value for att_end, meaning that they are more liberal about immigration, relative to women, conditional on the other variables in the model. -->
-
-<!-- Comment_1: Note how, whenever we consider non-treatment variables, we must never use terms like "cause," "impact" and so on. We can't make any statement which implies the existence of more than one potential outcome based on changes in non-treatment variables. We can't make any claims about within row effects. Instead, we can only compare across rows. Always use the phrase "when comparing X and Y" or something very similar. -->
-
-<!-- Comment_2: The phrase "conditional on the other variables in the model" is important. It could be shorted as "conditional on the model." This phrase acknowledges that there are many, many possible models, just considering all the different combintions of indepdendent variables we might include. Each one would produce a different coefficient for sexmale. None of these is the *true* cofficient. Any claim we make about  -0.83, or any specific number, is always conditional on the fact that we assume that this model is true, that these covariates, and no others, belong in the regression. Does that mean that we always use the phrase? No. We leave it out all the time. But it is always understood to be there but knowledge readers. Still, this is probably a point worth making in various knowledge drops. -->
-
-
-<!-- Q: Write a sentence interpreting the confidence interval for sexMale. -->
-
-<!-- A: We do not know the true value for the coefficient for sexMale, but we can by 95% confident that it lies somewhere between -1.88  and 0.22.  -->
-
-<!-- Comment: Because we are Bayesians, we believe that there is a true value and that the confidence or uncertainty interval includes it at the stated level. These questions provide an occasion in the knowledge drop to compare/contrast the Frequenist interpretation. See: https://ppbds.github.io/primer/cardinal-virtues.html#confidencecredibleuncertainty-intervals -->
-
-<!-- Q: Write a sentence interpreting the -1.42  estimate for treatmentControl. -->
-
-<!-- A: The causal effect of receiving the treatment of hearing Spanish-speakers on the train platform, relative to the control, is to have a 1.42  higher value for att_end, meaning that the treatment, relative to the control, makes one more conservative about immigration. (Note that you need to keep track of signs and of which 0/1 variable is being used.) -->
-
-<!-- Comment: The interpretation of a treatment variable is very different than the interpretation of a standard covariate. Whenever your model includes a treatment variable, you must always have a question about it and about the associated confidence interval. -->
-
-<!-- Q: Write one sentence interpreting the -2.45 to -0.32 interval for the treatmentControl coefficient. -->
-
-<!-- A: Our best estimate for the causal effect is -1.42, meaning that being treated makes someone 1.42 units more conservative about immigration. Yet, the true value could be lower or higher. We are 95% certain that the true effect is somewhere between -2.45 to -0.32.  -->
-
-<!-- Comment: It is OK if our answers are slightly longer than what we might expect from students, as long as those answers are *tight*, meaning that no word is wasted. In this case, the first two sentences are an attempt to ensure that the student understands what is going on. The last sentence is what we might expect students to write.  -->
-
-<!-- Q: Write a sentence interpreting the -0.1 estimate for age.  -->
-
-<!-- A: If we compare one group of people ten years older than another, the older group will, on average, have an attitude toward immigration 1 unit lower, i.e., less conservative. -->
-
-<!-- Comment: Numeric variables are harder than binary variables because there are no longer just two well-defined groups to compare with each other. We must make those two groups ourselves. Fortunately, as long as there are no interaction terms, we can just pick two groups with any values for the variable. The most common two groups differ by one unit of the variable. But it is quite common to use groups which differ by more/less if doing so seems sensible and/or if it makes the math easier. In this case, two groups which differ by 10 years makes sense for both reasons. -->
-
-<!-- Further comment: With a linear model, all these interpretations are fairly straightforward. With any other type of model, the math is too difficult to do in your head. You can't just look at a coefficient of 5 and know what it means in magnitude. But you can tell the direction, that a positive 5 means that -->
-
-### Exercise 17
-
-Run `pp_check()` on `fit_colleges`. The `pp_check()` runs a **p**osterior **p**redictive check.
-
-```{r courage-17, exercise = TRUE}
-
-```
-
-```{r courage-17-hint-1, eval = FALSE}
-pp_check(...)
-```
-
-```{r courage-17-test, include = FALSE}
-pp_check(fit_colleges)
-```
-
-### 
-
-`pp_check()` checks to see if our "fake data" matches the data we generated. In our case, the fake data looks very similar. For the most part, we can conclude that, although not perfect, `pp_check()` shows that the fake outcomes generated by our model are like the actual outcome data.
-
-
-### Exercise 18
-
-Use `library()` to load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
-
-```{r courage-18, exercise = TRUE}
-
-```
-
-```{r courage-18-hint-1, eval = FALSE}
-library(gtsummary)
-```
-
-```{r courage-18-test, include = FALSE}
-library(gtsummary)
-```
-
-### 
-
-**gtsummary** creates presentation-ready tables summarizing data sets, regression models, and more.
-
-### Exercise 19
-
-Pipe `fit_colleges` to `tbl_regression()`.
-
-
-```{r courage-19, exercise = TRUE}
-
-```
-
-```{r courage-19-hint-1, eval = FALSE}
-fit_colleges |> 
-  tbl_...()
-```
-
-```{r courage-19-test, include = FALSE}
-fit_colleges |>
-  tbl_regression()
-```
-
-### 
-
-`tbl_regression()` takes a regression model object in R (`fit_colleges`) and returns a formatted table of regression model results that is publication-ready. It is a lot nicer than using `fixef()` or the output of the call to `brm()` to display the expected values.
-
-
-### Exercise 20
+### Exercise 15
 
 Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using, specifying the functional form and the dependent variable. Add one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
 
-```{r courage-20}
+```{r courage-15}
 question_text(NULL,
 	message = "Using data from a system of interrelated surveys on postsecondary eduation in 2013, we seek to understand the relationship between graduation rates tuition for colleges/universities in the United States. In particular, what is the difference in graduation rate for colleges in the 75th and 25th percentiles of tuiton? Tuition rates and graduation rates could've changed since 2013. We modeled graduation rate, a continuous variable, as a linear function of both tuition and selectivity. Graduation rates seem to rise as tuition increases.",
 	answer(NULL, correct = TRUE),
@@ -1559,32 +1402,6 @@ question_text(NULL,
 
 Update your answer in `analysis.qmd` accordingly, but, don't blindly copy our answer.
 
-### Exercise 21
-
-Update `analysis.qmd`. First, add `library(gtsummary)` to the `setup` code chunk,. Then, add a new code chunk which creates the table of model parameters. `Command/Ctrl + Shift + K` to ensure that everything works.
-
-At the Console, run:
-
-```
-tutorial.helpers::show_file("analysis.qmd", start = -8)
-```
-
-CP/CR.
-
-```{r courage-21}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### 
-
-Now that we've added our regression tibble to the document, anyone viewing it can see a nice table with all of our regression values.
-
-<!-- TJ: Bad knowledge drop on my end -->
 
 ## Temperance
 ### 
@@ -1607,13 +1424,35 @@ question_text(NULL,
 
 ### 
 
+Courage gave us the data generating mechanism. Temperance guides us in the use of the DGM — or the “model” — we have created to answer the questions with which we began. We create posteriors for the quantities of interest. We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
+
 ### Exercise 2
+
+Load the [**marginaleffects**](https://marginaleffects.com/) package.
+
+```{r temperance-2, exercise = TRUE}
+
+```
+
+```{r temperance-2-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r temperance-2-test, include = FALSE}
+library(marginaleffects)
+```
+
+### 
+
+**marginaleffects** allows us to make plots in a quick and convenient way.
+
+### Exercise 3
 
 What is the general topic we are investigating? What is the specific question we are trying to answer? 
 
-```{r temperance-2}
+```{r temperance-3}
 question_text(NULL,
-	message = "XX: Should be exactly how you started the Wisdom section.",
+	message = "We are investigating the relationship between tuition and graduation rates. In particular, how does graduation rate differ between colleges at the 75th and 25th percentile of tuition?",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1624,11 +1463,11 @@ question_text(NULL,
 
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic broadly.
 
-### Exercise 3
+### Exercise 4
 
-To answer our question, we need to create a `newdata` object. Which variables (e.g., which columns) do we need to include in this object?
+To answer our question, we need to create an object --- call it `ndata` --- which we will pass in as a value to the `newdata` argument in whichever **marginaleffects** functions we decide to use. Which variables (e.g., which columns) do we need to include in this object?
 
-```{r temperance-3}
+```{r temperance-4}
 question_text(NULL,
 	message = "We will need `tuition` and `selectivity`.",
 	answer(NULL, correct = TRUE),
@@ -1639,16 +1478,14 @@ question_text(NULL,
 
 ### 
 
-These must be the right hand side variables in `fit_colleges`. The type must match, since `selectivity` is a factor in the original data used to create `fit_colleges` then it must be a factor in `ndata`.
+We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
 
 
-### Exercise 4
+### Exercise 5
 
-<!-- XX: Sometimes useful to think about this question and the number of posterior questions together, or event to reverse them. -->
+Which values do you want the variables in your `ndata` object to have? This is not easy! At the very least, one or more of the rows should have values which allow you to answer your original question. But, now that you have a model, there are many questions which you might want to answer, the better to get a fuller understanding.
 
-Which values do you want the variables in your `newdata` object to have? This is not easy! At the very least, one of the rows should have values which allow you to answer your original question. But, now that you have a model, there are many questions which you might want to answer, the better to get a fuller understanding.
-
-```{r temperance-4}
+```{r temperance-5}
 question_text(NULL,
 	message = "`tuition` will have the values 2.63 and 3.73, which represent the 75th and 25th percentiles. 'selectivity' will have the values 'Elite', 'Moderately Selective', 'Highly Selective', 'Lowly Selective' and 'Non-selective'",
 	answer(NULL, correct = TRUE),
@@ -1661,92 +1498,191 @@ question_text(NULL,
 
 We want to know how "different" units behave, where the very definition of "different" is that they do not have identical values for all the variables used in `fit_colleges.`
 
-### Exercise 5
-
-Here is the R code which creates the `ndata` object: `expand_grid(tuition = c(2.63, 3.73), selectivity = unique(colleges_2$selectivity))`. Type it into the code exercise block and hit "Run Code."
-
-```{r temperance-5, exercise = TRUE}
-
-```
-
-```{r temperance-5-test, include = FALSE}
-expand_grid(tuition = c(2.63, 3.73), selectivity = unique(colleges_2$selectivity))
-```
-
-###
-
-We use `expand_grid()` to get all possible combinations of `tuition` and `selectivity` into our tibble.
-
 ### Exercise 6
 
-Behind the scenes, we have created the `ndata` object using this code. To confirm, type `ndata` and hit "Run Code."
-
-<!-- Of course, you need to have added the code to create `ndata` in the setup chunk at the top of the file. -->
+Here is the R code which creates the `ndata` object: `expand_grid(tuition = c(2.63, 3.73), selectivity = unique(colleges_2$selectivity))`. Type it into the code exercise block and hit "Run Code."
 
 ```{r temperance-6, exercise = TRUE}
 
 ```
 
-```{r temperance-6-hint-1, eval = FALSE}
-ndata
-```
-
 ```{r temperance-6-test, include = FALSE}
-ndata
+expand_grid(tuition = c(2.63, 3.73), 
+            selectivity = unique(colleges_2$selectivity))
 ```
 
 ### 
 
-Note that, when you add Temperance-related code to your QMD, you will need to also add code which creates the `ndata` object.
+It is best to ensure that the variable types in `ndata` match the variable types on `colleges_2`. The easiest way to ensure that is by using `colleges_2` itself in the creation `ndata`.
 
 ### Exercise 7
 
-Now that we have the `newdata` object, we can create a pipe which uses out fitted model to answer our question. Begin by typing `fit_colleges` and clicking "Run Code."
+Behind the scenes, we have created the `ndata` object using this code. To confirm, type `ndata` and hit "Run Code."
+
 
 ```{r temperance-7, exercise = TRUE}
 
 ```
 
 ```{r temperance-7-hint-1, eval = FALSE}
-
+ndata
 ```
 
 ```{r temperance-7-test, include = FALSE}
-
+ndata
 ```
 
 ### 
 
-<!-- XX: Again, the main point of knowledge drops is this area is to explain to students why the newdata object looks the way it does and what it will produce. A great way to teach is via example. That is, explaining that if we had another way with these values, then we would get this posterior. Or, explaining what would be produced if we used add_epred instead of add_predict, and vice verse. -->
+Functions like `unique()` --- to grab all the possible values in a variable --- and `expand_grid()` --- to create all possible combinations of different variables --- are often useful in creating `ndata`.
 
 
 ### Exercise 8
 
-Pipe `fit_colleges` to [XX: either `add_epred_draws()` or `add_predicted_draws()`] with the argument `newdata = ndata`. 
+Add `library(marginaleffects)` to the `analysis.qmd` setup code chunk. Create a new code chunk in `analysis.qmd` which creates the `ndata` object. `Command/Ctrl + Shift + K`.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", pattern = "marginaleffects|ndata")
+```
+
+CP/CR.
 
 
+```{r temperance-8}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+If we used `tibble()` instead of `expand_grid()` when creating the `ndata` object, we would've got an error. This is because the `tuition` and `selectivity` columns are not equal in length. Instead of finding all the possible combinations, `tibble()` makes only one row for each value in the column. Example:
+
+```{r}
+tibble(tuition = c(1, 2, 3, 4, 5),
+       selectivity = "Non-selective", 
+                     "Lowly Selective", 
+                     "Moderately Selective", 
+                     "Highly Selective", 
+                     "Elite")
+```
+
+<!-- TJ: Not including #| echo: FALSE so that students can see the code -->
+
+The value of `1` in `tuition` corresponds to `"Non-selective"` in the `selectivity` column and so on.
+
+### Exercise 8
+
+Now that we have the `ndata` object, we can create a pipe which uses out fitted model to answer our question. Pipe `fit_colleges` to `plot_predictions()`
 
 ```{r temperance-8, exercise = TRUE}
 
 ```
 
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
 ```{r temperance-8-hint-1, eval = FALSE}
-
+fit_colleges |>
+  ...
 ```
 
 ```{r temperance-8-test, include = FALSE}
+# fit_colleges |>
+#   plot_predictions()
+```
 
+You should get an error
+
+### 
+
+`plot_predictions()` allows us to directly create a plot by just passing in our model, our `ndata` object and the `by` argument.
+
+### Exercise 9
+
+Set `newdata` to `ndata` and set `by` to `c("tuition", "selectivity")` inside of `plot_predictions()`
+
+
+```{r temperance-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-9-hint-1, eval = FALSE}
+... |> 
+  plot_predictions(newdata = ...,
+                   ... = c("tuition", "selectivity"))
+```
+
+```{r temperance-9-test, include = FALSE}
+fit_colleges |> 
+  plot_predictions(newdata = ndata,
+                   by = c("tuition", "selectivity"))
 ```
 
 ### 
 
-<!-- XX: How do students know whether to use add_epred_draws or add_predicted_draws? This is non-trivial. On some level, we just tell them with the above command. (We don't make them guess.) But we also address this issue explicitly in various knowledg drops, especially this one. -->
+We get a cool sort of line graph here. But, it's kind of boring. Also, it doesn't show the uncertainty for `tuition`.
 
-<!-- XX: Insert as many questions as necessary to build a nice-looking example of your final plot. In early chapters, this is simple since our questions are simple. They are just one posterior. In later chapters, they become more complex, with the inclusion of several posteriors, as well as manipulation of them to calculate causal effects and whatnot. See the voting postcard example. -->
+### Exercise 10
 
-### Exercise 9
+Switch `"tuition"` and `"selectivity"` inside of the vector `c()`.
+
+```{r temperance-10-ex, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-10-hint, eval = FALSE}
+fit_colleges |> 
+  plot_predictions(newdata = ndata,
+                   by = c(...))
+```
+
+```{r temperance-10-test, include = FALSE}
+fit_colleges |> 
+  plot_predictions(newdata = ndata,
+                   by = c("selectivity", "tuition"))
+```
+
+###
+
+This plot is a lot better! `tuition` is displayed a lot nicer. 
+
+The order of the vector in the `by` argument does matter. The first variable is mapped onto the x-axis, second is usually mapped as `fill` and as we go on and add more variables, we see more and more complex plots.
+
+### Exercise 11
+
+Add the layer `scale_y_continuous()`. Set `labels` equal to `scales::percent_format(accuracy = 1)`
+
+```{r temperance-11-ex, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-11-hint, eval = FALSE}
+
+```
+
+```{r temperance-11-test, include = FALSE}
+fit_colleges |> 
+  plot_predictions(newdata = ndata,
+                   by = c("selectivity", "tuition")) +
+  scale_y_continuous(labels = scales::percent_format())
+```
+
+###
+
+We must make out plot understandable to someone who has absolutely 0 idea about data science. Adding percents helps the reader interpret out plot.
+
+<!-- TJ: Trying to find a way to change the values in the fill legend to be 25th and 75th percentiles instead of the raw value. -->
+
+### Exercise 10
 
 Create a new code chunk in `analysis.qmd`. Label it with `label: plot`. Copy/paste the code which creates your graphic. Don't forget that, at the top of this chunk, you must include code which creates the `ndata` object.
 
@@ -1760,7 +1696,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r temperance-9}
+```{r temperance-10}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1771,15 +1707,13 @@ question_text(NULL,
 
 ### 
 
-### Exercise 10
+### Exercise 11
 
 Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
 
-<!-- XX: Most of the time, there will be some measure of uncertainty associated with your QoI. But not always! The most common counter-example involves a question which asks about the odds or probability of something happening. We would answer such a question by simulating the event with `add_predicted_draws()`. We would then calculate the odds/probability of something happening by seeing how many of the 4,000 draws met the criteria for the event. Assume that was 40%. So, we think that there is a 40% chance that event A will happen. Yet there is no uncertainty associated with that estimate because it, itself, is an expression of uncertainty.  -->
-
-```{r temperance-10}
+```{r temperance-11}
 question_text(NULL,
-	message = "XX",
+	message = "Using data from a system of interrelated surveys on postsecondary eduation in 2013, we seek to understand the relationship between graduation rates tuition for colleges/universities in the United States. In particular, what is the difference in graduation rate for colleges in the 75th and 25th percentiles of tuiton? Tuition rates and graduation rates could've changed since 2013. We modeled graduation rate, a continuous variable, as a linear function of both tuition and selectivity. Graduation rates seem to rise as tuition increases. Colleges in the 75th percentile are have on average an 11% higher graduation rate as opposed to colleges in the 25th percentile, although that number may be anywhere from 9-13%.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1791,13 +1725,11 @@ question_text(NULL,
 Edit the summary paragraph in `analysis.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
 
-<!-- XX: Again, spend time to make your recommended paragraph perfect. Study the examples in https://ppbds.github.io/primer/cardinal-virtues.html closely. -->
-
-### Exercise 11
+### Exercise 12
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-11}
+```{r temperance-12}
 question_text(NULL,
 	message = "XX: This is another example in which the quality of your answer is important. You might or might not suggest an alternate estimate. I always adjust the estimate toward my own subjective sense of a longrun average and/or typical value and/or zero. But that is not necessary. However, you should always increase the confidence interval since the assumptions of your model are always false.",
 	answer(NULL, correct = TRUE),
@@ -1808,9 +1740,11 @@ question_text(NULL,
 
 ### 
 
-### Exercise 12
+### Exercise 13
 
 Rearrange the material in `analysis.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
+
+<!-- TJ: Is the regression table the call to `tidy()`? -->
 
 At the Console, run:
 
@@ -1820,7 +1754,7 @@ tutorial.helpers::show_file("analysis.qmd")
 
 CP/CR.
 
-```{r temperance-12}
+```{r temperance-13}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1833,11 +1767,11 @@ question_text(NULL,
 
 Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
 
-### Exercise 13
+### Exercise 14
 
 Publish `analysis.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
 
-```{r temperance-13}
+```{r temperance-14}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1846,7 +1780,6 @@ question_text(NULL,
 	rows = 3)
 ```
 
-### 
 
 ## Summary
 ### 
