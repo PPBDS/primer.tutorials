@@ -27,6 +27,7 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
+set.seed(9)
 x <- nhanes |>
   filter(age >= 18) |>
   select(height, sex) |>
@@ -1258,18 +1259,12 @@ Recall that a categorical variable (whether character or factor) like `sex` is t
 
 ### Exercise 5
 
-Add `library(tidymodels)` and `library(broom)` to the `setup` code chunk in `XX.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `XX.qmd`. `Command/Ctrl + Shift + K`. 
-
-
-```
-$$ height \sim Normal(\mu, \sigma^2)$$
-$$ \mu =  \beta_0 + \beta_1 x_1 + \dots $$
-```
+Add `library(tidymodels)`, `library(broom)`, and `library(equatiomatic)` to the `setup` code chunk in `XX.qmd`. `Command/Ctrl + Shift + K`.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("XX.qmd", pattern = "tidymodels|broom|\\$\\$")
+tutorial.helpers::show_file("XX.qmd", pattern = "tidymodels|broom|equatiomatic")
 ```
 
 CP/CR.
@@ -1357,7 +1352,12 @@ fit_height
 
 ### 
 
-Note that a 0/1 dummy variable `sexMale` was created because it is a categorical variable in the model. 
+The *code formula* includes `sex`, a character variable with two possible values: `"Male"` and `"Female"`.
+
+The *math formula* includes `sexMale`, a 0/1 dummy variable.
+
+`sex` and `sexMale` are not the same things. But we always have to use 0/1 dummy variables with variables which are not numeric since we can't have words in math formulas.
+
 
 ### Exercise 9
 
@@ -1385,6 +1385,8 @@ question_text(NULL,
 ```
 
 ### 
+
+<!-- DK: Knowledge drop. -->
 
 ### Exercise 10
 
@@ -1417,9 +1419,9 @@ question_text(NULL,
 
 ### 
 
-<!-- GK: Maybe need rewrite? Not sure how to fix-->
-
 This is our Data Generating Mechanism. The code extracts the equation from the `fit_height` model, labels the `Intercept` as $\beta_0$ and substitute the estimated coefficients from the model to the equation.
+
+### Exercise 11
 
 <!-- XX: Explain in words what the code means. -->
 
@@ -1429,11 +1431,11 @@ Run `tidy()` on `fit_height` with the argument `conf.int` set equal to `TRUE`. T
 
 ```
 
-```{r courage-10-hint-1, eval = FALSE}
+```{r courage-11-hint-1, eval = FALSE}
 tidy(..., conf.int = ...)
 ```
 
-```{r courage-10-test, include = FALSE}
+```{r courage-11-test, include = FALSE}
 tidy(fit_height, conf.int = TRUE)
 ```
 
@@ -1441,13 +1443,26 @@ tidy(fit_height, conf.int = TRUE)
 
 Because we are Bayesians, we believe that there is a true value and that the confidence or uncertainty interval includes it at the stated level. This is different from the Frequentists' perception that if we followed the same approach in 100 similar problems then, 95% of the time, our confidence interval would include the true value. 
 
-### Exercise 11
+### Exercise 12
 
-Write a sentence interpreting the 159 estimate for the Intercept.
+```{r}
+key_number <- round(tidy(fit_height, conf.int = TRUE)[1,2][[1]])
+```
 
-```{r courage-11}
+
+Write a sentence interpreting the `r key_number` estimate for the Intercept.
+
+```{r}
+tidy(fit_height, conf.int = TRUE) |> 
+  select("term", "estimate", "conf.low", "conf.high")
+
+my_answer <- paste("This is the number", key_number, "and other stuff.")
+```
+
+
+```{r courage-12}
 question_text(NULL,
-	message = "Our (best) guess/estimate as to the average height of all adult females in the population is 159 centimeters.",
+	message = my_answer,
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1456,13 +1471,28 @@ question_text(NULL,
 
 ### 
 
-### Exercise 12
+### Exercise 13
 
-Write a sentence interpreting the 18 estimate for the sexMale.
+```{r}
+key_number <- tidy(fit_height, conf.int = TRUE) |> 
+                filter(term == "sexMale") |>
+                pull(estimate) |> 
+                round()
 
-```{r courage-12}
+answer <- paste("When comparing the average height of men versus women, our guess/estimate is that men are taller than women by", key_number, "centimeters on average.")
+```
+
+Write a sentence interpreting the estimate of about `r key_number` for the `sexMale`.
+
+```{r}
+tidy(fit_height, conf.int = TRUE) |> 
+  select("term", "estimate", "conf.low", "conf.high")
+```
+
+
+```{r courage-13}
 question_text(NULL,
-	message = "When comparing the average height of men versus women, our guess/ estimate is that men is taller than women by 18 centimeters.",
+	message = answer,
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1473,11 +1503,11 @@ question_text(NULL,
 
 Note how, whenever we consider non-treatment variables, we must never use terms like "cause," "impact" and so on. We can't make any statement which implies the existence of more than one potential outcome based on changes in non-treatment variables. We can't make any claims about within row effects. Instead, we can only compare across rows. Always use the phrase "when comparing X and Y" or something very similar.
 
-### Exercise 13
+### Exercise 14
 
 Write a sentence interpreting the 1.47 standard error for the estimate of the Intercept.
 
-```{r courage-13}
+```{r courage-14}
 question_text(NULL,
 	message = "The end points of our confidence interval are simply the estimate plus/minus two times the standard error (1.47).",
 	answer(NULL, correct = TRUE),
@@ -1488,11 +1518,11 @@ question_text(NULL,
 
 ### 
 
-### Exercise 14
+### Exercise 15
 
 Write a sentence interpreting the confidence interval for Intercept.
 
-```{r courage-14}
+```{r courage-15}
 question_text(NULL,
 	message = "We do not know the true value for the average height of all adult females in the population, but we can by 95% confident that it lies somewhere between 156 and 162.",
 	answer(NULL, correct = TRUE),
@@ -1503,11 +1533,11 @@ question_text(NULL,
 
 ### 
 
-### Exercise 15
+### Exercise 16
 
 Write a sentence interpreting the confidence interval for sexMale.
 
-```{r courage-15}
+```{r courage-16}
 question_text(NULL,
 	message = "We do not know the true value for the coefficient for sexMale, but we can be 95% confident that it lies somewhere between 14.1 and 22.0.",
 	answer(NULL, correct = TRUE),
@@ -1518,7 +1548,7 @@ question_text(NULL,
 
 ### 
 
-### Exercise 16
+### Exercise 17
 
 reate a new code chunk in `analysis.qmd`. Add a code chunk option: `label: table`. Add this code to the code chunk.
 
@@ -1536,7 +1566,7 @@ tutorial.helpers::show_file("analysis.qmd", pattern = "tidy")
 
 CP/CR.
 
-```{r courage-16}
+```{r courage-17}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1547,11 +1577,11 @@ question_text(NULL,
 
 ### 
 
-### Exercise 17
+### Exercise 18
 
 Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice section. Add at least one sentence which describes the modelling approach which you are using, specifying at least the functional form and the dependent variable. 
 
-```{r courage-17}
+```{r courage-18}
 question_text(NULL,
 	message = "Knowing about the average height of adult men is important since it is a reasonable benchmark for us to assess our own growth.
 Using the nhanes data set from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to understand height, which is of each individual in the data set and measured in centimeters, in order to estimate the average height of all men in the world right now. Since the participation for the survey is voluntary, it could mean that, for example, taller men are more likely to answer this question, thus reduces representativeness of the data. We model height as a continuous variable that follows normal distribution.",
