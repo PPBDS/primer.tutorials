@@ -59,17 +59,17 @@ plot_predictions(fit_vote$fit,
 # use draw = FALSE to get the raw data and then create the plot you like with
 # geom_errorbar().
 
-plot_comparisons(fit_vote$fit, 
-                 variables = c("treatment"),
-                 newdata = "balanced", 
-                 condition = c("voter_class")) +
-  facet_wrap(z$facet$params$facets, scales = "fixed") +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  labs(title = "Postcard Treatment Effects",
-       subtitles = "Neighbors postcard has the largest causal effect on voting",
-       x = NULL,
-       y = "Causal Effect") +
-  coord_flip()
+# plot_comparisons(fit_vote$fit, 
+#                  variables = c("treatment"),
+#                  newdata = "balanced", 
+#                  condition = c("voter_class")) +
+#   facet_wrap(z$facet$params$facets, scales = "fixed") +
+#   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+#   labs(title = "Postcard Treatment Effects",
+#        subtitles = "Neighbors postcard has the largest causal effect on voting",
+#        x = NULL,
+#        y = "Causal Effect") +
+#   coord_flip()
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -993,8 +993,6 @@ Edit the summary paragraph in `causal_effect.qmd` as you see fit, but do not cop
 
 *Courage is being scared to death, but saddling up anyway.* - John Wayne
 
-
-
 ### Exercise 1
 
 In your own words, describe the components of the virtue of Courage for analyzing data.
@@ -1030,7 +1028,7 @@ library(tidymodels)
 
 ### 
 
-1) Because `biden` is a binary variable, we assume that the outcome of voting for Biden (or not) is produced from a Bernoulli distribution.
+Because `primary_06` is a binary variable, we assume that the outcome of voting (or not) is produced from a Bernoulli distribution.
 
 $$ primary\_06_i  \sim Bernoulli(\rho) $$
 
@@ -1052,7 +1050,7 @@ library(broom)
 
 ### 
 
-Because the outcome variable has a Bernoulli (or Categorical or Cumulative) distribution, the link function is logit. That is:
+Because the outcome variable has a Bernoulli distribution, the link function is logit. That is:
 
 ```{r}
 extract_eq(fit_vote$fit, intercept = "beta")
@@ -1081,12 +1079,12 @@ Recall that a categorical variable (whether character or factor) like `treatment
 
 ### Exercise 5
 
-Add `library(tidymodels)`, `library(broom)`, and `library(equatiomatic)` to the `setup` code chunk in `XX.qmd`. `Command/Ctrl + Shift + K`.
+Add `library(tidymodels)`, `library(broom)`, and `library(equatiomatic)` to the `setup` code chunk in `causal_effect.qmd`. `Command/Ctrl + Shift + K`.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("XX.qmd", pattern = "tidymodels|broom|equatiomatic")
+tutorial.helpers::show_file("causal_effect.qmd", pattern = "tidymodels|broom|equatiomatic")
 ```
 
 CP/CR.
@@ -1102,7 +1100,7 @@ question_text(NULL,
 
 ### 
 
-The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. Since `treatment` has five values --- "No Postcard", "Civic Duty", "Hawthorne", "Self", "Neighbors" --- then the model creates four 0/1 dummy variables, giving them names like $treatmentCivic Duty$ and $treatmentHawthorne$. The results for the *first* category, which is "No Postcard" are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied. 
+The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. Since `treatment` has five values --- "No Postcard", "Civic Duty", "Hawthorne", "Self", "Neighbors" --- the model creates four 0/1 dummy variables, giving them names like $treatmentCivic Duty$, $treatmentHawthorne$ and so on. The results for the *first* category, which is "No Postcard" are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied. 
 
 It is convenient for the control condition to be included in the intercept.
 
@@ -1126,146 +1124,125 @@ logistic_reg(engine = "glm")
 
 In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
 
-### Exercise 6
-
-Create a model using `brm()` from the **brms** package. Your arguments should be `formula = voted ~ age_z + sex + treatment + voter_class + treatment*voter_class`, `data = ch10_data`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 19`.
-
-```{r courage-6, exercise = TRUE}
-
-```
-
-```{r courage-6-hint-1, eval = FALSE}
-brm(...)
-```
-
-### 
-
-The second type of formal notation, more associated with the virtue Courage, includes the actual variable names we are using. The trickiest part is the transformation of character/factor variables into indicator variables, meaning variables with 0/1 values. Because `treatment` has 5 levels, we need 4 indicator variables. The fifth level is incorporated in the intercept.
-
 ### Exercise 7
 
-Behind the scenes, we have assigned the result of the `brm()` call to an object named `fit_postcard_vote`. Type `fit_postcard_vote` and hit "Run Code". This generates the same results as using `print(fit_postcard_vote)`.
+<!-- DK: Does it mess up marginaleffects to as.factor on the fly like this? Should this be done in a recipe step instead? Perhaps this is a could occasion to introduce recipes? -->
+
+Continue the pipe to `fit(as.factor(primary_06) ~ age_z + sex + treatment + voter_class + treatment*voter_class, data = x)`. The "glm" engine requires that the outcome variable be a factor, so we need to transform `primary_06` during the fitting process.
+
 
 ```{r courage-7, exercise = TRUE}
 
 ```
 
 ```{r courage-7-hint-1, eval = FALSE}
-fit_postcard_vote
+logistic_reg(engine = "glm") |> 
+  fit(as.factor(primary_06) ~ age + sex + treatment + 
+        voter_class + treatment*voter_class, 
+      data = x)
 ```
 
 ```{r courage-7-test, include = FALSE}
-fit_postcard_vote
+logistic_reg(engine = "glm") |> 
+  fit(as.factor(primary_06) ~ age + sex + treatment + 
+        voter_class + treatment*voter_class, 
+      data = x)
 ```
 
 ### 
 
-The intercept of `fit_postcard_vote` is the expected probability of voting in the upcoming election for a woman of average age (\~ 50 years old in this data), who is assigned to the No Postcard group, and is a Rarely Voter. The estimate is 15.3%.
+We can translate the fitted model into mathematics, including the best estimates of all the unknown parameters:
+
+```{r}
+extract_eq(fit_vote$fit, 
+           intercept = "beta", 
+           use_coefs = TRUE,
+           wrap = TRUE)
+```
+
+$$
+\begin{aligned}
+\log\left[ \frac { \widehat{P( \operatorname{primary\_06} = \operatorname{1} )} }{ 1 - \widehat{P( \operatorname{primary\_06} = \operatorname{1} )} } \right] &= -2.43 + 0.01(\operatorname{age}) + 0.04(\operatorname{sex}_{\operatorname{Male}}) + 0.09(\operatorname{treatment}_{\operatorname{Civic\ Duty}})\ + \\
+&\quad 0.07(\operatorname{treatment}_{\operatorname{Hawthorne}}) + 0.2(\operatorname{treatment}_{\operatorname{Self}}) + 0.36(\operatorname{treatment}_{\operatorname{Neighbors}}) + 0.82(\operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}})\ + \\
+&\quad 1.61(\operatorname{voter\_class}_{\operatorname{Always\ Vote}}) + 0.03(\operatorname{treatment}_{\operatorname{Civic\ Duty}} \times \operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}}) + 0.06(\operatorname{treatment}_{\operatorname{Hawthorne}} \times \operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}}) + 0.05(\operatorname{treatment}_{\operatorname{Self}} \times \operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}})\ + \\
+&\quad 0.04(\operatorname{treatment}_{\operatorname{Neighbors}} \times \operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}}) - 0.05(\operatorname{treatment}_{\operatorname{Civic\ Duty}} \times \operatorname{voter\_class}_{\operatorname{Always\ Vote}}) + 0.06(\operatorname{treatment}_{\operatorname{Hawthorne}} \times \operatorname{voter\_class}_{\operatorname{Always\ Vote}}) - 0.01(\operatorname{treatment}_{\operatorname{Self}} \times \operatorname{voter\_class}_{\operatorname{Always\ Vote}})\ + \\
+&\quad 0.01(\operatorname{treatment}_{\operatorname{Neighbors}} \times \operatorname{voter\_class}_{\operatorname{Always\ Vote}})
+\end{aligned}
+$$
+
 
 ### Exercise 8
 
-Run `family()` on `fit_postcard_vote`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable.
+Behind the scenes of this tutorial, an object called `fit_vote` has been created which is the result of the code above. Type `fit_vote` and hit "Run Code." This generates the same results as using `print(fit_vote)`.
+
 
 ```{r courage-8, exercise = TRUE}
 
 ```
 
 ```{r courage-8-hint-1, eval = FALSE}
-family(...)
+fit_vote
 ```
 
 ```{r courage-8-test, include = FALSE}
-family(fit_postcard_vote)
+fit_vote
 ```
 
 ### 
 
-In this case, the family is gaussian, which means the distribution of the output variable is continuous. The family is determined by the `family` argument which you passed in to the `brm()` call.
+The *code formula* includes `sex`, a character variable with two possible values: `"Male"` and `"Female"`.
+
+The *math formula* includes `sexMale`, a 0/1 dummy variable.
 
 ### Exercise 9
 
-Run `formula()` on `fit_postcard_vote`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s).
+Create a new code chunk in `causal_effect.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_XX`. 
 
-```{r courage-9, exercise = TRUE}
-
-```
-
-```{r courage-9-hint-1, eval = FALSE}
-formula(...)
-```
-
-```{r courage-9-test, include = FALSE}
-formula(fit_postcard_vote)
-```
-
-### 
-
-In this case, the formula is `voted ~ age_z + sex + treatment + voter_class + treatment * voter_class`. The formula is determined by the `formula` argument which you passed in to the `brm()` call.
-
-### Exercise 10
-
-Run `nobs()` on `fit_postcard_vote`. The `nobs()` function returns the **n**umber of **obs**ervations.
-
-```{r courage-10, exercise = TRUE}
-
-```
-
-```{r courage-10-hint-1, eval = FALSE}
-nobs(...)
-```
-
-```{r courage-10-test, include = FALSE}
-nobs(fit_postcard_vote)
-```
-
-### 
-
-In this case, the number of observations is 34,408. 
-
-### Exercise 11
-
-Add mathematical formula for your model, using $\LaTeX$ math notation to `causal_effect.qmd`.
-
-```         
-$$y_{i} = \beta_{0} + \beta_{1} age\_z + \beta_{2}male_i + \beta_{3}civic\_duty_i + \\ \beta_{4}hawthorne_i + \beta_{5}self_i + \beta_{6}neighbors_i + \\ \beta_{7}Sometimes\ vote_i + \beta_{8}Always\ vote_i + \\ \beta_{9}civic\_duty_i Sometimes\ vote_i + \beta_{10}hawthorne_i Sometimes\ vote_i + \\ \beta_{11}self_i Sometimes\ vote_i + \beta_{11}neighbors_i Sometimes\ vote_i + \\ \beta_{12}civic\_duty_i Always\ vote_i + \beta_{13}hawthorne_i Always\ vote_i + \\ \beta_{14}self_i Always\ vote_i + \beta_{15}neighbors_i Always\ vote_i + \epsilon_{i}$$
-```
-
-`Command/Ctrl + Shift + K`. Ensure that the formula looks correct.
-
-At the Console, run:
-
-```         
-tutorial.helpers::show_file("causal_effect.qmd", start = -8)
-```
-
-CP/CR.
-
-```{r courage-11}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### Exercise 12
-
-Create a new code chunk in `causal_effect.qmd`. Add two code chunk options: `#| label: model` and `#|  cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assigning the result to `fit_postcard_vote`.
-
-`Command/Ctrl + Shift + K`. It may take some time to render `causal_effect.qmd`, depending on how complex your model is. But, by including `#| cache: true` you cause Quarto to cache the results of the chunk. The next time you render `causal_effect.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
+`Command/Ctrl + Shift + K`. It may take some time to render `causal_effect.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `causal_effect.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
 
 To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
 
 At the Console, run:
 
-```         
+```
 tutorial.helpers::show_file("causal_effect.qmd", start = -8)
 ```
 
 CP/CR.
 
-```{r courage-12}
+```{r courage-9}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 8)
+```
+
+### 
+
+### Exercise 10
+
+Create another code chunk in `XX.qmd`. Add the chunk option: `label: math`. In that code chunk, add something like the below. You may find it useful to add the `coef_digits` argument to show fewer significant digits after the decimal.
+
+```
+extract_eq(fit_vote$fit, 
+           intercept = "beta", 
+           use_coefs = TRUE,
+           wrap = TRUE)
+```
+
+`Command/Ctrl + Shift + K`. 
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("XX.qmd", pattern = "extract")
+```
+
+CP/CR.
+
+```{r courage-10}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1276,115 +1253,24 @@ question_text(NULL,
 
 ### 
 
-The coefficient of `age_z`, 0.035, implies a change of ~3.5% in likelihood of voting for each increment of one standard deviation (~ 14.45 years). For example: when comparing someone 50 years old with someone 65, the latter is about 3.5% more likely to vote.
+When you render your document, this formula will appear.
 
-### Exercise 13
-
-Run `posterior_interval()` on `fit_postcard_vote`. 
-
-```{r courage-13, exercise = TRUE}
-
+```{r}
+extract_eq(fit_vote$fit, 
+           intercept = "beta", 
+           use_coefs = TRUE,
+           wrap = TRUE)
 ```
 
-```{r courage-13-hint-1, eval = FALSE}
-posterior_interval(...)
-```
+This is our Data Generating Mechanism.
 
-```{r courage-13-test, include = FALSE}
-posterior_interval(fit_postcard_vote)
-```
 
-### 
 
-The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
-
-### Exercise 14
-
-Run `fixef()` on `fit_postcard_vote`. 
-
-```{r courage-14, exercise = TRUE}
-
-```
-
-```{r courage-14-hint-1, eval = FALSE}
-fixef(...)
-```
-
-```{r courage-14-test, include = FALSE}
-fixef(fit_postcard_vote)
-```
-
-### 
-
-The `fixef()` returns information about the **fix**ed **ef**fects in the model.
-
-### Exercise 15
-
-Run `pp_check()` on `fit_postcard_vote`. 
-
-```{r courage-15, exercise = TRUE}
-
-```
-
-```{r courage-15-hint-1, eval = FALSE}
-pp_check(...)
-```
-
-```{r courage-15-test, include = FALSE}
-pp_check(fit_postcard_vote)
-```
-
-### 
-
-The `pp_check()` runs a **p**osterior **p**redictive check.
-
-### Exercise 16
-
-Use `library()` to load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
-
-```{r courage-16, exercise = TRUE}
-
-```
-
-```{r courage-16-hint-1, eval = FALSE}
-library(...)
-```
-
-```{r courage-16-test, include = FALSE}
-library(gtsummary)
-```
-
-### 
-
-Exposure to the Neighbors treatment shows a ~4.4% increase in voting likelihood for someone in the Rarely Vote category. Because of random assignment of treatment, we can interpret that coefficient as an estimate of the average treatment effect.
-
-### Exercise 17
-
-Pipe `fit_postcard_vote` to `tbl_regression(intercept = TRUE, estimate_fun = function(x) style_sigfig(x, digits = 3))`.
-
-```{r courage-17, exercise = TRUE}
-
-```
-
-```{r courage-17-hint-1, eval = FALSE}
-fit_postcard_vote |> 
-  tbl_regression(...)
-```
-
-```{r courage-17-test, include = FALSE}
-fit_postcard_vote |> 
-  tbl_regression(intercept = TRUE, estimate_fun = function(x) style_sigfig(x, digits = 3))
-```
-
-### 
-
-If someone were from a different voter classification, the calculation is more complex because we need to account for the interaction term. For example, for individuals who Sometimes Vote, the treatment effect of Neighbors is 8.6%. For Always Vote Neighbors, it is 9%.
-
-### Exercise 18
+### Exercise 11
 
 Write a few sentences which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using, specifying the functional form and the dependent variable. Add one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
 
-```{r courage-18}
+```{r courage-11}
 question_text(NULL,
 	message = "Using the data from an experiment to find out whether and to what extent people are motivated to vote by social pressure, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026. Stability might not be true because the way people view politics has changed from 2006 because of new things such as social media. We modeled `primary_06`, a binary 0/1 integer variable indicating whether the respondent voted in the 2006 primary election, and the type of postcard they recieved. People who have been voting in the past are more likely to vote again.",
 	answer(NULL, correct = TRUE),
@@ -1397,26 +1283,7 @@ question_text(NULL,
 
 Edit the summary paragraph in `causal_effect.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`, and then commit/push.
 
-### Exercise 19
 
-Update `causal_effect.qmd`. First, add `library(gtsummary)` to the `setup` code chunk. Second, add a new code chunk which creates the table of model parameters. `Command/Ctrl + Shift + K` to ensure that everything works.
-
-At the Console, run:
-
-```         
-tutorial.helpers::show_file("causal_effect.qmd", start = -8)
-```
-
-CP/CR.
-
-```{r courage-19}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
 
 ## Temperance
 ### 
@@ -1557,18 +1424,18 @@ This should return the same thing as the previous exercise.
 
 ### Exercise 7
 
-Now that we have the `newdata` object, we can create a pipe which uses out fitted model to answer our question. Begin by typing `fit_postcard_vote` and clicking "Run Code".
+Now that we have the `newdata` object, we can create a pipe which uses out fitted model to answer our question. Begin by typing `fit_vote` and clicking "Run Code".
 
 ```{r temperance-7, exercise = TRUE}
 
 ```
 
 ```{r temperance-7-hint-1, eval = FALSE}
-fit_postcard_vote
+fit_vote
 ```
 
 ```{r temperance-7-test, include = FALSE}
-fit_postcard_vote
+fit_vote
 ```
 
 ### 
@@ -1581,7 +1448,7 @@ Both functions return draws from a posterior probability distribution, but the u
 
 ### Exercise 8
 
-Pipe `fit_postcard_vote` to `add_epred_draws()` with the argument `newdata = ndata`.
+Pipe `fit_vote` to `add_epred_draws()` with the argument `newdata = ndata`.
 
 ```{r temperance-8, exercise = TRUE}
 
@@ -1594,7 +1461,7 @@ Pipe `fit_postcard_vote` to `add_epred_draws()` with the argument `newdata = nda
 ```
 
 ```{r temperance-8-test, include = FALSE}
-fit_postcard_vote |> add_epred_draws(newdata = ndata)
+fit_vote |> add_epred_draws(newdata = ndata)
 ```
 
 ### 
@@ -1617,7 +1484,7 @@ Continue the pipe with `ungroup()` and then `select(names, .epred)`.
 ```
 
 ```{r temperance-9-test, include = FALSE}
-fit_postcard_vote |>
+fit_vote |>
   add_epred_draws(newdata = ndata) |>
   ungroup() |>
   select(names, .epred)
@@ -1645,7 +1512,7 @@ Continue the pipe with `pivot_wider(names_from = names, values_from = .epred, va
 ```
 
 ```{r temperance-10-test, include = FALSE}
-fit_postcard_vote |>
+fit_vote |>
   add_epred_draws(newdata = ndata) |>
   ungroup() |>
   select(names, .epred) |>  
@@ -1691,7 +1558,7 @@ mutate(`Always Civic-Duty`    = civic_duty_always_vote     - no_postcard_always_
 ```
 
 ```{r temperance-11-test, include = FALSE}
-fit_postcard_vote |>
+fit_vote |>
   add_epred_draws(newdata = ndata) |>
   ungroup() |>
   select(names, .epred) |>  
