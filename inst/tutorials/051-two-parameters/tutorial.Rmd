@@ -260,7 +260,7 @@ Write a few sentences which specify two different groups of individuals with dif
 
 ```{r the-question-10}
 question_text(NULL,
-	message = "XX: Some individuals might have a value for `sex` of `Male`. Others might have a value of `Female`. Those two groups will, on average, have different values for the outcome variable.",
+	message = "Some individuals might have a value for `sex` of `Male`. Others might have a value of `Female`. Those two groups will, on average, have different values for the outcome variable.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1254,7 +1254,9 @@ question_text(NULL,
 
 The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has three values --- "black", "hispanic", and "white" --- then the model creates two 0/1 dummy variables, giving them names like $race_{hispanic}$ and $race_{white}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
 
-<!-- GK: Try rewrite the above -->
+The mathematical formula in this case is: 
+$$\operatorname{\widehat{height}} = \beta_0 + race_{hispanic} + race_{white}$$ 
+When the value of `race` is neither "hispanic" or "white", the values of $race_{hispanic}$ and $race_{white}$ in the math formula are zero. The value of $\operatorname{\widehat{height}}$ is equal $\beta_0$, the Intercept, which captures the predicted height of all individuals whose race is neither "hispanic" nor "white", but "black". 
 
 ### Exercise 6
 
@@ -1362,8 +1364,7 @@ question_text(NULL,
 
 ### 
 
-<!-- DK: Knowledge drop. -->
-
+We use the *code formula* to communicate behind the scene with the computer to construct the model. We then use the *math formula* to communicate with the readers about the result of the model.
 
 ### Exercise 10
 
@@ -1429,21 +1430,23 @@ Because we are Bayesians, we believe that there is a true value and that the con
 ### Exercise 12
 
 ```{r}
-key_number <- round(tidy(fit_height, conf.int = TRUE)[1,2][[1]])
+result <- tidy(fit_height, conf.int = TRUE) |> 
+                  filter(term == "(Intercept)") |> 
+                  pull(estimate) |>
+                  round()
+answer <- paste("Our (best) guess/estimate for the average height of adult females is", result)
 ```
 
-Write a sentence interpreting the `r key_number` estimate for the Intercept.
+Write a sentence interpreting the `r result` estimate for the Intercept.
 
 ```{r}
 tidy(fit_height, conf.int = TRUE) |> 
   select("term", "estimate", "conf.low", "conf.high")
-
-my_answer <- paste("This is the number", key_number, "and other stuff.")
 ```
 
 ```{r courage-12}
 question_text(NULL,
-	message = my_answer,
+	message = answer,
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1452,18 +1455,27 @@ question_text(NULL,
 
 ### 
 
+Our mathematical formula for this problem is:
+
+```{r}
+extract_eq(fit_height$fit,
+           intercept = "beta")
+```
+
+Recall that we cannot have both "Male" and "Female" categories in the model. Instead, the Female category is incorporated into the intercept and becomes the reference case. Thus, it represents the average height of adult female.
+
 ### Exercise 13
 
 ```{r}
-key_number <- tidy(fit_height, conf.int = TRUE) |> 
+result <- tidy(fit_height, conf.int = TRUE) |> 
                 filter(term == "sexMale") |>
                 pull(estimate) |> 
                 round()
 
-answer <- paste("When comparing the average height of men versus women, our guess/estimate is that men are taller than women by", key_number, "centimeters.")
+answer <- paste("When comparing the average height of men versus women, our guess/estimate is that men are taller than women by", result, "centimeters.")
 ```
 
-Write a sentence interpreting the estimate of about `r key_number` for the `sexMale`.
+Write a sentence interpreting the estimate of about `r result` for the `sexMale`.
 
 ```{r}
 tidy(fit_height, conf.int = TRUE) |> 
@@ -1485,26 +1497,28 @@ Note how, whenever we consider non-treatment variables, we must never use terms 
 
 ### Exercise 14
 
-Write a sentence interpreting the 1.47 standard error for the estimate of the Intercept.
+```{r}
+ci_intercept <- tidy(fit_height, conf.int = TRUE) |> 
+                filter(term == "(Intercept)") |>
+                select(conf.low, conf.high) |> 
+                round() |> 
+                with(sprintf("[%d, %d]", conf.low, conf.high)) 
 
-```{r courage-14}
-question_text(NULL,
-	message = "The end points of our confidence interval are simply the estimate plus/minus two times the standard error (1.47).",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
+answer <- paste("There is a 95% chance that the true value of the Intercept is within the range", ci_intercept, "centimeters.")
 ```
-
-### 
-
-### Exercise 15
 
 Write a sentence interpreting the confidence interval for Intercept.
 
-```{r courage-15}
+```{r}
+tidy(fit_height, conf.int = TRUE) |> 
+  filter(term == "(Intercept)") |>
+  select(conf.low, conf.high) |> 
+  round()
+```
+
+```{r courage-14}
 question_text(NULL,
-	message = "We do not know the true value for the average height of all adult females in the population, but we can by 95% confident that it lies somewhere between 156 and 162.",
+	message = answer,
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1513,13 +1527,32 @@ question_text(NULL,
 
 ### 
 
-### Exercise 16
+When looking at the confidence interval, we examine whether it excludes zero. If not, then we can't be sure if the relationship is positive or negative.
+
+### Exercise 15
+
+```{r}
+ci_sex <- tidy(fit_height, conf.int = TRUE) |> 
+                filter(term == "sexMale") |>
+                select(conf.low, conf.high) |> 
+                round() |> 
+                with(sprintf("[%d, %d]", conf.low, conf.high)) 
+
+answer <- paste("There is a 95% chance that the true value of the coefficient of `sexMale` is within the range", ci_sex, "centimeters.")
+```
 
 Write a sentence interpreting the confidence interval for sexMale.
 
-```{r courage-16}
+```{r}
+tidy(fit_height, conf.int = TRUE) |> 
+  filter(term == "sexMale") |>
+  select(conf.low, conf.high) |> 
+  round()
+```
+
+```{r courage-15}
 question_text(NULL,
-	message = "We do not know the true value for the coefficient for sexMale, but we can be 95% confident that it lies somewhere between 14.1 and 22.0.",
+	message = answer,
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1528,7 +1561,9 @@ question_text(NULL,
 
 ### 
 
-### Exercise 17
+Dummy variables must always be interpreted in the context of the base value for that variable, which is always included in the intercept. For example, the base value here is "Female/Male." (The base value is the first alphabetically by default for character variables. However, if it is a factor variable, you can change that by setting the order of the levels by hand.)
+
+### Exercise 16
 
 reate a new code chunk in `analysis.qmd`. Add a code chunk option: `label: table`. Add this code to the code chunk.
 
@@ -1546,7 +1581,7 @@ tutorial.helpers::show_file("analysis.qmd", pattern = "tidy")
 
 CP/CR.
 
-```{r courage-17}
+```{r courage-16}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1557,14 +1592,14 @@ question_text(NULL,
 
 ### 
 
-### Exercise 18
+### Exercise 17
 
 Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice section. Add at least one sentence which describes the modelling approach which you are using, specifying at least the functional form and the dependent variable. 
 
-```{r courage-18}
+```{r courage-17}
 question_text(NULL,
 	message = "Knowing about the average height of adult men is important since it is a reasonable benchmark for us to assess our own growth.
-Using the nhanes data set from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to understand height, which is of each individual in the data set and measured in centimeters, in order to estimate the average height of all men in the world right now. Since the participation for the survey is voluntary, it could mean that, for example, taller men are more likely to answer this question, thus reduces representativeness of the data. We model height as a continuous variable that follows normal distribution.",
+Using the nhanes data set from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to understand height, which is of each individual in the data set and measured in centimeters, in order to estimate the average height of all men in the world right now. Since the participation for the survey is voluntary, it could mean that, for example, taller men are more likely to answer this question, thus reduces representativeness of the data. We model height as a function of sex.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1613,15 +1648,15 @@ library(marginaleffects)
 
 ### 
 
-### Exercise 3
+The **marginaleffects** package allows R users to compute and plot three principal quantities of interest: (1) predictions, (2) comparisons, and (3) slopes. In addition, the package includes a convenience function to compute a fourth quantity of interest, “marginal means”, which is a special case of averaged predictions. marginaleffects can also average (or “marginalize”) unit-level (or “conditional”) estimates of all those quantities, and conduct hypothesis tests on them.
 
-<!-- GK: Revise question to make it consistent -->
+### Exercise 3
 
 What is the general topic we are investigating? What is the specific question we are trying to answer? 
 
 ```{r temperance-3}
 question_text(NULL,
-	message = "We are investigating the height for adult men to answer the question: What is the probability that the next man we meet will be taller than 180 centimeters?",
+	message = "We are investigating the topic of height. We then drill to a more specific question: What is the average height of all adult males?",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1784,10 +1819,12 @@ question_text(NULL,
 
 Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
 
+<!-- GK: What should the standard error be -->
+
 ```{r temperance-11}
 question_text(NULL,
 	message = "Knowing about the average height of adult men is important since it is a reasonable benchmark for us to assess our own growth.
-Using the nhanes data set from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to understand height, which is of each individual in the data set and measured in centimeters, in order to estimate the average height of all men in the world right now. Since the participation for the survey is voluntary, it could mean that, for example, taller men are more likely to answer this question, thus reduces representativeness of the data. We model height as a continuous variable that follows normal distribution. Our best guess for the average height of all men on Earth in 2024 is 178.8698 cm, with standard error of 0.12 cm.",
+Using the nhanes data set from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to understand height, which is of each individual in the data set and measured in centimeters, in order to estimate the average height of all men in the world right now. Since the participation for the survey is voluntary, it could mean that, for example, taller men are more likely to answer this question, thus reduces representativeness of the data. We model height as a function of sex. Our best guess for the average height of all men on Earth in 2024 is 175 cm.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
