@@ -44,32 +44,8 @@ fit_vote <- logistic_reg(engine = "glm") |>
   fit(as.factor(primary_06) ~ 
         age + sex + treatment*voter_class, 
       data = x)
-  
 
 tidy_vote <- tidy(fit_vote, conf_int = TRUE)
-
-
-extract_eq(fit_vote$fit)
-
-plot_predictions(fit_vote$fit, 
-                 newdata = "balanced", 
-                 condition = c("treatment", "voter_class"))
-
-# Maybe show the plot comparison. Note that the initial plot is annoying. Then
-# use draw = FALSE to get the raw data and then create the plot you like with
-# geom_errorbar().
-
-# plot_comparisons(fit_vote$fit, 
-#                  variables = c("treatment"),
-#                  newdata = "balanced", 
-#                  condition = c("voter_class")) +
-#   facet_wrap(z$facet$params$facets, scales = "fixed") +
-#   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-#   labs(title = "Postcard Treatment Effects",
-#        subtitles = "Neighbors postcard has the largest causal effect on voting",
-#        x = NULL,
-#        y = "Causal Effect") +
-#   coord_flip()
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -77,6 +53,8 @@ plot_predictions(fit_vote$fit,
 
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
+
+<!-- DK: Consider using draw = FALSE in plot_comparisons and then creating a better looking plot. Should have the same scales in each facet. Should have better facet titles. Should organize the facets in some sensible way. Or maybe the facets should be voter_class so that we can see that Neightbors is (almost) always better. -->
 
 ## Introduction
 ### 
@@ -1264,15 +1242,21 @@ extract_eq(fit_vote$fit,
 
 This is our Data Generating Mechanism.
 
-
-
 ### Exercise 11
 
-Write a few sentences which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using, specifying the functional form and the dependent variable. Add one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
+Add two sentence to your project summary. 
+
+First, mention a weakness in your model, derived from the questions above about the key assumptions of a data science problem.
+
+Second, explain the structure of the model. Something like: "I/we model Y [the concept of the outcome, not the variable name] as a [linear/logistic/multinomial/oridinal] function of X [and maybe other covariates]."
+
+Recall the beginning of our version of the summary:
+
+> Efforts to get your supporters to vote have always been a part of US political campaigns. Using the data from a 2006 experiment in Michigan, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026.
 
 ```{r courage-11}
 question_text(NULL,
-	message = "Using the data from an experiment to find out whether and to what extent people are motivated to vote by social pressure, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026. Stability might not be true because the way people view politics has changed from 2006 because of new things such as social media. We modeled `primary_06`, a binary 0/1 integer variable indicating whether the respondent voted in the 2006 primary election, and the type of postcard they recieved. People who have been voting in the past are more likely to vote again.",
+	message = "The rise of social media use may have changed the efficacy of postcards in changing individual behavior. We model voting as a logistic function of treatment --- meaning type of postcard received, if any --- along with prior voting behavior, sex and age.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1281,8 +1265,7 @@ question_text(NULL,
 
 ### 
 
-Edit the summary paragraph in `causal_effect.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`, and then commit/push.
-
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to `causal_effects.qmd`, `Command/Ctrl + Shift + K`, and then commit/push.
 
 
 ## Temperance
@@ -1309,11 +1292,31 @@ Temperance guides us in the use of the DGM — or the “model” — we have cr
 
 ### Exercise 2
 
+Load the [**marginaleffects**](https://marginaleffects.com/) package.
+
+```{r temperance-2, exercise = TRUE}
+
+```
+
+```{r temperance-2-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r temperance-2-test, include = FALSE}
+library(marginaleffects)
+```
+
+### 
+
+We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
+
+### Exercise 3
+
 What is the general topic we are investigating? What is the specific question we are trying to answer?
 
-```{r temperance-2}
+```{r temperance-3}
 question_text(NULL,
-	message = "What is the causal effect, on the likelihood of voting, of different postcards on voters of different levels of political engagement?",
+	message = "What is the causal effect, on the probability of voting, of different postcards on voters of different levels of political engagement?",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1324,434 +1327,50 @@ question_text(NULL,
 
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic broadly.
 
-### Exercise 3
-
-To answer our question, we need to create a `newdata` object. Which variables do we need to include in this object?
-
-```{r temperance-3}
-question_text(NULL,
-	message = "The `sex`, `age_z`, `treatment`, and `voter_class` variables will be important to include.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-We will create a plot that displays the posterior probability distributions of the average treatment effects for men of average age across all combinations of 4 treatments and 3 voter classifications. This means that we are making a total of 12 inferences.
-
 ### Exercise 4
 
-Which values do you want the variables in your `newdata` object to have? This is not easy!
+Enter this code into the exercise code block and hit "Run Code."
 
-```{r temperance-4}
-question_text(NULL,
-	message = "`sex` will be male; `age_z` will be 0; `treatment` will be No Postcard, Civic Duty, Hawthorne, Self, and Neighbors; and `voter_class` will be Always Vote, Sometimes Vote, and Rarely Vote.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
+```
+plot_comparisons(fit_vote$fit,
+                 variables = "treatment",
+                 by = "voter_class",
+                 newdata = "balanced",
+                 type = "response")
+```                 
+
+```{r temperance-4, exercise = TRUE}
+
+```
+
+```{r temperance-4-test, include = FALSE}
+plot_comparisons(fit_vote$fit,
+                 variables = "treatment",
+                 by = "voter_class",
+                 newdata = "balanced",
+                 type = "response")
 ```
 
 ### 
 
-We could look at lots of ages and both Male and Female subjects. However, that would not change our estimates of the treatment effects, as in the model the effect of sex and the other effects do not affect each other. 
+We are interested in the average treatment effect of postcards. There are 4 different postcards, each of which can be compared to what would have happened if the voter did not receive any postcard.
 
 ### Exercise 5
 
-Here is the R code which creates the `newdata` object. Hit "Run Code".
-
-```{r temperance-5, exercise = TRUE}
-sex <- "Male"
-age_z <- 0
-treatment <- c("No Postcard",
-               "Civic Duty",
-               "Hawthorne",
-               "Self",
-               "Neighbors")
-voter_class <- c("Always Vote",
-                 "Sometimes Vote",
-                 "Rarely Vote")
-
-newdata <- expand_grid(sex, age_z, treatment, voter_class) |>
-  mutate(names = paste(treatment, voter_class, sep = "_"))
-
-newdata
-```
-
-```{r temperance-5-test, include = FALSE}
-sex <- "Male"
-age_z <- 0
-treatment <- c("No Postcard",
-               "Civic Duty",
-               "Hawthorne",
-               "Self",
-               "Neighbors")
-voter_class <- c("Always Vote",
-                 "Sometimes Vote",
-                 "Rarely Vote")
-
-newdata <- expand_grid(sex, age_z, treatment, voter_class) |>
-  mutate(names = paste(treatment, voter_class, sep = "_"))
-
-newdata
-```
-
-### 
-
-The model is linear, so terms associated with `age_z` and `sex` disappear when we do the subtraction. This is one of the great advantages of linear models.
-
-### Exercise 6
-
-Behind the scenes, we have created the `ndata` object using this code. To confirm, type `ndata` and hit "Run Code".
-
-```{r temperance-6, exercise = TRUE}
-
-```
-
-```{r temperance-6-hint-1, eval = FALSE}
-ndata
-```
-
-```{r temperance-6-test, include = FALSE}
-ndata
-```
-
-### 
-
-This should return the same thing as the previous exercise. 
-
-### Exercise 7
-
-Now that we have the `newdata` object, we can create a pipe which uses out fitted model to answer our question. Begin by typing `fit_vote` and clicking "Run Code".
-
-```{r temperance-7, exercise = TRUE}
-
-```
-
-```{r temperance-7-hint-1, eval = FALSE}
-fit_vote
-```
-
-```{r temperance-7-test, include = FALSE}
-fit_vote
-```
-
-### 
-
-We use `add_epred_draws()` for expected values: we are not interested in any specific individual, the individual value is irrelevant. 
-
-We use `add_predicted_draws()` for predicted values: we care, not about the average, but about this specific person.
-
-Both functions return draws from a posterior probability distribution, but the unknown number which underlies the posterior are very different.
-
-### Exercise 8
-
-Pipe `fit_vote` to `add_epred_draws()` with the argument `newdata = ndata`.
-
-```{r temperance-8, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-8-hint-1, eval = FALSE}
-... |> add_epred_draws(...)
-```
-
-```{r temperance-8-test, include = FALSE}
-fit_vote |> add_epred_draws(newdata = ndata)
-```
-
-### 
-
-This data is not in a format which is easy to work with. We want to calculate causal effects, which are the difference between two potential outcomes. This is easiest to do when all potential outcomes are on the same line. 
-
-### Exercise 9
-
-Continue the pipe with `ungroup()` and then `select(names, .epred)`.
-
-```{r temperance-9, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-9-hint-1, eval = FALSE}
-... |> ungroup() |>
-  select(...)
-```
-
-```{r temperance-9-test, include = FALSE}
-fit_vote |>
-  add_epred_draws(newdata = ndata) |>
-  ungroup() |>
-  select(names, .epred)
-```
-
-### 
-
-The `select()` function only keeps the important variables so we can focus on them. 
-
-### Exercise 10
-
-Continue the pipe with `pivot_wider(names_from = names, values_from = .epred, values_fn = list)` and then `unnest(cols = everything())`. Pipe `janitor::clean_names()` after the `unnest()` function.
-
-```{r temperance-10, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-10-hint-1, eval = FALSE}
-... |>  
-  pivot_wider(...) |>
-  unnest(...) |> 
-  janitor::clean_names()
-```
-
-```{r temperance-10-test, include = FALSE}
-fit_vote |>
-  add_epred_draws(newdata = ndata) |>
-  ungroup() |>
-  select(names, .epred) |>  
-  pivot_wider(names_from = names, 
-              values_from = .epred, 
-              values_fn = list) |>
-  unnest(cols = everything()) |> 
-  janitor::clean_names()
-```
-
-### 
-
-Each column has rows representing draws from the posterior probability distribution of average voting likelihood for a person with that level of civic engagement and subject to that treatment. So, `no_postcard_always_vote` is the posterior for the average (or predicted) likelihood of voting for someone who did not receive a postcard, i.e., they were a control, and who “always votes”.
-
-### Exercise 11
-
-Continue the pipe with the following code:
-
-```
-mutate(`Always Civic-Duty`    = civic_duty_always_vote     - no_postcard_always_vote,
-         `Always Hawthorne`     = hawthorne_always_vote      - no_postcard_always_vote,
-         `Always Self`          = self_always_vote           - no_postcard_always_vote,
-         `Always Neighbors`     = neighbors_always_vote      - no_postcard_always_vote,
-         `Sometimes Civic-Duty` = civic_duty_sometimes_vote  - no_postcard_sometimes_vote,
-         `Sometimes Hawthorne`  = hawthorne_sometimes_vote   - no_postcard_sometimes_vote,
-         `Sometimes Self`       = self_sometimes_vote        - no_postcard_sometimes_vote,
-         `Sometimes Neighbors`  = neighbors_sometimes_vote   - no_postcard_sometimes_vote,
-         `Rarely Civic-Duty`    = civic_duty_rarely_vote     - no_postcard_rarely_vote,
-         `Rarely Hawthorne`     = hawthorne_rarely_vote      - no_postcard_rarely_vote,
-         `Rarely Self`          = self_rarely_vote           - no_postcard_rarely_vote,
-         `Rarely Neighbors`     = neighbors_rarely_vote      - no_postcard_rarely_vote) 
-```
-
-```{r temperance-11, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-11-hint-1, eval = FALSE}
-... |>  
-  mutate(...)
-```
-
-```{r temperance-11-test, include = FALSE}
-fit_vote |>
-  add_epred_draws(newdata = ndata) |>
-  ungroup() |>
-  select(names, .epred) |>  
-  pivot_wider(names_from = names, 
-              values_from = .epred, 
-              values_fn = list) |>
-  unnest(cols = everything()) |> 
-  janitor::clean_names() |>
-  mutate(`Always Civic-Duty`    = civic_duty_always_vote     - no_postcard_always_vote,
-         `Always Hawthorne`     = hawthorne_always_vote      - no_postcard_always_vote,
-         `Always Self`          = self_always_vote           - no_postcard_always_vote,
-         `Always Neighbors`     = neighbors_always_vote      - no_postcard_always_vote,
-         `Sometimes Civic-Duty` = civic_duty_sometimes_vote  - no_postcard_sometimes_vote,
-         `Sometimes Hawthorne`  = hawthorne_sometimes_vote   - no_postcard_sometimes_vote,
-         `Sometimes Self`       = self_sometimes_vote        - no_postcard_sometimes_vote,
-         `Sometimes Neighbors`  = neighbors_sometimes_vote   - no_postcard_sometimes_vote,
-         `Rarely Civic-Duty`    = civic_duty_rarely_vote     - no_postcard_rarely_vote,
-         `Rarely Hawthorne`     = hawthorne_rarely_vote      - no_postcard_rarely_vote,
-         `Rarely Self`          = self_rarely_vote           - no_postcard_rarely_vote,
-         `Rarely Neighbors`     = neighbors_rarely_vote      - no_postcard_rarely_vote)
-```
-
-### 
-
-Recall that, when calculating a treatment effect, we need to subtract the estimate for each category from the control group for that category. For example, if we wanted to find the treatment effect for the `neighbors_always_vote` group, we would need: `neighbors_always_vote` minus `no_postcard_always_vote`.
-
-### Exercise 12
-
-Finish the pipe with the following code:
-
-```
-pivot_longer(names_to = c("Voter Class", "Group"),
-               names_sep = " ",
-               values_to = "values",
-               cols = `Always Civic-Duty`:`Rarely Neighbors`) |>
-               mutate(`Voter Class` = fct_relevel(factor(`Voter Class`),
-                                     c("Rarely",
-                                       "Sometimes",
-                                       "Always")))
-```
-
-```{r temperance-12, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-12-hint-1, eval = FALSE}
-... |>  
-  pivot_longer(...) |>
-  mutate()
-```
-
-### 
-
-We used `mutate()` twelve times, for each of the treatments and voting frequencies. After, we used `pivot_longer()` in order for the treatment effects to be sensibly categorized for plotting.
-
-### Exercise 13
-
-Behind the scenes in this tutorial, we have created an object called `plot_data` with the previous code.
-
-Start with `plot_data` and pipe to `ggplot()`, with `x` set to `values` and `y` set to `fct_reorder(Group, values)` inside `aes()`.
-
-```{r temperance-13, exercise = TRUE}
-
-```
-
-```{r temperance-13-hint-1, eval = FALSE}
-plot_data |> ggplot(...)
-```
-
-```{r temperance-13-test, include = FALSE}
-plot_data |> ggplot(aes(x = values, y = fct_reorder(Group, values)))
-```
-
-### 
-
-Reordering the y axis values allows a smoother visual interpretation.
-
-### Exercise 14
-
-Continue by adding `stat_slab()` with `fill` set to `` `Voter Class` `` inside `aes()`. Set `position` to `"dodge"` inside `stat_slab()`.
-
-```{r temperance-14, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-14-hint-1, eval = FALSE}
-... +
-  stat_slab(aes(... = `Voter Class`), ... = 'dodge')
-```
-
-```{r temperance-14-test, include = FALSE}
-plot_data |> ggplot(aes(x = values, y = fct_reorder(Group, values))) +
-  stat_slab(aes(fill = `Voter Class`),
-              position = 'dodge') 
-```
-
-### 
-
-`position = "dodge"` is the only sure way to see all 3 treatment distributions in the graph.
-
-### Exercise 15
-
-<!-- AC: The scale now looks a bit too bunched up? Maybe changing it from 0.01 to 0.02 is better?  -->
-
-Continue by adding `scale_x_continuous()` with `labels` set to `scales::percent_format(accuracy = 1)` and `breaks` set to `seq(-0.05, 0.11, 0.01)`.
-
-```{r temperance-15, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-15-hint-1, eval = FALSE}
-... +
-  scale_x_continuous(...) 
-```
-
-```{r temperance-15-test, include = FALSE}
-plot_data |> ggplot(aes(x = values, y = fct_reorder(Group, values))) +
-  stat_slab(aes(fill = `Voter Class`),
-              position = 'dodge') +
-  scale_x_continuous(labels = scales::percent_format(accuracy = 1),
-                       breaks = seq(-0.05, 0.11, 0.01))
-```
-
-### 
-
-More frequent breaks on the x-axis provides a better reader interpretation of the the shift across age groups, as opposed to intervals of 10%.
-
-### Exercise 16
-
-Finish the graph with `labs()`. Include `title`, `subtitle`, `x`, `y`, and `caption`.
-
-```{r temperance-16, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-16-hint-1, eval = FALSE}
-... +
-  labs(...) 
-```
-
-```{r temperance-16-test, include = FALSE}
-plot_data |> ggplot(aes(x = values, y = fct_reorder(Group, values))) +
-  stat_slab(aes(fill = `Voter Class`),
-              position = 'dodge') +
-  scale_x_continuous(labels = scales::percent_format(accuracy = 1),
-                       breaks = seq(-0.05, 0.11, 0.01)) +
-   labs(title = "Treatment Effects on the Probability of Voting",
-         subtitle = "Postcards work less well on those who rarely vote",
-         y = "Postcard Type",
-         x = "Average Treatment Effect",
-         caption = "Source: Gerber, Green, and Larimer (2008)")
-```
-
-The graph should look like this:
-
-```{r}
-#| echo: false
-
-plot_data |> ggplot(aes(x = values, y = fct_reorder(Group, values))) +
-  stat_slab(aes(fill = `Voter Class`),
-              position = 'dodge') +
-  scale_x_continuous(labels = scales::percent_format(accuracy = 1),
-                       breaks = seq(-0.05, 0.11, 0.01)) +
-   labs(title = "Treatment Effects on the Probability of Voting",
-         subtitle = "Postcards work less well on those who rarely vote",
-         y = "Postcard Type",
-         x = "Average Treatment Effect",
-         caption = "Source: Gerber, Green, and Larimer (2008)")
-```
-
-### Exercise 17
-
-Create a new code chunk in `causal_effect.qmd`. Label it with `label: plot`. Copy/paste the code which creates your graphic. Make sure to also add the code that creates the `plot_data` object.
+Add `library(marginaleffects)` to the `XX.qmd` setup code chunk. Create a new code chunk. Label it with `label: plot`. Copy/paste the code which creates your graphic. 
 
 `Command/Ctrl + Shift + K` to ensure that it all works as intended.
 
 At the Console, run:
 
-```         
-tutorial.helpers::show_file("causal_effect.qmd", start = -8)
+```
+tutorial.helpers::show_file("causal_effect.qmd", pattern = "marginaleffects")
 ```
 
 CP/CR.
 
-```{r temperance-17}
+
+```{r temperance-5}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1762,19 +1381,21 @@ question_text(NULL,
 
 ### 
 
-We are interested in the average treatment effect of postcards. There are 4 different postcards, each of which can be compared to what would have happened if the voter did not receive any postcard.
-
 These four treatment effects, however, are heterogeneous. They vary depending on an individual’s voting history, which we organize into three categories: Rarely Vote, Sometimes Vote and Always Vote. So, we have 12 different average treatment effects, one for each possible combination of postcard and voting history.
 
-For each of these combinations, the graphic shows our posterior distribution.
 
-### Exercise 18
+### Exercise 6
 
-Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question --- and which provides a measure of uncertainty about that QoI.
+Add the final one to two sentences to your project summary. This sentence must provide an estimate for at least one Quantity of Interest and its associated confidence interval. Your Quanity of Interest can be different than the one you started with.
 
-```{r temperance-18}
+Recall our current version of the summary. (It is OK if your version is different.)
+
+> Efforts to get your supporters to vote have always been a part of US political campaigns. Using the data from a 2006 experiment in Michigan, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026. The rise of social media use may have changed the efficacy of postcards in changing individual behavior. We model voting as a logistic function of treatment --- meaning type of postcard received, if any --- along with prior voting behavior, sex and age.
+
+
+```{r temperance-6}
 question_text(NULL,
-	message = "Using the data from an experiment to find out whether and to what extent people are motivated to vote by social pressure, we found the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026. Stability might not be true because the way people view politics has changed from 2006 because of new things such as social media. We modeled `primary_06`, a binary 0/1 integer variable indicating whether the respondent voted in the 2006 primary election, and the type of postcard they recieved. People who have been voting in the past are more likely to vote again. If we had a limited number of postcards, we would send the Neighbors postcard to citizens who already demonstrate a tendency to vote. This is our best guess. It is an informed estimate based on the most relevant data possible. From that data, we have created a 95% confidence interval for the treatment effect of various postcards: between 8% to 10%.",
+	message = "The causal effect of receiving a postcard varies based both on its message and the level of political engagement of the person receiving it. ",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1783,13 +1404,13 @@ question_text(NULL,
 
 ### 
 
-Edit the summary paragraph in `causal_effect.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
+Edit your summary paragraph in `causal_effect.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
-### Exercise 19
+### Exercise 7
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-19}
+```{r temperance-7}
 question_text(NULL,
 	message = "Perhaps our data did not match the future as well as we had hoped. We estimate that the treatment effect of the Neighbors postcard to be between 8% to 10%, but the reality might not be in this interval.",
 	answer(NULL, correct = TRUE),
@@ -1804,7 +1425,7 @@ question_text(NULL,
 
 Ultimately, we try to account for our uncertainty in our estimates. Even with this safeguard, we aren’t surprised if we are a bit off.
 
-### Exercise 20
+### Exercise 8
 
 Rearrange the material in `causal_effect.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
@@ -1816,22 +1437,25 @@ tutorial.helpers::show_file("causal_effect.qmd")
 
 CP/CR.
 
-```{r temperance-20}
+```{r temperance-8}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 3)
+	rows = 20)
 ```
 
 ### 
 
-### Exercise 21
+This is the version of your QMD file which your teacher is most likely to take a close look at.
+
+
+### Exercise 9
 
 Publish `causal_effect.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
 
-```{r temperance-21}
+```{r temperance-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1841,6 +1465,9 @@ question_text(NULL,
 ```
 
 ### 
+
+Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
+
 
 ## Summary
 ### 
