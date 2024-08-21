@@ -25,6 +25,8 @@ library(tidymodels)
 library(broom)
 library(marginaleffects)
 library(primer.data)
+library(equatiomatic)
+library(tidytext)
 
 # Required for the tutorial to work:
 
@@ -32,22 +34,27 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
+# Creates a model used for a plot in Wisdom-6
+
+fit_arrested <- linear_reg() |>
+    set_engine("lm") |>
+    fit(arrested ~ zone, data = stops)
+
 # Creates new df with 4 entries for race
 
 stops_new <- stops |>
-  filter(!race %in% c("other", "unknown"), zone %in% c("A", "X"))
+  filter(race %in% c("black", "white"))
 
 # Store the model from Courage
 
 fit_stops <- linear_reg() |>
     set_engine("lm") |>
-    fit(arrested ~ sex + race + age + zone, data = stops_new)
+    fit(arrested ~ sex + race*zone, data = stops_new)
 
 # Store the `ndata` object for Temperance
 
 ndata <- expand_grid(race = unique(stops_new$race),
                      sex = unique(stops_new$sex),
-                     age = mean(stops_new$age),
                      zone = unique(stops_new$zone))
 
 ```
@@ -61,17 +68,10 @@ ndata <- expand_grid(race = unique(stops_new$race),
 <!-- DK: Use linear -->
 <!--     sex + race*zone -->
 <!--     draw = FALSE -->
-<!--     plot just black versus white estimates by hand, with zone ordered by something interesting. -->
+<!--     plot just black versus white estimates by hand, with zone ordered by something interesting. - DONE -->
 
-<!-- Should we add the Temperance start and finish quotes from the Primer chapters? What about other classical quotes, like "You can never look at the data too much."?   -->
+<!-- Should we add the Temperance start and finish quotes from the Primer chapters? What about other classical quotes, like "You can never look at the data too much."? -->
 
-<!-- Every EDA should show a scatter plot of the outcome variable on the y-axis and one of (probably the most important or the treatment) covariates on the x-axis. -->
-
-<!-- Consider adding the model creation and saving code to a separate model.R script. Then, in analysis.R, you could just read it in. Would also be useful, in at least some tutorials, to highlight using a small sample of the data in initial fitting. -->
-
-<!-- Whenever you tell a student to make a change in the QMD, you should tell them to `Command/Ctrl + Shift + K` in order to render the document. Then, the last step in these exercises is often some version of show_file() and then CP/CR. -->
-
-<!-- Make use of, e.g., `show_file("tutorial-6.qmd", start = -5)` to get just the last 5 lines of the QMD. -->
 
 ## Introduction
 ### 
@@ -337,7 +337,7 @@ What is a Quantity of Interest which might help us to explore the answer to our 
 
 XX: For predictive models, the specific question is generally of two types. First, what is the *expected* value of the outcome for various values of the independent variables? Second, what is the comparison in the expected outcome between two different groups? We are *not* simply interested in predicting the outcome variable for one unit. (In fact, of course, we might ultimately be interested in just one unit, but we need to *pretend* to be interested in lots of units in order to motivate the creation of a model.) -->
 
-<!-- FIX - Is this good? -->
+<!-- SD: Is this a good QoI or did I do it wrong? -->
 
 ```{r the-question-12}
 question_text(NULL,
@@ -464,11 +464,11 @@ If our question were to have concerned the percentage of people that got arreste
 
 ### Exercise 6
 
-What is/are the outcome/outcomes for this problem?
+What is the outcome variable for this problem?
 
 ```{r wisdom-6}
 question_text(NULL,
-	message = "There are two outcomes for `arrested`: either getting arrested or not getting arrested.",
+	message = "Our outcome variable is `arrested`.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -477,11 +477,20 @@ question_text(NULL,
 
 ### 
 
-The variable `race` has multiple values, and with each value comes the the condition of the `arrested` variable. So, XX variables for `race` * 2 values for `arrested` (TRUE or FALSE) = XX total outcomes.
+```{r}
+plot_predictions(fit_arrested,
+                      newdata = expand_grid(zone = unique(stops_new$zone)),
+                      condition = c("zone")) +
+  coord_flip() +
+  scale_x_reordered() +
+  labs(x = "Zone", 
+       y = "Estimated Arrest Probability", 
+       title = "Predicted Arrest Rate of New Orleans Motorists by Zones",
+       subtitle = "The bars represent the 95% Confidence Intervals.",
+       caption = "Data from the Open Policing Project")
+```
 
-<!-- FIX - A good knowledge drop for this exercise might involve other outcomes which might be useful for related questions. For example, if the outcome for a presidential election are votes cast than, with a slightly different question, the outcomes might be the electoral votes. We want to show them the interplay between the exact question and which outcomes define the Preceptor Table. -->
-
-<!-- Specifying the Preceptor Table forces us to think clearly about the units and outcomes implied by the question. The resulting discussion sometimes leads us to modify the question we started with. No data science project follows a single direction. We always backtrack. There is always dialogue. -->
+Regardless, the central lesson is always the same: *You can never look at your data too much.*
 
 
 ### Exercise 7
@@ -559,9 +568,6 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### 
-
-<!-- FIX - XX: More discussion about potential outcomes. Counter-factuals are hard to think about. Help students by providing discussion of the ones under consideration here, or which might be under consideration with a different question. Are they plausible? What would make them more plausible? -->
 
 ### Exercise 12
 
@@ -569,19 +575,13 @@ How does the motto "No causal inference without manipulation." apply in this pro
 
 ```{r wisdom-12}
 question_text(NULL,
-	message = "XX",
+	message = "The motto does not apply because this is a predictive, not causal, model.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
 
-### 
-
-<!-- FIX -  -->
-<!-- XX: With tutorial which uses a predictive model, it is fair for your answer to this question to be. "The motto does not apply because this is a predictive, not causal, model." -->
-
-<!-- XX: For a causal model, can you really manipulate the treatments? In reality or in theory? How? What details would need to change to make this more or less plausible? -->
 
 ### Exercise 13
 
@@ -589,7 +589,7 @@ Describe in words the Preceptor Table for this problem.
 
 ```{r wisdom-13}
 question_text(NULL,
-	message = "FIX - XX. Make sure your words given an excellent description of the Preceptor Table which you are about to show the student.",
+	message = "On the far left, our Preceptor Table must have some way of idenitfying the people. Then, we would have a column called `arrested` (our outcome variable) and following this would be our covariate columns: `race`, `sex`, and `zone`.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -635,12 +635,17 @@ Write one sentence describing the data you have to answer your question.
 
 ```{r wisdom-14}
 question_text(NULL,
-	message = "FIX - XX. Make sure that your example sentence is a good one. Obviously, the date that the data was gathered is important, as well as the person/organization doing the gathering. The number of observations might also be useful, along with an indication as to the sort of variables included. But no need to include all of that! Use your best judgement. ",
+	message = "Our data comes from the Open Policing Project, and was collected from July 1, 2011 through July 18, 2018. Our data contains roughly 400,000 entries, contain crucial information regarding the person's age, sex, and race, and adressing whether or not they were arrested.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+###
+
+Your sentence doesn't have to be as long or in-depth as the answer, but your response should still contain the crucial imformation.
+
 
 ### Exercise 15
 
@@ -690,10 +695,6 @@ library(...)
 ```{r wisdom-16-test, include = FALSE}
 library(tidyverse)
 ```
-
-### 
-
-<!-- FIX - Insert introductory comments about the data -->
 
 
 ### Exercise 17
@@ -853,8 +854,7 @@ Validity is always about the *columns* in the Preceptor Table and the data. Just
 
 <!-- FIX - XX: For the validity questions, specifics matter. There is always a reason why the outcome column in the data is not the same as the outcome columns in the Preceptor Table, even in the case of simple sampling. For example, consider a historical question connecting sex with presidential vote. Our data is a subset of our Preceptor Table. We have information on a few thousand voters and want to draw inferences about millions of voters. But, even in this case, the outcome columns are different. The data is who people told a survey they voted for. The Preceptor Table is who people actually did vote for. Those are not the same things. If they, in your view, are different enough than validity is violated. -->
 
-Provide one reason why the assumption of validity might not hold for the outcome variable `arrested`.
-
+Provide one reason why the assumption of validity might not hold for the outcome variable: `arrested`. Use the words "column" or "columns" in your answer.
 ```{r wisdom-24}
 question_text(NULL,
 	message = "FIX - XX: Answers to validity question should always use the word 'column(s)'.",
@@ -1161,12 +1161,12 @@ library(equatiomatic)
 
 ### Exercise 5
 
-Add `library(tidymodels)`, `library(broom)`, and `library(equatiomatic)` to the `setup` code chunk in `stops.qmd`. `Command/Ctrl + Shift + K`.
+Add `library(tidymodels)`, `library(broom)`, `library(equatiomatic)`, and `library(tidytext)` to the `setup` code chunk in `stops.qmd`. `Command/Ctrl + Shift + K`.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("stops.qmd", pattern = "tidymodels|broom|\\$\\$")
+tutorial.helpers::show_file("stops.qmd", pattern = "tidymodels|broom|equatiomatic|tidytext")
 ```
 
 CP/CR.
@@ -1182,8 +1182,10 @@ question_text(NULL,
 
 ### 
 
+<!-- DK: You can use exactly the knowledge drops from the template, but with the variable names/appearence edited to match your model. - DONE -->
 
-<!-- DK: You can use exactly the knowledge drops from the template, but with the variable names/appearence edited to match your model. -->
+The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy `0/1` variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. In our case, `zone` has 25 values --- "A", "B", "C", and so on --- so the model creates 24 `0/1` dummy variables (`TRUE/FALSE`), giving them names like `zoneB` and `zoneC`, and so on. The results for the *first* category (Zone A) are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
+
 
 ### Exercise 6
 
@@ -1244,9 +1246,6 @@ linear_reg() |>
 We can translate the fitted model into mathematics, including the best estimates of all the unknown parameters:
 
 ```{r}
-# XX: You might want to use the `coef_digits` argument to show fewer digits
-# after the decimal.
-
 extract_eq(fit_stops$fit, 
            intercept = "beta", 
            use_coefs = TRUE)
@@ -1276,8 +1275,6 @@ fit_stops
 
 The Intercept parameter indicates when `sexmale = 0`, i.e. it indicates females on average. 
 
-Simplified, the age parameter is showing that if one person is 10 years older than another person, they are roughly -2.5% more likely (i.e. 2.5% less likely) to get arrested compared to the person 10 years younger.
-
 
 ### Exercise 9
 
@@ -1306,7 +1303,7 @@ question_text(NULL,
 
 ### Exercise 10
 
-Create another code chunk in `stops.qmd`. Add the chunk option: `label: math`. In that code chunk, add something like the below.
+Create another code chunk in `stops.qmd`. Add the chunk option: `label: math`. In that code chunk, add something like the following:
 
 ```
 extract_eq(fit_stops$fit, 
@@ -1348,12 +1345,9 @@ This is our Data Generating Mechanism.
 <!-- FIX - Explain in words what the code means. -->
 
 
-
 ### Exercise 11
 
-<!-- FIX - XX: You may use other arguments to tidy if that is useful. -->
-
-Run `tidy()` on `fit_stops` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
+Run `tidy()` on `fit_stops` with the argument `conf.int` set equal to `TRUE`. This returns the 95% intervals for all parameters in our model.
 
 ```{r courage-11, exercise = TRUE}
 
@@ -1513,7 +1507,6 @@ question_text(NULL,
 	rows = 6)
 ```
 
-
 ## Temperance
 ### 
 
@@ -1556,14 +1549,35 @@ library(marginaleffects)
 
 ### 
 
-<!-- FIX - Knowledge Drop? -->
+We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
 
 
 ### Exercise 3
 
+Load the **tidytext** package.
+
+```{r temperance-3, exercise = TRUE}
+
+```
+
+```{r temperance-3-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r temperance-3-test, include = FALSE}
+library(tidytext)
+```
+
+### 
+
+The **tidytext** package essentially adds on to what the other "tidy-" packages achieve, but makes a lot more tasks simpler to do. Today we will be using it to make reordering zones easier.
+
+
+### Exercise 4
+
 What is the general topic we are investigating? What is the specific question we are trying to answer? 
 
-```{r temperance-3}
+```{r temperance-4}
 question_text(NULL,
 	message = "We are generally investigating the likelihood of getting arrested during a Traffic Stop in New Orleans. FIX - update the specific question.",
 	answer(NULL, correct = TRUE),
@@ -1577,33 +1591,13 @@ question_text(NULL,
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic broadly.
 
 
-### Exercise 4
+### Exercise 5
 
 To answer our question, we need to create an object --- call it `ndata` --- which we will pass in as a value to the `newdata` argument in whichever **marginaleffects** functions we decide to use. Which variables (e.g., which columns) do we need to include in this object?
 
-```{r temperance-4}
-question_text(NULL,
-	message = "We need to include the variables `race`, `sex`, `age`, and `zone` in our `ndata` Tibble.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
-
-
-### Exercise 5
-
-<!-- XX: Sometimes useful to think about this question and the number of posterior questions together, or event to reverse them. -->
-
-Which values do you want the variables in your `ndata` object to have? This is not easy! At the very least, one or more of the rows should have values which allow you to answer your original question. But, now that you have a model, there are many questions which you might want to answer, the better to get a fuller understanding.
-
 ```{r temperance-5}
 question_text(NULL,
-	message = "FIX - XX",
+	message = "We need to include the variables `race`, `sex`, and `zone` in our `ndata` Tibble.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1612,58 +1606,64 @@ question_text(NULL,
 
 ### 
 
-<!-- XX: Chapter 10 is a great example of this in its full complexity. We want to know how "different" units behave, where the very definition of "different" is that they do not have identical values for all the variables used in fit_stops. -->
-
-<!-- For example, one row in ndata will generally represent the answer to the specific question we started with. But that is just the posterior for one sort of unit. There are lots of different units! Which others might we be interested in? We can generate posteriors for each of them, and then, in some cool graphic, display all those posteriors together. -->
-
-<!-- Note that, previously, this document claimed that the number of rows in ndata corresponded to the number of posteriors you wanted to calculate. But that is not true! -->
+For most models, each row in `ndata` corresponds to a posterior derived from the values of the variables in that row. But that is just the posterior for one sort of unit. There are lots of different units! Which others might we be interested in? We can generate posteriors for each of them, and then, in some cool graphic, display all those posteriors together.
 
 
 ### Exercise 6
+
+Which values do you want the variables in your `ndata` object to have? This is not easy! At the very least, one or more of the rows should have values which allow you to answer your original question. But, now that you have a model, there are many questions which you might want to answer, the better to get a fuller understanding.
+
+```{r temperance-6}
+question_text(NULL,
+	message = "We want to have `race` contain entries containing both `black` and `white`, we want `sex` to contain entries for both `male` and `female`, and we want zone to contain entries for all 25 zones in our data.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 7
 
 Here is the R code which creates the `ndata` object: 
 
 ```
 expand_grid(race = unique(stops_new$race),
             sex = unique(stops_new$sex),
-            age = mean(stops_new$age),
             zone = unique(stops_new$zone))
 ```
 
-Notice how we're using the mean age to calculate with, as we don't want different graphs relating to different ages, so it would be convenient to have every other parameter using the mean age rather than separate ages.
-
 Type the code into the code exercise block and hit "Run Code."
-
-```{r temperance-6, exercise = TRUE}
-
-```
-
-```{r temperance-6-hint-1, eval = FALSE}
-
-```
-
-```{r temperance-6-test, include = FALSE}
-
-```
-
-### 
-
-It is best to ensure that the variable types in `ndata` match the variable types in `stops`. The easiest way to ensure that is by using `stops` itself in the creation `ndata`. 
-
-
-### Exercise 7
-
-Behind the scenes, we have created the `ndata` object using this code. To confirm, type `ndata` and hit "Run Code."
 
 ```{r temperance-7, exercise = TRUE}
 
 ```
 
 ```{r temperance-7-hint-1, eval = FALSE}
-ndata
+
 ```
 
 ```{r temperance-7-test, include = FALSE}
+
+```
+
+### 
+
+It is best to ensure that the variable types in `ndata` match the variable types in `stops_new`. The easiest way to ensure that is by using `stops_new` itself in the creation `ndata`. 
+
+
+### Exercise 8
+
+Behind the scenes, we have created the `ndata` object using this code. To confirm, type `ndata` and hit "Run Code."
+
+```{r temperance-8, exercise = TRUE}
+
+```
+
+```{r temperance-8-hint-1, eval = FALSE}
+ndata
+```
+
+```{r temperance-8-test, include = FALSE}
 ndata
 ```
 
@@ -1672,19 +1672,19 @@ ndata
 Functions like `unique()` --- to grab all the possible values in a variable --- and `expand_grid()` --- to create all possible combinations of different variables --- are often useful in creating `ndata`.
 
 
-### Exercise 8
+### Exercise 9
 
-Add `library(marginaleffects)` to the `stops.qmd` setup code chunk. Create a new code chunk in `stops.qmd` which creates the `ndata` object. Don't forget to add `#| label: ndata` to this chunk. `Command/Ctrtl + Shift + K`.
+Add `library(marginaleffects)` and `library(tidytext)` to the `stops.qmd` setup code chunk. Create a new code chunk in `stops.qmd` which creates the `ndata` object. Don't forget to add `#| label: ndata` to this chunk. `Command/Ctrtl + Shift + K`.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("stops.qmd", pattern = "marginaleffects|ndata")
+tutorial.helpers::show_file("stops.qmd", pattern = "marginaleffects|tidytext|ndata")
 ```
 
 CP/CR.
 
-```{r temperance-8}
+```{r temperance-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1698,58 +1698,240 @@ question_text(NULL,
 <!-- FIX - Again, the main point of knowledge drops is this area is to explain to students why the ndata object looks the way it does and what it will produce. A great way to teach is via example. That is, explaining that if we had another way with these values, then we would get this posterior. Or, explaining what would be produced if we used add_epred instead of add_predict, and vice verse. -->
 
 
-### Exercise 9
+### Exercise 10
 
 Enter this code into the exercise code block and hit "Run Code."
 
 ```
 plot_predictions(fit_stops,
                  newdata = ndata,
-                 by = c("sex", "race", "zone")) +
-  labs(title = "Likelihood of Arrest by Race in New Orleans, Zones A & X",
-       subtitle = "Asian/Pacific Islander and Hispanic have higher uncertainty as there is less data regarding these races.",
-       x = "Sex",
-       y = "% Likelihood of Arrest",
-       color = "Race",
-       caption = "Data from the Open Policing Project by Stanford")
+                 condition = c("zone", "race", "sex"))
 ```
 
-```{r temperance-9, exercise = TRUE}
+```{r temperance-10, exercise = TRUE}
 
 ```
 
-```{r temperance-9-hint-1, eval = FALSE}
+```{r temperance-10-test, include = FALSE}
 plot_predictions(fit_stops,
                  newdata = ndata,
-                 by = c("sex", "race", "zone")) +
-  labs(title = "Likelihood of Arrest by Race in New Orleans, Zones A & X",
-       subtitle = "Asian/Pacific Islander and Hispanic have higher uncertainty as there is less data regarding these races.",
-       x = "Sex",
-       y = "% Likelihood of Arrest",
-       color = "Race",
-       caption = "Data from the Open Policing Project by Stanford")
+                 condition = c("zone", "race", "sex"))
 ```
 
-```{r temperance-9-test, include = FALSE}
+### Exercise 11
+
+Although it's nice to graph our model in one function, it would be nice to have it in order. To do this, we first have to convert our predictions to a tibble.
+
+Copy the previous code and add `draw = FALSE` to your `plot_predictions()` call. Then pipe it to `as_tibble()`.
+
+```{r temperance-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-11-hint-1, eval = FALSE}
 plot_predictions(fit_stops,
                  newdata = ndata,
-                 by = c("sex", "race", "zone")) +
-  labs(title = "Likelihood of Arrest by Race in New Orleans, Zones A & X",
-       subtitle = "Asian/Pacific Islander and Hispanic have higher uncertainty as there is less data regarding these races.",
-       x = "Sex",
-       y = "% Likelihood of Arrest",
-       color = "Race",
-       caption = "Data from the Open Policing Project by Stanford")
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_...()
+```
+
+```{r temperance-11-test, include = FALSE}
+plot_predictions(fit_stops,
+                 newdata = ndata,
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_tibble()
+```
+
+### Exercise 12
+
+We can now proceed to order our data. I want to arrange the graph in ascending order for arrest rates by sex.
+
+To do this, pipe to `mutate()` and set the argument `zone` to equal `reorder_within(zone, estimate, race)`.
+
+```{r temperance-12, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-12-hint-1, eval = FALSE}
+... |> 
+  ...(zone = reorder_within(..., estimate, ...))
+```
+
+```{r temperance-12-test, include = FALSE}
+plot_predictions(fit_stops,
+                 newdata = ndata,
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_tibble() |> 
+  mutate(zone = reorder_within(zone, estimate, race))
 ```
 
 ### 
 
-<!-- FIX - There are a lot of interesting options in plot_predictions. Check them out. You may want to use some of them in your plot. I think `points` is quite interesting. Feel free to add a couple more questions which add some options. Also, feel free to use the standard ggplot() commands, like `labs()`, to modify the plot. We want to encourage students to create publication-quality graphics.  -->
-
-<!-- XX: If such a plot would be complex and/or the tutorial is long enough, you can just include all the code for a plot in the exercise code chunk and tell students to just press "Run Code." This will, at least, allow them to see what a good plot looks like. -->
+Note that the function `reorder_within()` is from the **tidytext** package that we called earlier. This function saved us roughly 10+ lines of code.
 
 
-### Exercise 10
+### Exercise 13
+
+Now we should plot our findings. Continue the pipe to `ggplot()`, and inside aesthetics, map `x` to `zone`, `y` to `estimate`, and `color` to `race`.
+
+Then add `geom_point()` and `geom_errorbar()`, with the arguments `aes(ymin = conf.low, ymax = conf.high)` and `width = 0.2`.
+
+```{r temperance-13, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-13-hint-1, eval = FALSE}
+... |>
+  ggplot(aes(x = ..., y = ..., color = ...)) +
+    geom_point() + 
+    geom_errorbar(...(ymin = conf.low, ... = conf.high), ... = 0.2)
+```
+
+```{r temperance-13-test, include = FALSE}
+plot_predictions(fit_stops,
+                 newdata = ndata,
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_tibble() |> 
+  mutate(zone = reorder_within(zone, estimate, race)) |>
+  ggplot(aes(x = zone, y = estimate, color = race)) +
+    geom_point() + 
+    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2)
+```
+
+### Exercise 14
+
+Let's make 2 plots, one for each value of `sex`. Add `facet_wrap()`. Inside this, add `~sex` and set `scales` to equal `"free_y"`.
+
+Additionally, add `coord_flip()` to put the variables on the y-axis.
+
+```{r temperance-14, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-14-hint-1, eval = FALSE}
+... +
+    facet_wrap(~sex, ... = "free_y") +
+    coord_...()
+```
+
+```{r temperance-14-test, include = FALSE}
+plot_predictions(fit_stops,
+                 newdata = ndata,
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_tibble() |> 
+  mutate(zone = reorder_within(zone, estimate, race)) |>
+  
+  ggplot(aes(x = zone, y = estimate, color = race)) +
+    geom_point() + 
+    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+    facet_wrap(~sex, scales = "free_y") +
+    coord_flip()
+```
+
+### Exercise 15
+
+Now let's do something about those ugly y-axis labels.
+
+First. let's make them only reflect their zone and drop the race argument. To do this, add `scale_x_reordered()` to the previous code.
+
+Second, let's make the labels a bit smaller so that they're easier to read. To do this, add the following to the previous code: `theme(axis.text.y = element_text(size = 5))`.
+
+```{r temperance-15, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-15-hint-1, eval = FALSE}
+... +
+    scale_x_...() +
+    ...(axis.text.y = ..._text(... = 5))
+```
+
+```{r temperance-15-test, include = FALSE}
+plot_predictions(fit_stops,
+                 newdata = ndata,
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_tibble() |> 
+  mutate(zone = reorder_within(zone, estimate, race)) |>
+  
+  ggplot(aes(x = zone, y = estimate, color = race)) +
+    geom_point() + 
+    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+    facet_wrap(~sex, scales = "free_y") +
+    coord_flip() +
+    scale_x_reordered() +
+    theme(axis.text.y = element_text(size = 5))
+```
+
+### Exercise 16
+
+Finish it off by adding a proper title, subtitle, axis titles, caption, and title for the key with `labs()`. Your graph should look something like this:
+
+```{r}
+plot_predictions(fit_stops,
+                 newdata = ndata,
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_tibble() |> 
+  mutate(zone = reorder_within(zone, estimate, race)) |>
+  
+  ggplot(aes(x = zone, y = estimate, color = race)) +
+    geom_point() + 
+    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+    facet_wrap(~sex, scales = "free_y") +
+    coord_flip() +
+    scale_x_reordered() +
+    theme(axis.text.y = element_text(size = 5)) +
+    labs(x = "Zone", y = "Estimated Arrest Probabilty",
+         title = "Predicted Arrest Rate of New Orleans Motorists by Zones",
+         subtitle = "Black motorists are more likely to get arrested during a traffic stop than White motorists.",
+         color = "Race",
+         caption = "Data from the Open Policing Project")
+```
+
+```{r temperance-16, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-16-hint-1, eval = FALSE}
+... +
+  labs(...)
+```
+
+```{r temperance-16-test, include = FALSE}
+plot_predictions(fit_stops,
+                 newdata = ndata,
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_tibble() |> 
+  mutate(zone = reorder_within(zone, estimate, race)) |>
+  
+  ggplot(aes(x = zone, y = estimate, color = race)) +
+    geom_point() + 
+    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+    facet_wrap(~sex, scales = "free_y") +
+    coord_flip() +
+    scale_x_reordered() +
+    theme(axis.text.y = element_text(size = 5)) +
+    labs(x = "Zone", y = "Estimated Arrest Probabilty",
+         title = "Predicted Arrest Rate of New Orleans Motorists by Zones",
+         subtitle = "Black motorists are more likely to get arrested during a traffic stop than White motorists.",
+         color = "Race",
+         caption = "Data from the Open Policing Project")
+```
+
+### 
+
+### Exercise 17
 
 Create a new code chunk in `stops.qmd`. Label it with `label: plot`. Copy/paste the code which creates your graphic. 
 
@@ -1763,7 +1945,7 @@ tutorial.helpers::show_file("stops.qmd", start = -8)
 
 CP/CR.
 
-```{r temperance-10}
+```{r temperance-17}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1774,13 +1956,13 @@ question_text(NULL,
 
 ### 
 
-### Exercise 11
+### Exercise 18
 
 Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) and which provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
 <!-- XX: Most of the time, there will be some measure of uncertainty associated with your QoI. But not always! The most common counter-example involves a question which asks about the odds or probability of something happening. We would answer such a question by simulating the event with `add_predicted_draws()`. We would then calculate the odds/probability of something happening by seeing how many of the 4,000 draws met the criteria for the event. Assume that was 40%. So, we think that there is a 40% chance that event A will happen. Yet there is no uncertainty associated with that estimate because it, itself, is an expression of uncertainty. But, the vast majority of projects are not concerned with individual prediction. Instead, they focus on expected/average values. -->
 
-```{r temperance-11}
+```{r temperance-18}
 question_text(NULL,
 	message = "XX",
 	answer(NULL, correct = TRUE),
@@ -1796,11 +1978,11 @@ Edit the summary paragraph in `stops.qmd` as you see fit, but do not copy/paste 
 
 <!-- XX: Again, spend time to make your recommended paragraph perfect. Study the examples in https://ppbds.github.io/primer/cardinal-virtues.html closely. -->
 
-### Exercise 12
+### Exercise 19
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-12}
+```{r temperance-19}
 question_text(NULL,
 	message = "XX: This is another example in which the quality of your answer is important. You might or might not suggest an alternate estimate. I always adjust the estimate toward my own subjective sense of a long-run average and/or typical value and/or zero. But that is not necessary. However, you should always increase the confidence interval since the assumptions of your model are always false.",
 	answer(NULL, correct = TRUE),
@@ -1811,7 +1993,7 @@ question_text(NULL,
 
 ### 
 
-### Exercise 13
+### Exercise 20
 
 Rearrange the material in `stops.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
@@ -1823,7 +2005,7 @@ tutorial.helpers::show_file("stops.qmd")
 
 CP/CR.
 
-```{r temperance-13}
+```{r temperance-20}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1837,11 +2019,11 @@ question_text(NULL,
 Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
 
 
-### Exercise 14
+### Exercise 21
 
 Publish `stops.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
 
-```{r temperance-14}
+```{r temperance-21}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
