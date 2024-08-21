@@ -18,16 +18,9 @@ library(gt)
 
 library(tidyverse)
 library(primer.data)
-library(MASS)
 library(equatiomatic)
 library(broom)
 library(marginaleffects)
-
-# Danger! There is a select() function in MASS.
-
-library(conflicted)
-conflict_prefer("select", "dplyr")
-conflict_prefer("filter", "dplyr")
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
@@ -47,7 +40,7 @@ x <- ces |>
 # per se. But this model (the first to be ordinal) is always complex enough
 # without that.
 
-fit_approval <- polr(approval ~ ideology + education,
+fit_approval <- MASS::polr(approval ~ ideology + education,
                       data = x)
 
 # tidy() takes so long to run that it makes sense to save the basic table so
@@ -1123,9 +1116,15 @@ question_text(NULL,
 
 A statistical model consists of two parts: the *probability family* and the *link function*. The probability family is the probability distribution which generates the randomness in our data. The link function is the mathematical formula which links our data to the unknown parameters in the probability distribution. 
 
+### 
+
+Because `approval` is an ordinal variable, we assume that an individual's approval is produced from a Cumulative distribution.
+
+$$ approval_i  \sim Cumulative(\rho_{strongly\_positive}, \rho_{positive}, \rho_{neutral}, \rho_{negative}, \rho_{strongly\_negative}) $$
+
 ### Exercise 2
 
-Load the **MASS** package.
+Load the **broom** package.
 
 ```{r courage-2, exercise = TRUE}
 
@@ -1136,28 +1135,6 @@ library(...)
 ```
 
 ```{r courage-2-test, include = FALSE}
-library(MASS)
-```
-
-### 
-
-Because `approval` is an ordinal variable, we assume that an individual's approval is produced from a Cumulative distribution.
-
-$$ approval_i  \sim Cumulative(\rho_{strongly\_positive}, \rho_{positive}, \rho_{neutral}, \rho_{negative}, \rho_{strongly\_negative}) $$
-
-### Exercise 3
-
-Load the **broom** package.
-
-```{r courage-3, exercise = TRUE}
-
-```
-
-```{r courage-3-hint-1, eval = FALSE}
-library(...)
-```
-
-```{r courage-3-test, include = FALSE}
 library(broom)
 ```
 
@@ -1167,9 +1144,9 @@ Because the outcome variable has a Cumulative distribution, the link function is
 
 $$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 x_1 + \dots)}}$$
 
-### Exercise 4
+### Exercise 3
 
-Add `library(MASS)` and `library(broom)` to the `setup` code chunk in `analysis.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `analysis.qmd`. `Command/Ctrl + Shift + K`. 
+Add `library(broom)` to the `setup` code chunk in `analysis.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `analysis.qmd`. `Command/Ctrl + Shift + K`. 
 
 ```
 $$ approval_i  \sim Cumulative(\rho_{strongly\_positive}, \rho_{positive}, \rho_{neutral}, \rho_{negative}, \rho_{strongly\_negative})$$
@@ -1179,12 +1156,12 @@ $$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 x_1 + \dots)}}$$
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("analysis.qmd", pattern = "MASS|broom|\\$\\$")
+tutorial.helpers::show_file("analysis.qmd", pattern = "broom|\\$\\$")
 ```
 
 CP/CR.
 
-```{r courage-4}
+```{r courage-3}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1199,16 +1176,18 @@ Of course, our model must make use of the variables we actually have. Consider:
 
 $$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 ideologyLiberal+\beta_2 ideologyModerate + \dots)}}$$
 
-### Exercise 5
+### Exercise 4
 
-Create a model using `polr()` from the **MASS** package. Your arguments should be `formula = approval ~ ideology + faminc + education` and `data = x`. 
+Create a model using `polr()` from the **MASS** package. We recommend that you do *not* load the **MASS** package, either here or ever. The reason is that **MASS** contains functions `filter()` and `select()` which are not the same as the two functions, with the same names, from the **dplyr** package, which is a part of the *Tidyverse*. This can cause all sorts of difficult-to-diagnose errors. Instead, we use the double colon notation: `MASS::polr()`. This allows us to access the `polr()` function without loading the **MASS** library, although the library must be installed on your computer.
 
-```{r courage-5, exercise = TRUE}
+Your arguments to `MASS::polr()` should be `formula = approval ~ ideology + faminc + education` and `data = x`. 
+
+```{r courage-4, exercise = TRUE}
 
 ```
 
-```{r courage-5-hint-1, eval = FALSE}
-polr(formula = approval ~ ... + faminc + education,
+```{r courage-4-hint-1, eval = FALSE}
+MASS::polr(formula = approval ~ ... + faminc + education,
     ... = x)
 ```
 
@@ -1216,21 +1195,21 @@ polr(formula = approval ~ ... + faminc + education,
 
 The Cumulative family leads to ordinal regression.
 
-### Exercise 6
+### Exercise 5
 
 Behind the scenes, we have used `polr()` to create an object named `fit_approval`. This version was created using `x` so it has more rows than the one you created in the previous exercise.
 
 Type `fit_approval` and hit "Run Code." This generates the same results as using `print(fit_approval)`.
 
-```{r courage-6, exercise = TRUE}
+```{r courage-5, exercise = TRUE}
 
 ```
 
-```{r courage-6-hint-1, eval = FALSE}
+```{r courage-5-hint-1, eval = FALSE}
 fit_approval
 ```
 
-```{r courage-6-test, include = FALSE}
+```{r courage-5-test, include = FALSE}
 fit_approval
 ```
 
@@ -1241,7 +1220,7 @@ Recall that a categorical variable (whether character or factor) like `sex` is t
 The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has three values --- "black", "hispanic", and "white" --- then the model creates two 0/1 dummy variables, giving them names like $race_{hispanic}$ and $race_{white}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
 
 
-### Exercise 7
+### Exercise 6
 
 Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `polr()` into the code chunk, assigning the result to `fit_approval`.  `Command/Ctrl + Shift + K`. 
 
@@ -1253,7 +1232,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r courage-7}
+```{r courage-6}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1269,19 +1248,19 @@ By including `cache: true` you cause Quarto to cache the results of the chunk. T
 To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
 
 
-### Exercise 8
+### Exercise 7
 
 Run `tidy()` on `fit_approval` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model. (This might take 30 seconds or so.)
 
-```{r courage-8, exercise = TRUE}
+```{r courage-7, exercise = TRUE}
 
 ```
 
-```{r courage-8-hint-1, eval = FALSE}
+```{r courage-7-hint-1, eval = FALSE}
 tidy(..., conf.int = ...)
 ```
 
-### Exercise 9
+### Exercise 8
 
 Write a sentence interpreting the `-0.19` estimate for `educationHighSchoolGraduate`.
 
@@ -1291,7 +1270,7 @@ tidy_approval |>
   filter(str_detect(term, "^education"))
 ```
 
-```{r courage-9}
+```{r courage-8}
 question_text(NULL,
 	message = "When comparing (only) high school graduates with people who didn't go to high school, high school graduates have lower value, meaning that they are less likely to approve of the president.",
 	answer(NULL, correct = TRUE),
@@ -1308,7 +1287,7 @@ Negative coefficients suggest that higher values of the predictor decrease the l
 
 Larger coefficients (either positive or negative) indicate a stronger relationship between the predictor and the latent approval score.
 
-### Exercise 10
+### Exercise 9
 
 Write a sentence interpreting the `-0.29` to `-0.08` confidence interval for `educationHighSchoolGraduate`. 
 
@@ -1318,7 +1297,7 @@ tidy_approval |>
   filter(str_detect(term, "^education"))
 ```
 
-```{r courage-10}
+```{r courage-9}
 question_text(NULL,
 	message = "We do not know the true value for the coefficient for educationHighSchoolGraduate, but we can be 95% confident that it lies somewhere between -0.29 and -0.08.",
 	answer(NULL, correct = TRUE),
@@ -1333,7 +1312,7 @@ If the credible interval includes zero, the effect is less likely to be signific
 
 The intercept is always the first value for any variable. For example, the intercept for `education` is `No HS`, and intercept for `ideology` is `Very Liberal`. This is why these values do not show up with `tidy(fit_approval)`. 
 
-### Exercise 11
+### Exercise 10
 
 Write a sentence interpreting the `5.43` estimate for `ideologyVeryConservative`.
 
@@ -1343,7 +1322,7 @@ tidy_approval |>
   filter(str_detect(term, "^ideology"))
 ```
 
-```{r courage-11}
+```{r courage-10}
 question_text(NULL,
 	message = "If we compare people who are very conservative with people who are very liberal (the base category which is included in the intercept), the very conservative people approve of the president more. Because of the complexity of the mathematics of the model, 5.43 does not have a natural interpretation in terms of its magnitude.",
 	answer(NULL, correct = TRUE),
@@ -1358,11 +1337,11 @@ question_text(NULL,
 
 In ordinal regression, these intercepts define the points on the latent variable scale at which the response variable transitions from one category to the next.The probability of falling into a specific category is determined by the relationship between these intercepts and the predictors.
 
-### Exercise 12
+### Exercise 11
 
 Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using, specifying the functional form and the dependent variable. Add one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
 
-```{r courage-12}
+```{r courage-11}
 question_text(NULL,
 	message = "Using the CES, which is one of the largest political surveys in the United States, we seek to understand the relationship between presidential approval and political ideology in 2020. One concern is that survey respondents might be systematically different from other Americans. We are using a cumulative model for ordinal regression.",
 	answer(NULL, correct = TRUE),
