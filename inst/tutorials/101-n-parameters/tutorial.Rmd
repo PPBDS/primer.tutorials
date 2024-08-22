@@ -14,94 +14,38 @@ description: 'Chapter 10 Tutorial: N Parameters'
 ```{r setup, include = FALSE}
 library(learnr)
 library(tutorial.helpers)
-library(tidyverse)
 library(gt)
-library(brms)
-library(tidybayes)
-library(gtsummary)
+
+library(tidyverse)
 library(primer.data)
-library(janitor)
+library(tidymodels)
+library(equatiomatic)
+library(broom)
+library(marginaleffects)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
-set.seed(9)
-
-ch10_data <- shaming |> 
-  mutate(
-    civ_engage = primary_00 + primary_02 + primary_04 + 
-                 general_00 + general_02 + general_04,
-    voter_class = case_when(
+x <- shaming |> 
+  mutate(civ_engage = primary_00 + primary_02 + primary_04 + 
+               general_00 + general_02 + general_04) |> 
+  select(primary_06, treatment, sex, age, civ_engage) |> 
+  mutate(voter_class = factor(
+    case_when(
       civ_engage %in% c(5, 6) ~ "Always Vote",
       civ_engage %in% c(3, 4) ~ "Sometimes Vote",
       civ_engage %in% c(1, 2) ~ "Rarely Vote"),
-    voter_class = factor(voter_class, levels = 
-            c("Rarely Vote", "Sometimes Vote", "Always Vote")), 
-    age_z = as.numeric(scale(age))) |> 
-  rename(voted = primary_06) |> 
-  select(voted, treatment, sex, age_z, civ_engage, voter_class) |> 
-  drop_na() |> 
-  slice_sample(prop = 0.1)
+         levels = c("Rarely Vote", 
+                    "Sometimes Vote", 
+                    "Always Vote"))) 
 
+fit_vote <- logistic_reg(engine = "glm") |> 
+  fit(as.factor(primary_06) ~ 
+        age + sex + treatment*voter_class, 
+      data = x)
 
-# fit_postcard_vote <- brm(formula = voted ~ age_z + sex + 
-#                            treatment + voter_class + treatment*voter_class, 
-#                          data = ch10_data, 
-#                          family = gaussian(), 
-#                          refresh = 0, 
-#                          silent = 2, 
-#                          seed = 19)
-# 
-# write_rds(fit_postcard_vote, "data/fit_postcard_vote.rds")
-
-fit_postcard_vote <- read_rds("data/fit_postcard_vote.rds")
-
-
-sex <- "Male"
-age_z <- 0
-treatment <- c("No Postcard",
-               "Civic Duty",
-               "Hawthorne",
-               "Self",
-               "Neighbors")
-voter_class <- c("Always Vote",
-                 "Sometimes Vote",
-                 "Rarely Vote")
-
-ndata <- expand_grid(sex, age_z, treatment, voter_class) |>
-  mutate(names = paste(treatment, voter_class, sep = "_"))
-
-
-plot_data <- fit_postcard_vote |>
-  add_epred_draws(newdata = ndata) |>
-  ungroup() |>
-  select(names, .epred) |>  
-  pivot_wider(names_from = names, 
-              values_from = .epred, 
-              values_fn = list) |>
-  unnest(cols = everything()) |> 
-  janitor::clean_names() |>
-  mutate(`Always Civic-Duty`    = civic_duty_always_vote     - no_postcard_always_vote,
-         `Always Hawthorne`     = hawthorne_always_vote      - no_postcard_always_vote,
-         `Always Self`          = self_always_vote           - no_postcard_always_vote,
-         `Always Neighbors`     = neighbors_always_vote      - no_postcard_always_vote,
-         `Sometimes Civic-Duty` = civic_duty_sometimes_vote  - no_postcard_sometimes_vote,
-         `Sometimes Hawthorne`  = hawthorne_sometimes_vote   - no_postcard_sometimes_vote,
-         `Sometimes Self`       = self_sometimes_vote        - no_postcard_sometimes_vote,
-         `Sometimes Neighbors`  = neighbors_sometimes_vote   - no_postcard_sometimes_vote,
-         `Rarely Civic-Duty`    = civic_duty_rarely_vote     - no_postcard_rarely_vote,
-         `Rarely Hawthorne`     = hawthorne_rarely_vote      - no_postcard_rarely_vote,
-         `Rarely Self`          = self_rarely_vote           - no_postcard_rarely_vote,
-         `Rarely Neighbors`     = neighbors_rarely_vote      - no_postcard_rarely_vote) |>
-  pivot_longer(names_to = c("Voter Class", "Group"),
-               names_sep = " ",
-               values_to = "values",
-               cols = `Always Civic-Duty`:`Rarely Neighbors`) |>
-               mutate(`Voter Class` = fct_relevel(factor(`Voter Class`),
-                                     c("Rarely",
-                                       "Sometimes",
-                                       "Always")))
+tidy_vote <- tidy(fit_vote, conf_int = TRUE)
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -110,27 +54,24 @@ plot_data <- fit_postcard_vote |>
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
 
-<!-- DK: I am not satisfied with all the variable creation and manipulation we do here. Should we really be doing it? Are we doing it well? Maybe we need to change the code in the Primer as well. -->
+<!-- DK: Consider using draw = FALSE in plot_comparisons and then creating a better looking plot. Should have the same scales in each facet. Should have better facet titles. Should organize the facets in some sensible way. Or maybe the facets should be voter_class so that we can see that Neightbors is (almost) always better. -->
 
 ## Introduction
 ### 
 
-This tutorial covers [Chapter 10: N Parameters](https://ppbds.github.io/primer/n-parameters.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
+This tutorial supports [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
 
-In this tutorial, we will consider models with many parameters and the complexities that arise therefrom.
+The world confronts us. Make decisions we must.
 
-As our models grow in complexity, we need to pay extra attention to basic assumptions like validity, stability, representativeness, and unconfoundedness. It is easy to jump right in and start interpreting. It is harder, but necessary, to ensure that our models are really answering our questions.
+Imagine that you are running for Governor of Texas in the next election. You have a campaign budget. Your goal is to win the election. Winning the election involves convincing people to vote for you *and* getting your supporters to vote. Should you send postcards to registered voters likely to vote for you? What should those postcards say? 
 
-### 
-
-Imagine you are a Republican running for Governor in Texas. You need to allocate your campaign spending intelligently. For example, you want to do a better job of getting your voters to vote.
-
-We will be looking at the shaming tibble from the [**primer.data**](https://ppbds.github.io/primer.data/) package, sourced from “[Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment](https://doi.org/10.1017/S000305540808009X)” by Gerber, Green, and Larimer (2008).
 
 ## The Question
 ### 
 
 *A prudent question is one half of wisdom.* - Francis Bacon
+
+> *What is the causal effect on voting of receiving a postcard which encourages one to vote?*
 
 ### Exercise 1
 
@@ -150,7 +91,7 @@ library(tidyverse)
 
 ### 
 
-The data is from a study which aimed to find out whether and to what extent people are motivated to vote by social pressure.
+The data come from “[Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment](https://doi.org/10.1017/S000305540808009X)” by Gerber, Green, and Larimer (2008).
 
 ### Exercise 2
 
@@ -170,7 +111,7 @@ library(primer.data)
 
 ### 
 
-A version of the data from “[Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment](https://doi.org/10.1017/S000305540808009X)” is available in the `shaming` tibble.
+A version of the data is available in the `shaming` tibble.
 
 ### Exercise 3
 
@@ -189,15 +130,15 @@ question_text(NULL,
 
 ### 
 
-In their published article, the authors note that “Only registered voters who voted in November 2004 were selected for our sample.” After this, the authors found their history then sent out the mailings. Thus, anyone who did not vote in the 2004 general election is excluded, by definition. Keep that fact in mind when we discuss representativeness later or.
+In their published article, the authors note that “Only registered voters who voted in November 2004 were selected for our sample.” After this, the authors found their history then sent out the mailings. Thus, anyone who did not vote in the 2004 general election is excluded, by definition. 
 
 ### Exercise 4
 
-How campaigns influence voters is the broad topic of this tutorial. Given that topic, which variable in `shaming` should we use as our outcome variable?
+Voting is the broad topic of this tutorial. Given that topic, which variable in `shaming` should we use as our outcome variable? 
 
 ```{r the-question-4}
 question_text(NULL,
-	message = "The outcome is `primary_06`, which indicates whether the respondent voted in the 2006 primary election.",
+	message = "The outcome is `primary_06`, which indicates whether the resident voted in the 2006 primary election.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -206,19 +147,35 @@ question_text(NULL,
 
 ### 
 
-That is, we are researching the question of how to convince people to vote, not how to convince them to vote for a specific candidate. This project is about getting our voters to the polls, not about convincing their voters to switch to our side.
+There were many more people age 18-22 registered to Michigan in 2006 than age 27-31. It is unclear to use why that should be.
 
-The outcomes in a Preceptor Table refer to a moment in time. In this case, the outcome occurs on Election Day in 2026. The covariates and treatments must be measured before the outcome, otherwise they can’t be modeled as connected with the outcome.
+```{r}
+x |> 
+ggplot(aes(x = age, fill = factor(primary_06))) +
+    geom_bar(position = "dodge") +
+    scale_fill_manual(values = c("0" = "skyblue", "1" = "coral"),
+                      labels = c("0" = "Did Not Vote", 
+                                 "1" = "Voted"),
+                      name = NULL) +
+    scale_y_continuous(labels = label_comma()) +
+    labs(title = "Voting Behavior in the 2006 Michigan Primary",
+         subtitle = "Old people are much more likely to vote",
+         x = "Age",
+         y = NULL,
+         caption = "Gerber, Green, and Larimer (2008)")
+```
 
-Notice the time difference between the data we have and the data we want to have.
+Regardless, the central lesson is always the same: *You can never look at your data too much.*
 
 ### Exercise 5
 
-Pick a variable in the data which might have a connection to the outcome variable and which we might consider to be, at least in theory, a treatment. (If you don't see a reasonable variable in the data, you can just name a variable which *might have been* included in the data.) How might we manipulate this variable?
+Let's imagine a brand new variable which **does not exists** in the data. This variable should be binary, meaning that it only takes on one of two values. It should also, at least in theory, by manipulable. In other words, if the value of the variable is "X," or whatever, then it generates one potential outcome and if it is "Y," or whatever, it generates another potential outcome.
+
+Describe this imaginary variable and how might we manipulate its value.
 
 ```{r the-question-5}
 question_text(NULL,
-	message = "We can manipulate the value of the type of postcards the individuals are exposed to, at least in theory, by randomly assigning people different types of postcards, and no postcards to some, to see the effect of postcards on voting. ",
+	message = "Imagine a variable called `phone_call` which has a value of `1` if the person received a phone call urging them to vote and `0` if they did not receive such a phone call. We, meaning the organization in charge of making such phone calls, can manipulate this variable by deciding, either randonly or otherwise, whether or not we will call a specific individual.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -227,17 +184,15 @@ question_text(NULL,
 
 ### 
 
-There is no one right answer. But, going forward, we will be using the type of postcard as the treatment. For the rest of this tutorial, we will be referring to this treatment variable as `treatment`.
-
-Recall that a treatment is just another covariate. But, it is special in that we can, at least in theory, manipulate it to discover different potential outcomes for the same individual.
+Any data set can be used to construct a causal model as long as there is at least one covariate that we can, at least in theory, manipulate. It does not matter whether or not anyone did, in fact, manipulate it. 
 
 ### Exercise 6
 
-Write a sentence which speculates as to the different potential outcomes which we might observe in `shaming` when we change the value of the treatment variable `treatment`.
+Given our imaginary treatment variable `phone_call`, how many potential outcomes are there for each person? Explain why.
 
 ```{r the-question-6}
 question_text(NULL,
-	message = "The value of `treatment` would demonstrate 2 different potential outcomes for each unit as we vary the treatment variable. Either the person votes, or does not vote.",
+	message = "There are 2 potential outcomes because the treatment variable `phone_call` takes on 2 posible values: received a get-out-the-vote phone call or did not.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -246,21 +201,15 @@ question_text(NULL,
 
 ### 
 
-The definition of a causal effect is the difference between potential outcomes. So, there must be two (or more) potential outcomes for any causal model to make sense.
-
-This treatment has five different values, representing four types of postcards and no postcard. Thereby generating five potential outcomes: person with postcard one votes or doesn't, person with postcard two votes or doesn't, and so on for the rest of the values of `treatment`.
-
-<!-- DK: Not two outcomes. -->
-
-<!-- MK: Is this better? -->
+The same data set can be used to create, separately, lots and lots of different models, both causal and predictive. We can just use different outcome variables and/or specify different treatment variables. All of this stuff is a *conceptual* framework we apply to the data. It is never inherent in the data itself.
 
 ### Exercise 7
 
-Write a few sentences which specify two different values for the treatment variable, for a single unit, and then guesses at the potential outcomes which would result, and then calculates the causal effect for that unit given those guesses.
+In a few sentences, specify two different values for the imaginary treatment variable `phone_call`, for a single unit, and then guess at the potential outcomes which would result, and then determine the causal effect for that unit given those guesses.
 
 ```{r the-question-7}
 question_text(NULL,
-	message = "For a given person, assume that the value of the treatment variables, the types of postcard, might be 'Civic Duty' or 'No Postcard'. If the person gets 'Civic Duty', then the outcome would be 1, which would signify that the person did vote. If the person gets 'No Postcard', then the outcome would be 0, which would signify that the person did not vote. The causal effect on the outcome of a treatment of 'Civic Duty' versus 'No Postcard' is 1 - 0, which equals 1.",
+	message = "For a given person, assume that the value of the treatment variable might be received a phone call or did not receive phone call. If the person gets the phone call, then her voting behavior would be that she did vote. If the person gets no phone call, then her voting behavioor might be not to vote. The causal effect on the outcome of a treatment of receiving-call versus no-call is voting minus not voting --- i.e., the difference between two potential outcomes --- which does not have a numeric value. That difference is still the causal effect, even if we can't assign a number to it. In many cases, we will just assign arbitray numbers to the outcomes --- say 1 for voting and 0 for not-voting. Doing so allows us to repory a numeric causal effect. But keep in mind that any such numbers are arbitrary.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -269,17 +218,18 @@ question_text(NULL,
 
 ### 
 
-The definition of a causal effect is the difference between two potential outcomes. Of course, you can't just say that the causal effect is 10. The exact value depends on which potential outcome comes first in the subtraction and which second. We will use the default sense in which the causal effect is defined as treatment minus control.
+The the definition of a causal effect as the difference between two potential outcomes. Of course, you can't just say that the causal effect is 10. The exact value depends on which potential outcome comes first in the subtraction and which second. There is, perhaps, a default sense in which the causal effect is defined as treatment minus control. 
 
-The causal effect on whether or not a person votes after seeing a political postcard versus not seeing a postcard is 1.
+Any causal connection means exploring the *within row* different between two potential outcomes. We don't need to look at any other rows to have that conversation.
+
 
 ### Exercise 8
 
-Let's consider a *predictive* model. Which variable in `shaming` do you think might have an important connection to `primary_06`? (If you don't see a reasonable variable in the data, you can just name a variable which *might have been* included in the data.)
+Let's consider a *predictive* model. Which variable in `shaming` do you think might have an important connection to `primary_06`? 
 
 ```{r the-question-8}
 question_text(NULL,
-	message = "Whether or not the person has voted in the previous elections.",
+	message = "The person's `age` is probably connected to `primary_06`, but so are other variables like `treatment` and past voting behavior.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -288,15 +238,11 @@ question_text(NULL,
 
 ### 
 
-<!-- DK: Include stuff here, and elsewhere, about how 1/0 for voting/not-voting is arbitrary. Maybe use the hair cut example. A causal effect is the "difference" between two potential outcome. There is no requirement that there are numbers associated with those outcomes, although we might assign arbitrary numbers. -->
-
-The numbers we chose to represent voting or not voting is arbitrary. Instead of 0 and 1, we could have chosen any other number, like 12 and 83. In this example, the difference would have been 12 - 83 = -71 instead of 1.
-
-A causal effect is the "difference" between two potential outcome. There is no requirement that there are numbers associated with those outcomes, although we might assign arbitrary numbers. For example, if we were looking at haircuts of different barbers, there is no numerical value associated with haircuts, but we could assign a rating to each haircut so we can find the difference.
+With a predictive model, there is only one outcome for each individual unit. There are not two potential outcomes because we are not considering any of the covariates to be a treatment variable. We assuming that the values of all covariates are "fixed." 
 
 ### Exercise 9
 
-Write a few sentences which specify two different groups of voters with different values for past civic engagement. Explain that the outcome variable might differ between these two groups.
+Write a few sentences which specify two different groups of voters with different values for `age`. Explain that the outcome variable might differ between these two groups.
 
 ```{r the-question-9}
 question_text(NULL,
@@ -309,7 +255,7 @@ question_text(NULL,
 
 ### 
 
-The key point is that, with a predictive model, there is only one outcome for each individual unit. There are not two potential outcomes because we are not considering any of the covariates to be treatment variables. We assume that all covariates are "fixed."
+In predictive models, do not use words like "cause," "influence," "impact," or anything else which suggests causation. The best phrasing is in terms of "differences" between groups of units with different values for the covariate of interest.
 
 ### Exercise 10
 
@@ -317,7 +263,7 @@ Write a causal question which connects the outcome variable `primary_06` to a co
 
 ```{r the-question-10}
 question_text(NULL,
-	message = "What is the causal effect of postcards on voting in the 2006 election? Do those effects vary by political engagement?",
+	message = "What is the causal effect of postcards on voting in the 2006 Michigan election?",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -330,7 +276,7 @@ It is OK if you did not write what is written in the answer! There are lots of i
 
 For this tutorial, our question is:
 
-> *What is the causal effect of postcards on voting in the 2026 election? Do those effects vary by political engagement?*
+> *What is the causal effect of postcards on voting?*
 
 ### Exercise 11
 
@@ -338,7 +284,7 @@ What is the Quantity of Interest which might help us to explore the answer to ou
 
 ```{r the-question-11}
 question_text(NULL,
-	message = "We care about `primary_06`, which is the outcome variable. The type of postcard they recieved also matters.",
+	message = "The average causal effect on voting of receiving a 'Neighbors' post card.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -347,12 +293,16 @@ question_text(NULL,
 
 ### 
 
-Note the time difference between the data we have and the data we want to have. There is a 20 year gap which we will discuss more later on.
+Our Quantity of Interest might appear too specific, too narrow to capture the full complexity of the topic. There are many, many numbers which we are interested in, many numbers that we want to know. But we don't need to list them all here! We just need to choose one of them since our goal is just to have a specific number which helps to guide us in the creation of the Preceptor Table and, then, the model.
 
 ## Wisdom
 ### 
 
 *All we can know is that we know nothing. And that’s the height of human wisdom.* - Leo Tolstoy
+
+Our question:
+
+> *What is the causal effect of postcards on voting?*
 
 ### Exercise 1
 
@@ -369,7 +319,7 @@ question_text(NULL,
 
 ### 
 
-The authors conducted a field experiment to answer their questions about the extent people are motivated to vote by social pressure. Households were randomly assigned to either a control group or one of four treatment groups.
+Can we use data from a primary election in Michigan in 2006 to predict behavior in a general election in Texas today?
 
 ### Exercise 2
 
@@ -403,7 +353,7 @@ question_text(NULL,
 
 ### 
 
-This problem is causal so one of the covariates is a treatment. In our problem, the treatment is the type of postcard that the people get.
+This problem is causal so one of the covariates is a treatment. In our problem, the treatment is the type of postcard that the resident receives.
 
 ### Exercise 4
 
@@ -583,6 +533,7 @@ question_text(NULL,
 
 Render again. Everything looks nice because we have added code to make the file look better and more professional.
 
+
 ### Exercise 11
 
 Run `glimpse()` on `shaming`.
@@ -601,7 +552,9 @@ glimpse(shaming)
 
 ### 
 
-`glimpse()` gives us a look at the raw data contained within the `shaming` data set. At the very top of the output, we can see the number of rows and columns, or observations and variables, respectively. We see that there are 344,084 observations, with each row corresponding to a unique respondent.
+`glimpse()` gives us a look at the raw data contained within the `shaming` data set. The variables which begin with `primary` or `general` indicate whether or not the indvidual voted in thos elections.
+
+
 
 ### Exercise 12
 
@@ -612,16 +565,18 @@ Pipe `shaming` to `count()` with `treament` inside of it.
 ```
 
 ```{r wisdom-12-hint-1, eval = FALSE}
-shaming |> count(...)
+shaming |> 
+  count(...)
 ```
 
 ```{r wisdom-12-test, include = FALSE}
-shaming |> count(treatment)
+shaming |> 
+  count(treatment)
 ```
 
 ### 
 
-Four types of treatments were used in the experiment, with voters receiving one of the four types of mailing. All of the mailing treatments carried the message, “DO YOUR CIVIC DUTY - VOTE!”.
+Four types of treatments were used in the experiment, with voters receiving one of the four types of mailing. All of the mailing treatments carried the message, “DO YOUR CIVIC DUTY - VOTE!”. 
 
 ### Exercise 13
 
@@ -629,16 +584,9 @@ Pipe `shaming` to the following:
 
 ```         
 mutate(
-    civ_engage = primary_00 + primary_02 + primary_04 + 
-                 general_00 + general_02 + general_04,
-voter_class = case_when(civ_engage %in% c(5, 6) ~ "Always Vote",
-                        civ_engage %in% c(3, 4) ~ "Sometimes Vote",
-                        civ_engage %in% c(1, 2) ~ "Rarely Vote"),
-voter_class = factor(voter_class, 
-                     levels = c("Rarely Vote", 
-                                "Sometimes Vote", 
-                                "Always Vote")), 
-                     age_z = as.numeric(scale(age))) 
+  civ_engage = primary_00 + primary_02 + primary_04 + 
+               general_00 + general_02 + general_04) |> 
+select(primary_06, treatment, sex, age, civ_engage)
 ```
 
 ```{r wisdom-13, exercise = TRUE}
@@ -654,269 +602,109 @@ shaming |>
 shaming |> 
   mutate(
     civ_engage = primary_00 + primary_02 + primary_04 + 
-                 general_00 + general_02 + general_04,
-    voter_class = case_when(civ_engage %in% c(5, 6) ~ "Always Vote",
-                        civ_engage %in% c(3, 4) ~ "Sometimes Vote",
-                        civ_engage %in% c(1, 2) ~ "Rarely Vote"),
-    voter_class = factor(voter_class, 
-                     levels = c("Rarely Vote", 
-                                "Sometimes Vote", 
-                                "Always Vote")), 
-    age_z = as.numeric(scale(age))) 
+                 general_00 + general_02 + general_04) |> 
+  select(primary_06, treatment, sex, age, civ_engage)
 ```
 
 ### 
 
-The code above converts the Yes/No columns to binaries with the function we made. Note that `primary_06` is already binary and also that we didn't need it to construct a variable based on previous voting behavior. We also create a `voter_class` variable which tells us the civic engagement of that individual.
+We want to create a variable which captures the amount of civic engagement for each person. Since we don't have data about any other political activities, we define `civ_engage` as the number of elections participated in over the prior 6 elections.
 
 ### Exercise 14
 
-Continue the pipe to `rename()` with `voted` being set to `primary_06` inside `rename()`.
+Continue the pipe with the following:
+
+```         
+mutate(voter_class = factor(
+  case_when(
+    civ_engage %in% c(5, 6) ~ "Always Vote",
+    civ_engage %in% c(3, 4) ~ "Sometimes Vote",
+    civ_engage %in% c(1, 2) ~ "Rarely Vote"),
+       levels = c("Rarely Vote", 
+                  "Sometimes Vote", 
+                  "Always Vote"))) 
+```
 
 ```{r wisdom-14, exercise = TRUE}
 
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r wisdom-14-hint-1, eval = FALSE}
-... |> 
-  rename(...)
 ```
 
 ```{r wisdom-14-test, include = FALSE}
 shaming |> 
   mutate(
     civ_engage = primary_00 + primary_02 + primary_04 + 
-                 general_00 + general_02 + general_04,
-    voter_class = case_when(civ_engage %in% c(5, 6) ~ "Always Vote",
-                        civ_engage %in% c(3, 4) ~ "Sometimes Vote",
-                        civ_engage %in% c(1, 2) ~ "Rarely Vote"),
-    voter_class = factor(voter_class, 
-                     levels = c("Rarely Vote", 
-                                "Sometimes Vote", 
-                                "Always Vote")), 
-    age_z = as.numeric(scale(age))) |> 
-  rename(voted = primary_06)
+                 general_00 + general_02 + general_04) |> 
+  select(primary_06, treatment, sex, age, civ_engage) |> 
+  mutate(voter_class = factor(
+  case_when(
+    civ_engage %in% c(5, 6) ~ "Always Vote",
+    civ_engage %in% c(3, 4) ~ "Sometimes Vote",
+    civ_engage %in% c(1, 2) ~ "Rarely Vote"),
+       levels = c("Rarely Vote", 
+                  "Sometimes Vote", 
+                  "Always Vote"))) 
 ```
 
 ### 
 
-`voted` is a more natural name for our outcome variable. This will also help us in the future when we will graph this data.
+Classifying voters into three large groups, based on their voting history, will allow us to examine any heterogeneity in the causal effects. That is, perhaps receiving a postcard has a different average causal effect on people who always vote than it does on people who never vote.
+
+```{r}
+x |> 
+  sample_frac(0.5) |> 
+  ggplot(aes(x = civ_engage, y = primary_06)) +
+    geom_jitter(alpha = 0.03, height = 0.1) +
+    scale_x_continuous(breaks = 1:6) + 
+    scale_y_continuous(breaks = c(0, 1), labels = c("No", "Yes")) +
+    labs(title = "Civic Engagement and Voting Behavior in Michigan",
+         subtitle = "Past voting predicts future voting.",
+         x = "Civic Engagement",
+         y = "Voted in 2006 Primary Election",
+         caption = "Random sample of 5% of the data from Gerber, Green, and Larimer (2008)")
+```
+
+It is certainly the case that people who had voted more in the past were more likely to vote in the 2006 primary. 
 
 ### Exercise 15
 
-Continue the pipe to `select()` and choose `voted`, `treatment`, `sex`, `age_z`, `civ_engage`, and `voter_class`. Then pipe with `drop_na()`.
+We have assigned the result of this pipe to an object named `x`. Type `x` and hit "Run Code."
 
 ```{r wisdom-15, exercise = TRUE}
 
 ```
 
-<button onclick="transfer_code(this)">Copy previous code</button>
-
 ```{r wisdom-15-hint-1, eval = FALSE}
-... |> select(...) |> drop_na()
+x
 ```
 
 ```{r wisdom-15-test, include = FALSE}
-shaming |> 
-  mutate(
-    civ_engage = primary_00 + primary_02 + primary_04 + 
-                 general_00 + general_02 + general_04,
-    voter_class = case_when(civ_engage %in% c(5, 6) ~ "Always Vote",
-                        civ_engage %in% c(3, 4) ~ "Sometimes Vote",
-                        civ_engage %in% c(1, 2) ~ "Rarely Vote"),
-    voter_class = factor(voter_class, 
-                     levels = c("Rarely Vote", 
-                                "Sometimes Vote", 
-                                "Always Vote")), 
-    age_z = as.numeric(scale(age))) |> 
-  rename(voted = primary_06) |> 
-  select(voted, treatment, sex, age_z, civ_engage, voter_class) |> 
-  drop_na()
-```
-
-### 
-
-The data we have right now is too much, it will take too long to use it later on in the tutorial.
-
-### Exercise 16
-
-To finish, pipe `slice_sample(prop = 0.1)` at the end so we only get 10% of all the data.
-
-```{r wisdom-16, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r wisdom-16-hint-1, eval = FALSE}
-... |> 
-  slice_sample(...)
-```
-
-```{r wisdom-16-test, include = FALSE}
-shaming |> 
-  mutate(
-    civ_engage = primary_00 + primary_02 + primary_04 + 
-                 general_00 + general_02 + general_04,
-    voter_class = case_when(civ_engage %in% c(5, 6) ~ "Always Vote",
-                        civ_engage %in% c(3, 4) ~ "Sometimes Vote",
-                        civ_engage %in% c(1, 2) ~ "Rarely Vote"),
-    voter_class = factor(voter_class, 
-                     levels = c("Rarely Vote", 
-                                "Sometimes Vote", 
-                                "Always Vote")), 
-    age_z = as.numeric(scale(age))) |> 
-  rename(voted = primary_06) |> 
-  select(voted, treatment, sex, age_z, civ_engage, voter_class) |> 
-  drop_na() |> 
-  slice_sample(prop = 0.1)
-```
-
-### 
-
-`slice_sample()` gives a new random set of the data each time it is run. If you run the previous code again, you will notice that some numbers might change. The important thing to keep in mind is that the summary numbers of the data, such as the percent of people who voted or the percent of people who got no postcard, stay roughly the same. The 10% we will use is still representative of the whole data because it is randomly selected.
-
-### Exercise 17
-
-In the background of this tutorial, an object called `ch10_data` was created and given the value of the code above. Start a new pipe with `ch10_data` to `sample_frac()` with `0.5` as the parameter.
-
-```{r wisdom-17, exercise = TRUE}
-
-```
-
-```{r wisdom-17-hint-1, eval = FALSE}
-ch10_data |> sample_frac(...)
-```
-
-```{r wisdom-17-test, include = FALSE}
-ch10_data |> 
-  sample_frac(0.5)
+x
 ```
 
 ### 
 
 Of course, when doing the analysis, you don’t know when you start what you will be using at the end. Data analysis is a circular process. We mess with the data. We do some modeling. We mess with the data on the basis of what we learned from the models. With this new data, we do some more modeling. And so on.
 
-### Exercise 18
 
-Continue the pipe to `ggplot()` with `x` set to `civ_engage` and `y` set to `voted` inside `aes()`. Also add `geom_jitter()` with `alpha` set to `0.03` and `height` set to `0.1`.
 
-```{r wisdom-18, exercise = TRUE}
+### Exercise 16
 
-```
+Add the code from the pipe above and set it to an object named `x` in a new code chunk in `causal_effect.qmd`. 
 
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r wisdom-18-hint-1, eval = FALSE}
-... |> 
-  ggplot(aes(...)) +
-    geom_jitter(...)
-```
-
-```{r wisdom-18-test, include = FALSE}
-ch10_data |> sample_frac(0.5) |> 
-  ggplot(aes(x = civ_engage, y = voted)) +
-    geom_jitter(alpha = 0.03, height = 0.1)
-```
-
-### 
-
-In this graph, we are trying to see if the past civic engagement of the individual can help predict weather or not they voted.
-
-### Exercise 19
-
-Using the previous code, add `scale_x_continuous()` with `breaks` set to `1:6` and also add `scale_y_continuous()` with `breaks` set to `c(0, 1)` and `labels` set to `c("No", "Yes")`.
-
-```{r wisdom-19, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r wisdom-19-hint-1, eval = FALSE}
-... +
-    scale_x_continuous(breaks = ...) + 
-    scale_y_continuous(breaks = ..., labels = ...)
-```
-
-```{r wisdom-19-test, include = FALSE}
-ch10_data |> sample_frac(0.5) |> 
-  ggplot(aes(x = civ_engage, y = voted)) +
-    geom_jitter(alpha = 0.03, height = 0.1) +
-    scale_x_continuous(breaks = 1:6) + 
-    scale_y_continuous(breaks = c(0, 1), labels = c("No", "Yes"))
-```
-
-### 
-
-Through the graph, we can see that past voting predicts future voting.
-
-### Exercise 20
-
-Finally, using the previous code, add the `labs()` layer and include a suitable `title`, `subtitle`, `x`, `y` and `caption`.
-
-```{r wisdom-20, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r wisdom-20-hint-1, eval = FALSE}
-... +
-  labs(...)
-```
-
-```{r wisdom-20-test, include = FALSE}
-ch10_data |> sample_frac(0.5) |> 
-  ggplot(aes(x = civ_engage, y = voted)) +
-    geom_jitter(alpha = 0.03, height = 0.1) +
-    scale_x_continuous(breaks = 1:6) + 
-    scale_y_continuous(breaks = c(0, 1), labels = c("No", "Yes")) +
-    labs(title = "Civic Engagement and Voting Behavior in Michigan",
-         subtitle = "Past voting predicts future voting.",
-         x = "Civic Engagement",
-         y = "Voted in 2006 Primary Election",
-         caption = "Random sample of 5% of the data from Gerber, Green, and Larimer (2008)")
-```
-
-The graph should look like this:
-
-```{r}
-#| echo: false
-
-ch10_data |>
-  sample_frac(0.5) |> 
-  ggplot(aes(x = civ_engage, y = voted)) +
-    geom_jitter(alpha = 0.03, height = 0.1) +
-    scale_x_continuous(breaks = 1:6) + 
-    scale_y_continuous(breaks = c(0, 1), labels = c("No", "Yes")) +
-    labs(title = "Civic Engagement and Voting Behavior in Michigan",
-         subtitle = "Past voting predicts future voting.",
-         x = "Civic Engagement",
-         y = "Voted in 2006 Primary Election",
-         caption = "Random sample of 5% of the data from Gerber, Green, and Larimer (2008)")
-```
-
-### 
-
-Although this plot is pleasing, we need to create an actual model with this data in order to answer our questions.
-
-### Exercise 21
-
-Add the code from Exercise 16 and set it to an object named `ch10_data` in a new code chunk in `causal_effect.qmd`. At the top of this code chunk, add `set.seed(9)`. This will generate the same random sample of the whole data so we don't have new new samples from the data each time.
-
-Also add the code from the previous exercise to add the graph in the file.
-
-Your code should look something like this:
 
 ```         
-set.seed(9)
-
-ch10_data <- shaming |> ... |> slice_sample(prop = 0.1)
-
-ch10_data |> ...
+x <- shaming |> 
+  mutate(civ_engage = primary_00 + primary_02 + primary_04 + 
+               general_00 + general_02 + general_04) |> 
+  select(primary_06, treatment, sex, age, civ_engage) |> 
+  mutate(voter_class = factor(
+    case_when(
+      civ_engage %in% c(5, 6) ~ "Always Vote",
+      civ_engage %in% c(3, 4) ~ "Sometimes Vote",
+      civ_engage %in% c(1, 2) ~ "Rarely Vote"),
+         levels = c("Rarely Vote", 
+                    "Sometimes Vote", 
+                    "Always Vote"))) 
 ```
 
 Render the file.
@@ -929,7 +717,7 @@ show_file("causal_effect.qmd", start = -5)
 
 CP/CR.
 
-```{r wisdom-21}
+```{r wisdom-16}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -938,17 +726,15 @@ question_text(NULL,
 	rows = 3)
 ```
 
-<!-- AC: I'm not sure if start = -5 is enough? -->
-
 ### 
 
 In the `.gitignore`, add `*_files` so that we do not commit those junk files. Commit and push.
 
-### Exercise 22
+### Exercise 17
 
 In your own words, define "validity" as we use the term.
 
-```{r wisdom-22}
+```{r wisdom-17}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -961,13 +747,13 @@ question_text(NULL,
 
 In order to consider the two data sets to be drawn from the same population, the columns from one must have a valid correspondence with the columns in the other.
 
-### Exercise 23
+### Exercise 18
 
-Provide one reason why the assumption of validity might not hold for this problem.
+Provide one reason why the assumption of validity might not hold for the variable: `primary_06`. Use the words "column" or "columns" in your answer.
 
-```{r wisdom-23}
+```{r wisdom-18}
 question_text(NULL,
-	message = "Voting in a primary election in 2006 in Michigan is not the same thing as voting in a general election in Texas in 2026. Primary elections are less newsworthy and, usually, less competitive. We cannot assume tha the two elections are similar enough for us to make connections between them.",
+	message = "The voting column in a our data is for a primary election in 2006 in Michigan. The voting coloumn in the Preceptor Table is for a general election in Texas in 2026. Those are not the same things.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -976,15 +762,22 @@ question_text(NULL,
 
 ### 
 
-Fortunately, at least for our continued use of this example, we will assume that validity holds. The outcome variable in our data and in our Preceptor Table are close enough — even though one is for a primary election while the other is for a general election — that we can just stack them. At the back of our minds we should remember that the answer that we will find will be nowhere close to being 100% accurate.
+Fortunately, at least for our continued use of this example, we will assume that validity holds. The outcome variable in our data and in our Preceptor Table are close enough — even though one is for a primary election while the other is for a general election — that we can just stack them. 
 
-### Exercise 24
+### Exercise 19
 
-Summarize the state of your work so far in one sentence. Make reference to the data you have and to the specific question you are trying to answer.
+Over the course of this tutorial, we will be creating a summary paragraph. The purpose of this exercise is to write the first two sentences of that paragraph.
 
-```{r wisdom-24}
+The first sentence is a general statement about the overall topic, mentioning both general class of the outcome variable and of at least one of the covariates. That sentence can be rhetorical. It can be trite, or even a platitude. The purpose of the sentence to let the reader know, gently, about our topic.
+
+The second sentence does two things. First, it introduces the data source. Second, it introduces the specific question.
+
+Type your two sentences below.
+
+
+```{r wisdom-19}
 question_text(NULL,
-	message = "Using the data from an experiment to find out whether and to what extent people are motivated to vote by social pressure, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026.",
+	message = "Efforts to get your supporters to vote have always been a part of US political campaigns. Using the data from a 2006 experiment in Michigan, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -993,7 +786,7 @@ question_text(NULL,
 
 ### 
 
-Edit your answer as you see fit, but do not copy/paste our answer exactly. Add this summary to `causal_effect.qmd`, `Command/Ctrl + Shift + K`, and then commit/push.
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to `causal_effect.qmd`, `Command/Ctrl + Shift + K`, and then commit/push.
 
 ## Justice
 ### 
@@ -1015,7 +808,7 @@ question_text(NULL,
 
 ### 
 
-In the previous section we noted why validity may not hold. We also noticed some other potentially problematic things about the data. We will be looking at them on a deeper level in this section. The goal is to understand that our model will not be perfect, because none of them are! We strive to make our conclusions as accurate as possible but they will never reach perfection. It is important as data scientists to take note of our limitations.
+Justice is about concerns that you (or your critics) might have, reasons why the model you create might not work as well as you hope. 
 
 ### Exercise 2
 
@@ -1032,7 +825,7 @@ question_text(NULL,
 
 ### 
 
-Recall that every row from both the Preceptor Table and the data is included in the Population Table (at least at the start), along with all the rows from the underlying population from which we assume that both the Preceptor Table and the data were drawn. The Population Table includes rows from three sources: the Preceptor Table, the actual data, and all other members of the population.
+The Population Table is almost always much bigger than the combination of the Preceptor Table and the data because, if we can really assume that both the Preceptor Table and the data are part of the same population, than that population must cover a broad universe of time and units since the Preceptor Table and the data are, themselves, often far apart from each other.
 
 ### Exercise 3
 
@@ -1049,7 +842,7 @@ question_text(NULL,
 
 ### 
 
-Stability is all about *time*. Is the relationship among the columns in the Population Table stable over time? In particular, is the relationship --- which is another way of saying "mathematical formula" --- at the time the data was gathered the same as the relationship at the (generally later) time references by the Preceptor Table?
+Stability is all about *time*. Is the relationship among the columns in the Population Table stable over time? In particular, is the relationship --- which is another way of saying "mathematical formula" --- at the time the data was gathered the same as the relationship at the (generally later) time referenced by the Preceptor Table.
 
 ### Exercise 4
 
@@ -1057,7 +850,7 @@ Provide one reason why the assumption of stability might not be true in this cas
 
 ```{r justice-4}
 question_text(NULL,
-	message = "The data collected in 2006 on voting behavior might not be the same in 2026. We aren’t sure what would impact someone’s response to a postcard encouraging them to vote. It is possible, for instance, that a postcard informing neighbors of voting status has a bigger effect in a world with more social media.",
+	message = "It is possible, for instance, that a postcard informing neighbors of voting status has a bigger effect in a world with more social media.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1066,15 +859,16 @@ question_text(NULL,
 
 ### 
 
-When we are confronted with this uncertainty, we can consider making our time frame smaller. However, we would still need to assume stability from 2006 (time of data collection) to 2026. Stability allows us to ignore the issue of time.
+A change in time or the distribution of the data does not, in and of itself, demonstrate a violation of stability. Stability is about the parameters: $\beta_0$, $\beta_1$ and so on. Stability means these parameters are the same in the data as they are in the population as they are in the Preceptor Table.
+
 
 ### Exercise 5
 
-In your own words, define the assumption of "representativeness" when employed in the context of data science.
+We use our data to make inferences about the overall population. We use information about the population to make inferences about the Preceptor Table: `Data -> Population -> Preceptor Table`. In your own words, define the assumption of "representativeness" when employed in the context of data science.
 
 ```{r justice-5}
 question_text(NULL,
-	message = "Representativeness, or the lack thereof, concerns two relationship, among the rows in the Population Table. The first is between the Preceptor Table and the other rows. The second is between our data and the other rows.",
+	message = "Representativeness, or the lack thereof, concerns two relationships among the rows in the Population Table. The first is between the data and the other rows. The second is between the other rows and the Preceptor Table.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1087,11 +881,12 @@ Ideally, we would like both the Preceptor Table *and* our data to be random samp
 
 ### Exercise 6
 
-Provide one reason why the assumption of representativeness might not be true in this case.
+We do not use the data, directly, to estimate missing values in the Preceptor Table. Instead, we use the data to learn about the overall population. Provide one reason, involving the relationship between the data and the population, for why the assumption of representativeness might not be true in this case. 
 
 ```{r justice-6}
+
 question_text(NULL,
-	message = "Michigan and Texas are different states. We are trying to use data from Michigan to make an inference about Texas. The obvious problem is that voters in Michigan are different from voters in Texas, in all sorts of ways which might matter to our analysis.",
+	message = "All the data is from Michigan, which is, by definition, not necessarily representative of all the other states in the country.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1100,13 +895,31 @@ question_text(NULL,
 
 ### 
 
-In one sense, neither the data nor the Preceptor Table is a sample. Both include, more or less, the entire electorates in their respective states. But, from the point of view of the Population Table, they are both samples from the underlying population.
+The reason that representativeness is important is because, when it is violated, the estimates for the model parameters might be biased. 
+
 
 ### Exercise 7
 
-In your own words, define the assumption of "unconfoundedness" when employed in the context of data science.
+We use information about the population to make inferences about the Preceptor Table. Provide one reason, involving the relationship between the population and the Preceptor Table, for why the assumption of representativeness might not be true in this case.
 
 ```{r justice-7}
+question_text(NULL,
+	message = "Even if Michigan were representative of the larger population, Texas certainly is not. That is, the rows in the Preceptor Table are not a random draw from the larger population.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Stability looks across time periods. Representativeness looks within time periods, for the most part. 
+
+### Exercise 8
+
+In your own words, define the assumption of "unconfoundedness" when employed in the context of data science.
+
+```{r justice-8}
 question_text(NULL,
 	message = "Unconfoundedness means that the treatment assignment is independent of the potential outcomes, when we condition on pre-treatment covariates.",
 	answer(NULL, correct = TRUE),
@@ -1117,13 +930,13 @@ question_text(NULL,
 
 ### 
 
-This assumption is only relevant for causal models. We describe a model as "confounded" if this is not true.
+This assumption is only relevant for causal models. We describe a model as "confounded" if this is not true. The easiest way to ensure unconfoundedness is to assign treatment randomly.
 
-### Exercise 8
+### Exercise 9
 
 Provide one reason why the assumption of unconfoundedness might not be true (or relevant) in this case.
 
-```{r justice-8}
+```{r justice-9}
 question_text(NULL,
 	message = "The experiment should be randomized, but there is a possibility that the people who ran the experiment did not actually make it fully randomized. It is easy to lie and say that there was randomization, but we can not know for sure if this was truly random assignment.",
 	answer(NULL, correct = TRUE),
@@ -1136,11 +949,11 @@ question_text(NULL,
 
 The great advantage of randomized assignment of treatment is that it guarantees unconfoundedness. There is no way for treatment assignment to be correlated with anything, including potential outcomes, if treatment assignment is random.
 
-### Exercise 9
+### Exercise 10
 
 Summarize the state of your work so far in two or three sentences. Make reference to the data you have and to the question you are trying to answer. Feel free to copy from your answer at the end of the Wisdom Section. Mention one specific problem which casts doubt on your approach.
 
-```{r justice-9}
+```{r justice-10}
 question_text(NULL,
 	message = "Using the data from an experiment to find out whether and to what extent people are motivated to vote by social pressure, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026. Stability might not be true because the way people view politics has changed from 2006 because of new things such as social media.",
 	answer(NULL, correct = TRUE),
@@ -1164,7 +977,7 @@ In your own words, describe the components of the virtue of Courage for analyzin
 
 ```{r courage-1}
 question_text(NULL,
-	message = "Courage begins with the exploration and testing of different models. It concludes with the creation of a Data Generating Mechanism.",
+	message = "Courage starts with math, explores models, and then creates the Data Generating Mechanism.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1173,11 +986,11 @@ question_text(NULL,
 
 ### 
 
-We first specify the mathematical formula which connects the outcome variable we are interested in with the other data that we have. We need to decide which variables to include and to estimate the values of unknown parameters. We check our models for consistency with the data we have. We avoid hypothesis tests.
+A statistical model consists of two parts: the *probability family* and the *link function*. The probability family is the probability distribution which generates the randomness in our data. The link function is the mathematical formula which links our data to the unknown parameters in the probability distribution. 
 
 ### Exercise 2
 
-Load the **brms** package.
+Load the **tidymodels** package.
 
 ```{r courage-2, exercise = TRUE}
 
@@ -1188,16 +1001,18 @@ library(...)
 ```
 
 ```{r courage-2-test, include = FALSE}
-library(brms)
+library(tidymodels)
 ```
 
 ### 
 
-Given that the outcome variable is 0/1, a logistic model is the obvious choice. However, in this case, a linear model with a normal error term provides more or less the same answer.
+Because `primary_06` is a binary variable, we assume that the outcome of voting (or not) is produced from a Bernoulli distribution.
+
+$$ primary\_06_i  \sim Bernoulli(\rho) $$
 
 ### Exercise 3
 
-Load the **tidybayes** package.
+Load the **broom** package.
 
 ```{r courage-3, exercise = TRUE}
 
@@ -1208,28 +1023,51 @@ library(...)
 ```
 
 ```{r courage-3-test, include = FALSE}
-library(tidybayes)
+library(broom)
 ```
 
 ### 
 
-It is time to look at interactions! We will create a model that estimates `voted` as a function of `age_z`, `sex`, `treatment`, `voter_class`, and the interaction between treatment and voter classification.
+Because the outcome variable has a Bernoulli distribution, the link function is logit. That is:
 
-The math (very long):
-
-$$y_{i} = \beta_{0} + \beta_{1} age\_z + \beta_{2}male_i + \beta_{3}civic\_duty_i + \\ \beta_{4}hawthorne_i + \beta_{5}self_i + \beta_{6}neighbors_i + \\ \beta_{7}Sometimes\ vote_i + \beta_{8}Always\ vote_i + \\ \beta_{9}civic\_duty_i Sometimes\ vote_i + \beta_{10}hawthorne_i Sometimes\ vote_i + \\ \beta_{11}self_i Sometimes\ vote_i + \beta_{11}neighbors_i Sometimes\ vote_i + \\ \beta_{12}civic\_duty_i Always\ vote_i + \beta_{13}hawthorne_i Always\ vote_i + \\ \beta_{14}self_i Always\ vote_i + \beta_{15}neighbors_i Always\ vote_i + \epsilon_{i}$$
+```{r}
+extract_eq(fit_vote$fit, intercept = "beta")
+```
 
 ### Exercise 4
 
-Add `library(brms)` and `library(tidybayes)` to `causal_effect.qmd`. `Command/Ctrl + Shift + K`. At the Console, run:
+Load the **equatiomatic** package.
 
-```         
-tutorial.helpers::show_file("causal_effect.qmd", pattern = "brms|tidybayes")
+```{r courage-4, exercise = TRUE}
+
+```
+
+```{r courage-4-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r courage-4-test, include = FALSE}
+library(equatiomatic)
+```
+
+### 
+
+Recall that a categorical variable (whether character or factor) like `treatment` is turned into a $0/1$ "dummy" variable which is then re-named something like $treatmentNeighbors$. After all, we can't have words --- like "Neighbors" or "Civic Duty" --- in a mathematical formula, hence the need for dummy variables.
+
+
+### Exercise 5
+
+Add `library(tidymodels)`, `library(broom)`, and `library(equatiomatic)` to the `setup` code chunk in `causal_effect.qmd`. `Command/Ctrl + Shift + K`.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("causal_effect.qmd", pattern = "tidymodels|broom|equatiomatic")
 ```
 
 CP/CR.
 
-```{r courage-4}
+```{r courage-5}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1240,118 +1078,144 @@ question_text(NULL,
 
 ### 
 
-There are two ways to formalize the model: with and without the variable names. The former is related to the concept of Justice as we acknowledge that the model is constructed via the linear sum of `n` parameters times the value for `n` variables, along with an error term. In other words, it is a linear model.
+The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. Since `treatment` has five values --- "No Postcard", "Civic Duty", "Hawthorne", "Self", "Neighbors" --- the model creates four 0/1 dummy variables, giving them names like $treatmentCivic Duty$, $treatmentHawthorne$ and so on. The results for the *first* category, which is "No Postcard" are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied. 
 
-### Exercise 5
-
-Create a model using `brm()` from the **brms** package. Your arguments should be `formula = voted ~ age_z + sex + treatment + voter_class + treatment*voter_class`, `data = ch10_data`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 19`.
-
-```{r courage-5, exercise = TRUE}
-
-```
-
-```{r courage-5-hint-1, eval = FALSE}
-brm(...)
-```
-
-### 
-
-The second type of formal notation, more associated with the virtue Courage, includes the actual variable names we are using. The trickiest part is the transformation of character/factor variables into indicator variables, meaning variables with 0/1 values. Because `treatment` has 5 levels, we need 4 indicator variables. The fifth level is incorporated in the intercept.
+It is convenient for the control condition to be included in the intercept.
 
 ### Exercise 6
 
-Behind the scenes, we have assigned the result of the `brm()` call to an object named `fit_postcard_vote`. Type `fit_postcard_vote` and hit "Run Code". This generates the same results as using `print(fit_postcard_vote)`.
+Because our outcome variable is binary, start to create the model by using `logistic_reg(engine = "glm")`.
 
 ```{r courage-6, exercise = TRUE}
 
 ```
 
 ```{r courage-6-hint-1, eval = FALSE}
-fit_postcard_vote
+logistic_reg(engine = "glm")
 ```
 
 ```{r courage-6-test, include = FALSE}
-fit_postcard_vote
+logistic_reg(engine = "glm")
 ```
 
 ### 
 
-The intercept of `fit_postcard_vote` is the expected probability of voting in the upcoming election for a woman of average age (\~ 50 years old in this data), who is assigned to the No Postcard group, and is a Rarely Voter. The estimate is 15.3%.
+In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
 
 ### Exercise 7
 
-Run `family()` on `fit_postcard_vote`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable.
+<!-- DK: Does it mess up marginaleffects to as.factor on the fly like this? Should this be done in a recipe step instead? Perhaps this is a could occasion to introduce recipes? -->
+
+Continue the pipe to `fit(as.factor(primary_06) ~ age_z + sex + treatment + voter_class + treatment*voter_class, data = x)`. The "glm" engine requires that the outcome variable be a factor, so we need to transform `primary_06` during the fitting process.
+
 
 ```{r courage-7, exercise = TRUE}
 
 ```
 
 ```{r courage-7-hint-1, eval = FALSE}
-family(...)
+logistic_reg(engine = "glm") |> 
+  fit(as.factor(primary_06) ~ age + sex + treatment + 
+        voter_class + treatment*voter_class, 
+      data = x)
 ```
 
 ```{r courage-7-test, include = FALSE}
-family(fit_postcard_vote)
+logistic_reg(engine = "glm") |> 
+  fit(as.factor(primary_06) ~ age + sex + treatment + 
+        voter_class + treatment*voter_class, 
+      data = x)
 ```
 
 ### 
 
-In this case, the family is gaussian, which means the distribution of the output variable is continuous. The family is determined by the `family` argument which you passed in to the `brm()` call.
+We can translate the fitted model into mathematics, including the best estimates of all the unknown parameters:
+
+```{r}
+extract_eq(fit_vote$fit, 
+           intercept = "beta", 
+           use_coefs = TRUE,
+           wrap = TRUE)
+```
+
+$$
+\begin{aligned}
+\log\left[ \frac { \widehat{P( \operatorname{primary\_06} = \operatorname{1} )} }{ 1 - \widehat{P( \operatorname{primary\_06} = \operatorname{1} )} } \right] &= -2.43 + 0.01(\operatorname{age}) + 0.04(\operatorname{sex}_{\operatorname{Male}}) + 0.09(\operatorname{treatment}_{\operatorname{Civic\ Duty}})\ + \\
+&\quad 0.07(\operatorname{treatment}_{\operatorname{Hawthorne}}) + 0.2(\operatorname{treatment}_{\operatorname{Self}}) + 0.36(\operatorname{treatment}_{\operatorname{Neighbors}}) + 0.82(\operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}})\ + \\
+&\quad 1.61(\operatorname{voter\_class}_{\operatorname{Always\ Vote}}) + 0.03(\operatorname{treatment}_{\operatorname{Civic\ Duty}} \times \operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}}) + 0.06(\operatorname{treatment}_{\operatorname{Hawthorne}} \times \operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}}) + 0.05(\operatorname{treatment}_{\operatorname{Self}} \times \operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}})\ + \\
+&\quad 0.04(\operatorname{treatment}_{\operatorname{Neighbors}} \times \operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}}) - 0.05(\operatorname{treatment}_{\operatorname{Civic\ Duty}} \times \operatorname{voter\_class}_{\operatorname{Always\ Vote}}) + 0.06(\operatorname{treatment}_{\operatorname{Hawthorne}} \times \operatorname{voter\_class}_{\operatorname{Always\ Vote}}) - 0.01(\operatorname{treatment}_{\operatorname{Self}} \times \operatorname{voter\_class}_{\operatorname{Always\ Vote}})\ + \\
+&\quad 0.01(\operatorname{treatment}_{\operatorname{Neighbors}} \times \operatorname{voter\_class}_{\operatorname{Always\ Vote}})
+\end{aligned}
+$$
+
 
 ### Exercise 8
 
-Run `formula()` on `fit_postcard_vote`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s).
+Behind the scenes of this tutorial, an object called `fit_vote` has been created which is the result of the code above. Type `fit_vote` and hit "Run Code." This generates the same results as using `print(fit_vote)`.
+
 
 ```{r courage-8, exercise = TRUE}
 
 ```
 
 ```{r courage-8-hint-1, eval = FALSE}
-formula(...)
+fit_vote
 ```
 
 ```{r courage-8-test, include = FALSE}
-formula(fit_postcard_vote)
+fit_vote
 ```
 
 ### 
 
-In this case, the formula is `voted ~ age_z + sex + treatment + voter_class + treatment * voter_class`. The formula is determined by the `formula` argument which you passed in to the `brm()` call.
+The *code formula* includes `sex`, a character variable with two possible values: `"Male"` and `"Female"`.
+
+The *math formula* includes `sexMale`, a 0/1 dummy variable.
 
 ### Exercise 9
 
-Run `nobs()` on `fit_postcard_vote`. The `nobs()` function returns the **n**umber of **obs**ervations.
+Create a new code chunk in `causal_effect.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_XX`. 
 
-```{r courage-9, exercise = TRUE}
+`Command/Ctrl + Shift + K`. It may take some time to render `causal_effect.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `causal_effect.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
+
+To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
+
+At the Console, run:
 
 ```
-
-```{r courage-9-hint-1, eval = FALSE}
-nobs(...)
+tutorial.helpers::show_file("causal_effect.qmd", start = -8)
 ```
 
-```{r courage-9-test, include = FALSE}
-nobs(fit_postcard_vote)
+CP/CR.
+
+```{r courage-9}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 8)
 ```
 
 ### 
 
-In this case, the number of observations is 34,408. 
-
 ### Exercise 10
 
-Add mathematical formula for your model, using $\LaTeX$ math notation to `causal_effect.qmd`.
+Create another code chunk in `XX.qmd`. Add the chunk option: `label: math`. In that code chunk, add something like the below. You may find it useful to add the `coef_digits` argument to show fewer significant digits after the decimal.
 
-```         
-$$y_{i} = \beta_{0} + \beta_{1} age\_z + \beta_{2}male_i + \beta_{3}civic\_duty_i + \\ \beta_{4}hawthorne_i + \beta_{5}self_i + \beta_{6}neighbors_i + \\ \beta_{7}Sometimes\ vote_i + \beta_{8}Always\ vote_i + \\ \beta_{9}civic\_duty_i Sometimes\ vote_i + \beta_{10}hawthorne_i Sometimes\ vote_i + \\ \beta_{11}self_i Sometimes\ vote_i + \beta_{11}neighbors_i Sometimes\ vote_i + \\ \beta_{12}civic\_duty_i Always\ vote_i + \beta_{13}hawthorne_i Always\ vote_i + \\ \beta_{14}self_i Always\ vote_i + \beta_{15}neighbors_i Always\ vote_i + \epsilon_{i}$$
+```
+extract_eq(fit_vote$fit, 
+           intercept = "beta", 
+           use_coefs = TRUE,
+           wrap = TRUE)
 ```
 
-`Command/Ctrl + Shift + K`. Ensure that the formula looks correct.
+`Command/Ctrl + Shift + K`. 
 
 At the Console, run:
 
-```         
-tutorial.helpers::show_file("causal_effect.qmd", start = -8)
+```
+tutorial.helpers::show_file("XX.qmd", pattern = "extract")
 ```
 
 CP/CR.
@@ -1365,144 +1229,34 @@ question_text(NULL,
 	rows = 3)
 ```
 
-### Exercise 11
+### 
 
-Create a new code chunk in `causal_effect.qmd`. Add two code chunk options: `#| label: model` and `#|  cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assigning the result to `fit_postcard_vote`.
+When you render your document, this formula will appear.
 
-`Command/Ctrl + Shift + K`. It may take some time to render `causal_effect.qmd`, depending on how complex your model is. But, by including `#| cache: true` you cause Quarto to cache the results of the chunk. The next time you render `causal_effect.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
-
-To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
-
-At the Console, run:
-
-```         
-tutorial.helpers::show_file("causal_effect.qmd", start = -8)
+```{r}
+extract_eq(fit_vote$fit, 
+           intercept = "beta", 
+           use_coefs = TRUE,
+           wrap = TRUE)
 ```
 
-CP/CR.
+This is our Data Generating Mechanism.
+
+### Exercise 11
+
+Add two sentence to your project summary. 
+
+First, mention a weakness in your model, derived from the questions above about the key assumptions of a data science problem.
+
+Second, explain the structure of the model. Something like: "I/we model Y [the concept of the outcome, not the variable name] as a [linear/logistic/multinomial/oridinal] function of X [and maybe other covariates]."
+
+Recall the beginning of our version of the summary:
+
+> Efforts to get your supporters to vote have always been a part of US political campaigns. Using the data from a 2006 experiment in Michigan, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026.
 
 ```{r courage-11}
 question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### 
-
-The coefficient of `age_z`, 0.035, implies a change of ~3.5% in likelihood of voting for each increment of one standard deviation (~ 14.45 years). For example: when comparing someone 50 years old with someone 65, the latter is about 3.5% more likely to vote.
-
-### Exercise 12
-
-Run `posterior_interval()` on `fit_postcard_vote`. 
-
-```{r courage-12, exercise = TRUE}
-
-```
-
-```{r courage-12-hint-1, eval = FALSE}
-posterior_interval(...)
-```
-
-```{r courage-12-test, include = FALSE}
-posterior_interval(fit_postcard_vote)
-```
-
-### 
-
-The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
-
-### Exercise 13
-
-Run `fixef()` on `fit_postcard_vote`. 
-
-```{r courage-13, exercise = TRUE}
-
-```
-
-```{r courage-13-hint-1, eval = FALSE}
-fixef(...)
-```
-
-```{r courage-13-test, include = FALSE}
-fixef(fit_postcard_vote)
-```
-
-### 
-
-The `fixef()` returns information about the **fix**ed **ef**fects in the model.
-
-### Exercise 14
-
-Run `pp_check()` on `fit_postcard_vote`. 
-
-```{r courage-14, exercise = TRUE}
-
-```
-
-```{r courage-14-hint-1, eval = FALSE}
-pp_check(...)
-```
-
-```{r courage-14-test, include = FALSE}
-pp_check(fit_postcard_vote)
-```
-
-### 
-
-The `pp_check()` runs a **p**osterior **p**redictive check.
-
-### Exercise 15
-
-Use `library()` to load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary) package.
-
-```{r courage-15, exercise = TRUE}
-
-```
-
-```{r courage-15-hint-1, eval = FALSE}
-library(...)
-```
-
-```{r courage-15-test, include = FALSE}
-library(gtsummary)
-```
-
-### 
-
-Exposure to the Neighbors treatment shows a ~4.4% increase in voting likelihood for someone in the Rarely Vote category. Because of random assignment of treatment, we can interpret that coefficient as an estimate of the average treatment effect.
-
-### Exercise 16
-
-Pipe `fit_postcard_vote` to `tbl_regression(intercept = TRUE, estimate_fun = function(x) style_sigfig(x, digits = 3))`.
-
-```{r courage-16, exercise = TRUE}
-
-```
-
-```{r courage-16-hint-1, eval = FALSE}
-fit_postcard_vote |> 
-  tbl_regression(...)
-```
-
-```{r courage-16-test, include = FALSE}
-fit_postcard_vote |> 
-  tbl_regression(intercept = TRUE, estimate_fun = function(x) style_sigfig(x, digits = 3))
-```
-
-### 
-
-If someone were from a different voter classification, the calculation is more complex because we need to account for the interaction term. For example, for individuals who Sometimes Vote, the treatment effect of Neighbors is 8.6%. For Always Vote Neighbors, it is 9%.
-
-### Exercise 17
-
-Write a few sentences which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using, specifying the functional form and the dependent variable. Add one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
-
-```{r courage-17}
-question_text(NULL,
-	message = "Using the data from an experiment to find out whether and to what extent people are motivated to vote by social pressure, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026. Stability might not be true because the way people view politics has changed from 2006 because of new things such as social media. We modeled `primary_06`, a binary 0/1 integer variable indicating whether the respondent voted in the 2006 primary election, and the type of postcard they recieved. People who have been voting in the past are more likely to vote again.",
+	message = "The rise of social media use may have changed the efficacy of postcards in changing individual behavior. We model voting as a logistic function of treatment --- meaning type of postcard received, if any --- along with prior voting behavior, sex and age.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1511,28 +1265,8 @@ question_text(NULL,
 
 ### 
 
-Edit the summary paragraph in `causal_effect.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`, and then commit/push.
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to `causal_effects.qmd`, `Command/Ctrl + Shift + K`, and then commit/push.
 
-### Exercise 18
-
-Update `causal_effect.qmd`. First, add `library(gtsummary)` to the `setup` code chunk. Second, add a new code chunk which creates the table of model parameters. `Command/Ctrl + Shift + K` to ensure that everything works.
-
-At the Console, run:
-
-```         
-tutorial.helpers::show_file("causal_effect.qmd", start = -8)
-```
-
-CP/CR.
-
-```{r courage-18}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
 
 ## Temperance
 ### 
@@ -1545,7 +1279,7 @@ In your own words, describe the use of Temperance in data science.
 
 ```{r temperance-1}
 question_text(NULL,
-	message = "Temperance uses the Data Generating Mechanism to answer the question with which we began. Humility reminds us that this answer is always a lie.",
+	message = "Temperance uses the Data Generating Mechanism to answer the questions with which we began. Humility reminds us that this answer is always a lie. We can also use the DGM to calculate many similar quantities of interest, displaying the results graphically.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1558,11 +1292,31 @@ Temperance guides us in the use of the DGM — or the “model” — we have cr
 
 ### Exercise 2
 
+Load the [**marginaleffects**](https://marginaleffects.com/) package.
+
+```{r temperance-2, exercise = TRUE}
+
+```
+
+```{r temperance-2-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r temperance-2-test, include = FALSE}
+library(marginaleffects)
+```
+
+### 
+
+We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
+
+### Exercise 3
+
 What is the general topic we are investigating? What is the specific question we are trying to answer?
 
-```{r temperance-2}
+```{r temperance-3}
 question_text(NULL,
-	message = "What is the causal effect, on the likelihood of voting, of different postcards on voters of different levels of political engagement?",
+	message = "What is the causal effect, on the probability of voting, of different postcards on voters of different levels of political engagement?",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1573,434 +1327,50 @@ question_text(NULL,
 
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic broadly.
 
-### Exercise 3
-
-To answer our question, we need to create a `newdata` object. Which variables do we need to include in this object?
-
-```{r temperance-3}
-question_text(NULL,
-	message = "The `sex`, `age_z`, `treatment`, and `voter_class` variables will be important to include.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-We will create a plot that displays the posterior probability distributions of the average treatment effects for men of average age across all combinations of 4 treatments and 3 voter classifications. This means that we are making a total of 12 inferences.
-
 ### Exercise 4
 
-Which values do you want the variables in your `newdata` object to have? This is not easy!
+Enter this code into the exercise code block and hit "Run Code."
 
-```{r temperance-4}
-question_text(NULL,
-	message = "`sex` will be male; `age_z` will be 0; `treatment` will be No Postcard, Civic Duty, Hawthorne, Self, and Neighbors; and `voter_class` will be Always Vote, Sometimes Vote, and Rarely Vote.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
+```
+plot_comparisons(fit_vote$fit,
+                 variables = "treatment",
+                 by = "voter_class",
+                 newdata = "balanced",
+                 type = "response")
+```                 
+
+```{r temperance-4, exercise = TRUE}
+
+```
+
+```{r temperance-4-test, include = FALSE}
+plot_comparisons(fit_vote$fit,
+                 variables = "treatment",
+                 by = "voter_class",
+                 newdata = "balanced",
+                 type = "response")
 ```
 
 ### 
 
-We could look at lots of ages and both Male and Female subjects. However, that would not change our estimates of the treatment effects, as in the model the effect of sex and the other effects do not affect each other. 
+We are interested in the average treatment effect of postcards. There are 4 different postcards, each of which can be compared to what would have happened if the voter did not receive any postcard.
 
 ### Exercise 5
 
-Here is the R code which creates the `newdata` object. Hit "Run Code".
-
-```{r temperance-5, exercise = TRUE}
-sex <- "Male"
-age_z <- 0
-treatment <- c("No Postcard",
-               "Civic Duty",
-               "Hawthorne",
-               "Self",
-               "Neighbors")
-voter_class <- c("Always Vote",
-                 "Sometimes Vote",
-                 "Rarely Vote")
-
-newdata <- expand_grid(sex, age_z, treatment, voter_class) |>
-  mutate(names = paste(treatment, voter_class, sep = "_"))
-
-newdata
-```
-
-```{r temperance-5-test, include = FALSE}
-sex <- "Male"
-age_z <- 0
-treatment <- c("No Postcard",
-               "Civic Duty",
-               "Hawthorne",
-               "Self",
-               "Neighbors")
-voter_class <- c("Always Vote",
-                 "Sometimes Vote",
-                 "Rarely Vote")
-
-newdata <- expand_grid(sex, age_z, treatment, voter_class) |>
-  mutate(names = paste(treatment, voter_class, sep = "_"))
-
-newdata
-```
-
-### 
-
-The model is linear, so terms associated with `age_z` and `sex` disappear when we do the subtraction. This is one of the great advantages of linear models.
-
-### Exercise 6
-
-Behind the scenes, we have created the `ndata` object using this code. To confirm, type `ndata` and hit "Run Code".
-
-```{r temperance-6, exercise = TRUE}
-
-```
-
-```{r temperance-6-hint-1, eval = FALSE}
-ndata
-```
-
-```{r temperance-6-test, include = FALSE}
-ndata
-```
-
-### 
-
-This should return the same thing as the previous exercise. 
-
-### Exercise 7
-
-Now that we have the `newdata` object, we can create a pipe which uses out fitted model to answer our question. Begin by typing `fit_postcard_vote` and clicking "Run Code".
-
-```{r temperance-7, exercise = TRUE}
-
-```
-
-```{r temperance-7-hint-1, eval = FALSE}
-fit_postcard_vote
-```
-
-```{r temperance-7-test, include = FALSE}
-fit_postcard_vote
-```
-
-### 
-
-We use `add_epred_draws()` for expected values: we are not interested in any specific individual, the individual value is irrelevant. 
-
-We use `add_predicted_draws()` for predicted values: we care, not about the average, but about this specific person.
-
-Both functions return draws from a posterior probability distribution, but the unknown number which underlies the posterior are very different.
-
-### Exercise 8
-
-Pipe `fit_postcard_vote` to `add_epred_draws()` with the argument `newdata = ndata`.
-
-```{r temperance-8, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-8-hint-1, eval = FALSE}
-... |> add_epred_draws(...)
-```
-
-```{r temperance-8-test, include = FALSE}
-fit_postcard_vote |> add_epred_draws(newdata = ndata)
-```
-
-### 
-
-This data is not in a format which is easy to work with. We want to calculate causal effects, which are the difference between two potential outcomes. This is easiest to do when all potential outcomes are on the same line. 
-
-### Exercise 9
-
-Continue the pipe with `ungroup()` and then `select(names, .epred)`.
-
-```{r temperance-9, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-9-hint-1, eval = FALSE}
-... |> ungroup() |>
-  select(...)
-```
-
-```{r temperance-9-test, include = FALSE}
-fit_postcard_vote |>
-  add_epred_draws(newdata = ndata) |>
-  ungroup() |>
-  select(names, .epred)
-```
-
-### 
-
-The `select()` function only keeps the important variables so we can focus on them. 
-
-### Exercise 10
-
-Continue the pipe with `pivot_wider(names_from = names, values_from = .epred, values_fn = list)` and then `unnest(cols = everything())`. Pipe `janitor::clean_names()` after the `unnest()` function.
-
-```{r temperance-10, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-10-hint-1, eval = FALSE}
-... |>  
-  pivot_wider(...) |>
-  unnest(...) |> 
-  janitor::clean_names()
-```
-
-```{r temperance-10-test, include = FALSE}
-fit_postcard_vote |>
-  add_epred_draws(newdata = ndata) |>
-  ungroup() |>
-  select(names, .epred) |>  
-  pivot_wider(names_from = names, 
-              values_from = .epred, 
-              values_fn = list) |>
-  unnest(cols = everything()) |> 
-  janitor::clean_names()
-```
-
-### 
-
-Each column has rows representing draws from the posterior probability distribution of average voting likelihood for a person with that level of civic engagement and subject to that treatment. So, `no_postcard_always_vote` is the posterior for the average (or predicted) likelihood of voting for someone who did not receive a postcard, i.e., they were a control, and who “always votes”.
-
-### Exercise 11
-
-Continue the pipe with the following code:
-
-```
-mutate(`Always Civic-Duty`    = civic_duty_always_vote     - no_postcard_always_vote,
-         `Always Hawthorne`     = hawthorne_always_vote      - no_postcard_always_vote,
-         `Always Self`          = self_always_vote           - no_postcard_always_vote,
-         `Always Neighbors`     = neighbors_always_vote      - no_postcard_always_vote,
-         `Sometimes Civic-Duty` = civic_duty_sometimes_vote  - no_postcard_sometimes_vote,
-         `Sometimes Hawthorne`  = hawthorne_sometimes_vote   - no_postcard_sometimes_vote,
-         `Sometimes Self`       = self_sometimes_vote        - no_postcard_sometimes_vote,
-         `Sometimes Neighbors`  = neighbors_sometimes_vote   - no_postcard_sometimes_vote,
-         `Rarely Civic-Duty`    = civic_duty_rarely_vote     - no_postcard_rarely_vote,
-         `Rarely Hawthorne`     = hawthorne_rarely_vote      - no_postcard_rarely_vote,
-         `Rarely Self`          = self_rarely_vote           - no_postcard_rarely_vote,
-         `Rarely Neighbors`     = neighbors_rarely_vote      - no_postcard_rarely_vote) 
-```
-
-```{r temperance-11, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-11-hint-1, eval = FALSE}
-... |>  
-  mutate(...)
-```
-
-```{r temperance-11-test, include = FALSE}
-fit_postcard_vote |>
-  add_epred_draws(newdata = ndata) |>
-  ungroup() |>
-  select(names, .epred) |>  
-  pivot_wider(names_from = names, 
-              values_from = .epred, 
-              values_fn = list) |>
-  unnest(cols = everything()) |> 
-  janitor::clean_names() |>
-  mutate(`Always Civic-Duty`    = civic_duty_always_vote     - no_postcard_always_vote,
-         `Always Hawthorne`     = hawthorne_always_vote      - no_postcard_always_vote,
-         `Always Self`          = self_always_vote           - no_postcard_always_vote,
-         `Always Neighbors`     = neighbors_always_vote      - no_postcard_always_vote,
-         `Sometimes Civic-Duty` = civic_duty_sometimes_vote  - no_postcard_sometimes_vote,
-         `Sometimes Hawthorne`  = hawthorne_sometimes_vote   - no_postcard_sometimes_vote,
-         `Sometimes Self`       = self_sometimes_vote        - no_postcard_sometimes_vote,
-         `Sometimes Neighbors`  = neighbors_sometimes_vote   - no_postcard_sometimes_vote,
-         `Rarely Civic-Duty`    = civic_duty_rarely_vote     - no_postcard_rarely_vote,
-         `Rarely Hawthorne`     = hawthorne_rarely_vote      - no_postcard_rarely_vote,
-         `Rarely Self`          = self_rarely_vote           - no_postcard_rarely_vote,
-         `Rarely Neighbors`     = neighbors_rarely_vote      - no_postcard_rarely_vote)
-```
-
-### 
-
-Recall that, when calculating a treatment effect, we need to subtract the estimate for each category from the control group for that category. For example, if we wanted to find the treatment effect for the `neighbors_always_vote` group, we would need: `neighbors_always_vote` minus `no_postcard_always_vote`.
-
-### Exercise 12
-
-Finish the pipe with the following code:
-
-```
-pivot_longer(names_to = c("Voter Class", "Group"),
-               names_sep = " ",
-               values_to = "values",
-               cols = `Always Civic-Duty`:`Rarely Neighbors`) |>
-               mutate(`Voter Class` = fct_relevel(factor(`Voter Class`),
-                                     c("Rarely",
-                                       "Sometimes",
-                                       "Always")))
-```
-
-```{r temperance-12, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-12-hint-1, eval = FALSE}
-... |>  
-  pivot_longer(...) |>
-  mutate()
-```
-
-### 
-
-We used `mutate()` twelve times, for each of the treatments and voting frequencies. After, we used `pivot_longer()` in order for the treatment effects to be sensibly categorized for plotting.
-
-### Exercise 13
-
-Behind the scenes in this tutorial, we have created an object called `plot_data` with the previous code.
-
-Start with `plot_data` and pipe to `ggplot()`, with `x` set to `values` and `y` set to `fct_reorder(Group, values)` inside `aes()`.
-
-```{r temperance-13, exercise = TRUE}
-
-```
-
-```{r temperance-13-hint-1, eval = FALSE}
-plot_data |> ggplot(...)
-```
-
-```{r temperance-13-test, include = FALSE}
-plot_data |> ggplot(aes(x = values, y = fct_reorder(Group, values)))
-```
-
-### 
-
-Reordering the y axis values allows a smoother visual interpretation.
-
-### Exercise 14
-
-Continue by adding `stat_slab()` with `fill` set to `` `Voter Class` `` inside `aes()`. Set `position` to `"dodge"` inside `stat_slab()`.
-
-```{r temperance-14, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-14-hint-1, eval = FALSE}
-... +
-  stat_slab(aes(... = `Voter Class`), ... = 'dodge')
-```
-
-```{r temperance-14-test, include = FALSE}
-plot_data |> ggplot(aes(x = values, y = fct_reorder(Group, values))) +
-  stat_slab(aes(fill = `Voter Class`),
-              position = 'dodge') 
-```
-
-### 
-
-`position = "dodge"` is the only sure way to see all 3 treatment distributions in the graph.
-
-### Exercise 15
-
-<!-- AC: The scale now looks a bit too bunched up? Maybe changing it from 0.01 to 0.02 is better?  -->
-
-Continue by adding `scale_x_continuous()` with `labels` set to `scales::percent_format(accuracy = 1)` and `breaks` set to `seq(-0.05, 0.11, 0.01)`.
-
-```{r temperance-15, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-15-hint-1, eval = FALSE}
-... +
-  scale_x_continuous(...) 
-```
-
-```{r temperance-15-test, include = FALSE}
-plot_data |> ggplot(aes(x = values, y = fct_reorder(Group, values))) +
-  stat_slab(aes(fill = `Voter Class`),
-              position = 'dodge') +
-  scale_x_continuous(labels = scales::percent_format(accuracy = 1),
-                       breaks = seq(-0.05, 0.11, 0.01))
-```
-
-### 
-
-More frequent breaks on the x-axis provides a better reader interpretation of the the shift across age groups, as opposed to intervals of 10%.
-
-### Exercise 16
-
-Finish the graph with `labs()`. Include `title`, `subtitle`, `x`, `y`, and `caption`.
-
-```{r temperance-16, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-16-hint-1, eval = FALSE}
-... +
-  labs(...) 
-```
-
-```{r temperance-16-test, include = FALSE}
-plot_data |> ggplot(aes(x = values, y = fct_reorder(Group, values))) +
-  stat_slab(aes(fill = `Voter Class`),
-              position = 'dodge') +
-  scale_x_continuous(labels = scales::percent_format(accuracy = 1),
-                       breaks = seq(-0.05, 0.11, 0.01)) +
-   labs(title = "Treatment Effects on the Probability of Voting",
-         subtitle = "Postcards work less well on those who rarely vote",
-         y = "Postcard Type",
-         x = "Average Treatment Effect",
-         caption = "Source: Gerber, Green, and Larimer (2008)")
-```
-
-The graph should look like this:
-
-```{r}
-#| echo: false
-
-plot_data |> ggplot(aes(x = values, y = fct_reorder(Group, values))) +
-  stat_slab(aes(fill = `Voter Class`),
-              position = 'dodge') +
-  scale_x_continuous(labels = scales::percent_format(accuracy = 1),
-                       breaks = seq(-0.05, 0.11, 0.01)) +
-   labs(title = "Treatment Effects on the Probability of Voting",
-         subtitle = "Postcards work less well on those who rarely vote",
-         y = "Postcard Type",
-         x = "Average Treatment Effect",
-         caption = "Source: Gerber, Green, and Larimer (2008)")
-```
-
-### Exercise 17
-
-Create a new code chunk in `causal_effect.qmd`. Label it with `label: plot`. Copy/paste the code which creates your graphic. Make sure to also add the code that creates the `plot_data` object.
+Add `library(marginaleffects)` to the `XX.qmd` setup code chunk. Create a new code chunk. Label it with `label: plot`. Copy/paste the code which creates your graphic. 
 
 `Command/Ctrl + Shift + K` to ensure that it all works as intended.
 
 At the Console, run:
 
-```         
-tutorial.helpers::show_file("causal_effect.qmd", start = -8)
+```
+tutorial.helpers::show_file("causal_effect.qmd", pattern = "marginaleffects")
 ```
 
 CP/CR.
 
-```{r temperance-17}
+
+```{r temperance-5}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -2011,19 +1381,21 @@ question_text(NULL,
 
 ### 
 
-We are interested in the average treatment effect of postcards. There are 4 different postcards, each of which can be compared to what would have happened if the voter did not receive any postcard.
-
 These four treatment effects, however, are heterogeneous. They vary depending on an individual’s voting history, which we organize into three categories: Rarely Vote, Sometimes Vote and Always Vote. So, we have 12 different average treatment effects, one for each possible combination of postcard and voting history.
 
-For each of these combinations, the graphic shows our posterior distribution.
 
-### Exercise 18
+### Exercise 6
 
-Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question --- and which provides a measure of uncertainty about that QoI.
+Add the final one to two sentences to your project summary. This sentence must provide an estimate for at least one Quantity of Interest and its associated confidence interval. Your Quanity of Interest can be different than the one you started with.
 
-```{r temperance-18}
+Recall our current version of the summary. (It is OK if your version is different.)
+
+> Efforts to get your supporters to vote have always been a part of US political campaigns. Using the data from a 2006 experiment in Michigan, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026. The rise of social media use may have changed the efficacy of postcards in changing individual behavior. We model voting as a logistic function of treatment --- meaning type of postcard received, if any --- along with prior voting behavior, sex and age.
+
+
+```{r temperance-6}
 question_text(NULL,
-	message = "Using the data from an experiment to find out whether and to what extent people are motivated to vote by social pressure, we found the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026. Stability might not be true because the way people view politics has changed from 2006 because of new things such as social media. We modeled `primary_06`, a binary 0/1 integer variable indicating whether the respondent voted in the 2006 primary election, and the type of postcard they recieved. People who have been voting in the past are more likely to vote again. If we had a limited number of postcards, we would send the Neighbors postcard to citizens who already demonstrate a tendency to vote. This is our best guess. It is an informed estimate based on the most relevant data possible. From that data, we have created a 95% confidence interval for the treatment effect of various postcards: between 8% to 10%.",
+	message = "The causal effect of receiving a postcard varies based both on its message and the level of political engagement of the person receiving it. ",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -2032,13 +1404,13 @@ question_text(NULL,
 
 ### 
 
-Edit the summary paragraph in `causal_effect.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
+Edit your summary paragraph in `causal_effect.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
-### Exercise 19
+### Exercise 7
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-19}
+```{r temperance-7}
 question_text(NULL,
 	message = "Perhaps our data did not match the future as well as we had hoped. We estimate that the treatment effect of the Neighbors postcard to be between 8% to 10%, but the reality might not be in this interval.",
 	answer(NULL, correct = TRUE),
@@ -2053,7 +1425,7 @@ question_text(NULL,
 
 Ultimately, we try to account for our uncertainty in our estimates. Even with this safeguard, we aren’t surprised if we are a bit off.
 
-### Exercise 20
+### Exercise 8
 
 Rearrange the material in `causal_effect.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
@@ -2065,22 +1437,25 @@ tutorial.helpers::show_file("causal_effect.qmd")
 
 CP/CR.
 
-```{r temperance-20}
+```{r temperance-8}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 3)
+	rows = 20)
 ```
 
 ### 
 
-### Exercise 21
+This is the version of your QMD file which your teacher is most likely to take a close look at.
+
+
+### Exercise 9
 
 Publish `causal_effect.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
 
-```{r temperance-21}
+```{r temperance-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -2090,6 +1465,9 @@ question_text(NULL,
 ```
 
 ### 
+
+Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
+
 
 ## Summary
 ### 
