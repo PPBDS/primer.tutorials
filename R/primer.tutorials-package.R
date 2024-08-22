@@ -14,11 +14,6 @@ function_for_import  <- function()
 
 }
 
-# Putting these libraries here makes an annoying renv message go away. Once we
-# get rid of gtsummary everywhere, I think I can delete these.
-
-library(broom.helpers)
-library(labelled)
 
 ## usethis namespace: start
 ## usethis namespace: end
