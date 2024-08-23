@@ -34,39 +34,18 @@ fit_arrested <- linear_reg() |>
     set_engine("lm") |>
     fit(arrested ~ zone, data = stops)
 
-# Creates new df with 4 entries for race
+# Creates new df with 4 entries for race & converts sex and race to be capitalized
 
-stops_new <- stops |>
-  filter(race %in% c("black", "white"))
+x <- stops |>
+  filter(race %in% c("black", "white")) |>
+  mutate(race = str_to_title(race), 
+         sex = str_to_title(sex))
 
 # Store the model from Courage
 
 fit_stops <- linear_reg() |>
     set_engine("lm") |>
-    fit(arrested ~ sex + race*zone, data = stops_new)
-
-# Store the `ndata` object for Temperance
-
-ndata <- expand_grid(race = unique(stops_new$race),
-                     sex = unique(stops_new$sex),
-                     zone = unique(stops_new$zone))
-
-
-# tidy(fit_stops, conf.int = TRUE)
-# 
-# extract_eq(fit_stops$fit, 
-#            intercept = "beta",
-#            wrap = TRUE) # Explore argument like terms_per_line.
-# 
-# extract_eq(fit_stops$fit, 
-#            intercept = "beta",
-#            wrap = TRUE,
-#            use_coefs = TRUE) # Explore argument like terms_per_line.
-# 
-# plot_predictions(fit_stops$fit,
-#                  newdata = "balanced",
-#                  condition = c("zone", "race", "sex"),
-#                  draw = FALSE) 
+    fit(arrested ~ sex + race*zone, data = x)
 
 ```
 
@@ -76,8 +55,7 @@ ndata <- expand_grid(race = unique(stops_new$race),
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
 
-
-<!-- DK: Change stops_new to x. -->
+<!-- DK: Change stops_new to x. - DONE -->
 
 
 ## Introduction
@@ -475,7 +453,7 @@ question_text(NULL,
 
 ```{r}
 plot_predictions(fit_arrested,
-                      newdata = expand_grid(zone = unique(stops_new$zone)),
+                      newdata = expand_grid(zone = unique(x$zone)),
                       condition = c("zone")) +
   coord_flip() +
   scale_x_reordered() +
@@ -731,9 +709,7 @@ By using `$` to specify a specific variable, `table()` shows the different uniqu
 
 ### Exercise 19
 
-For our model, we want to remove the entries for `other` and `unknown` (due to their low number of observations, and the fact that they don't provide any useful data) while still retaining everything else in the dataset.
-
-We can do this in 2 ways: we can either remove those entries, or we can select the entries to retain. For this tutorial, we will be doing the former.
+For our model, let's just focus on the entries for `black` and `white` (due to the low number of observations for all other races).
 
 To do this, start by piping `stops` to `filter()`. Then, inside `filter()`, use the argument `race %in% c("black", "white")`.
 
@@ -751,23 +727,50 @@ stops |>
 filter(race %in% c("black", "white"))
 ```
 
+### Exercise 20
+
+Additionally, it's important that we have the values for `race` and `sex` be capitalized. This is much easier when done initially in our modified data.
+
+Continue the pipe to `mutate()`, in which you should set `race` to `str_to_title(race)` and `sex` to `str_to_title(sex)`.
+
+```{r wisdom-20, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r wisdom-20-hint-1, eval = FALSE}
+... |>
+  mutate(... = str_to_title(...), 
+         ... = str_to_title(...))
+```
+
+```{r wisdom-20-test, include = FALSE}
+stops |>
+  filter(race %in% c("black", "white")) |>
+  mutate(race = str_to_title(race), 
+         sex = str_to_title(sex))
+```
+
 ### 
 
-To instead select races, we could have removed the `!` in the argument and used the variables that we wanted to keep.
+Note that in this step, we are converting the strings to titles, so that they remain capitalized throughout our graph. This is important as later, we will have to capitalize `"Black"` to match what we did in this step.
 
 
-### Exercise 20
+### Exercise 21
 
 We have saved this pipeline to the following object:
 
 ```
-stops_new <- stops |>
-  filter(!race %in% c("other", "unknown"))
+x <- stops |>
+  filter(race %in% c("black", "white")) |>
+  mutate(race = str_to_title(race), 
+         sex = str_to_title(sex))
 ```
 
-Create a new code chunk in `stops.qmd`. Add `#| label: eda`. Copy/Paste the code for the `stops_new` object. Render and run `tutorial.helpers::show_file("stops.qmd", chunk = "last")`. CP/CR.
+Create a new code chunk in `stops.qmd`. Add `#| label: eda`. Copy/Paste the code for the `x` object. Render and run `tutorial.helpers::show_file("stops.qmd", chunk = "last")`. CP/CR.
 
-```{r wisdom-20}
+```{r wisdom-21}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -781,11 +784,11 @@ question_text(NULL,
 We will use this cleaned up data in Courage when we make our model.
 
 
-### Exercise 21
+### Exercise 22
 
 In your own words, define "validity" as we use the term.
 
-```{r wisdom-21}
+```{r wisdom-22}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -798,11 +801,11 @@ question_text(NULL,
 
 Validity is always about the *columns* in the Preceptor Table and the data. Just because columns from these two different tables have the same *name* does not mean that they are the same *thing*.
 
-### Exercise 22
+### Exercise 23
 
 Provide one reason why the assumption of validity might not hold for the outcome variable: `arrested`. Use the words "column" or "columns" in your answer.
 
-```{r wisdom-22}
+```{r wisdom-23}
 question_text(NULL,
 	message = "Although we know that an arrest in our dataset means an actual arrest, we don't know if that's the case with the Preceptor Table. What if arrests in the Preceptor Table also include detainments, which aren't full arrests? in this case, we would see a lot of entries for arrests in our `arrested` column in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -811,11 +814,11 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 23
+### Exercise 24
 
 Provide one reason why the assumption of validity might not hold for the covariate `zone`.
 
-```{r wisdom-23}
+```{r wisdom-24}
 question_text(NULL,
 	message = "An instance where validity would not hold would be if the `zone` column is referring to different zones in both data sources. It could be that the zones are renamed in one, or that one is referring to completely different zones entirely.",
 	answer(NULL, correct = TRUE),
@@ -824,13 +827,12 @@ question_text(NULL,
 	rows = 6)
 ```
 
-
-### Exercise 24
+### Exercise 25
 
 Summarize the state of your work so far in one sentence. Make reference to the data you have and to the specific question you are trying to answer. 
 
 
-```{r wisdom-24}
+```{r wisdom-25}
 question_text(NULL,
 	message = "Using data from a study of New Orleans drivers, we seek to understand the relationship between driver race and the probabilty of getting arrested during a traffic stop.In particular, what is the probability of a Black motorist getting arrested during a traffic stop, and how does this compare to that of a White motorist?",
 	answer(NULL, correct = TRUE),
@@ -914,8 +916,6 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 6)
 ```
-
-### 
 
 ### Exercise 5
 
@@ -1148,10 +1148,10 @@ In data science, we deal with words, math, and code, but the most important of t
 We will be using the following formula:
 
 ```
-arrested ~ sex + race + age + zone
+arrested ~ sex + race*zone
 ```
 
-Continue the pipe to `fit()`, pasting in the formula, and then adding the argument `data = stops_new`.
+Continue the pipe to `fit()`, pasting in the formula, and then adding the argument `data = x`.
 
 ```{r courage-7, exercise = TRUE}
 
@@ -1161,25 +1161,34 @@ Continue the pipe to `fit()`, pasting in the formula, and then adding the argume
 
 ```{r courage-7-hint-1, eval = FALSE}
 ... |> 
-  fit(arrested ~ ... + race + ... + zone, data = ...)
+  fit(arrested ~ ... + race*..., data = ...)
 ```
 
 ```{r courage-7-test, include = FALSE}
 linear_reg() |>
   set_engine("lm") |>
-  fit(arrested ~ sex + race + age + zone, data = stops_new)
+  fit(arrested ~ sex + race*zone, data = x)
 ```
 
 ### 
 
 We can translate the fitted model into mathematics, including the best estimates of all the unknown parameters:
 
-```{r}
-extract_eq(fit_stops$fit, 
-           intercept = "beta", 
-           use_coefs = TRUE)
+```
+extract_eq(fit_stops$fit,
+           intercept = "beta",
+           wrap = TRUE,
+           use_coefs = TRUE,
+           terms_per_line = 2)
 ```
 
+```{r}
+extract_eq(fit_stops$fit,
+           intercept = "beta",
+           wrap = TRUE,
+           use_coefs = TRUE,
+           terms_per_line = 2)
+```
 
 ### Exercise 8
 
@@ -1233,9 +1242,11 @@ question_text(NULL,
 Create another code chunk in `stops.qmd`. Add the chunk option: `label: math`. In that code chunk, add something like the following:
 
 ```
-extract_eq(fit_stops$fit, 
-           intercept = "beta", 
-           use_coefs = TRUE)
+extract_eq(fit_stops$fit,
+           intercept = "beta",
+           wrap = TRUE,
+           use_coefs = TRUE,
+           terms_per_line = 2)
 ```
 
 `Command/Ctrl + Shift + K`. 
@@ -1262,9 +1273,11 @@ question_text(NULL,
 When you render your document, this formula will appear.
 
 ```{r}
-extract_eq(fit_stops$fit, 
-           intercept = "beta", 
-           use_coefs = TRUE)
+extract_eq(fit_stops$fit,
+           intercept = "beta",
+           wrap = TRUE,
+           use_coefs = TRUE,
+           terms_per_line = 2)
 ```
 
 This is our data generating mechanism.
@@ -1288,110 +1301,61 @@ tidy(..., conf.int = ...)
 tidy(fit_stops, conf.int = TRUE)
 ```
 
+### Exercise 12
+
+Write a sentence interpreting the ~0.06 estimate for `sexMale`.
+
+```{r courage-12}
+question_text(NULL,
+	message = "When comparing men with women, men have a 0.06 higher value for `arrested`, meaning that they are more likely to get arrested during a traffic stop relative to women, conditional on the other variables in the model.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
 ### 
 
-<!-- FIX - 
-
-XX: Add at least three questions which require the student to interpret the meanings of a parameter estimate and/or its associated confidence interval. These questions also feature good opportunities to knowledge drop about the meaning of intervals (credible versus confidence versus uncertainty) and about Frequentist versus Bayesian interpretations. See https://ppbds.github.io/primer/cardinal-virtues.html#confidencecredibleuncertainty-intervals-->
-
-<!-- XX: The key point is that predictive models involve comparisons *between different rows* in the Preceptor Table while causal models involve subtraction between two potential outcomes *within the same row*. Of course, we are rarely interested in comparing just two rows or in looking at the difference in potential outcomes within just one row. -->
-
-<!-- That is, we don't ask: How does Sam's height differ from John's? We ask about the difference in average height between people from New York (where Sam is from) and people in Boston (which John is from). We don't ask: What is the causal effect for Sarah? We ask: What is the average causal effect for all the people in Florida (where Sarah is from)? -->
-
-<!-- Consider some example questions and answers, along with comments about the larger picture, all based on this display. This is good for linear (meaning the Gaussian family) models. For other models, see the comments below. -->
-
-<!-- ```{r} -->
-<!-- linear_reg() |> -->
-<!--   set_engine("lm") |> -->
-<!--   fit(att_end ~ sex + treatment + age, data = trains) |> -->
-<!--   tidy(conf.int = TRUE) -->
-<!-- ``` -->
+The phrase "conditional on the other variables in the model" is important. It could be shortened to "conditional on the model." This phrase acknowledges that there are many, many possible models, just considering all the different combinations of independent variables we might include. Each one would produce a different coefficient for sexmale. None of these is the *true* coefficient.
 
 
-<!--   term             estimate std.error statistic  p.value conf.low conf.high -->
-<!--   <chr>               <dbl>     <dbl>     <dbl>    <dbl>    <dbl>     <dbl> -->
-<!-- 1 (Intercept)       11.0       0.962     11.4   1.86e-20   9.09     12.9    -->
-<!-- 2 sexMale           -0.829     0.523     -1.59  1.16e- 1  -1.86      0.207  -->
-<!-- 3 treatmentControl  -1.41      0.529     -2.67  8.73e- 3  -2.46     -0.364  -->
-<!-- 4 age               -0.0143    0.0217    -0.660 5.11e- 1  -0.0572    0.0286 -->
+### Exercise 13
 
-<!-- Q: Write a sentence interpreting the -0.83 estimate for sexMale. -->
+Between Zone D and Zone F, in which zone would the average person be more likely to get arrested during a traffic stop? In which zone would the expected average arrest rate be lower than the average of all females in New Orleans?
 
-<!-- A: When comparing men with women, men have a 0.83 lower value for att_end, meaning that they are more liberal about immigration, relative to women, conditional on the other variables in the model. -->
+```{r courage-13}
+question_text(NULL,
+	message = "We expect that the average person be more likely to get arrested at Zone D because of its higher probability than Zone F. Given that our Intercept represents the average arrest rate of all females in New Orleans, we expect that the person would be less likely to get arrested in Zone F than our Intercept because of Zone F's negative estimate.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
 
-<!-- Comment 1: Note how, whenever we consider non-treatment variables, we must never use terms like "cause," "impact" and so on. We can't make any statement which implies the existence of more than one potential outcome based on changes in non-treatment variables. We can't make any claims about within row effects. Instead, we can only compare across rows. Always use the phrase "when comparing X and Y" or something very similar. -->
+### 
 
-<!-- Comment 2: The phrase "conditional on the other variables in the model" is important. It could be shortened to "conditional on the model." This phrase acknowledges that there are many, many possible models, just considering all the different combinations of independent variables we might include. Each one would produce a different coefficient for sexmale. None of these is the *true* coefficient. Any claim we make about  -0.83, or any specific number, is always conditional on the fact that we assume that this model is true, that these covariates, and no others, belong in the regression. Does that mean that we always use the phrase? No. We leave it out all the time. But it is always understood to be there by knowledgeable readers. Still, this is probably a point worth making in various knowledge drops. -->
-
-<!-- Q: Write a sentence interpreting the confidence interval for sexMale. -->
-
-<!-- A: We do not know the true value for the coefficient for sexMale, but we can be 95% confident that it lies somewhere between -1.86  and 0.21.  -->
-
-<!-- Comment 1: Because we are Bayesians, we believe that there is a true value and that the confidence or credible or uncertainty interval includes it at the stated level. These questions provide an occasion in the knowledge drop to compare/contrast the Frequenist interpretation. See: https://ppbds.github.io/primer/cardinal-virtues.html#confidencecredibleuncertainty-intervals -->
-
-<!-- Comment 2: Most of the time parameters in a model have no direct relationship with any population parameter which we might be interested. This is especially true in complex and/or non-linear models. That is, in those cases, a coefficient like $\beta_1$ does not "mean" anything. But, in simple, small, linear models, it sometimes happens that a parameter does correspond to something real. In this case, the coefficient of sexmale does correspond to the difference between the population average of att_end between men and women, adjusting for the other variables in the model. -->
-
-<!-- Q: Write a sentence interpreting the -1.41  estimate for treatmentControl. -->
-
-<!-- A: If this is a causal model, then the average causal effect of receiving the treatment of hearing Spanish-speakers on the train platform, relative to the control, is to have a 1.41  higher value for att_end, meaning that the treatment, relative to the control, makes one more conservative about immigration. (Note that you need to keep track of signs and of which 0/1 variable is being used.) -->
-
-<!-- A 2: If this is a predictive model, then, if we compare people who receive the treatment with people who receive the control, the treated people have, on average, a 1.41 more conservative attitude toward immigration, adjusting for other individual characteristics. -->
-
-<!-- Comment 1: The interpretation of a treatment variable is very different than the interpretation of a standard covariate. Whenever your model includes a treatment variable, you must always have a question about it and about the associated confidence interval. -->
-
-<!-- Comment 2: The key point is that there is no such thing as a causal (versus preditive) data set nor a causal (versus predictive) R code formula. You can use the same data set (and the same R code!) for both causal and predictive models. The difference lies in the assumptions you make.  -->
-
-<!-- Q: Write one sentence interpreting the -2.46 to -0.36 interval for the treatmentControl coefficient. -->
-
-<!-- A: Our best estimate for the average causal effect is -1.41, meaning that being treated makes someone 1.41 units more conservative about immigration. Yet, the true value could be lower or higher. We are 95% certain that the true effect is somewhere between -2.46 to -0.36.  -->
-
-<!-- Comment: It is OK if our answers are slightly longer than what we might expect from students, as long as those answers are *tight*, meaning that no word is wasted. In this case, the first two sentences are an attempt to ensure that the student understands what is going on. The last sentence is what we might expect students to write.  -->
-
-<!-- Q: Write a sentence interpreting the -0.01 estimate for age.  -->
-
-<!-- A: If we compare one group of people ten years older than another, the older group will, on average, have an attitude toward immigration 0.1 unit lower, i.e., less conservative. -->
-
-<!-- Comment 1: Numeric variables are harder than binary variables because there are no longer just two well-defined groups to compare with each other. We must make those two groups ourselves. Fortunately, as long as there are no interaction terms, we can just pick two groups with any values for the variable. The most common two groups differ by one unit of the variable. But it is quite common to use groups which differ by more/less if doing so seems sensible and/or if it makes the math easier. In this case, two groups which differ by 10 years makes sense for both reasons. -->
-
-<!-- What about non-linear models, or linear models with lots of interaction terms? -->
+Because we are Bayesians, we believe that there is a true value and that the confidence or credible or uncertainty interval includes it at the stated level. This is different from the Frequenist interpretation, for which you should see [here](https://ppbds.github.io/primer/cardinal-virtues.html#confidencecredibleuncertainty-intervals).
 
 
-<!-- logistic_reg() |>  -->
-<!--   set_engine("glm") |>  -->
-<!--   fit(as.factor(arrested) ~ sex + race, data = stops) |>  -->
-<!--   tidy(conf.int = TRUE) -->
+### Exercise 14
 
-<!--   term         estimate std.error statistic  p.value conf.low conf.high -->
-<!--   <chr>           <dbl>     <dbl>     <dbl>    <dbl>    <dbl>     <dbl> -->
-<!-- 1 (Intercept)   -2.56     0.0633    -40.5   0         -2.69     -2.44   -->
-<!-- 2 sexmale        0.368    0.00861    42.8   0          0.352     0.385  -->
-<!-- 3 raceblack      1.19     0.0631     18.8   6.16e-79   1.07      1.31   -->
-<!-- 4 racehispanic   0.805    0.0676     11.9   1.05e-32   0.674     0.939  -->
-<!-- 5 raceother      0.337    0.192       1.76  7.89e- 2  -0.0537    0.700  -->
-<!-- 6 raceunknown   -0.0824   0.0913     -0.902 3.67e- 1  -0.262     0.0965 -->
-<!-- 7 racewhite      0.928    0.0635     14.6   1.88e-48   0.806     1.05   -->
+Write a sentence interpreting the -0.04 estimate for `raceWhite`.
 
+```{r courage-14}
+question_text(NULL,
+	message = "if we compare people who are White (figuratively the treated) with people who are Black (figuratively the control), the treated people have, on average, a 0.04 lower chance of getting arrested, adjusting for other individual characteristics.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
 
-<!-- With a linear model, all these interpretations are fairly straightforward. With any other type of model, the math is too difficult to do in your head. You can't just look at a coefficient of 5 and know what it means in magnitude. But you can tell the direction, that a positive 5 means that higher values of the variable are associated with higher values of the outcome variable. So, with anything other than linear models, we restrict ourselves to direction and significance interpretations. -->
+### 
 
-<!-- Q: Write a sentence interpreting the 0.37 estimate for Sexmale. -->
-
-<!-- A: In comparison with women, men are more likely to be arrested. -->
-
-<!-- Comment 1: Categorical variables (with N categories), like sex (with two values),  are always replaced with (N-1) 0/1 dummy variables like sexMale. Students are often confused about this point, so we should make it a knowledge drop in every tutorials. -->
-
-<!-- Comment 2: We can't (easily) know how big 0.37 is. Because the model is non-linear, you can't (easily) determine whether men are 1% or 50% more likely to be arrested. -->
-
-<!-- Q: Write a sentence interpreting the 1.07 to 1.31 confidence interval for raceblack. -->
-
-<!-- A: In comparison with Asian/Pacific Islanders, Blacks are more likely to be arrested. In fact, they are more likely to be arrested than any other racial group. -->
-
-<!-- Comment 1: Dummy variables must always be interpreted in the context of the base value for that variable, which is always included in the intercept. For example, the base value here is "asian/pacific islander." (The base value is the first alphabetically by default for character variables. However, if it is a factor variable, you can change that by setting the order of the levels by hand.) -->
-
-<!-- Comment 2:  We look for two things in the confidence interval. First, does it exclude zero? If not, then we can't be sure if the relationship is positive or negative. Second, does it overlap with the confidence intervals for other dummy columns derived from this variable? If so, then we can be sure that the ordering as to which comparisons are bigger. If there is overlap, as for examle between raceother and raceunknow, we can't be sure how the average comparison would go. Because the estimate for raceother > the estimate for raceunknown, our best guess is that others are more likely to be arrested. But, because the confidence intervals overlap, there is a good chance (more than 5% certainly) that the ordering is the opposite. -->
+The key point is that there is no such thing as a causal (versus preditive) data set nor a causal (versus predictive) R code formula. You can use the same data set (and the same R code!) for both causal and predictive models. The difference lies in the assumptions you make.
 
 
-### Exercise 12
+### Exercise 15
 
 Create a new code chunk in `stops.qmd`. Add a code chunk option: `label: table`. Add this code to the code chunk.
 
@@ -1409,7 +1373,7 @@ tutorial.helpers::show_file("stops.qmd", pattern = "tidy")
 
 CP/CR.
 
-```{r courage-12}
+```{r courage-15}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1418,11 +1382,11 @@ question_text(NULL,
 	rows = 3)
 ```
 
-### Exercise 13
+### Exercise 16
 
 Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using, specifying the functional form and the dependent variable. Add one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
 
-```{r courage-13}
+```{r courage-16}
 question_text(NULL,
 	message = "Using data from a study of New Orleans drivers, we seek to understand the relationship between driver race and the probabilty of getting arrested during a traffic stop. However, our data from both our Preceptor Table and our dataset may not fully represent the population as both may not be from the same time frame and some of our data may come from biased officers, who may target certain groups of individuals. However, these concerns don't appear to be valid in a substantial manner in either dataset, allowing us to continue in our process. We modeled `arrested` as a linear function of both `sex` and the product of `race` and `zone`. From this, we examined that Males are less likely of getting arrested than Females.",
 	answer(NULL, correct = TRUE),
@@ -1546,69 +1510,28 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 7
-
-Here is the R code which creates the `ndata` object: 
-
-```
-expand_grid(race = unique(stops_new$race),
-            sex = unique(stops_new$sex),
-            zone = unique(stops_new$zone))
-```
-
-Type the code into the code exercise block and hit "Run Code."
-
-```{r temperance-7, exercise = TRUE}
-
-```
-
-```{r temperance-7-hint-1, eval = FALSE}
-
-```
-
-```{r temperance-7-test, include = FALSE}
-
-```
-
 ### 
 
-It is best to ensure that the variable types in `ndata` match the variable types in `stops_new`. The easiest way to ensure that is by using `stops_new` itself in the creation `ndata`. 
-
-
-### Exercise 8
-
-Behind the scenes, we have created the `ndata` object using this code. To confirm, type `ndata` and hit "Run Code."
-
-```{r temperance-8, exercise = TRUE}
-
-```
-
-```{r temperance-8-hint-1, eval = FALSE}
-ndata
-```
-
-```{r temperance-8-test, include = FALSE}
-ndata
-```
+However, we won't be making an `ndata` object today. Instead, we'll be relying on an argument called `"balanced"`, which automatically uses all possible parameters.
 
 ### 
 
 Functions like `unique()` --- to grab all the possible values in a variable --- and `expand_grid()` --- to create all possible combinations of different variables --- are often useful in creating `ndata`.
 
 
-### Exercise 9
+### Exercise 7
 
-Add `library(marginaleffects)` and `library(tidytext)` to the `stops.qmd` setup code chunk. Create a new code chunk in `stops.qmd` which creates the `ndata` object. Don't forget to add `#| label: ndata` to this chunk. `Command/Ctrtl + Shift + K`.
+Add `library(marginaleffects)` and `library(tidytext)` to the `stops.qmd` setup code chunk. `Command/Ctrtl + Shift + K`.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("stops.qmd", pattern = "marginaleffects|tidytext|ndata")
+tutorial.helpers::show_file("stops.qmd", pattern = "marginaleffects|tidytext")
 ```
 
 CP/CR.
 
-```{r temperance-9}
+```{r temperance-7}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1619,47 +1542,116 @@ question_text(NULL,
 
 ### 
 
-If we used `data.frame()` instead of `expand_grid()` when creating the `ndata` object, we would've got an error. This is because the `tuition` and `selectivity` columns are not equal in length. Instead of finding all the possible combinations, `data.frame()` makes only one row for each value in the column. Example:
+Functions like `unique()` --- to grab all the possible values in a variable --- and `expand_grid()` --- to create all possible combinations of different variables --- are often useful in creating `ndata`.
+
+However, if we used `data.frame()` instead of `expand_grid()` when creating the `ndata` object, we would've got an error. This is because the `tuition` and `selectivity` columns are not equal in length. Instead of finding all the possible combinations, `data.frame()` makes only one row for each value in the column. Example:
 
 ```
-data.frame(race = unique(stops_new$race),
-           sex = unique(stops_new$sex),
-           zone = unique(stops_new$zone))
+data.frame(race = unique(x$race),
+           sex = unique(x$sex),
+           zone = unique(x$zone))
 ```
 
 When I run this, I get the following message because of the lengths:
 
 ```{r}
-message("Error in data.frame(race = unique(stops_new$race), sex = unique(stops_new$sex),  : 
+message("Error in data.frame(race = unique(x$race), sex = unique(x$sex),  : 
   arguments imply differing number of rows: 2, 25")
 ```
 
-
-### Exercise 10
+### Exercise 8
 
 Enter this code into the exercise code block and hit "Run Code."
 
 ```
-plot_predictions(fit_stops,
-                 newdata = ndata,
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
                  condition = c("zone", "race", "sex"))
 ```
+
+```{r temperance-8, exercise = TRUE}
+
+```
+
+```{r temperance-8-test, include = FALSE}
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
+                 condition = c("zone", "race", "sex"))
+```
+
+### 
+
+Notice how we used the `"balanced"` argument for `newdata`, since we need all of the possible outcomes.
+
+
+### Exercise 9
+
+Although it's nice to graph our model in one function, it would be nice to have it in order. To do this, we first have to convert our predictions to a tibble.
+
+Copy the previous code and add `draw = FALSE` to your `plot_predictions()` call. Then pipe it to `as_tibble()`.
+
+```{r temperance-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-9-hint-1, eval = FALSE}
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_...()
+```
+
+```{r temperance-9-test, include = FALSE}
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_tibble()
+```
+
+### Exercise 10
+
+We can now proceed to order our data. I want to arrange the graph in ascending order for Black arrest rates by sex.
+
+To do this, first we need to set a grouping. Pipe to `group_by()`, with the arguments `zone` and `sex`.
+
+Next, pipe to `mutate()`, setting `sort_order` eequal to `estimate[race == "Black"]`.
+
+Finally, pipe to `ungroup()`.
+
 
 ```{r temperance-10, exercise = TRUE}
 
 ```
 
-```{r temperance-10-test, include = FALSE}
-plot_predictions(fit_stops,
-                 newdata = ndata,
-                 condition = c("zone", "race", "sex"))
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-10-hint-1, eval = FALSE}
+... |> 
+  group_by(zone, ...) |>
+  ...(sort_order = estimate[... == "Black"]) |>
+  ungroup()
 ```
+
+```{r temperance-10-test, include = FALSE}
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_tibble() |> 
+  group_by(zone, sex) |>
+  mutate(sort_order = estimate[race == "Black"]) |>
+  ungroup()
+```
+
+### 
+
+Notice how we capitalized `"Black"`. This is because we had set `race` to consist of titles in Wisdom.
+
 
 ### Exercise 11
 
-Although it's nice to graph our model in one function, it would be nice to have it in order. To do this, we first have to convert our predictions to a tibble.
-
-Copy the previous code and add `draw = FALSE` to your `plot_predictions()` call. Then pipe it to `as_tibble()`.
+Now pipe to `mutate()` and set the argument `zone` to equal `reorder_within(zone, sort_order, sex)`.
 
 ```{r temperance-11, exercise = TRUE}
 
@@ -1668,24 +1660,31 @@ Copy the previous code and add `draw = FALSE` to your `plot_predictions()` call.
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r temperance-11-hint-1, eval = FALSE}
-plot_predictions(fit_stops,
-                 newdata = ndata,
-                 condition = c("zone", "race", "sex"),
-                 draw = FALSE) |> as_...()
+... |> 
+  ...(zone = reorder_within(..., sort_order, ...))
 ```
 
 ```{r temperance-11-test, include = FALSE}
-plot_predictions(fit_stops,
-                 newdata = ndata,
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
                  condition = c("zone", "race", "sex"),
-                 draw = FALSE) |> as_tibble()
+                 draw = FALSE) |> as_tibble() |> 
+  group_by(zone, sex) |>
+  mutate(sort_order = estimate[race == "Black"]) |>
+  ungroup() |>
+  mutate(zone = reorder_within(zone, sort_order, sex))
 ```
+
+### 
+
+Note that the function `reorder_within()` is from the **tidytext** package that we called earlier. This function saved us roughly 10+ lines of code.
+
 
 ### Exercise 12
 
-We can now proceed to order our data. I want to arrange the graph in ascending order for arrest rates by sex.
+Now we should plot our findings. Continue the pipe to `ggplot()`, and inside aesthetics, map `x` to `zone` and `color` to `race`.
 
-To do this, pipe to `mutate()` and set the argument `zone` to equal `reorder_within(zone, estimate, race)`.
+Then add `geom_errorbar()`, with the arguments `aes(ymin = conf.low, ymax = conf.high)`, `width = 0.2`, and `position = position_dodge(width = 0.5)`.
 
 ```{r temperance-12, exercise = TRUE}
 
@@ -1694,28 +1693,38 @@ To do this, pipe to `mutate()` and set the argument `zone` to equal `reorder_wit
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r temperance-12-hint-1, eval = FALSE}
-... |> 
-  ...(zone = reorder_within(..., estimate, ...))
+... |>
+  ggplot(aes(x = ..., y = ..., color = ...)) +
+    geom_errorbar(...(ymin = conf.low, ... = conf.high), 
+                  ... = 0.2,
+                  ... = position_dodge(... = 0.5))
 ```
 
 ```{r temperance-12-test, include = FALSE}
-plot_predictions(fit_stops,
-                 newdata = ndata,
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
                  condition = c("zone", "race", "sex"),
                  draw = FALSE) |> as_tibble() |> 
-  mutate(zone = reorder_within(zone, estimate, race))
+  group_by(zone, sex) |>
+  mutate(sort_order = estimate[race == "Black"]) |>
+  ungroup() |>
+  mutate(zone = reorder_within(zone, sort_order, sex)) |>
+  ggplot(aes(x = zone, 
+             color = race)) +
+  geom_errorbar(aes(ymin = conf.low, 
+                    ymax = conf.high), 
+                width = 0.2,
+                position = position_dodge(width = 0.5))
 ```
 
 ### 
 
-Note that the function `reorder_within()` is from the **tidytext** package that we called earlier. This function saved us roughly 10+ lines of code.
+We added the `position_dodge()` argument to ensure that the bars don't touch, but instead are slightly spread apart so if there's any overlap, we can see the difference clearly.
 
 
 ### Exercise 13
 
-Now we should plot our findings. Continue the pipe to `ggplot()`, and inside aesthetics, map `x` to `zone`, `y` to `estimate`, and `color` to `race`.
-
-Then add `geom_point()` and `geom_errorbar()`, with the arguments `aes(ymin = conf.low, ymax = conf.high)` and `width = 0.2`.
+Now let's add the points. Continue the pipe to `geom_point()` with the arguments `aes(y = estimate)`, `size = 1`, `position = position_dodge(width = 0.5)`. Note that this is the same `position_dodge()` argument that we added in the last step, and how we also need it to display our points in the right place.
 
 ```{r temperance-13, exercise = TRUE}
 
@@ -1724,28 +1733,35 @@ Then add `geom_point()` and `geom_errorbar()`, with the arguments `aes(ymin = co
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r temperance-13-hint-1, eval = FALSE}
-... |>
-  ggplot(aes(x = ..., y = ..., color = ...)) +
-    geom_point() + 
-    geom_errorbar(...(ymin = conf.low, ... = conf.high), ... = 0.2)
+... +
+  geom_point(...(y = ...), 
+             ... = 1, 
+             position = position_dodge(width = ...))
 ```
 
 ```{r temperance-13-test, include = FALSE}
-plot_predictions(fit_stops,
-                 newdata = ndata,
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
                  condition = c("zone", "race", "sex"),
                  draw = FALSE) |> as_tibble() |> 
-  mutate(zone = reorder_within(zone, estimate, race)) |>
-  ggplot(aes(x = zone, y = estimate, color = race)) +
-    geom_point() + 
-    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2)
+  group_by(zone, sex) |>
+  mutate(sort_order = estimate[race == "Black"]) |>
+  ungroup() |>
+  mutate(zone = reorder_within(zone, sort_order, sex)) |>
+  ggplot(aes(x = zone, 
+             color = race)) +
+  geom_errorbar(aes(ymin = conf.low, 
+                    ymax = conf.high), 
+                width = 0.2,
+                position = position_dodge(width = 0.5)) +
+  geom_point(aes(y = estimate), 
+             size = 1, 
+             position = position_dodge(width = 0.5))
 ```
 
 ### Exercise 14
 
-Let's make 2 plots, one for each value of `sex`. Add `facet_wrap()`. Inside this, add `~sex` and set `scales` to equal `"free_y"`.
-
-Additionally, add `coord_flip()` to put the variables on the y-axis.
+Let's make 2 plots, one for each value of `sex`. Add `facet_wrap()`. Inside this, add `~sex` and set `scales` to equal `"free_x"`.
 
 ```{r temperance-14, exercise = TRUE}
 
@@ -1755,31 +1771,37 @@ Additionally, add `coord_flip()` to put the variables on the y-axis.
 
 ```{r temperance-14-hint-1, eval = FALSE}
 ... +
-    facet_wrap(~sex, ... = "free_y") +
-    coord_...()
+    facet_wrap(~sex, ... = "free_x")
 ```
 
 ```{r temperance-14-test, include = FALSE}
-plot_predictions(fit_stops,
-                 newdata = ndata,
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
                  condition = c("zone", "race", "sex"),
                  draw = FALSE) |> as_tibble() |> 
-  mutate(zone = reorder_within(zone, estimate, race)) |>
-  
-  ggplot(aes(x = zone, y = estimate, color = race)) +
-    geom_point() + 
-    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
-    facet_wrap(~sex, scales = "free_y") +
-    coord_flip()
+  group_by(zone, sex) |>
+  mutate(sort_order = estimate[race == "Black"]) |>
+  ungroup() |>
+  mutate(zone = reorder_within(zone, sort_order, sex)) |>
+  ggplot(aes(x = zone, 
+             color = race)) +
+  geom_errorbar(aes(ymin = conf.low, 
+                    ymax = conf.high), 
+                width = 0.2,
+                position = position_dodge(width = 0.5)) +
+  geom_point(aes(y = estimate), 
+             size = 1, 
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~ sex, scales = "free_x")
 ```
 
 ### Exercise 15
 
-Now let's do something about those ugly y-axis labels.
+Now let's do something about those ugly x-axis labels.
 
 First. let's make them only reflect their zone and drop the race argument. To do this, add `scale_x_reordered()` to the previous code.
 
-Second, let's make the labels a bit smaller so that they're easier to read. To do this, add the following to the previous code: `theme(axis.text.y = element_text(size = 5))`.
+Second, let's make the labels a bit smaller so that they're easier to read. To do this, add the following to the previous code: `theme(axis.text.x = element_text(size = 8))`.
 
 ```{r temperance-15, exercise = TRUE}
 
@@ -1790,49 +1812,35 @@ Second, let's make the labels a bit smaller so that they're easier to read. To d
 ```{r temperance-15-hint-1, eval = FALSE}
 ... +
     scale_x_...() +
-    ...(axis.text.y = ..._text(... = 5))
+    ...(axis.text.x = ..._text(... = 8))
 ```
 
 ```{r temperance-15-test, include = FALSE}
-plot_predictions(fit_stops,
-                 newdata = ndata,
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
                  condition = c("zone", "race", "sex"),
                  draw = FALSE) |> as_tibble() |> 
-  mutate(zone = reorder_within(zone, estimate, race)) |>
-  
-  ggplot(aes(x = zone, y = estimate, color = race)) +
-    geom_point() + 
-    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
-    facet_wrap(~sex, scales = "free_y") +
-    coord_flip() +
-    scale_x_reordered() +
-    theme(axis.text.y = element_text(size = 5))
+  group_by(zone, sex) |>
+  mutate(sort_order = estimate[race == "Black"]) |>
+  ungroup() |>
+  mutate(zone = reorder_within(zone, sort_order, sex)) |>
+  ggplot(aes(x = zone, 
+             color = race)) +
+  geom_errorbar(aes(ymin = conf.low, 
+                    ymax = conf.high), 
+                width = 0.2,
+                position = position_dodge(width = 0.5)) +
+  geom_point(aes(y = estimate), 
+             size = 1, 
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~ sex, scales = "free_x") +
+  scale_x_reordered() +
+  theme(axis.text.x = element_text(size = 8))
 ```
 
 ### Exercise 16
 
-Finish it off by adding a proper title, subtitle, axis titles, caption, and title for the key with `labs()`. Your graph should look something like this:
-
-```{r}
-plot_predictions(fit_stops,
-                 newdata = ndata,
-                 condition = c("zone", "race", "sex"),
-                 draw = FALSE) |> as_tibble() |> 
-  mutate(zone = reorder_within(zone, estimate, race)) |>
-  
-  ggplot(aes(x = zone, y = estimate, color = race)) +
-    geom_point() + 
-    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
-    facet_wrap(~sex, scales = "free_y") +
-    coord_flip() +
-    scale_x_reordered() +
-    theme(axis.text.y = element_text(size = 5)) +
-    labs(x = "Zone", y = "Estimated Arrest Probabilty",
-         title = "Predicted Arrest Rate of New Orleans Motorists by Zones",
-         subtitle = "Black motorists are more likely to get arrested during a traffic stop than White motorists.",
-         color = "Race",
-         caption = "Data from the Open Policing Project")
-```
+Additionally, let's put the y-axis labels in percent (%) format. Add `scale_y_continous()`, setting `labels` to equal `percent_format()`.
 
 ```{r temperance-16, exercise = TRUE}
 
@@ -1842,33 +1850,107 @@ plot_predictions(fit_stops,
 
 ```{r temperance-16-hint-1, eval = FALSE}
 ... +
-  labs(...)
+  scale_y_continuous(... = percent_format())
 ```
 
 ```{r temperance-16-test, include = FALSE}
-plot_predictions(fit_stops,
-                 newdata = ndata,
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
                  condition = c("zone", "race", "sex"),
                  draw = FALSE) |> as_tibble() |> 
-  mutate(zone = reorder_within(zone, estimate, race)) |>
-  
-  ggplot(aes(x = zone, y = estimate, color = race)) +
-    geom_point() + 
-    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
-    facet_wrap(~sex, scales = "free_y") +
-    coord_flip() +
-    scale_x_reordered() +
-    theme(axis.text.y = element_text(size = 5)) +
-    labs(x = "Zone", y = "Estimated Arrest Probabilty",
-         title = "Predicted Arrest Rate of New Orleans Motorists by Zones",
-         subtitle = "Black motorists are more likely to get arrested during a traffic stop than White motorists.",
-         color = "Race",
-         caption = "Data from the Open Policing Project")
+  group_by(zone, sex) |>
+  mutate(sort_order = estimate[race == "Black"]) |>
+  ungroup() |>
+  mutate(zone = reorder_within(zone, sort_order, sex)) |>
+  ggplot(aes(x = zone, 
+             color = race)) +
+  geom_errorbar(aes(ymin = conf.low, 
+                    ymax = conf.high), 
+                width = 0.2,
+                position = position_dodge(width = 0.5)) +
+  geom_point(aes(y = estimate), 
+             size = 1, 
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~ sex, scales = "free_x") +
+  scale_x_reordered() +
+  theme(axis.text.x = element_text(size = 8)) +
+  scale_y_continuous(labels = percent_format())
 ```
 
-### 
-
 ### Exercise 17
+
+Finish it off by adding a proper title, subtitle, axis titles, caption, and title for the key with `labs()`. Your graph should look something like this:
+
+```{r}
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_tibble() |> 
+  group_by(zone, sex) |>
+  mutate(sort_order = estimate[race == "Black"]) |>
+  ungroup() |>
+  mutate(zone = reorder_within(zone, sort_order, sex)) |>
+  ggplot(aes(x = zone, 
+             color = race)) +
+  geom_errorbar(aes(ymin = conf.low, 
+                    ymax = conf.high), 
+                width = 0.2,
+                position = position_dodge(width = 0.5)) +
+  geom_point(aes(y = estimate), 
+             size = 1, 
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~ sex, scales = "free_x") +
+  scale_x_reordered() +
+  theme(axis.text.x = element_text(size = 8)) +
+  scale_y_continuous(labels = percent_format()) +
+  labs(x = "Zone", y = "Estimated Arrest Probability (%)",
+       title = "Predicted Arrest Rate of New Orleans Motorists by Zones",
+       subtitle = "Black motorists are more likely to get arrested during a traffic stop than White motorists.",
+       color = "Race",
+       caption = "Data from the Stanford Open Policing Project")
+```
+
+```{r temperance-17, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-17-hint-1, eval = FALSE}
+... +
+  labs(...)
+```
+
+```{r temperance-17-test, include = FALSE}
+plot_predictions(fit_stops$fit,
+                 newdata = "balanced",
+                 condition = c("zone", "race", "sex"),
+                 draw = FALSE) |> as_tibble() |> 
+  group_by(zone, sex) |>
+  mutate(sort_order = estimate[race == "Black"]) |>
+  ungroup() |>
+  mutate(zone = reorder_within(zone, sort_order, sex)) |>
+  ggplot(aes(x = zone, 
+             color = race)) +
+  geom_errorbar(aes(ymin = conf.low, 
+                    ymax = conf.high), 
+                width = 0.2,
+                position = position_dodge(width = 0.5)) +
+  geom_point(aes(y = estimate), 
+             size = 1, 
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~ sex, scales = "free_x") +
+  scale_x_reordered() +
+  theme(axis.text.x = element_text(size = 8)) +
+  scale_y_continuous(labels = percent_format()) +
+  labs(x = "Zone", y = "Estimated Arrest Probability (%)",
+       title = "Predicted Arrest Rate of New Orleans Motorists by Zones",
+       subtitle = "Black motorists are more likely to get arrested during a traffic stop than White motorists.",
+       color = "Race",
+       caption = "Data from the Stanford Open Policing Project")
+```
+
+### Exercise 18
 
 Create a new code chunk in `stops.qmd`. Label it with `label: plot`. Copy/paste the code which creates your graphic. 
 
@@ -1882,7 +1964,7 @@ tutorial.helpers::show_file("stops.qmd", start = -8)
 
 CP/CR.
 
-```{r temperance-17}
+```{r temperance-18}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1891,13 +1973,11 @@ question_text(NULL,
 	rows = 3)
 ```
 
-### 
-
-### Exercise 18
+### Exercise 19
 
 Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) and which provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
-```{r temperance-18}
+```{r temperance-19}
 question_text(NULL,
 	message = "Using data from a study of New Orleans drivers, we seek to understand the relationship between driver race and the probabilty of getting arrested during a traffic stop. However, our data from both our Preceptor Table and our dataset may not fully represent the population as both may not be from the same time frame and some of our data may come from biased officers, who may target certain groups of individuals. However, these concerns don't appear to be valid in a substantial manner in either dataset, allowing us to continue in our process. We modeled `arrested` as a linear function of both `sex` and the product of `race` and `zone`. From this, we examined that Males are less likely of getting arrested than Females. Focusing on our question, there is no uncertainty associated with our estimate because it, itself, is an expression of uncertainty. We estimate that the probaibility of a Black driver in New Orleans getting arrested during a traffic stop is roughly 25%, compared to roughly 20% for White drivers.",
 	answer(NULL, correct = TRUE),
@@ -1911,11 +1991,11 @@ question_text(NULL,
 Edit the summary paragraph in `stops.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
 
-### Exercise 19
+### Exercise 20
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-19}
+```{r temperance-20}
 question_text(NULL,
 	message = "Based on all of the errors in our data that we collected during Justice, our original data source to base our model on was already flawed. Additionally, our model can only predict estimates on paper, based on an ideal world. It doesn't account for many factors of the real world that we, ourselves, can't even describe. However, our estimate was formed to the best of our abilities given the data on hand, and all I would do to modify it would be to modify the confidence intervals: I would keep the upper confidence interval the same, but would singifcantly decrease the lower confidence interval to roughly 15%-17% to account for the future, where the values would most likely decrease based on the pattern of racism in the US decreasing over time.",
 	answer(NULL, correct = TRUE),
@@ -1924,8 +2004,7 @@ question_text(NULL,
 	rows = 6)
 ```
 
-
-### Exercise 20
+### Exercise 21
 
 Rearrange the material in `stops.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
@@ -1937,7 +2016,7 @@ tutorial.helpers::show_file("stops.qmd")
 
 CP/CR.
 
-```{r temperance-20}
+```{r temperance-21}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1951,11 +2030,11 @@ question_text(NULL,
 Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
 
 
-### Exercise 21
+### Exercise 22
 
 Publish `stops.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
 
-```{r temperance-21}
+```{r temperance-22}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
