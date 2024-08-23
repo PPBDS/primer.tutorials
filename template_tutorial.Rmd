@@ -96,6 +96,42 @@ fit_XX <- linear_reg(engine = "lm") |>
 
 <!-- Make sure to uncomment the test code chunks once you have created the necessary objects. -->
 
+<!-- WARNING: There are changes underway in our use of equatiomatic and marginaleffects. The background is that both packages, currently, will fail if you pass in an object created by tidymodels. That is annoying! Why can't they "just work," as broom does? To get around this, we need to pass in the fit object within. So, we pass in fit_obj$fit instead of fit_obj itself. This seems to work, but is ugly. I am working with the autors of both packages to change things. In the meantime, we will continue to use fit_obj$fit.
+
+The fix is already in, I think, in marginaleffects. But that might also cause problems since it complicates the use of newdata = "balanced" --- and perhaps other convenient options. The reason is that all the complexities of fitted models, especially, the manipulation of the input data with recipes and whatnot, means that "balanced" is no longer guaranteed to work. (To be honest, I am having trouble following the details of the discussion.) For now, in marginaleffects, we will just continue to use fit_obj$fit and "balanced."
+
+The fix has already been added to marginaleffects. It should show up in CRAN before Sep 30. But, even here, I am a bit concerned because of some weird behavior with the fix:
+
+library(tidymodels)
+library(marginaleffects)
+
+mod <- logistic_reg() |> 
+    fit(as.factor(vs) ~ hp + drat, data = mtcars)
+
+with a linear regression, these next two functions produce the same answer. With logistic (or perhaps the cause is the as.factor() use in the fitted function), we get problems. 
+
+predictions(mod)
+predictions(mod$fit)
+
+Sure seems like this could be serious. Playing around, predictions(mod) only works if you include an argument like type = "prob". predictions(mod$fit) seems to be giving us the invlink. Maybe this is all OK, but I get the heebie-jeebies from it. For example, this plot looks sensible:
+
+plot_predictions(mod$fit, condition = "hp")
+
+I can't get anything which looks like it when I just use mod. Consider this failed attempt:
+
+plot_predictions(mod, condition = "hp", type = "prob")
+
+Key problem seems to be that 
+
+predictions(mod, type = "numeric")
+
+ought to work but, instead, produces this:
+
+
+-->
+
+
+
 <!-- Things which DK is considering adding: -->
 
 <!-- The connection between the specific question and the general question is confusing. The specific question will often suggest filtering our universe in ways that are not (?) what we want. -->
@@ -1968,14 +2004,14 @@ This tutorial supports [*Preceptor’s Primer for Bayesian Data Science: Using t
 
 ```{r}
 library(tidymodels)
-library(equatiomatic)
+library(marginaleffects)
 
-mod <- linear_reg() |> 
-  fit(mpg ~ hp + drat, data = mtcars)
+mod <- logistic_reg() |> 
+  fit(as.factor(vs) ~ hp + drat, data = mtcars)
 
-extract_eq(mod$fit) # works
+predictions(mod$fit) # works
 
-extract_eq(mod) # fails
+predictions(mod) # fails
 ```
 
 
