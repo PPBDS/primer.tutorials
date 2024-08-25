@@ -27,10 +27,16 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
+# Because we want the undertainty about the true mean of men and women to be
+# large enough to show up in out plot in an interesting way, we pretend that we
+# only have 100 observations in the data, 50 men and 50 women.
+
+set.seed(10)
 x <- nhanes |>
   filter(age >= 18) |>
   select(height, sex) |>
-  drop_na()
+  drop_na() |> 
+  slice_sample(n = 50, by = sex)
 
 fit_height <- linear_reg() |> 
   set_engine("lm") |> 
@@ -48,6 +54,12 @@ plot <- plot_predictions(fit_height,
 
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
+
+<!-- DK: Get rid of coded answer creation in interpretation questions. Just hard code the number once! -->
+
+<!-- DK: Get rid of ndata. Plot is: -->
+
+<!-- plot_predictions(fit_height$fit, condition = "sex") -->
 
 ## Introduction
 ### 
@@ -1082,12 +1094,13 @@ question_text(NULL,
 
 ### 
 
-<!-- DK: This is good stuff, but could be improved. -->
 
 The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has three values --- "black", "hispanic", and "white" --- then the model creates two 0/1 dummy variables, giving them names like $race_{hispanic}$ and $race_{white}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
 
 The mathematical formula in this case is: 
+
 $$\operatorname{\widehat{height}} = \beta_0 + race_{hispanic} + race_{white}$$ 
+
 When the value of `race` is neither "hispanic" or "white", the values of $race_{hispanic}$ and $race_{white}$ in the math formula are zero. The value of $\operatorname{\widehat{height}}$ is equal $\beta_0$, the Intercept, which captures the predicted height of all individuals whose race is neither "hispanic" nor "white", but "black". 
 
 ### Exercise 6
@@ -1301,24 +1314,15 @@ Recall that we cannot have both "Male" and "Female" categories in the model. Ins
 ### Exercise 13
 
 ```{r}
-result <- tidy(fit_height, conf.int = TRUE) |> 
-                filter(term == "sexMale") |>
-                pull(estimate) |> 
-                round()
-
-answer <- paste("When comparing the average height of men versus women, our guess/estimate is that men are taller than women by", result, "centimeters.")
-```
-
-Write a sentence interpreting the estimate of about `r result` for the `sexMale`.
-
-```{r}
 tidy(fit_height, conf.int = TRUE) |> 
   select("term", "estimate", "conf.low", "conf.high")
 ```
 
+Write a sentence interpreting the estimate for `sexMale`.
+
 ```{r courage-13}
 question_text(NULL,
-	message = answer,
+	message = "When comparing the average height of men versus women, our guess/estimate is that men are taller than women by about 14 centimeters.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1670,11 +1674,9 @@ question_text(NULL,
 
 Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
-<!-- DK: Add uncertainty. -->
-
 ```{r temperance-11}
 question_text(NULL,
-	message = "Men and women vary in height. Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women. Since the participation for the survey is voluntary, it could mean that, for example, taller people are more likely to answer this question, thus reduces representativeness of the data. We model height as a linear function of sex. Our best guest for the average height of women is 161 cm, we are 95% confident that its true value is between [158, 164] while men, on average, are expected to be taller in women by 14.4 cm, and we are also 95% confident that the real value of differences in average height lies between [10.2, 18.6].",
+	message = "Men and women vary in height. Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women. Since the participation for the survey is voluntary, it could mean that, for example, taller people are more likely to answer this question, thus reduces representativeness of the data. We model height as a linear function of sex. Our best guest for the average height of women is 161 cm, we are 95% confident that its true value is between 158 and 164 while men, on average, are expected to be taller in women by 14.4 cm, and we are also 95% confident that the real value of differences in average height lies between 10.2 and 18.6.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
