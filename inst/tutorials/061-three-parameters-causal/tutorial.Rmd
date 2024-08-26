@@ -14,48 +14,29 @@ description: 'Chapter 6 Tutorial: Three Parameters: Causal'
 ```{r setup, include = FALSE}
 library(learnr)
 library(tutorial.helpers)
-library(tidyverse)
-library(brms)
-library(tidybayes)
-library(primer.data)
 library(gt)
+
+library(tidyverse)
+library(primer.data)
+library(tidymodels)
+library(broom)
+library(equatiomatic)
+library(marginaleffects)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
-
-#fit_gauss <- brm(formula = att_end ~ treatment,
-#             data = trains,
-#             family = gaussian(),
-#             silent = 2,
-#             refresh = 0,
-#             seed = 9)
-#write_rds(fit_gauss, "data/fit_gauss.rds")
-
-fit_gauss <- read_rds("data/fit_gauss.rds")
-
-ndata <- tibble(treatment = c("Treated", "Control"))
-
-library(tidymodels)
-library(primer.data)
-library(broom)
-library(equatiomatic)
-library(marginaleffects)
 
 fit_att <- linear_reg(engine = "lm") |> 
   fit(att_end ~ treatment, data = trains)
 
 # tidy(fit_att, conf.int = TRUE)
 
-# It seems like a huge bug, or at least a poorly documented API, that we need
-# $fit. Can't extract_eq() just look for the fit object?
-
-# extract_eq(fit_att$fit, intercept = "beta")
-# extract_eq(fit_att$fit, intercept = "beta", use_coefs = TRUE)
+# extract_eq(fit_att, intercept = "beta")
+# extract_eq(fit_att, intercept = "beta", use_coefs = TRUE)
 # 
-# plot_predictions(fit_att$fit,
-#             newdata = "balanced",
-#             condition = "treatment")
+# plot_predictions(fit_att,
+#                  condition = "treatment")
 
 ```
 
@@ -64,6 +45,8 @@ fit_att <- linear_reg(engine = "lm") |>
 
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
+
+<!-- DK: Delete ndata questions. -->
 
 ## Introduction
 ### 
@@ -197,11 +180,9 @@ question_text(NULL,
 
 ### 
 
-<!-- DK Add sentence about this: The last two sentence kind of use fancy wording, can we make it simpler to understand? *from template tutorial -->
-
 Any data set can be used to construct a predictive model. 
 
-The same data set can be used to create, separately, lots and lots of different models, both causal and predictive. We can just use different outcome variables and/or specify different treatment variables. All of this stuff is a *conceptual* framework we apply to the data. It is never inherent in the data itself.
+The same data set can be used to create, separately, lots and lots of different models, both causal and predictive. We can just use different outcome variables and/or specify different treatment variables. All of this stuff is a *conceptual* framework we apply to the data. It is never inherent in the data itself. At the end, it depends what question is being posed, and what you want to know.
 
 ### Exercise 7
 
@@ -246,8 +227,6 @@ question_text(NULL,
 
 ### 
 
-<!-- DK: Clarify. Done -->
-
 The definition of a causal effect is the difference between two potential outcomes. But its not like first grade subtraction, where we subtract the smaller number from the bigger number. Usually, default is where the causal effect is defined as treatment minus control.
 
 Any causal connection means exploring the difference between two potential outcomes. We can look at just on row and have a causal connection between both outcomes, but generally the average of both outcomes are used. In any case, its impossible to get the causal effect of just one row without averaging everything out and estimating what goes in one column because of the **Fundamental Problem of Causal Interference**.
@@ -272,13 +251,11 @@ The key point is that, with a predictive model, there is only one outcome for ea
 
 ### Exercise 10
 
-<!-- SU: I didn't know what to add here, but pls check if its accurate DK: Check the template.-->
-
 Different key covariates will cause difference in avgs of outcomes. Even if the covariate is not a treatment, we can add it into the model because we see a greater difference with it than without it.
 
 ```{r the-question-10}
 question_text(NULL,
-	message = "XX: Some people might have a value for party of Republican. Others might have a value of Democrat. Those two groups will, on average, have different values for the outcome variable.",
+	message = "Some people might have a value for party of Republican. Others might have a value of Democrat. Those two groups will, on average, have different values for the outcome variable.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1018,7 +995,7 @@ question_text(NULL,
 
 ### 
 
-**Stability** looks across time periods, **Representativeness** looks within time periods, allowing us to make connection between the data we have and the population, and the population to the Preceptor Table. 
+Justice is about concerns that you (or your critics) might have, reasons why the model you create might not work as well as you hope.
 
 ### Exercise 2
 
@@ -1035,7 +1012,7 @@ question_text(NULL,
 
 ### 
 
-The Population Table can only be constructed if the *validity* assumption is (mostly) true. Besides incorporating the rows from the Preceptor table and the dataset, it usually has other rows as well, rows which represent unit/time combinations from other parts of the population. 
+The Population Table is almost always much bigger than the combination of the Preceptor Table and the data because, if we can really assume that both the Preceptor Table and the data are part of the same population, than that population must cover a broad universe of time and units since the Preceptor Table and the data are, themselves, often far apart from each other. 
 
 The Population Table looks like this: 
 
@@ -1109,7 +1086,7 @@ However, if we don’t assume stability then we can’t use data from 2012 to in
 
 ### Exercise 5
 
-In your own words, define the assumption of "representativeness" when employed in the context of data science.
+We use our data to make inferences about the overall population. We use information about the population to make inferences about the Preceptor Table: `Data -> Population -> Preceptor Table`. In your own words, define the assumption of "representativeness" when employed in the context of data science.
 
 ```{r justice-5}
 question_text(NULL,
@@ -1126,7 +1103,7 @@ Ideally, we would like both the Preceptor Table *and* our data to be random samp
 
 ### Exercise 6
 
-Provide one reason why the assumption of representativeness might not be true in this case.
+We do not use the data, directly, to estimate missing values in the Preceptor Table. Instead, we use the data to learn about the overall population. Provide one reason, involving the relationship between the data and the population, for why the assumption of representativeness might not be true in this case. 
 
 ```{r justice-6}
 question_text(NULL,
@@ -1139,13 +1116,32 @@ question_text(NULL,
 
 ### 
 
-A similar set of issues apply to our data as it is not a random draw from the underlying population in 2012. Instead, we only have data from Boston, and not any other city. 
+The reason that representativeness is important is because, when it is violated, the estimates for the model parameters might be biased.  
 
 ### Exercise 7
 
-In your own words, define the assumption of "unconfoundedness" when employed in the context of data science.
+We use information about the population to make inferences about the Preceptor Table. Provide one reason, involving the relationship between the population and the Preceptor Table, for why the assumption of representativeness might not be true in this case.
 
 ```{r justice-7}
+# XX: Again, try not use of the concept time. We want to save examples of
+# changes caused by time for the discussio about stability. Instead, focus on
+# why the Preceptor might not be representative of the population at that moment
+# in time. 
+
+question_text(NULL,
+	message = "The Preceptor table might not be representatice of the population at this moment, because it only surveyed people who take train stations in Chicago, but not everyone takes the metro, becaue maybe the richer people go by taxi, or car etc.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+
+### Exercise 8
+
+In your own words, define the assumption of "unconfoundedness" when employed in the context of data science.
+
+```{r justice-8}
 question_text(NULL,
 	message = "Unconfoundedness means that the treatment assignment is independent of the potential outcomes, when we condition on pre-treatment covariates. A model is *confounded* if this is not true.",
 	answer(NULL, correct = TRUE),
@@ -1156,13 +1152,13 @@ question_text(NULL,
 
 ### 
 
-The easiest way to ensure unconfoundedness is to assign treatment randomly. In our experiment, this may involve giving each person a number and then randomly picking a number to assign the treatment. 
+This assumption is only relevant for causal models. We describe a model as "confounded" if this is not true. The easiest way to ensure unconfoundedness is to assign treatment randomly.
 
-### Exercise 8
+### Exercise 9
 
 Provide one reason why the assumption of unconfoundedness might not be true (or relevant) in this case.
 
-```{r justice-8}
+```{r justice-9}
 question_text(NULL,
 	message = "In this case, the assumption of unconfoundedness might not be true if the participants in the treatment and control group are not truly randomly selected, but selected by a person choosing 'randomly' (which is likely not truly random).",
 	answer(NULL, correct = TRUE),
@@ -1173,14 +1169,14 @@ question_text(NULL,
 
 ### 
 
-Since treatment was assigned at random, we can be fairly confident that treatment assignment is independent of everything. This is the beauty of randomization and the key reason why randomized control trials are the gold standard in statistics for drawing conclusions about causal effects.
+The great advantage of randomized assignment of treatment is that it guarantees unconfoundedness. There is no way for treatment assignment to be correlated with anything, including potential outcomes, if treatment assignment is random.
 
-### Exercise 9
+### Exercise 10
 
 Summarize the state of your work so far in two or three sentences. Make reference to the data you have and to the question you are trying to answer. Feel free to copy from your answer at the end of the Wisdom Section. Mention at least one specific problem which casts doubt on your approach. 
 
 
-```{r justice-9}
+```{r justice-10}
 question_text(NULL,
 	message = "Using data from a 2012 survey of Boston-area commuters, we seek to measure the causal effect of exposure to Spanish-speakers on attitudes toward immigration among adults in Chicago and similar cities in 2024. There is some concern that the relationship has changed since our data was collected.",
 	answer(NULL, correct = TRUE),
@@ -1217,7 +1213,7 @@ A statistical model consists of two parts: the *probability family* and the *lin
 
 ### Exercise 2
 
-Load the **brms** package.
+Load the [**tidymodels**](https://www.tidymodels.org/) package.
 
 ```{r courage-2, exercise = TRUE}
 
@@ -1228,19 +1224,19 @@ library(...)
 ```
 
 ```{r courage-2-test, include = FALSE}
-library(brms)
+library(tidymodels)
 ```
 
 ### 
 
 Because `att_end` is a continuous variable, we assume that an individual's attitude toward immigration is produced from a Normal distribution.
 
-$$att\_end_i \sim Normal(\mu, \sigma^2)$$
+$$ att\_end_i \sim Normal(\mu, \sigma^2)$$
 
 
 ### Exercise 3
 
-Load the **tidybayes** package.
+Load the [**broom**](https://broom.tidymodels.org/) package.
 
 ```{r courage-3, exercise = TRUE}
 
@@ -1251,53 +1247,53 @@ library(...)
 ```
 
 ```{r courage-3-test, include = FALSE}
-library(tidybayes)
+library(broom)
 ```
 
 ### 
 
-Because we are using a Normal distribution, the link function is the identity. That is:
+Because the outcome variable has a Normal distribution, the link function is the identity. That is:
 
-$$ \mu =  \beta_0 + \beta_1 x_1 + \dots $$
+```{r}
+extract_eq(fit_att, intercept = "beta")
+```
+
 
 ### Exercise 4
 
-Add `library(brms)` and `library(tidybayes)` to the `setup` code chunk in `XX.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `XX.qmd`. `Command/Ctrl + Shift + K`. 
+Load the [**equatiomatic**](https://datalorax.github.io/equatiomatic/) package.
 
+```{r courage-4, exercise = TRUE}
 
 ```
-$$ att\_end_i \sim Normal(\mu, \sigma^2)$$
-$$ \mu =  \beta_0 + \beta_1 x_1 + \dots $$
+
+```{r courage-4-hint-1, eval = FALSE}
+library(...)
 ```
+
+```{r courage-4-test, include = FALSE}
+library(equatiomatic)
+```
+
+### 
+
+Recall that a continuous variable like `att_end` represents an individual's attitude towards immigration and is modeled as being generated from a Normal distribution. To fit this into a mathematical formula, we need to represent the variable appropriately.
+
+Since `att_end` is a continuous outcome, it is directly modeled without the need for dummy variables. Instead of converting `att_end` into dummy variables, we assume that it follows a Normal distribution:
+
+<!-- DK: More here. -->
+
+### Exercise 5
+
+Add `library(tidymodels)`, `library(broom)`, and `library(equatiomatic)` to the `setup` code chunk in `analysis.qmd`. `Command/Ctrl + Shift + K`.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("XX.qmd", pattern = "brms|tidybayes|\\$\\$")
+tutorial.helpers::show_file("analysis.qmd", pattern = "tidymodels|broom|equatiomatic")
 ```
 
 CP/CR.
-
-```{r courage-4}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### 
-
-Of course, our model must make use of the variables we actually have. Consider:
-
-$$ \mu =  \beta_0 + \beta_1 att\_start + \beta_2 sexmale $$
-<!-- DK: Knowledge -->
-
-
-### Exercise 5
-
-Type `?tidybayes` in the Console and copy paste the description. CP/CR.
 
 ```{r courage-5}
 question_text(NULL,
@@ -1307,98 +1303,103 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 3)
 ```
-
 ### 
-
-<!-- XX: Some comments about this problem. -->
-Always stick to the question we are trying to answer:
-
-> What is the average treatment effect, of exposing people to Spanish-speakers, on their attitudes toward immigration? 
 
 We need to provide a mathematical formula for our model to work on, using the two variables that are necessary to answer this question: `att_end` and `treatment`.
 
 ### Exercise 6
 
-Type `trains` and hit "Run Code." This will generate the data set about US commuters toward immigration, which will be used to construct the model.
+Because our outcome variable is continuous, start to create the model by using `linear_reg(engine = "lm")`.
 
 ```{r courage-6, exercise = TRUE}
 
 ```
 
 ```{r courage-6-hint-1, eval = FALSE}
-trains
+linear_reg(engine = "lm")
 ```
 
 ```{r courage-6-test, include = FALSE}
-trains
+linear_reg(engine = "lm")
 ```
+
 
 ### 
 
-The `treatment` can either be “Treated” or “Control” which are the two factors that may influence `att_end`. Participants were asked three questions about immigration issues, each of which allowed for an answer indicating strength of agreement on a scale form 1 to 5, with higher values for `att_end` indicating more agreement with conservative viewpoints.
+In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
+
 
 ### Exercise 7
 
-Create a model using `brm()` from the **brms**. Use the argument `formula = att_end ~ treatment`, `data = trains`, `family = gaussian()`, `refresh = 0`, `silent = 2`, and `seed = 9`.
-
-Assign the result to an object called `fit_gauss`.
-
+Continue the pipe to `fit(att_end ~ treatment, data = trains)`.
 
 ```{r courage-7, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r courage-7-hint-1, eval = FALSE}
-fit_gauss <- brm(formula = ...,
-                ... = trains,
-                family = gaussian(),
-                ... = 0,
-                silent = ...,
-                ... = 9)
+... |> 
+  fit(..., data = ...)
 ```
 
 ```{r courage-7-test, include = FALSE}
-fit_gauss
+linear_reg(engine = "lm")|> 
+  fit(att_end ~ treatment, data = trains)
 ```
-
-This will take a little while to run. It won't produce anything because of the `refresh` and `silent` arguments. 
 
 ### 
 
-Note that other numbers assigned to the `seed` argument will not affect the result since it is only for the purpose of eliminating the effect of randomness in the modeling fitting process. If you and your friend are running the above code in your own computers and want to cross-check the result, remember to set the same value for `seed`. 
+We can translate the fitted model into mathematics, including the best estimates of all the unknown parameters:
+
+```{r}
+# XX: You might want to use the `coef_digits` argument to show fewer digits
+# after the decimal. wrap = TRUE is necessary for large models.
+
+extract_eq(fit_att, 
+           intercept = "beta", 
+           use_coefs = TRUE)
+```
 
 ### Exercise 8
 
-In the `analysis.qmd`, add a new code chunk copy paste your answer above, remember to change the argument `data` to `ch6`. 
+Behind the scenes of this tutorial, an object called `fit_att` has been created which is the result of the code above. Type `fit_att` and hit "Run Code." This generates the same results as using `print(fit_att)`.
 
-Save the file and in the Console, run: 
 
-````
-tutorial.helpers::show_file("analysis.qmd")
-```` 
+```{r courage-8, exercise = TRUE}
 
-```{r courage-8}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
+```
+
+```{r courage-8-hint-1, eval = FALSE}
+fit_att
+```
+
+```{r courage-8-test, include = FALSE}
+fit_att
 ```
 
 ### 
 
-Selecting a model sometimes can feel like a trial and error process in which we first come up with a model to estimate our quantities of interest, test the model and try a different one until we find the most suitable model to answer our problem. 
+The code formula includes 'treatment' a factor variable that has two possible values: "Treated", and "Control".
+
+The *math formula* includes 'treatment' as a 0/1 variable
 
 ### Exercise 9
 
-As the model takes a while to run, it will be time-consuming when rendering the document many times along our work. On the top of the model setup, type `#| cache: TRUE`. Save and render the file again, you will see that it renders faster. 
+Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_att`. 
 
-In the Console, run: 
+`Command/Ctrl + Shift + K`. It may take some time to render `analysis.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `analysis.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
 
-````
-tutorial.helpers::show_file("analysis.qmd", pattern = "cache")
-```` 
+To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", start = -8)
+```
+
+CP/CR.
 
 ```{r courage-9}
 question_text(NULL,
@@ -1406,172 +1407,120 @@ question_text(NULL,
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
+	rows = 8)
+```
+
+### 
+
+Add `*_cache` to `.gitignore` file. Commit and push. Cached objects are often large. They don't belong on Github.
+
+### Exercise 10
+
+Create another code chunk in `analysis.qmd`. Add the chunk option: `label: math`. In that code chunk, add something like the below. You may find it useful to add the `coef_digits` argument to show fewer significant digits after the decimal.
+
+```
+extract_eq(fit_att, 
+           intercept = "beta", 
+           use_coefs = TRUE)
+```
+
+`Command/Ctrl + Shift + K`. 
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", pattern = "extract")
+```
+
+CP/CR.
+
+```{r courage-10}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
 	rows = 3)
 ```
 
 ### 
 
-Running `#| cache: TRUE` will save the results of the code chunk the first time it is run, and subsequent runs will use the cached results instead of re-executing the code. 
+When you render your document, this formula will appear.
 
-### Exercise 10
-
-Type `fit_gauss` and hit "Run Code." This generates the same results as using `print(fit_gauss)`.
-
-
-```{r courage-10, exercise = TRUE}
-
+```{r}
+extract_eq(fit_att, 
+           intercept = "beta", 
+           use_coefs = TRUE)
 ```
 
-```{r courage-10-hint-1, eval = FALSE}
-print(...)
-```
+This is our data generating mechanism.
 
-```{r courage-10-test, include = FALSE}
-print(fit_gauss)
-```
+The predicted attitude toward immigration (att_end) is calculated by starting with a baseline value of 8.45. If an individual is part of the treated group (where treatment=1), then 1.55 is added to this baseline. If the individual is not part of the treated group (where treatment=0), the prediction remains at 8.45.
 
-### 
-
-The top 4 rows (`Family`, `Link`, `Formula`, `Data`) are the setup of the models, you want to check this to make sure you did not make a mistake in the call to `brm()`. Next, we will go deeper into each of these rows.
 
 ### Exercise 11
 
-Run `family()` on `fit_gauss`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable. 
+Run `tidy()` on `fit_att` with the argument `conf.int` set equal to `TRUE`. This returns 95% confidence intervals for all the parameters in our model.
 
 ```{r courage-11, exercise = TRUE}
 
 ```
 
 ```{r courage-11-hint-1, eval = FALSE}
-family(...)
+tidy(..., conf.int = ...)
 ```
 
 ```{r courage-11-test, include = FALSE}
-family(fit_gauss)
+tidy(fit_att, conf.int = TRUE)
 ```
 
 ### 
 
-In this case, the "Family" is `gaussian`, which is the default value for the `family` argument in `brm()`. Gaussian is another term for the normal distribution. 
-
+ 
 ### Exercise 12
 
-Run `formula()` on `fit_gauss`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s). 
-
-```{r courage-12, exercise = TRUE}
+Create a new code chunk in `XX.qmd`. Add a code chunk option: `label: table`. Add this code to the code chunk.
 
 ```
-
-```{r courage-12-hint-1, eval = FALSE}
-formula(...)
+tidy(fit_att, conf.int = TRUE)
 ```
 
-```{r courage-12-test, include = FALSE}
-formula(fit_gauss)
+`Command/Ctrl + Shift + K`. 
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", pattern = "tidy")
 ```
 
-### 
+CP/CR.
 
-In this case, the "Formula" is `att_end ~ treatment`, which is what we passed in to the formula argument when we called `brm()`. 
+
+```{r courage-12}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
 
 ### Exercise 13
 
-Run `nobs()` on `fit_gauss`. The `nobs()` function returns the **n**umber of **obs**ervations.
+Add two sentences to your project summary. 
 
-```{r courage-13, exercise = TRUE}
+First, mention a weakness in your model, derived from the questions above about the key assumptions of a data science problem.
 
-```
+Second, explain the structure of the model. Something like: "I/we model Y [the concept of the outcome, not the variable name] as a [linear/logistic/multinomial/ordinal] function of X [and maybe other covariates]."
 
-```{r courage-13-hint-1, eval = FALSE}
-nobs(...)
-```
+Recall the beginning of our version of the summary:
 
-```{r courage-13-test, include = FALSE}
-nobs(fit_gauss)
-```
+> Using data from a 2012 survey of Boston-area commuters, we seek to measure the causal effect of exposure to Spanish-speakers on attitudes toward immigration among adults in Chicago and similar cities in 2024. There is some concern that the relationship has changed since our data was collected.
 
-### 
-
-In this case, the "number of observations" is `r scales::comma(nobs(fit_gauss))`. These are the people for whom we have the data.
-
-### Exercise 14
-
-Recall the definition of `Posterior Distribution` from [Chapter 2](https://ppbds.github.io/primer/probability.html#probability-distributions), which is a type of `Probability Distribution` that is based on our beliefs and expectations.
-
-Run `posterior_interval()` on `fit_gauss`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
-
-```{r courage-14, exercise = TRUE}
-
-```
-
-```{r courage-14-hint-1, eval = FALSE}
-posterior_interval(...)
-```
-
-```{r courage-14-test, include = FALSE}
-posterior_interval(fit_gauss)
-```
-
-### 
-
-We are 95% confident that the true value of each parameter lies within its associated confidence interval. Note that we might also use the term "uncertainty interval" to describe this range.
-
-### Exercise 15
-
-Run `fixef()` on `fit_gauss`. The `fixef()` returns information about the **fix**ed **ef**fects in the model, meaning the estimated values for certain parameters.
-
-```{r courage-15, exercise = TRUE}
-
-```
-
-```{r courage-15-hint-1, eval = FALSE}
-fixef(...)
-```
-
-```{r courage-15-test, include = FALSE}
-fixef(fit_gauss)
-```
-
-### 
-
-The precise definition of "fixed effects" is beyond the scope of this tutorial. See [here](https://statmodeling.stat.columbia.edu/2005/01/25/why_i_dont_use/) for extended discussion.
-
-
-### Exercise 16
-
-In order to check whether we have selected the right model, we can compare our model's prediction with our actual data. The **bayesplot** package includes the `pp_check()` function for that purpose.
-
-Run `pp_check()` on `fit_gauss`. The `pp_check()` runs a **p**osterior **p**redictive check.
-
-```{r courage-16, exercise = TRUE}
-
-```
-
-```{r courage-16-hint-1, eval = FALSE}
-pp_check(...)
-```
-
-```{r courage-16-test, include = FALSE}
-pp_check(fit_gauss)
-```
-
-### 
-
-If we run this code again we will get a (very slightly) different answer because the fitting process is **random**, but if the fake data had looked very different from the real data, that means that we have had a problem. However, for the most part, we conclude that, although not perfect, `pp_check()` shows that the fake outcomes generated by our model are like the actual outcome data. 
-
-
-
-
-
-
-
-### Exercise 17
-
-Write a few sentences which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add at least one sentence which describes the modelling approach which you are using, specifying at least the functional form and the dependent variable. Add at least one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
-
-```{r courage-17}
+```{r courage-13}
 question_text(NULL,
-	message = "Using data from a 2012 survey of Boston-area commuters, we seek to measure the causal effect of exposure to Spanish-speakers on attitudes toward immigration among adults in Chicago and similar cities in 2024. There is some concern that the relationship has changed since our data was collected. We modeled att_end, a summary measure of attitude toward immigration measured on a 3 to 15 integer scale, as a linear function of treatment.",
+	message = "We modeled a person's attitude toward immigration, measured on a 3 to 15 integer scale, as a linear function of treatment.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1580,7 +1529,8 @@ question_text(NULL,
 
 ### 
 
-Update the `analysis.qmd` paragraph accordingly. Do not just copy/paste our example answer, obviously!  
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to summary paragraph portion of your QMD. `Command/Ctrl + Shift + K`, and then commit/push.
+
 
 ## Temperance
 ### 
@@ -1621,7 +1571,7 @@ fit_gauss
 ```
 
 ```{r temperance-2-test, include = FALSE}
-fit_gauss 
+#fit_gauss 
 ```
 
 ### 
@@ -1661,7 +1611,7 @@ ndata
 ```
 
 ```{r temperance-4-test, include = FALSE}
-ndata
+# ndata
 ```
 
 ### 
@@ -1708,9 +1658,9 @@ Pipe `fit_gauss` to `add_epred_draws()`. Set the `newdata` argument equals `ndat
 ```
 
 ```{r temperance-6-test, include = FALSE}
-fit_gauss |> 
-  add_epred_draws(
-    newdata = ndata)
+# # fit_gauss |> 
+#   add_epred_draws(
+#     newdata = ndata)
 ```
 
 ### 
@@ -1733,10 +1683,10 @@ Continue the pipe with the command `select()` with `treatment`, `.draw`, and `.e
 ```
 
 ```{r temperance-7-test, include = FALSE}
-fit_gauss |> 
-  add_epred_draws(
-    newdata = ndata) |> 
-  select(treatment, .draw, .epred)
+# #fit_gauss |> 
+#   add_epred_draws(
+#     newdata = ndata) |> 
+#   select(treatment, .draw, .epred)
 ```
 
 ### 
@@ -1759,10 +1709,10 @@ In the output of the pipe, the "Treated" and "Control" posteriors are stacked up
 ```
 
 ```{r temperance-8-test, include = FALSE}
-fit_gauss |> 
-  add_epred_draws(
-    newdata = ndata) |> 
-  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred)
+# fit_gauss |> 
+#   add_epred_draws(
+#     newdata = ndata) |> 
+#   pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred)
 ```
 
 ### 
@@ -1785,11 +1735,11 @@ Continue the pipe with `mutate()`, and set `causal_effect = Treated - Control` a
 ```
 
 ```{r temperance-9-test, include = FALSE}
-fit_gauss |> 
-  add_epred_draws(
-    newdata = ndata) |> 
-  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
-  mutate(causal_effect = Treated - Control)
+# fit_gauss |> 
+#   add_epred_draws(
+#     newdata = ndata) |> 
+#   pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+#   mutate(causal_effect = Treated - Control)
 ```
 
 ### 
@@ -1812,12 +1762,12 @@ Continue the pipe with `select(- .draw)` to drop the `.draw` columns.
 ```
 
 ```{r temperance-10-test, include = FALSE}
-fit_gauss |> 
-  add_epred_draws(
-    newdata = ndata) |> 
-  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
-  mutate(causal_effect = Treated - Control) |> 
-  select(- .draw)
+# fit_gauss |> 
+#   add_epred_draws(
+#     newdata = ndata) |> 
+#   pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+#   mutate(causal_effect = Treated - Control) |> 
+#   select(- .draw)
 ```
 
 ### 
@@ -1842,12 +1792,12 @@ Continue the pipe with `ggplot()`, mapping `x` to `causal_effect` in the `aes()`
 ```
 
 ```{r temperance-11-test, include = FALSE}
-fit_gauss |> 
-  add_epred_draws(
-    newdata = ndata) |> 
-  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
-  mutate(causal_effect = Treated - Control) |> 
-  ggplot(aes(x = causal_effect))
+# fit_gauss |> 
+#   add_epred_draws(
+#     newdata = ndata) |> 
+#   pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+#   mutate(causal_effect = Treated - Control) |> 
+#   ggplot(aes(x = causal_effect))
 ```
 
 ### 
@@ -1871,13 +1821,13 @@ Add `geom_histogram()`, setting `y` equal `after_stat(count / sum(count))` withi
 ```
 
 ```{r temperance-12-test, include = FALSE}
-fit_gauss |> 
-  add_epred_draws(
-    newdata = ndata) |> 
-  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
-  mutate(causal_effect = Treated - Control) |> 
-  ggplot(aes(x = causal_effect)) +
-    geom_histogram(aes(y = after_stat(count / sum(count))))
+# fit_gauss |> 
+#   add_epred_draws(
+#     newdata = ndata) |> 
+#   pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+#   mutate(causal_effect = Treated - Control) |> 
+#   ggplot(aes(x = causal_effect)) +
+#     geom_histogram(aes(y = after_stat(count / sum(count))))
 ```
 
 ### 
@@ -1902,14 +1852,14 @@ Adjust the bin width by adding `bins = 100` to the `geom_histogram()` function.
 ```
 
 ```{r temperance-13-test, include = FALSE}
-fit_gauss |> 
-  add_epred_draws(
-    newdata = ndata) |> 
-  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
-  mutate(causal_effect = Treated - Control) |> 
-  ggplot(aes(x = causal_effect)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))), 
-                   bins = 100)
+# fit_gauss |> 
+#   add_epred_draws(
+#     newdata = ndata) |> 
+#   pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+#   mutate(causal_effect = Treated - Control) |> 
+#   ggplot(aes(x = causal_effect)) +
+#     geom_histogram(aes(y = after_stat(count/sum(count))), 
+#                    bins = 100)
 ```
 
 ### 
@@ -1933,15 +1883,15 @@ Change the y-axis into the percentage format. Add `scale_y_continuous()`, settin
 ```
 
 ```{r temperance-14-test, include = FALSE}
-fit_gauss |> 
-  add_epred_draws(
-    newdata = ndata) |> 
-  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
-  mutate(causal_effect = Treated - Control) |> 
-  ggplot(aes(x = causal_effect)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))), 
-                   bins = 100) + 
-  scale_y_continuous(labels = scales::percent_format())
+# fit_gauss |> 
+#   add_epred_draws(
+#     newdata = ndata) |> 
+#   pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+#   mutate(causal_effect = Treated - Control) |> 
+#   ggplot(aes(x = causal_effect)) +
+#     geom_histogram(aes(y = after_stat(count/sum(count))), 
+#                    bins = 100) + 
+#   scale_y_continuous(labels = scales::percent_format())
 ```
 
 ### 
@@ -1964,16 +1914,16 @@ Change the theme of the graph by adding `theme_classic()`.
 ```
 
 ```{r temperance-15-test, include = FALSE}
-fit_gauss |> 
-  add_epred_draws(
-    newdata = ndata) |> 
-  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
-  mutate(causal_effect = Treated - Control) |> 
-  ggplot(aes(x = causal_effect)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))), 
-                   bins = 100) + 
-  scale_y_continuous(labels = scales::percent_format()) + 
-  theme_classic()
+# fit_gauss |> 
+#   add_epred_draws(
+#     newdata = ndata) |> 
+#   pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+#   mutate(causal_effect = Treated - Control) |> 
+#   ggplot(aes(x = causal_effect)) +
+#     geom_histogram(aes(y = after_stat(count/sum(count))), 
+#                    bins = 100) + 
+#   scale_y_continuous(labels = scales::percent_format()) + 
+#   theme_classic()
 ```
 
 ### 
@@ -2003,20 +1953,20 @@ Remember that this is what your graph should look like:
 ```{r}
 #| echo: false
 
-fit_gauss |> 
-  add_epred_draws(
-    newdata = ndata) |> 
-  pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
-  mutate(causal_effect = Treated - Control) |> 
-  ggplot(aes(x = causal_effect)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))), 
-                   bins = 100) + 
-  scale_y_continuous(labels = scales::percent_format()) + 
-  theme_classic() + 
-  labs(title = "Posterior for Average Treatment Effect",
-         subtitle = "Exposure to Spanish-speakers shifts immigration attitudes rightward",
-         x = "Difference in Attitude",
-         y = "Probability")
+# fit_gauss |> 
+#   add_epred_draws(
+#     newdata = ndata) |> 
+#   pivot_wider(id_cols = .draw, names_from = treatment, values_from = .epred) |> 
+#   mutate(causal_effect = Treated - Control) |> 
+#   ggplot(aes(x = causal_effect)) +
+#     geom_histogram(aes(y = after_stat(count/sum(count))), 
+#                    bins = 100) + 
+#   scale_y_continuous(labels = scales::percent_format()) + 
+#   theme_classic() + 
+#   labs(title = "Posterior for Average Treatment Effect",
+#          subtitle = "Exposure to Spanish-speakers shifts immigration attitudes rightward",
+#          x = "Difference in Attitude",
+#          y = "Probability")
 ```
 
 ### 
