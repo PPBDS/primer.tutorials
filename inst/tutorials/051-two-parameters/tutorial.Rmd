@@ -42,11 +42,8 @@ fit_height <- linear_reg() |>
   set_engine("lm") |> 
   fit(height ~ sex, data = x)
 
-ndata <- expand_grid(sex = unique(x$sex))
-
-plot <- plot_predictions(fit_height, 
-                         newdata = expand_grid(sex = unique(x$sex)),
-                         condition = "sex")
+plot <- plot_predictions(fit_height$fit, 
+                        condition = "sex")
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -54,12 +51,6 @@ plot <- plot_predictions(fit_height,
 
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
-
-<!-- DK: Get rid of coded answer creation in interpretation questions. Just hard code the number once! -->
-
-<!-- DK: Get rid of ndata. Plot is: -->
-
-<!-- plot_predictions(fit_height$fit, condition = "sex") -->
 
 ## Introduction
 ### 
@@ -704,13 +695,45 @@ We have to clean the data so we can focus on the specific numbers to answer our 
 
 ### Exercise 19
 
+Copy the previous code, continue the pipe with `slice_sample()`, set `n` equal `50`, and `by` equal `sex` as arguments. Add `set.seed(10)` in a separate line before creating the object. 
+
+```{r wisdom-19, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r wisdom-19-hint-1, eval = FALSE}
+set.seed(10)
+... |> 
+  slice_sample(n = ..., by = ...)
+```
+
+```{r wisdom-19-test, include = FALSE}
+set.seed(10)
+x <- nhanes |>
+  filter(age >= 18) |>
+  select(height, sex) |>
+  drop_na() |> 
+  slice_sample(n = 50, by = sex)
+```
+
+### 
+
+Because we want the undertainty about the true mean of men and women to be large enough to show up in out plot in an interesting way, we pretend that we only have 100 observations in the data, 50 men and 50 women.
+
+### Exercise 20
+
 In `analysis.qmd`, add a new code chunk to the QMD, copy/paste the pipeline above and assign the result to the new object `x`: 
 
 ```
+set.seed(10)
+
 x <- nhanes |> 
   filter(age >= 18) |> 
   select(height, sex) |> 
-  drop_na()
+  drop_na() |> 
+  slice_sample(n = 50, by = sex)
 ```
 
 `Command/ctrl + Shift + K` follows. In the Console, run:
@@ -719,7 +742,7 @@ x <- nhanes |>
 show_file("analysis.qmd", start = -5)
 ```
 
-```{r wisdom-19}
+```{r wisdom-20}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -732,11 +755,11 @@ question_text(NULL,
 
 Now that you have an object `x`, a subset of `nhanes` that has been cleaned and narrowed down to meet the requirement of our question. 
 
-### Exercise 20
+### Exercise 21
 
 In your own words, define "validity" as we use the term.
 
-```{r wisdom-20}
+```{r wisdom-21}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -749,11 +772,11 @@ question_text(NULL,
 
 Validity is always about the *columns* in the Preceptor Table and the data. Just because columns from these two different tables have the same *name* does not mean that they are the same *thing*.
 
-### Exercise 21
+### Exercise 22
 
 Provide one reason why the assumption of validity might not hold for the outcome variable: `Height`. Use the words "column" or "columns" in your answer.
 
-```{r wisdom-21}
+```{r wisdom-22}
 question_text(NULL,
 	message = "Is the way people measure height in the survey similar to the way it is being measured now -- e.g. Are measurements taken with shoes on or shoes off --. Such issues can cause the `height` column in NHANES in 2010 and the column `height` in the Preceptor Table not refer to the same thing.",
 	answer(NULL, correct = TRUE),
@@ -766,11 +789,11 @@ question_text(NULL,
 
 In order to consider the Preceptor Table and the data to be drawn from the same population, the columns from one must have a *valid correspondence* with the columns in the other. Validity, if true (or at least reasonable), allows us to construct the Population Table, which is the first step in Justice.
 
-### Exercise 22
+### Exercise 23
 
 Provide one reason why the assumption of validity might not hold for the covariate: `sex`. Use the words "column" or "columns" in your answer.
 
-```{r wisdom-22}
+```{r wisdom-23}
 question_text(NULL,
 	message = "The column `sex` in NHANES in 2010 and the column `sex` in the Preceptor Table may not refer to the same thing since people's notion about sex back in the 2010 might not be as diverse as now.",
 	answer(NULL, correct = TRUE),
@@ -783,7 +806,7 @@ question_text(NULL,
 
 Because we control the Preceptor Table and, to a lesser extent, the original question, we can adjust those variables to be “closer” to the data that we actually have. This is another example of the iterative nature of data science. If the data is not close enough to the question, then we check with our boss/colleague/customer to see if we can modify the question in order to make the match between the data and the Preceptor Table close enough for validity to hold.
 
-### Exercise 23
+### Exercise 24
 
 Over the course of this tutorial, we will be creating a summary paragraph. The purpose of this exercise is to write the first two sentences of that paragraph.
 
@@ -793,7 +816,7 @@ The second sentence does two things. First, it introduces the data source. Secon
 
 Type your two sentences below.
 
-```{r wisdom-23}
+```{r wisdom-24}
 question_text(NULL,
 	message = "Men and women vary in height. Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women.",
 	answer(NULL, correct = TRUE),
@@ -1094,8 +1117,7 @@ question_text(NULL,
 
 ### 
 
-
-The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has three values --- "black", "hispanic", and "white" --- then the model creates two 0/1 dummy variables, giving them names like $race_{hispanic}$ and $race_{white}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
+The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. Imagine you have a variable `race` that has three values --- "black", "hispanic", and "white" --- then the model creates two 0/1 dummy variables, giving them names like $race_{hispanic}$ and $race_{white}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied. 
 
 The mathematical formula in this case is: 
 
@@ -1277,23 +1299,15 @@ Because we are Bayesians, we believe that there is a true value and that the con
 ### Exercise 12
 
 ```{r}
-result <- tidy(fit_height, conf.int = TRUE) |> 
-                  filter(term == "(Intercept)") |> 
-                  pull(estimate) |>
-                  round()
-answer <- paste("Our (best) guess/estimate for the average height of adult females is", result)
-```
-
-Write a sentence interpreting the `r result` estimate for the Intercept.
-
-```{r}
 tidy(fit_height, conf.int = TRUE) |> 
   select("term", "estimate", "conf.low", "conf.high")
 ```
 
+Write a sentence interpreting the estimate for the Intercept.
+
 ```{r courage-12}
 question_text(NULL,
-	message = answer,
+	message = "Our (best) guess/estimate for the average height of adult females is 161cm.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1336,27 +1350,17 @@ Note how, whenever we consider non-treatment variables, we must never use terms 
 ### Exercise 14
 
 ```{r}
-ci_intercept <- tidy(fit_height, conf.int = TRUE) |> 
-                filter(term == "(Intercept)") |>
-                select(conf.low, conf.high) |> 
-                round() |> 
-                with(sprintf("[%d, %d]", conf.low, conf.high)) 
-
-answer <- paste("There is a 95% chance that the true value of the Intercept is within the range", ci_intercept, "centimeters.")
-```
-
-Write a sentence interpreting the confidence interval for Intercept.
-
-```{r}
 tidy(fit_height, conf.int = TRUE) |> 
   filter(term == "(Intercept)") |>
   select(conf.low, conf.high) |> 
   round()
 ```
 
+Write a sentence interpreting the confidence interval for Intercept.
+
 ```{r courage-14}
 question_text(NULL,
-	message = answer,
+	message = "There is a 95% chance that the true value of the Intercept is within the range 159 and 163 cm.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1370,27 +1374,17 @@ When looking at the confidence interval, we examine whether it excludes zero. If
 ### Exercise 15
 
 ```{r}
-ci_sex <- tidy(fit_height, conf.int = TRUE) |> 
-                filter(term == "sexMale") |>
-                select(conf.low, conf.high) |> 
-                round() |> 
-                with(sprintf("[%d, %d]", conf.low, conf.high)) 
-
-answer <- paste("There is a 95% chance that the true value of the coefficient of `sexMale` is within the range", ci_sex, "centimeters.")
-```
-
-Write a sentence interpreting the confidence interval for sexMale.
-
-```{r}
 tidy(fit_height, conf.int = TRUE) |> 
   filter(term == "sexMale") |>
   select(conf.low, conf.high) |> 
   round()
 ```
 
+Write a sentence interpreting the confidence interval for sexMale.
+
 ```{r courage-15}
 question_text(NULL,
-	message = answer,
+	message = "There is a 95% chance that the true value of the coefficient of `sexMale` is within the range 11 and 17 centimeters.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1518,132 +1512,52 @@ Data science projects almost always begin with a broad topic of interest. Yet, i
 
 ### Exercise 4
 
-To answer our question, we need to create an object --- call it `ndata` --- which we will pass in as a value to the `newdata` argument in whichever **marginaleffects** functions we decide to use. Which variables (e.g., which columns) do we need to include in this object?
+In the Console, run `fit_height$fit` and hit "Run Code."
 
-```{r temperance-4}
-question_text(NULL,
-	message = "The ndata object should include all the independent variables in the model, i.e., all the variables after the `~` in the model formula. In this case, those variables are Intercept and sex. In most statistical models, the intercept is assumed to be there, so we do not need to include it. So, there is only one column for sex in our ndata object.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
+```{r temperance-4, exercise = TRUE}
+
+```
+
+```{r temperance-4-hint-1, eval = FALSE}
+fit_height$fit
+```
+
+```{r temperance-4-test, include = FALSE}
+fit_height$fit
 ```
 
 ### 
 
-For most models, each row in `ndata` corresponds to a posterior derived from the values of the variables in that row. But that is just the posterior for one sort of unit. There are lots of different units! Which others might we be interested in? We can generate posteriors for each of them, and then, in some cool graphic, display all those posteriors together.
+This prints out the result of our estimated coefficients for the Intercept and `sexMale`. From this, we can answer our question about the average height of men and women. 
 
 ### Exercise 5
-
-Which values do you want the variables in your `ndata` object to have? This is not easy! At the very least, one or more of the rows should have values which allow you to answer your original question. But, now that you have a model, there are many questions which you might want to answer, the better to get a fuller understanding.
-
-```{r temperance-5}
-question_text(NULL,
-	message = "The `sex` variable will be either Male or Female.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-Selecting the values involves extremely subtle statistical reasoning. Explore the vignettes about [predictions](https://marginaleffects.com/vignettes/predictions.html) and [comparisons](https://marginaleffects.com/vignettes/comparisons.html) for detailed discussion.
-
-### Exercise 6
-
-Here is the R code which creates the `ndata` object: `expand_grid(sex = unique(x$sex))`. Type it into the code exercise block and hit "Run Code."
-
-```{r temperance-6, exercise = TRUE}
-
-```
-
-```{r temperance-6-hint-1, eval = FALSE}
-expand_grid(sex = ...)
-```
-
-```{r temperance-6-test, include = FALSE}
-expand_grid(sex = unique(x$sex))
-```
-
-### 
-
-It is best to ensure that the variable types in `ndata` match the variable types on `x`. The easiest way to ensure that is by using `x` itself in the creation `ndata`. 
-
-### Exercise 7
-
-Behind the scenes, we have created the `ndata` object using this code. Type `ndata` and hit "Run Code." 
-
-```{r temperance-7, exercise = TRUE}
-
-```
-
-```{r temperance-7-hint-1, eval = FALSE}
-ndata
-```
-
-```{r temperance-7-test, include = FALSE}
-ndata
-```
-
-### 
-
-Functions like `unique()` --- to grab all the possible values in a variable --- and `expand_grid()` --- to create all possible combinations of different variables --- are often useful in creating `ndata`.
-
-### Exercise 8
-
-Create a new code chunk in your QMD which creates the `ndata` object. 
-
-`Command/Ctrtl + Shift + K`.
-
-At the Console, run:
-
-```
-tutorial.helpers::show_file("analysis.qmd", pattern = "ndata")
-```
-CP/CR.
-
-
-```{r temperance-8}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### 
-
-Note that the `ndata` object has not existed in the qmd world yet, that's why we need to create it there. 
-
-### Exercise 9
 
 Enter this code into the exercise code block and hit "Run Code."
 
 ```
-plot_predictions(fit_height, 
-                 newdata = ndata, 
-                 conditions = "sex")
+plot_predictions(fit_height$fit, 
+                condition = "sex")
 ```                 
 
-```{r temperance-9, exercise = TRUE}
+```{r temperance-5, exercise = TRUE}
 
 ```
 
-```{r temperance-9-hint-1, eval = FALSE}
-plot_predictions(fit_height, 
-                 newdata = ndata, 
-                 conditions = c("XX", "XX")))
+```{r temperance-5-hint-1, eval = FALSE}
+plot_predictions(fit_height$fit, 
+                 conditions = "sex")
 ```
 
-```{r temperance-9-test, include = FALSE}
-plot_predictions(fit_height, 
-                 newdata = ndata, 
+```{r temperance-5-test, include = FALSE}
+plot_predictions(fit_height$fit,
                  condition = "sex")
 ```
 
-### Exercise 10
+### 
+
+Although we cannot directly tell the uncertainty level of our estimate for the average height of men, by eyeballing, we can tell that it ranges from approximately 172.5 to 177.5 cm.
+
+### Exercise 6
 
 Add `library(marginaleffects)` to the `analysis.qmd` setup code chunk. 
 
@@ -1659,7 +1573,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r temperance-10}
+```{r temperance-6}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1670,13 +1584,13 @@ question_text(NULL,
 
 ### 
 
-### Exercise 11
+### Exercise 7
 
 Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
-```{r temperance-11}
+```{r temperance-7}
 question_text(NULL,
-	message = "Men and women vary in height. Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women. Since the participation for the survey is voluntary, it could mean that, for example, taller people are more likely to answer this question, thus reduces representativeness of the data. We model height as a linear function of sex. Our best guest for the average height of women is 161 cm, we are 95% confident that its true value is between 158 and 164 while men, on average, are expected to be taller in women by 14.4 cm, and we are also 95% confident that the real value of differences in average height lies between 10.2 and 18.6.",
+	message = "Men and women vary in height. Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women. Since the participation for the survey is voluntary, it could mean that, for example, taller people are more likely to answer this question, thus reduces representativeness of the data. We model height as a linear function of sex. Our best guest for the average height of women is 161 cm, we are 95% confident that its true value is between 158 and 164 while men, on average, are expected to be taller in women by 14 cm, and we are also 95% confident that the real value of differences in average height lies between 10.7 and 16.8.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1689,11 +1603,11 @@ Add a final sentence to your summary paragraph in your QMD as you see fit, but d
 
 As always, note that your estimate depends on all the assumptions in your model being true. But that is a lie! All your assumptions are not true. So, your mean estimate might be wrong, and your confidence intervals are certainly too narrow.
 
-### Exercise 12
+### Exercise 8
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-12}
+```{r temperance-8}
 question_text(NULL,
 	message = "As we would tell our boss, it would not be shocking to find out that the actual average height was less or more than our estimate. This is because a lot of the assumptions we make during the process of building a model, the processes in Wisdom, are subject to error. Perhaps our data did not match the future as well as we had hoped. In such cases, increase the confidence interval since the assumptions of your model are always false.",
 	answer(NULL, correct = TRUE),
@@ -1704,9 +1618,9 @@ question_text(NULL,
 
 ### 
 
-### Exercise 13
+### Exercise 9
 
-Rearrange the material in `analysis.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
+Rearrange the material in `analysis.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to make sure that everything works.
 
 At the Console, run:
 
@@ -1716,7 +1630,7 @@ tutorial.helpers::show_file("analysis.qmd")
 
 CP/CR.
 
-```{r temperance-13}
+```{r temperance-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1729,11 +1643,11 @@ question_text(NULL,
 
 This is the version of your QMD file which your teacher is most likely to take a close look at.
 
-### Exercise 14
+### Exercise 10
 
 Publish your rendered QMD to Rpubs. Choose a sensible slug. Copy/paste the url below.
 
-```{r temperance-14}
+```{r temperance-10}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1753,11 +1667,10 @@ We started the Tutorial with a question:
 
 > *What is the average height of men and women?*
 
-Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women. Since the participation for the survey is voluntary, it could mean that, for example, taller people are more likely to answer this question, thus reduces representativeness of the data. We model height as a linear function of sex. Our best guest for the average height of women is 161 cm, we are 95% confident that its true value is between [158, 164] while men, on average, are expected to be taller in women by 14.4 cm, and we are also 95% confident that the real value of differences in average height lies between [10.2, 18.6]
+Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women. Since the participation for the survey is voluntary, it could mean that, for example, taller people are more likely to answer this question, thus reduces representativeness of the data. We model height as a linear function of sex. Our best guest for the average height of women is 161 cm, we are 95% confident that its true value is between 158 and 164 while men, on average, are expected to be taller in women by 14 cm, and we are also 95% confident that the real value of differences in average height lies between 10.7 and 16.8.
 
 ```{r}
-plot_predictions(fit_height, 
-                 newdata = ndata, 
+plot_predictions(fit_height$fit, 
                  condition = "sex")
 ```
 
