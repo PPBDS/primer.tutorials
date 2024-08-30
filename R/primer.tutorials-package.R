@@ -17,7 +17,7 @@ function_for_import  <- function()
 # Best way to demnstrate that quarto is actually "used", thereby stopping
 # renv::status() from bothering us.
 
-library(quarto)
+library(quart
 
 ## usethis namespace: start
 ## usethis namespace: end
