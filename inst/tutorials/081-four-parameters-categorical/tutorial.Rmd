@@ -8,7 +8,7 @@ output:
     progressive: yes
     allow_skip: yes
 runtime: shiny_prerendered
-description: 'Chapter 8 Tutorial: Four Parameters: Categorical'
+description: 'Tutorial #8 for Preceptor''s Primer'
 ---
 
 ```{r setup, include = FALSE}
@@ -18,8 +18,10 @@ library(gt)
 
 library(tidyverse)
 library(primer.data)
-library(brms)
-library(tidybayes)
+library(tidymodels)
+library(broom)
+library(equatiomatic)
+library(marginaleffects)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
@@ -34,34 +36,6 @@ nes_92 <- nes |>
     pres_vote == "Republican" ~ "Bush",
     pres_vote == "Third Party" ~ "Perot",
   ))
-
-# temperance <- fit_nes |> 
-#   add_epred_draws(newdata = tibble(sex = c("Female", "Male"))) |>
-#   select(sex, .category, .epred) |> 
-#   ggplot(aes(x = .epred, fill = sex)) +
-#     geom_histogram(bins = 100) +
-#     facet_grid(~ .category) +
-#     scale_x_continuous(breaks = c(0.05, 0.3, 0.6),
-#       labels = scales::percent_format()) +
-#     labs(title = "Posterior for Expected Probability of Candidate Support Among Women",
-#           subtitle = "Women are most likely to support Clinton",
-#           x = "Posterior Probability of Expected Vote Probability",
-#           y = "Count",
-#           fill = "Sex") 
-
-# fit_nes <- brm(formula = pres_vote ~ sex,
-#                data = nes_92,
-#                family = categorical(),
-#                silent = 2,
-#                refresh = 0,
-#                seed = 76)
-# 
-# write_rds(fit_nes, "data/fit_nes.rds")
-
-fit_nes <- read_rds("data/fit_nes.rds")
-
-ndata <- tibble(sex = c("Female", "Male"))
-
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -73,22 +47,272 @@ ndata <- tibble(sex = c("Female", "Male"))
 ## Introduction
 ### 
 
-This tutorial covers [Chapter 8: Four Parameters: Categorical](https://ppbds.github.io/primer/four-parameters-categorical.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
+This tutorial supports [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
+
+The world confronts us. Make decisions we must.
+
+Imagine that you are ... 
+
+## The Question
+### 
+
+*It is not the answer that enlightens, but the question.* - Eugene Ionesco
+
+### Exercise 1
+
+Load [**tidyverse**](https://www.tidyverse.org/) package.
+
+```{r the-question-1, exercise = TRUE}
+
+```
+
+```{r the-question-1-hint-1, eval = FALSE}
+library(tidyverse)
+```
+
+```{r the-question-1-test, include = FALSE}
+library(tidyverse)
+```
+
+### 
+
+<!-- XX: Report the source of the data, along with some background information about it. -->
+
+### Exercise 2
+
+Load the [**primer.data**](https://ppbds.github.io/primer.data/) package.
+
+```{r the-question-2, exercise = TRUE}
+
+```
+
+```{r the-question-2-hint-1, eval = FALSE}
+library(primer.data)
+```
+
+```{r the-question-2-test, include = FALSE}
+library(primer.data)
+```
+
+### 
+
+A version of the data from XX is available in the `nes` tibble.
+
+### Exercise 3
+
+After loading **primer.data** in your Console, type `?nes` in the Console, and paste in the Description below.
+
+```{r the-question-3}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+<!-- XX. More information about the data. One example would be a copy/paste of the abstract if the data is from a paper. Or perhaps a quote from the website on which the data can be found. -->
+
+### Exercise 4
+
+XX is the broad topic of this tutorial. Given that topic, which variable in `nes` should we use as our outcome variable? 
+
+```{r the-question-4}
+question_text(NULL,
+	message = "XX: A sentence about the outcome variable which we will be using.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 2)
+```
+
+### 
+
+<!-- XX: Create a simple plot of the outcome variable. Do not use any code chunk labels for this code chunk. The subtitle should highlight some aspect of the data. Plot does not need to be fancy but it should be competent, with axis labels, nice formatting and so on. We don't show students the code. You can add more knowledge below the plot, if you like. -->
+
+### Exercise 5
+
+<!-- DK: Add discussion of how to handle the case in which there is an actual treatment variable. -->
+
+Let's imagine a brand new variable which **does not exists** in the data. This variable should be binary, meaning that it only takes on one of two values. It should also, at least in theory, by manipulable. In other words, if the value of the variable is "X," or whatever, then it generates one potential outcome and if it is "Y," or whatever, it generates another potential outcome.
+
+Describe this imaginary variable and how might we manipulate its value.
+
+
+```{r the-question-5}
+# XX: In your answer, and for the next few questions, always treat this
+# imaginary variable as real by putting backticks around the name. For example,
+# with nhanes data, we might imagine a variable called `vitamin` for which `1`
+# means that the individual ate vitamins growing up and `0` means they did not.
+# Using the words "treatment group" and "control group" as part of your answer
+# is often helpful since it reinforces the fact that we are using the Rubin
+# Causal Model.
+
+question_text(NULL,
+	message = "XX: (This is an example answer.) Imagine a variable called `phone_call` which has a value of `1` if the person received a phone call urging them to vote and `0` if they did not receive such a phone call. We, meaning the organization in charge of making such phone calls, can manipulate this variable by deciding, either randonly or otherwise, whether or not we will call a specific individual.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Any data set can be used to construct a causal model as long as there is at least one covariate that we can, at least in theory, manipulate. It does not matter whether or not anyone did, in fact, manipulate it. 
+
+### Exercise 6
+
+Given our (imaginary) treatment variable XX, how many potential outcomes are there for each [XX: unit]? Explain why.
+
+
+```{r the-question-6}
+question_text(NULL,
+	message = "There are XX potential outcomes because the treatment variable `XX` takes on XX posible values: list-the-values-here, i.e., exposure to Spanish-speakers on a train paltform versus no such exposure.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+The same data set can be used to create, separately, lots and lots of different models, both causal and predictive. We can just use different outcome variables and/or specify different treatment variables. All of this stuff is a *conceptual* framework we apply to the data. It is never inherent in the data itself.
+
+
+### Exercise 7
+
+In a few sentences, specify two different values for the imaginary treatment variable `XX`, for a single unit, and then guess at the potential outcomes which would result, and then determine the causal effect for that unit given those guesses.
+
+```{r the-question-7}
+# XX: Replace [XX: unit] with a better word below given the actual data set we
+# are using. Replace all the XX terms as appropriate.
+
+# XX: For a given individual, assume that the value of the treatment variables
+# might be 'exposure to Spanish-speakers' or 'no exposure'. If the individual
+# gets 'exposure to Spanish-speakers', then her attitude toward immigration
+# would be 10. If the individual gets 'no exposure', then her attitude would be
+# 8. The causal effect on the outcome of a treatment of exposure to
+# Spanish-speakers versus no exposure is 10 - 8 --- i.e., the difference between
+# two potential outcomes --- which equals 2, which is the causal effect.
+
+# XX: If the outcome is a character variable, like Strongly Approve, then there
+# is no simple metric on which we can pinpoint the causal effect. That is, the
+# causal effect is still defined --- as, in this example, the difference between
+# Strongly Approve and Neutral --- but can not be expressed as a number, at
+# least without further work.
+
+question_text(NULL,
+	message = "For a given [XX: unit], assume that the value of the treatment variable might be [XX: treatment] or [XX: control]. If the [XX: unit] gets [XX: treatment], then [XX: the outcome] would be [XX: a number/character]. If the [XX: unit] gets [XX: control], then [XX: the outcome] would be [XX: a different number or character]. The causal effect on the outcome of a treatment of [XX: treatment] versus [XX: control] is [XX: a number] - [XX: a different number] --- i.e., the difference between two potential outcomes --- which equals [XX: the causal effect], which is the causal effect.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+The the definition of a causal effect as the difference between two potential outcomes. Of course, you can't just say that the causal effect is 10. The exact value depends on which potential outcome comes first in the subtraction and which second. There is, perhaps, a default sense in which the causal effect is defined as treatment minus control. 
+
+Any causal connection means exploring the *within row* different between two potential outcomes. We don't need to look at any other rows to have that conversation.
+
+### Exercise 8
+
+<!-- XX: Replace stuff like `[XX: the tibble]` with just the name of the tibble, i.e., `trains`. -->
+
+Let's consider a *predictive* model. Which variable in `[XX: the tibble]` do you think might have an important connection to `XX: the outcome variable`? 
+
+
+```{r the-question-8}
+question_text(NULL,
+	message = "XX: Describe the (or one of) the key covariate whose connection to the outcome variable we most want to explore.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 2)
+```
+
+### 
+
+With a predictive model, there is only one outcome for each individual unit. There are not two potential outcomes because we are not considering any of the covariates to be a treatment variable. We assuming that the values of all covariates are "fixed." 
+
+### Exercise 9
+
+Specify two different groups of [XX: units] which have specific value for [XX: covariate] and which might have different average values for the [XX: outcome].  
+
+```{r the-question-9}
+question_text(NULL,
+	message = "XX: Consider two groups, the first with a value for [XX: covariate] of [XX: a value] and the second with value [XX: a different value]. Those two groups might different average values for the outcome variable.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+In predictive models, do not use words like "cause," "influence," "impact," or anything else which suggests causation. The best phrasing is in terms of "differences" between groups of units with different values for the covariate of interest.
+
+### Exercise 10
+
+Write a [XX: choose causal or predictive] question which connects the outcome variable `XX` to `XXZ`, the covariate of interest. 
+
+```{r the-question-10}
+# XX: If it is causal, you should use key causal language in the question, like
+# "What is the causal effect of the treatment on the outcome?" Example: "What is
+# the causal effect of exposure to Spanish-speakers on attitudes toward
+# immigration?" If the model is predictive, the question should clearly compare
+# two groups of units. "What is the difference in the outcome variable between
+# two groups of units?" Example:  "What is the difference in immigration
+# attitudes between Democrats and Republicans?" In both cases, the word
+# "average" is implicit in the question.
+
+question_text(NULL,
+	message = "XX: Give your question.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+The question can not specify values for more than one covariate, simply because you do not know which covariates will be included in the model until you create it. You must mention the covariate (i.e., the treatment) in a causal model. Also, it is not unreasonable to specify, before you start, a covariate whose connection, if any, to the outcome is of special interest.
+
+### Exercise 11
+
+What is a Quantity of Interest which might help us to answer our question?
+
+<!-- XX: In general, our initial question does not include any specific numbers. It just uses words. For precision, we need to specify a Quantity of Interest that we are interested in. This is harder than it might look! It also helps to set the stage of Temperance. In all cases, the quantity of interest involves the outcome variable. (How could it not?) It also involves specific values of the covariates.  -->
+
+<!-- XX: For predictive models, the specific question is generally of two types. First, what is the *expected* value of the outcome for various values of the independent variables? Second, what is the comparison in the expected outcome between two different groups? We are *not* simply interested in predicting the outcome variable for one unit. (In fact, of course, we might ultimately be interested in just one unit, but we need to *pretend* to be interested in lots of units in order to motivate the creation of a model.) -->
+
+<!-- XX: For causal models, we are almost always interested in the average causal effect of treatment versus control. We are *not* simply interested in the causal effect for one specific unit. (In fact, of course, we might ultimately be interested in just one unit, but we need to *pretend* to be interested in lots of units in order to motivate the creation of a model.) -->
+
+
+```{r the-question-11}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Our Quantity of Interest might appear too specific, too narrow to capture the full complexity of the topic. There are many, many numbers which we are interested in, many numbers that we want to know. But we don't need to list them all here! We just need to choose one of them since our goal is just to have a specific number which helps to guide us in the creation of the Preceptor Table and, then, the model.
+
 
 ## Wisdom
 ### 
 
 *The only true wisdom is in knowing you know nothing.*  - Socrates
 
-We start every problem with a question. Consider this:
+Our question:
 
-> What is the relationship between sex and voting?
-
-### 
-
-In order to make progress we must make our question more specific. Here is our new question: 
-
-> What was the relationship between sex and voting in the 1992 US Presidential election among supporters of the three leading candidates: Clinton, Bush and Perot?
+> *XX: Repeat the question with which you ended The Question topic.*
 
 ### Exercise 1
 
@@ -105,7 +329,12 @@ question_text(NULL,
 
 ### 
 
-If it is not *valid* to consider the data you have and the (theoretical) data from the Preceptor Table to have arisen out of the same population, your attempt to estimate your quantity of interest ends at the first stage. 
+XX: Can we use data from [XX: describe your data] to predict behavior in [XX: describe your Preceptor Table]?
+
+<!-- XX: Not only are you discussing the data, but you are also discussing potential problems with the data, problems which will be more fully fleshed out in the Justice section. You want to pick 5 to 10 interesting facts about the data. (You may need to go to the original source, not simply relying on the chapter. ) 
+
+You won't be drawing any conclusions or discussing the explicit violation of any assumptions. That discussion is saved until Justice and the specific questions about stability, representativeness, and (with causal models) unconfoundedness. You are, however, providing the details which you and the students can then use later. -->
+
 
 ### Exercise 2
 
@@ -113,12 +342,16 @@ Define a Preceptor Table.
 
 ```{r wisdom-2}
 question_text(NULL,
-	message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, it is easy to calculate the quantities of interest.",
+	message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, we can easily calculate the quantities of interest.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+### 
+
+The Preceptor Table does not include all the covariates which you will eventually include in your model. It only includes covariates which you need to answer your question.
 
 ### Exercise 3
 
@@ -135,17 +368,22 @@ question_text(NULL,
 
 ### 
 
-As we are considering a *predictive model*, our Preceptor Table will have only one column for the potential outcome.
-
+<!-- XX: This problem is predictive so . . . -->
 
 ### Exercise 4
 
-Create a Github repo called `four-parameters-categorical`. Be sure to add a README file. Connect the repo to a new R project titled `four-parameters-categorical`. Edit the `.gitignore` by adding `*Rproj`. 
+Create a Github repo called `four-categorical-variables`. Make sure to click the "Add a README file" check box.
+
+Connect the Github repo to an R project on your computer. Give the R project the same name.
+
+Select `File -> New File -> Quarto Document ...`. Provide a title -- `"Four-Categorical-Variables"` -- and an author (you). Render the document and save it as `analysis.qmd`.
+
+Edit the `.gitignore` by adding `*Rproj`. Save and commit this in the Git tab. Push the commit.
 
 In the Console, run:
 
-```
-tutorial.helpers::show_file(".gitignore")
+```         
+show_file(".gitignore")
 ```
 
 CP/CR.
@@ -156,12 +394,12 @@ question_text(NULL,
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 3)
+	rows = 7)
 ```
 
 ### 
 
-Commit and push the changes to GitHub, we will work more with this.
+Remove everything below the YAML header from `analysis.qmd` and render the file. `Command/Ctrl + Shift + K` first saves the file and then renders it.
 
 ### Exercise 5
 
@@ -178,7 +416,9 @@ question_text(NULL,
 
 ### 
 
-We are looking at who voted for these three candidates: Bush, Clinton and Perot. The question suggests that we are not interested in people who did not vote, although one might explore if men were more or less likely to vote in the first place. As always, the initial question rarely specifies the Preceptor Table precisely.
+<!-- We are looking at who voted for these three candidates: Bush, Clinton and Perot. The question suggests that we are not interested in people who did not vote, although one might explore if men were more or less likely to vote in the first place. As always, the initial question rarely specifies the Preceptor Table precisely. -->
+
+Specifying the Preceptor Table forces us to think clearly about the units and outcomes implied by the question. The resulting discussion sometimes leads us to modify the question with which we started. No data science project follows a single direction. We always backtrack. There is always dialogue.
 
 ### Exercise 6
 
@@ -195,11 +435,18 @@ question_text(NULL,
 
 ### 
 
-Such explorations are often restricted to just the two “major party” candidates, the nominees of the Democratic and the Republican parties, Bill Clinton and George HW Bush. But, in 1992, Ross Perot was a very successful “third party” candidate, winning almost 19% of the vote. Should he be included in the analysis? Again, the question does not specify. However, the outcome variable is certainly the candidate for whom an individual voted.
+```{r}
+## XX: Make a nice looking plot which shows the outcome variable on the y-axis
+## and the most important/interesting covariate/treatment on the x-axis.
+```
+
+Regardless, the central lesson is always the same: *You can never look at your data too much.*
+
+<!-- Such explorations are often restricted to just the two “major party” candidates, the nominees of the Democratic and the Republican parties, Bill Clinton and George HW Bush. But, in 1992, Ross Perot was a very successful “third party” candidate, winning almost 19% of the vote. Should he be included in the analysis? Again, the question does not specify. However, the outcome variable is certainly the candidate for whom an individual voted. -->
 
 ### Exercise 7
 
-What are some covariates which you think might be useful for this problem?
+What are some covariates which you think might be useful for this problem, regardless of whether or not they might be included in the data?
 
 ```{r wisdom-7}
 question_text(NULL,
@@ -212,7 +459,13 @@ question_text(NULL,
 
 ### 
 
-Covariates are any variable that might have some connection with the outcome. For example, Democrats are almost certainly going to vote for Clinton. For this model we will be measuring the `sex` variable.
+The term "covariates" is used in at least three ways in data science. First, it is all the variables which might be useful, regardless of whether or not we have the data. Second, it is all the variables for which we have data. Third, it is the set of variables in the data which we end up using in the model.
+
+```{r}
+## XX: Make a nice looking plot which shows the outcome variable and at least
+## one covariate. The subtitle should highlight an interesting/important
+## observation about the outcome.
+```
 
 ### Exercise 8
 
@@ -229,8 +482,7 @@ question_text(NULL,
 
 ### 
 
-Since this represents a predictive model, there are no treatments.
-
+Remember that a treatment is just another covariate which, for the purposes of this specific problem, we are assuming can be manipulated and, thereby, creating two or more different potential outcomes for each unit. Since this represents a predictive model, there are no treatments.
 
 ### Exercise 9
 
@@ -247,9 +499,60 @@ question_text(NULL,
 
 ### Exercise 10
 
-Describe in words the Preceptor Table for this problem.
+Define a causal effect.
 
 ```{r wisdom-10}
+question_text(NULL,
+	message = "A causal effect is the difference between two potential outcomes.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+According to the Rubin Causal Model, there must be two (or more) potential outcomes for any discussion of causation to make sense. This is simplest to discuss when the treatment only has two different values, thereby generating only two potential outcomes. 
+
+### Exercise 11
+
+What is the fundamental problem of causal inference?
+
+```{r wisdom-11}
+question_text(NULL,
+	message = "The fundamental problem of causal inference is that we can only observe one potential outcome.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+If the treatment variable is continuous (like income), then there are lots and lots of potential outcomes, one for each possible value of the treatment variable. 
+
+### Exercise 12
+
+How does the motto "No causal inference without manipulation." apply in this problem?
+
+```{r wisdom-12}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+The motto does not apply because this is a predictive, not causal, model.
+
+### Exercise 13
+
+Describe in words the Preceptor Table for this problem.
+
+```{r wisdom-13}
 question_text(NULL,
 	message = "The Preceptor Table has one row for each voter, one output column for which party was voted and one covariate, sex.",
 	answer(NULL, correct = TRUE),
@@ -284,13 +587,13 @@ tibble(ID = c("1", "2", "...", "10", "11", "...", "103,754,865"),
   tab_spanner(label = "Covariate", columns = c(sex))
 ```
 
-### Exercise 11
+Like all aspects of a data science problem, the Preceptor Table evolves as we work on the problem. 
 
-Go to the Console and type `?nes` to learn more about the data. Write one sentence describing the data you have to answer your question.
+### Exercise 14
 
-Hint: If this doesn't work, that means that the package that contains `nes` --- **primer.data** --- is not loaded. 
+Write one sentence describing the data you have to answer your question.
 
-```{r wisdom-11}
+```{r wisdom-14}
 question_text(NULL,
 	message = "This dataset contains information starting from 1948, before and after each presidential election, and combines questions about voters' political attitudes with extensive biographical information.",
 	answer(NULL, correct = TRUE),
@@ -299,67 +602,26 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 12
-
-What does the dependent variable represent in this data?
-
-```{r wisdom-12}
-question_text(NULL,
-	message = "The candidate who an individual that was surveyed voted for.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### Exercise 13
-
-Load the **primer.data** package.
-
-```{r wisdom-13, exercise = TRUE}
-
-```
-
-```{r wisdom-13-hint-1, eval = FALSE}
-library(...)
-```
-
-```{r wisdom-13-test, include = FALSE}
-library(primer.data)
-```
-
-### Exercise 14
-
-Load the **tidyverse** package.
-
-```{r wisdom-14, exercise = TRUE}
-
-```
-
-```{r wisdom-14-hint-1, eval = FALSE}
-library(...)
-```
-
-```{r wisdom-14-test, include = FALSE}
-library(tidyverse)
-```
-
 ### Exercise 15
 
-Go to `File -> New File -> Quarto Document`. Title it "Four Parameters: Categorical". Make yourself the author. Render and save the file as `analysis.qmd`. Once you do this, delete everything below the YAML header and render the file again. 
+<!-- XX: Switch primer.data for whichever package you got your data from. -->
 
-Add the below code to the YAML header as well: 
-```
-execute:
-        echo: false
+In `analysis.qmd`, load the **tidyverse** and the **primer.data** packages in a new code chunk. Label it as the setup code chunk by adding `#| label: setup`. Render the file.
+
+Notice that the file does not look good because it is has code that is showing and it also has messages. To take care of this, add `#| message: false` to remove all the messages in the setup chunk. Also add the following to the YAML header to remove all code echos from the whole file:
+
+```         
+execute: 
+  echo: false
 ```
 
-In the Console, run : 
+In the Console, run:
+
+```         
+show_file("analysis.qmd", start = -5)
 ```
-tutorial.helpers::show_file("analysis.qmd")
-```
+
 CP/CR.
-
 
 ```{r wisdom-15}
 question_text(NULL,
@@ -367,115 +629,60 @@ question_text(NULL,
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 3)
-```
-
-### Exercise 16
-
-Edit the `.gitignore` file to include `*_files`.
-In the Console, run: 
-```
-tutorial.helpers::show_file(".gitignore")
-```
-CP/CR.
-
-
-```{r wisdom-16}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### Exercise 17
-
-Create a new code chunk. Add `#| label: setup` and `#| message: FALSE` to the top of it. Load the **primer.data** and **tidyverse** packages into this code chunk. 
-
-In the Console, run: 
-```
-tutorial.helpers::show_file("analysis.qmd", start = 7)
-```
-
-
-```{r wisdom-17}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### Exercise 18
-
-Type `nes` below.
-
-```{r wisdom-18, exercise = TRUE}
-
-```
-
-```{r wisdom-18-hint-1, eval = FALSE}
-nes
-```
-
-```{r wisdom-18-test, include = FALSE}
-nes
-```
-
-### Exercise 19
-
-Pipe nes to `count()`, set the argument inside to `sex`
-
-<!-- AC: Not sure if this is on purpose but nes is already in the exercise box? Also there's no copy previous code button -->
-
-```{r wisdom-19, exercise = TRUE}
-nes
-```
-
-```{r wisdom-19-hint-1, eval = FALSE}
-nes |> count(...)
-```
-
-```{r wisdom-19-test, include = FALSE}
-
-nes |> count(sex)
-
+	rows = 6)
 ```
 
 ### 
 
-We can see that there are over 4000 more female voters than male voters
+Render again. Everything looks nice because we have added code to make the file look better and more professional.
 
+### Exercise 16
 
-### Exercise 20
+Run `glimpse()` on `nes`.
 
-<!-- AC: Not sure if we need this? We could just move on to the next Exercise (+ we've already done this in Exercise 18) -->
-
-Type `nes` below.
-
-```{r wisdom-20, exercise = TRUE}
-
+```{r wisdom-16, exercise = TRUE}
+    
 ```
 
-### Exercise 21
+```{r wisdom-16-hint-1, eval = FALSE}
+glimpse(nes)
+```
+
+```{r wisdom-16-test, include = FALSE}
+glimpse(nes)
+```
+
+### 
+
+<!-- GK: Add knowledge drop about the data set, type of the variables that will be discussed. -->
+
+<!-- nes_92 <- nes |>  -->
+<!--   filter(year == 1992) |>  -->
+<!--   select(sex, pres_vote) |>  -->
+<!--   drop_na() |>  -->
+<!--   mutate(pres_vote = case_when( -->
+<!--     pres_vote == "Democrat" ~ "Clinton", -->
+<!--     pres_vote == "Republican" ~ "Bush", -->
+<!--     pres_vote == "Third Party" ~ "Perot", -->
+<!--   )) -->
+
+### Exercise 17
 
 Pipe `nes` to `filter()` and set the argument `year` to `1992`.  
 
 
-```{r wisdom-21, exercise = TRUE}
+```{r wisdom-17, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r wisdom-21-hint-1, eval = FALSE}
+```{r wisdom-17-hint-1, eval = FALSE}
 nes |> 
   filter (...)
 ```
 
-```{r wisdom-21-test, include = FALSE}
+```{r wisdom-17-test, include = FALSE}
 nes |> 
   filter(year == 1992)
 ```
@@ -484,66 +691,40 @@ nes |>
 
 This only looks at data from the year 1992.
 
-### Exercise 22
+### Exercise 18
 
-Continue the pipe with `select()`, be sure to select the `pres_vote` and `sex` columns
+Continue the pipe with `select()`, be sure to select the `pres_vote` and `sex` columns. Most data sets have some NA values, we have to get rid of these so that we can use the data. Continue the pipe with `drop_na()`.
 
-```{r wisdom-22, exercise = TRUE}
+```{r wisdom-18, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r wisdom-22-hint-1, eval = FALSE}
+```{r wisdom-18-hint-1, eval = FALSE}
 ... |>
-  select(..., ...)
-```
-
-```{r wisdom-22-test, include = FALSE}
-nes |> 
-  filter(year == 1992) |>
-  select(pres_vote, sex)
-```
-
-### 
-
-This only keeps the data that we need, which is the candidate voted and the sex of the voter.
-
-
-### Exercise 23
-
-Continue the pipe with `drop_na()`
-
-```{r wisdom-23, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r wisdom-23-hint-1, eval = FALSE}
-... |> 
+  select(..., ...) |>
   drop_na()
 ```
 
-```{r wisdom-23-test, include = FALSE}
+```{r wisdom-18-test, include = FALSE}
 nes |> 
   filter(year == 1992) |>
-  select(pres_vote, sex) |>
+  select(pres_vote, sex) |> 
   drop_na()
 ```
 
 ### 
 
-This gets rid of NA values. 
+We have to clean the data so we can focus on the specific numbers to answer our question. We only keep the data we need, which is the candidate voted and the sex of the voter.
 
-### Exercise 24
+### Exercise 19
 
 Finish the pipe with `mutate()`. Set the `pres_vote` argument to `case_when()`. Inside of `case_when()`, change `pres_vote` from the name of the political party to the name of the candidate that was voted.
 
 Good news. We did this for you! Just hit "Run Code".
 
-
-```{r wisdom-24, exercise = TRUE}
+```{r wisdom-19, exercise = TRUE}
 nes |> 
   filter(year == 1992) |>
   select(pres_vote, sex) |>
@@ -558,7 +739,7 @@ nes |>
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 
-```{r wisdom-24-hint-1, eval = FALSE}
+```{r wisdom-19-hint-1, eval = FALSE}
 ... |> 
   mutate(pres_vote = case_when(
     pres_vote == "Democrat" ~ ...,
@@ -567,7 +748,7 @@ nes |>
   ))
 ```
 
-```{r wisdom-24-test, include = FALSE}
+```{r wisdom-19-test, include = FALSE}
 nes |> 
   filter(year == 1992) |>
   select(pres_vote, sex) |>
@@ -583,35 +764,11 @@ nes |>
 
 The data uses the name of the political party, but, we want the name of the candidate specifically.
 
-### Exercise 25
+<!-- GK: Add a plot for the distribution of `pres_vote` here -->
 
-Assign this to a new object called `nes_92`. 
+### Exercise 20
 
-```{r wisdom-25, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r wisdom-25-hint-1, eval = FALSE}
-nes_92 <- ...
-```
-
-```{r wisdom-25-test, include = FALSE}
-nes_92 <- nes |> 
-  filter(year == 1992) |>
-  select(pres_vote, sex) |>
-  drop_na() |> 
-  mutate(pres_vote = case_when(
-    pres_vote == "Democrat" ~ "Clinton",
-    pres_vote == "Republican" ~ "Bush",
-    pres_vote == "Third Party" ~ "Perot"
-  ))
-```
-
-### 
-
-Your code should look like this: 
+In `analysis.qmd`, add a new code chunk to the QMD, copy/paste the pipeline above and assign the result to the new object `nes92`: 
 
 ```
 nes_92 <- nes |> 
@@ -621,25 +778,17 @@ nes_92 <- nes |>
   mutate(pres_vote = case_when(
     pres_vote == "Democrat" ~ "Clinton",
     pres_vote == "Republican" ~ "Bush",
-    pres_vote == "Third Party" ~ "Perot"
+    pres_vote == "Third Party" ~ "Perot",
   ))
 ```
 
-### 
+`Command/ctrl + Shift + K` follows. In the Console, run:
 
-This is the data we will use to create our model. 
-
-### Exercise 26
-
-Create a new code chunk. Add `#| label: cleaning` and `#| message: FALSE` to the top of it once again. Copy and paste the code above into the code chunk. Render the document, `Command/Control + Shift + K`.
-
-In the Console, run: 
+```         
+show_file("analysis.qmd", start = -5)
 ```
-tutorial.helpers::show_file("analysis.qmd", start = -12)
-```
-CP/CR.
 
-```{r wisdom-26}
+```{r wisdom-20}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -648,11 +797,15 @@ question_text(NULL,
 	rows = 3)
 ```
 
-### Exercise 27
+### 
+
+Now that you have an object `nes92`, a subset of `nes` that has been cleaned and narrowed down to meet the requirement of our question. 
+
+### Exercise 21
 
 In your own words, define "validity" as we use the term.
 
-```{r wisdom-27}
+```{r wisdom-21}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -663,26 +816,13 @@ question_text(NULL,
 
 ### 
 
-In order to consider the two data sets to be drawn from the same population, the columns from one must have a valid correspondence with the columns in the other. Validity, if true (or at least reasonable), allows us to construct the Population Table, which is the first step in Justice.
+Validity is always about the *columns* in the Preceptor Table and the data. Just because columns from these two different tables have the same *name* does not mean that they are the same *thing*.
 
-### Exercise 28
+### Exercise 22
 
-What can't we do if the assumption of validity is not true?
+Provide one reason why the assumption of validity might not hold for the outcome variable: `XX`. Use the words "column" or "columns" in your answer.
 
-```{r wisdom-28}
-question_text(NULL,
-	message = "We can't combine the Preceptor Table and the data in order to construct the Population Table.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### Exercise 29
-
-Provide one reason why the assumption of validity might not hold for this problem.
-
-```{r wisdom-29}
+```{r wisdom-22}
 question_text(NULL,
 	message = "People may claim that they voted for one candidate when they really voted for another. This causes the data in the population table to not match up with the columns in the Preceptor Table",
 	answer(NULL, correct = TRUE),
@@ -693,13 +833,36 @@ question_text(NULL,
 
 ### 
 
-More people claim to have voted for the winning candidate than the actual number of votes that they receive.
+In order to consider the Preceptor Table and the data to be drawn from the same population, the columns from one must have a *valid correspondence* with the columns in the other. Validity, if true (or at least reasonable), allows us to construct the Population Table, which is the first step in Justice.
 
-### Exercise 30
+### Exercise 23
 
-Summarize the state of your work so far in one sentence. Make reference to the data you have and to the specific question you are trying to answer. 
+Provide one reason why the assumption of validity might not hold for the covariate: `sex`. Use the words "column" or "columns" in your answer.
 
-```{r wisdom-30}
+```{r wisdom-23}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Because we control the Preceptor Table and, to a lesser extent, the original question, we can adjust those variables to be “closer” to the data that we actually have. This is another example of the iterative nature of data science. If the data is not close enough to the question, then we check with our boss/colleague/customer to see if we can modify the question in order to make the match between the data and the Preceptor Table close enough for validity to hold.
+
+### Exercise 24
+
+Over the course of this tutorial, we will be creating a summary paragraph. The purpose of this exercise is to write the first two sentences of that paragraph.
+
+The first sentence is a general statement about the overall topic, mentioning both general class of the outcome variable and of at least one of the covariates. That sentence can be rhetorical. It can be trite, or even a platitude. The purpose of the sentence to let the reader know, gently, about our topic.
+
+The second sentence does two things. First, it introduces the data source. Second, it introduces the specific question.
+
+Type your two sentences below.
+
+```{r wisdom-24}
 question_text(NULL,
 	message = "Using data from the National Election Studies survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election.",
 	answer(NULL, correct = TRUE),
@@ -708,13 +871,12 @@ question_text(NULL,
 	rows = 6)
 ```
 
-Edit you answer as you see fit, but do not copy/paste our answer exactly. Add this summary to `analysis.qmd`, `Command/Ctrl + Shift + K`, and then commit/push.
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to `XX.qmd`, `Command/Ctrl + Shift + K`, and then commit/push.
 
 ## Justice
 ### 
 
 *Justice delayed is justice denied.* - William E. Gladstone
-
 
 ### Exercise 1
 
@@ -728,6 +890,10 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+### 
+
+Justice is about concerns that you (or your critics) might have, reasons why the model you create might not work as well as you hope. 
 
 ### Exercise 2
 
@@ -744,9 +910,7 @@ question_text(NULL,
 
 ### 
 
-It can be constructed if the validity assumption is (mostly) true. It includes all the rows from the Preceptor Table. It also includes the rows from the data set. It usually has other rows as well, rows which represent unit/time combinations from other parts of the population.
-
-### Exercise 3
+The Population Table is almost always much bigger than the combination of the Preceptor Table and the data because, if we can really assume that both the Preceptor Table and the data are part of the same population, than that population must cover a broad universe of time and units since the Preceptor Table and the data are, themselves, often far apart from each other.
 
 Here is our Population Table:
 
@@ -774,26 +938,11 @@ tibble(source = c("PT/Data", "PT/Data", "PT", "PT", "PT", "PT", "...", "PT/Data"
   tab_spanner(label = "Covariate", columns = c(sex))
 ```
 
-Describe the Population Table for this problem. In particular, are any of the rows in the Preceptor Table also rows in the data? Are there other rows in the Population Table which are not from the Preceptor Table or the data? If so, describe some of those rows.
-
-```{r justice-3}
-question_text(NULL,
-	message = "Each row in the Population Table corresponds to a person/date combination. None of the rows for the Preceptor Table and the data overlap. Rows from the overall population feature dates outside the survey dates and the election.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-We are not interested in the voters outside of the 1992 election. So, this Population Table, unlike most, does not require a `Time` column. The Preceptor Table and the data come from the same moment in time. Of course, this is not literally true. Recall: **The `Time` column is always a lie.**
-
-### Exercise 4
+### Exercise 3
 
 In your own words, define the assumption of "stability" when employed in the context of data science.
 
-```{r justice-4}
+```{r justice-3}
 question_text(NULL,
 	message = "Stability means that the relationship between the columns in the Population Table is the same for three categories of rows: the data, the Preceptor Table, and the larger population from which both are drawn.",
 	answer(NULL, correct = TRUE),
@@ -804,14 +953,14 @@ question_text(NULL,
 
 ### 
 
-Stability is all about *time*. Is the relationship among the columns in the Population Table stable over time? In particular, is the relationship --- which is another way of saying "mathematical formula" --- at the time the data was gathered the same as the relationship at the (generally later) time references by the Preceptor Table.
+Stability is all about *time*. Is the relationship among the columns in the Population Table stable over time? In particular, is the relationship --- which is another way of saying "mathematical formula" --- at the time the data was gathered the same as the relationship at the (generally later) time referenced by the Preceptor Table.
 
+### Exercise 4
 
-### Exercise 5
-
+<!-- GK: May need rewrite answer -->
 Provide one reason why the assumption of stability might not be true in this case.
 
-```{r justice-5}
+```{r justice-4}
 question_text(NULL,
 	message = "Not all voters voted at the same moment in time.",
 	answer(NULL, correct = TRUE),
@@ -824,14 +973,15 @@ question_text(NULL,
 
 Some voters cast their ballots weeks before Election Day. Some NES participants were surveyed right after the election. Some were survey later. We sweep all these complications under the mythical moment in time which we assert is the same for both the data and the Preceptor Table.
 
+A change in time or the distribution of the data does not, in and of itself, demonstrate a violation of stability. Stability is about the parameters: $\beta_0$, $\beta_1$ and so on. Stability means these parameters are the same in the data as they are in the population as they are in the Preceptor Table.
 
-### Exercise 6
+### Exercise 5
 
-In your own words, define the assumption of "representativeness" when employed in the context of data science.
+We use our data to make inferences about the overall population. We use information about the population to make inferences about the Preceptor Table: `Data -> Population -> Preceptor Table`. In your own words, define the assumption of "representativeness" when employed in the context of data science.
 
-```{r justice-6}
+```{r justice-5}
 question_text(NULL,
-	message = "Representativeness, or the lack thereof, concerns two relationship, among the rows in the Population Table. The first is between the Preceptor Table and the other rows. The second is between our data and the other rows.",
+	message = "Representativeness, or the lack thereof, concerns two relationships among the rows in the Population Table. The first is between the data and the other rows. The second is between the other rows and the Preceptor Table.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -842,15 +992,17 @@ question_text(NULL,
 
 Ideally, we would like both the Preceptor Table *and* our data to be random samples from the population. Sadly, this is almost never the case.
 
+### Exercise 6
 
+We do not use the data, directly, to estimate missing values in the Preceptor Table. Instead, we use the data to learn about the overall population. Provide one reason, involving the relationship between the data and the population, for why the assumption of representativeness might not be true in this case. 
 
-### Exercise 7
+```{r justice-6}
+# XX: In your answer, try not use of the concept time, even though, in theory,
+# it is a perfectly reasonable to do so. Instead, focus on why the data might
+# not be representative of the population at that moment in time.
 
-Provide one reason why the assumption of representativeness might not be true in this case.
-
-```{r justice-7}
 question_text(NULL,
-	message = "The assumption of representativeness might not be true because the sample of our data is not random enough.",
+	message = "XX",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -859,9 +1011,31 @@ question_text(NULL,
 
 ### 
 
-The sample that we are using may not accurately represent the rest of the population.
+The reason that representativeness is important is because, when it is violated, the estimates for the model parameters might be biased. 
 
+### Exercise 7
 
+We use information about the population to make inferences about the Preceptor Table. Provide one reason, involving the relationship between the population and the Preceptor Table, for why the assumption of representativeness might not be true in this case.
+
+```{r justice-7}
+# XX: Again, try not use of the concept time. We want to save examples of
+# changes caused by time for the discussio about stability. Instead, focus on
+# why the Preceptor might not be representative of the population at that moment
+# in time. 
+
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Stability looks across time periods. Representativeness looks within time periods, for the most part. 
+
+<!-- XX: Use this comment when it is relevant to the problem at hand. Of course, it is sometimes the case that the Preceptor Table includes every row from the Population Table for that moment in time. In that case, the assumption representativeness is met, by definition, if we only consider that moment. So, in that case, the only possible violation of representativeness must involve a claim that this moment in time is not representative of the rest of the Population Table. -->
 
 ### Exercise 8
 
@@ -878,8 +1052,7 @@ question_text(NULL,
 
 ### 
 
-Because this is a predictive, not causal, model, the assumption of unconfoundedness is irrelevant.
-
+This assumption is only relevant for causal models. We describe a model as "confounded" if this is not true. The easiest way to ensure unconfoundedness is to assign treatment randomly.
 
 ### Exercise 9
 
@@ -916,9 +1089,13 @@ question_text(NULL,
 	rows = 6)
 ```
 
+### 
+
+A statistical model consists of two parts: the *probability family* and the *link function*. The probability family is the probability distribution which generates the randomness in our data. The link function is the mathematical formula which links our data to the unknown parameters in the probability distribution. 
+
 ### Exercise 2
 
-Load the **brms** package.
+Load the [**tidymodels**](https://www.tidymodels.org/) package.
 
 ```{r courage-2, exercise = TRUE}
 
@@ -931,46 +1108,78 @@ library(...)
 ```
 
 ```{r courage-2-test, include = FALSE}
-library(brms)
+library(tidymodels)
 ```
 
 ### 
 
-We use the **brms** package to build Bayesian models (**brms** stands for **B**ayesian **r**egression **m**odel**s**.)
+<!-- GK: Give probability family  -->
 
 ### Exercise 3
 
-Load the **tidybayes** package.
+Load the [**broom**](https://broom.tidymodels.org/) package.
 
 ```{r courage-3, exercise = TRUE}
 
 ```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r courage-3-hint-1, eval = FALSE}
 library(...)
 ```
 
 ```{r courage-3-test, include = FALSE}
-library(tidybayes)
+library(broom)
 ```
 
 ### 
 
-The **tidybayes** package makes working with the fitted models easier. 
+<!-- XX: Discuss the link function. This is a "generic" link function which does not mention any of the variables in our actual problem. Choose 1 of these 2 starting sentences, followed by the basic link function:
+
+Because the outcome variable has a Bernoulli (or Categorical or Cumulative) distribution, the link function is logit. That is:
+
+Or: 
+
+Because the outcome variable has a Normal distribution, the link function is the identity. That is:
+
+```{r}
+#extract_eq(fit_XX$fit, intercept = "beta")
+```
+
+-->
 
 ### Exercise 4
 
-Add `library(brms)` and `library(tidybayes)` to the `setup` code chunk in `analysis.qmd`. `Command/Ctrl + Shift + K`. At the Console, run:
+Load the [**equatiomatic**](https://datalorax.github.io/equatiomatic/) package.
+
+```{r courage-4, exercise = TRUE}
 
 ```
-tutorial.helpers::show_file("analysis.qmd", pattern = "brms|tidybayes")
+
+```{r courage-4-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r courage-4-test, include = FALSE}
+library(equatiomatic)
+```
+
+### 
+
+Recall that a categorical variable (whether character or factor) like `sex` is turned into a $0/1$ "dummy" variable which is then re-named something like $sex_{Male}$. After all, we can't have words --- like "Male" or "Female" --- in a mathematical formula, hence the need for dummy variables.
+
+### Exercise 5
+
+Add `library(tidymodels)`, `library(broom)`, and `library(equatiomatic)` to the `setup` code chunk in `XX.qmd`. `Command/Ctrl + Shift + K`.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("XX.qmd", pattern = "tidymodels|broom|equatiomatic")
 ```
 
 CP/CR.
 
-```{r courage-4}
+```{r courage-5}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -979,81 +1188,70 @@ question_text(NULL,
 	rows = 3)
 ```
 
-### Exercise 5
-
-Make a model using `brm()` from the **brms** package. Your arguments should be: `formula = pres_vote ~ sex`, `data = nes_92`, `family = categorical()`, `silent = 2`, `refresh = 0` and `seed = 76`
-
-
-Assign the result to an object called `fit_nes`. It may take a while to run, so be patient.
-
-```{r courage-5, exercise = TRUE}
-
-```
-
-```{r courage-5-hint-1, eval = FALSE}
-fit_nes <- brm(... = pres_vote ~ sex,
-               ... = nes_92,
-               ... = categorical(),
-               silent = ...,
-               refresh = ...,
-               seed = ...)
-```
-
 ### 
 
-Your code should look like this:
+<!-- XX: If your model has one categorical variable with more than two values, then use the below paragraph, but edit it to use your variable, and its values, instead. If not, then just keep this paragraph but add a sentence which notes that there is no variable like this in your model. -->
 
-```
-fit_nes <- brm(formula = pres_vote ~ sex,
-               data = nes_92,
-               family = categorical(),
-               silent = 2,
-               refresh = 0,
-               seed = 76)
-```
+The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has three values --- "black", "hispanic", and "white" --- then the model creates two 0/1 dummy variables, giving them names like $race_{hispanic}$ and $race_{white}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
 
 ### Exercise 6
 
-Behind the scenes, we have assigned the result of the `brm()` call to an object named `fit_nes`. Type `fit_nes` and hit "Run Code". This generates the same results as using `print(fit_nes)`.
-
+Because our outcome variable is [XX: binary or continuous or multinomial], start to create the model by using `[XX: logistic_reg(engine = "glm") or linear_reg(engine = "lm") or multinom_reg(engine = "glmnet")]`.
 
 ```{r courage-6, exercise = TRUE}
 
 ```
 
 ```{r courage-6-hint-1, eval = FALSE}
-fit_nes
+XX
 ```
 
 ```{r courage-6-test, include = FALSE}
-# fit_nes
+# XX
 ```
+
+### 
+
+In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
 
 ### Exercise 7
 
-Run `family()` on `fit_nes`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable.
-
+Continue the pipe to `fit(XX, data = XX)`.
 
 ```{r courage-7, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r courage-7-hint-1, eval = FALSE}
-family(...)
+... |> 
+  fit(..., data = ...)
 ```
 
 ```{r courage-7-test, include = FALSE}
-# family(fit_nes)
+# XX |> 
+#   fit(XX, data = XX)
 ```
 
 ### 
 
-A categorical model is like a logistic model, but, it has more than two options instead of the standard binary dependant variable.
+We can translate the fitted model into mathematics, including the best estimates of all the unknown parameters:
 
+```{r}
+# XX: You might want to use the `coef_digits` argument to show fewer digits
+# after the decimal. wrap = TRUE is necessary for large models.
+
+#extract_eq(fit_XX$fit, 
+#           intercept = "beta", 
+#           use_coefs = TRUE)
+```
+
+<!-- DK: Knowledge drop about error term going away and height with a hat -->
 
 ### Exercise 8
 
-Run `formula()` on `fit_nes`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s).
+Behind the scenes of this tutorial, an object called `fit_XX` has been created which is the result of the code above. Type `fit_XX` and hit "Run Code." This generates the same results as using `print(fit_XX)`.
 
 
 ```{r courage-8, exercise = TRUE}
@@ -1061,73 +1259,201 @@ Run `formula()` on `fit_nes`. `formula()` returns the statistical equation which
 ```
 
 ```{r courage-8-hint-1, eval = FALSE}
-formula(...)
+#fit_XX
 ```
 
 ```{r courage-8-test, include = FALSE}
-# formula(fit_nes)
+#fit_XX
 ```
 
 ### 
 
-In this case, we have the simplest possible formula. `pres_vote` and `sex` are both categorical variables. `pres_vote` is the dependent variable and `sex` is the independent variable.
+<!-- XX: Consider a knowledge drops which highlights a 0/1 dummy variable which was created because a categorical variable was included in the model. -->
 
+<!-- The *code formula* includes `sex`, a character variable with two possible values: `"Male"` and `"Female"`. -->
+
+<!-- The *math formula* includes `sexMale`, a 0/1 dummy variable. -->
 
 ### Exercise 9
 
-Run `nobs()` on `fit_nes`. The `nobs()` function returns the **n**umber of **obs**ervations.
+Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_XX`. 
 
-```{r courage-9, exercise = TRUE}
+`Command/Ctrl + Shift + K`. It may take some time to render `analysis.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `analysis.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
+
+To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
+
+At the Console, run:
 
 ```
-
-```{r courage-9-hint-1, eval = FALSE}
-nobs(...)
+tutorial.helpers::show_file("analysis.qmd", start = -8)
 ```
 
-```{r courage-9-test, include = FALSE}
-nobs(fit_nes)
+CP/CR.
+
+```{r courage-9}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 8)
 ```
 
 ### 
 
-In this case, `fit_nes` has 1658 recorded observations
+Add `*_cache` to `.gitignore` file. Commit and push. Cached objects are often large. They don't belong on Github.
 
 ### Exercise 10
 
-We are going to write the mathematical formula for your model, using $\LaTeX$ math notation.
+Create another code chunk in `analysis.qmd`. Add the chunk option: `label: math`. In that code chunk, add something like the below. You may find it useful to add the `coef_digits` argument to show fewer significant digits after the decimal.
+
+```
+extract_eq(fit_XX$fit, 
+           intercept = "beta", 
+           use_coefs = TRUE)
+```
+
+`Command/Ctrl + Shift + K`. 
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", pattern = "extract")
+```
+
+CP/CR.
+
+```{r courage-10}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
 
 ### 
 
-Because we have three possible outcomes, and because there is no natural ordering among the outcomes, a *categorical* model is the most natural choice.
+<!-- When you render your document, this formula will appear. -->
 
-$$ vote_i  \sim Categorical(\rho_{bush}, \rho_{clinton}, \rho_{perot}) $$
+<!-- ```{r} -->
+<!-- extract_eq(fit_XX$fit,  -->
+<!--            intercept = "beta",  -->
+<!--            use_coefs = TRUE) -->
+<!-- ``` -->
+
+<!-- This is our data generating mechanism. -->
+
+<!-- XX: Explain in words what the mathematical function means. That is, say in English what the formula means. -->
+
+
+### Exercise 11
+
+<!-- XX: You may use other arguments to tidy if that is useful. -->
+
+Run `tidy()` on `fit_XX` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
+
+```{r courage-11, exercise = TRUE}
+
+```
+
+```{r courage-11-hint-1, eval = FALSE}
+tidy(..., conf.int = ...)
+```
+
+```{r courage-11-test, include = FALSE}
+# tidy(fit_XX, conf.int = TRUE)
+```
 
 ### 
 
-The vote of person $i$ takes on one of three possible values: Bush (Republican), Clinton (Democrat) or Perot (Third Party). The probability of each outcome is given by the respective $\rho$. And, by definition:
+<!-- XX: Add at least three questions which involve the interpretation of numbers in the table. See the Cardinal Virtues vignette for detailed discussion. -->
 
-$$ \rho_{bush} + \rho_{clinton} + \rho_{perot} = 1 $$
-So, once we know two of the probabilities, we know the third. That means that we can't estimate them separately. If we do, we run the risk of violating this equality. We must estimate them together. Fortunately, **brms** takes care of all the details.
+### Exercise 12
+
+<!-- XX: We still have some details to worry about in terms of what the table should look like. Not sure on the best approach. If we use the gt() package, we need to load it. Maybe we just give all the code, includeing library(gt), and then can just copy it in. Ought to get rid of the statistic and p.value columns. -->
+
+Create a new code chunk in `analysis.qmd`. Add a code chunk option: `label: table`. Add this code to the code chunk.
+
+```
+tidy(fit_XX, conf.int = TRUE)
+```
+
+`Command/Ctrl + Shift + K`. 
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", pattern = "tidy")
+```
+
+CP/CR.
+
+
+```{r courage-12}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+<!-- DK: Give some advice about making the table look more professional. Maybe show some code and the resulting nice looking table. -->
+
+
+### Exercise 13
+
+Add two sentence to your project summary. 
+
+First, mention a weakness in your model, derived from the questions above about the key assumptions of a data science problem.
+
+Second, explain the structure of the model. Something like: "I/we model Y [the concept of the outcome, not the variable name] as a [linear/logistic/multinomial/ordinal] function of X [and maybe other covariates]."
+
+Recall the beginning of our version of the summary:
+
+> XX: Include what we suggested at the end of Justice
+
+```{r courage-13}
+question_text(NULL,
+	message = "Using data from the National Election Studies (NES) survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. Our results might be biased by differential non-response among different categories of voters. We modeled pres_vote, a character variable, as a multinomial logistic regression model. Women are most likely to support Clinton. ",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
 
 ### 
 
-Recall the logit link function from the Bernoulli model in Chapter 4:
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to summary paragrah portion of your QMD. `Command/Ctrl + Shift + K`, and then commit/push.
 
-$$
-\rho = \frac{e^{\beta_0}}{1 + e^{\beta_0}}
-$$
+
+
+
+
+<!-- The vote of person $i$ takes on one of three possible values: Bush (Republican), Clinton (Democrat) or Perot (Third Party). The probability of each outcome is given by the respective $\rho$. And, by definition: -->
+
+<!-- $$ \rho_{bush} + \rho_{clinton} + \rho_{perot} = 1 $$ -->
+<!-- So, once we know two of the probabilities, we know the third. That means that we can't estimate them separately. If we do, we run the risk of violating this equality. We must estimate them together. Fortunately, **brms** takes care of all the details. -->
 
 ### 
 
-We need to expand this in two ways: First, we have to allow for variables (in this case, the sex of the voter) to influence the probability. 
+<!-- Recall the logit link function from the Bernoulli model in Chapter 4: -->
+
+<!-- $$ -->
+<!-- \rho = \frac{e^{\beta_0}}{1 + e^{\beta_0}} -->
+<!-- $$ -->
+
+<!-- ###  -->
+
+<!-- We need to expand this in two ways: First, we have to allow for variables (in this case, the sex of the voter) to influence the probability.  -->
 
 
-$$
-\rho = \frac{e^{\beta_0 + \beta_1 {male}}}{1 + e^{\beta_0 + \beta_1 {male}}}
-$$
+<!-- $$ -->
+<!-- \rho = \frac{e^{\beta_0 + \beta_1 {male}}}{1 + e^{\beta_0 + \beta_1 {male}}} -->
+<!-- $$ -->
 
-The logit link function can be expanded just like a simple linear regression. We just add more terms, along with their associated coefficients. Regardless of how complex this term becomes, $\rho$ will remain bounded between 0 and 1.
+<!-- The logit link function can be expanded just like a simple linear regression. We just add more terms, along with their associated coefficients. Regardless of how complex this term becomes, $\rho$ will remain bounded between 0 and 1. -->
 
 ### 
 
@@ -1167,122 +1493,19 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r courage-10}
+```{r courage-14}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
 	rows = 3)
-```
-
-### Exercise 11
-
-Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assigning the result to `fit_nes`. 
-
-`Command/Ctrl + Shift + K`. It may take some time to render `analysis.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `analysis.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
-
-To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
-
-At the Console, run:
-
-```
-tutorial.helpers::show_file("analysis.qmd", start = -8)
-```
-
-CP/CR.
-
-```{r courage-11}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### Exercise 12
-
-Run `posterior_interval()` on `fit_nes`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
-
-```{r courage-12, exercise = TRUE}
-
-```
-
-```{r courage-12-hint-1, eval = FALSE}
-posterior_interval(...)
-```
-
-```{r courage-12-test, include = FALSE}
-posterior_interval(fit_nes)
-```
-
-### 
-
-The positive value for `muPerot_sexMale` means that men are much more likely to vote for Perot.
-
-
-### Exercise 13
-
-Run `fixef()` on `fit_nes`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
-
-```{r courage-13, exercise = TRUE}
-
-```
-
-```{r courage-13-hint-1, eval = FALSE}
-fixef(...)
-```
-
-```{r courage-13-test, include = FALSE}
-fixef(fit_nes)
-```
-
-### 
-
-The negative value for `muClinton_sexMale` means that men are less likely to vote for Perot.
-
-### Exercise 14
-
-Run `pp_check()` on `fit_nes`. The `pp_check()` runs a **p**osterior **p**redictive check. Set the `type` argument to "bars".
-
-```{r courage-14, exercise = TRUE}
-
-```
-
-```{r courage-14-hint-1, eval = FALSE}
-pp_check(...)
-```
-
-```{r courage-14-test, include = FALSE}
-pp_check(fit_nes, type = "bars")
-```
-
-### 
-
-`pp_check()` is used to examine if the “fake data” created from our DGM matches our actual data. If the fake data had looked very different from the real data, we have had a problem. But, for the most part, we conclude that, although not perfect, `pp_check()` shows that the fake outcomes generated by our model are like the actual outcome data.
-
-
-
-### Exercise 15
-
-Write a few sentences which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add at least one sentence which describes the modelling approach which you are using, specifying at least the functional form and the dependent variable. Add at least one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
-
-```{r courage-15}
-question_text(NULL,
-	message = "Using data from the National Election Studies (NES) survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. Our results might be biased by differential non-response among different categories of voters. We modeled pres_vote, a character variable, as a multinomial logistic regression model. Women are most likely to support Clinton. ",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
 ```
 
 ## Temperance
 ### 
 
 *Temperance is a tree which as for its root very little contentment, and for its fruit calm and peace.* - Buddha
-
-
 
 ### Exercise 1
 
@@ -1297,11 +1520,35 @@ question_text(NULL,
 	rows = 6)
 ```
 
+### 
+
+Courage gave us the data generating mechanism. Temperance guides us in the use of the DGM — or the “model” — we have created to answer the questions with which we began. We create posteriors for the quantities of interest. 
+
 ### Exercise 2
+
+Load the [**marginaleffects**](https://marginaleffects.com/) package.
+
+```{r temperance-2, exercise = TRUE}
+
+```
+
+```{r temperance-2-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r temperance-2-test, include = FALSE}
+library(marginaleffects)
+```
+
+### 
+
+We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
+
+### Exercise 3
 
 What is the general topic we are investigating? What is the specific question we are trying to answer? 
 
-```{r temperance-2}
+```{r temperance-3}
 question_text(NULL,
 	message = "Our general topic is: What is the relationship between sex and voting? Specifically, we want to know: What was the relationship between sex and voting in the 1992 US Presidential election among supporters of the three leading candidates: Clinton, Bush and Perot?",
 	answer(NULL, correct = TRUE),
@@ -1314,320 +1561,56 @@ question_text(NULL,
 
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic broadly.
 
-
-### Exercise 3
-
-To answer our question, we need to create a `newdata` object. Which variables (e.g., which columns) do we need to include in this object?
-
-```{r temperance-3}
-question_text(NULL,
-	message = "All the variables which are on the right side of the formula in `fit_nes`, in this case, it is only sex.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-A `newdata` tibble must include columns for all the right-hand side variables --- all the "covariates" --- in the model, and with all the same variable names and, mostly, variable types.
-
 ### Exercise 4
 
-How many rows do we need in the `newdata` object? Recall that each row will generate a posterior for something. That is, if you have two rows in your `newdata` object, you will get two posteriors. It is up to you to determine what those two posteriors are and what you want to do with them.
+Enter this code into the exercise code block and hit "Run Code."
 
-```{r temperance-4}
-question_text(NULL,
-	message = "6 rows",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
+```
+plot_predictions(fit_XX, 
+                 conditions = c("XX", "XX")))
+```                 
+
+```{r temperance-4, exercise = TRUE}
+
+```
+
+```{r temperance-4-hint-1, eval = FALSE}
+plot_predictions(fit_XX, 
+                 conditions = c("XX", "XX")))
+```
+
+```{r temperance-4-test, include = FALSE}
+# plot_predictions(fit_XX, 
+#                  conditions = c("XX", "XX")))
 ```
 
 ### 
 
-We want to know how "different" units behave, where the very definition of "different" is that they do not have identical values for all the variables used in `fit_nes`. In this case, we are interested, for both men and women separately, an individual's probability of voting for Bush, or for Clinton, or for Perot. So, two sexes times 3 voting options generates 6 posteriors. 
+<!-- XX: The knowledge drop MUST discuss the estimate (and its uncertainty) that you go on to include in your summary paragraph. You MUST discuss how you are reading, roughly, the values for the estimate and the confidence interval by looking at this plot. -->
+
+<!-- XX: There are a lot of interesting options in plot_predictions. Check them out. You may want to use some of them in your plot. I think `points` is quite interesting. Feel free to add a couple more questions which add some options.  -->
+
+<!-- XX: You can use the draw = FALSE option to return a tibble which can then be piped directly into ggplot.  -->
+
+<!-- XX: If such a plot would be complex and/or the tutorial is long enough, you can just include all the code for a plot in the exercise code chunk and tell students to just press "Run Code." This will, at least, allow them to see what a good plot looks like. -->
 
 ### Exercise 5
 
-Which values do you want the variables in your `newdata` object to have? This is not easy! 
+Add `library(marginaleffects)` to the `XX.qmd` setup code chunk. 
 
-```{r temperance-5}
-question_text(NULL,
-	message = "The sex variable should hold the values of Male and Female",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
+Create a new code chunk. Label it with `label: plot`. Copy/paste the code which creates your graphic. 
 
-### 
-
-Now we are going to use `tibble()` to create the `newdata` object.
-
-### Exercise 6
-
-Here is the R code which creates the `newdata` object: `tibble(sex = c("Female", "Male"))`. Type it into the code exercise block and hit "Run Code".
-
-<!-- Asking students to create this object --- even after you help them figure out the columns, rows and values --- is too hard, at least until they get more experiences. Your knowledge drop, for this question and the next, should give them advice on the broad topic of how they can create newdata objects themselves. -->
-
-```{r temperance-6, exercise = TRUE}
-
-```
-
-```{r temperance-6-hint-1, eval = FALSE}
-tibble(sex = c(..., ...))
-```
-
-```{r temperance-6-test, include = FALSE}
-tibble(sex = c("Female", "Male"))
-```
-
-### Exercise 7
-
-Behind the scenes, we have created the `ndata` object using this code. To confirm, type `ndata` and hit "Run Code".
-
-```{r temperance-7, exercise = TRUE}
-
-```
-
-```{r temperance-7-hint-1, eval = FALSE}
-ndata
-```
-
-```{r temperance-7-test, include = FALSE}
-ndata
-```
-
-### Exercise 8
-
-Now that we have the `newdata` object, we can create a pipe which uses out fitted model to answer our question. Begin by typing `fit_nes` and clicking "Run Code".
-
-```{r temperance-8, exercise = TRUE}
-
-```
-
-```{r temperance-8-hint-1, eval = FALSE}
-fit_nes
-```
-
-```{r temperance-8-test, include = FALSE}
-fit_nes
-```
-
-<!-- ###  -->
-
-<!-- DK: Knowledge drop? -->
-
-### Exercise 9
-
-Pipe `fit_nes` to `add_epred_draws()` with the argument `newdata = ndata`.
-
-
-
-```{r temperance-9, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-9-hint-1, eval = FALSE}
-fit_nes |> add_epred_draws(...)
-```
-
-```{r temperance-9-test, include = FALSE}
-fit_nes |> 
-  add_epred_draws(newdata = ndata)
-```
-
-### 
-
-`add_epred_draws()` generates a series of predicted values from the posterior distribution for the new data. These predictions represent the distribution of the intercept's expected value.
-
-We are looking for the expected values, so, we use `add_epred_draws`. If we wanted the predicted values instead, we would use `add_predictive_draws`
-
-
-### Exercise 10
-
-Continue the pipe with `select()`, select `sex`, `.category` and `.epred`.
-
-```{r temperance-10, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-10-hint-1, eval = FALSE}
-... |> select(...)
-```
-
-```{r temperance-10-test, include = FALSE}
-fit_nes |> 
-  add_epred_draws(newdata = ndata) |>
-  select(sex, .category, .epred)
-```
-
-### Exercise 11
-
-Add `ggplot()` to the pipe. Set the argument inside to be `aes(x = .epred, fill = sex)`
-
-```{r temperance-11, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-11-hint-1, eval = FALSE}
-... |> 
-  ggplot(aes(...))
-```
-
-```{r temperance-11-test, include = FALSE}
-fit_nes |> 
-  add_epred_draws(newdata = ndata) |>
-  select(sex, .category, .epred) |>
-  ggplot(aes(x = .epred, fill = sex))
-```
-
-### Exercise 12
-
-Add `geom_histogram()`, set `bins` equal to `100`.
-
-```{r temperance-12, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-12-hint-1, eval = FALSE}
-... + 
-  geom_histogram(...)
-```
-
-```{r temperance-12-test, include = FALSE}
-fit_nes |> 
-  add_epred_draws(newdata = ndata) |>
-  select(sex, .category, .epred) |>
-  ggplot(aes(x = .epred, fill = sex)) +
-    geom_histogram(bins = 100)
-```
-
-### Exercise 13
-
-Next add `facet_grid(~ .category)`
-
-```{r temperance-13, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-13-hint-1, eval = FALSE}
-... + 
-  facet_grid(~ .category)
-```
-
-```{r temperance-13-test, include = FALSE}
-fit_nes |> 
-  add_epred_draws(newdata = ndata) |>
-  select(sex, .category, .epred) |>
-  ggplot(aes(x = .epred, fill = sex)) +
-    geom_histogram(bins = 100) +
-    facet_grid(~ .category)
-```
-
-### Exercise 14
-
-Add `scale_x_continuous()` to the function. Set `breaks` to `c(0.05, 0.3, 0.6)` and `labels` to `scales::percent_format()`
-
-```{r temperance-14, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-14-hint-1, eval = FALSE}
-... +
-  scale_x_continuous(breaks = c(...,
-                                ...,
-                                ...),
-                     labels = ...)
-```
-
-```{r temperance-14-test, include = FALSE}
-fit_nes |> 
-  add_epred_draws(newdata = ndata) |>
-  select(sex, .category, .epred) |>
-  ggplot(aes(x = .epred, fill = sex)) +
-    geom_histogram(bins = 100) +
-    facet_grid(~ .category) +
-    scale_x_continuous(breaks = c(0.05,
-                                   0.3,
-                                   0.6),
-                       labels = scales::percent_format())
-```
-
- 
-### Exercise 15
-
-Finally, use `labs()` to add your labels. 
-
-```{r temperance-15, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-Your plot should look like this:
-
-```{r}
-fit_nes |> 
-  add_epred_draws(newdata = tibble(sex = c("Female", "Male"))) |>
-  select(sex, .category, .epred) |>
-  ggplot(aes(x = .epred, fill = sex)) +
-    geom_histogram(bins = 100) +
-    facet_grid(~ .category) +
-    scale_x_continuous(breaks = c(0.05, 0.3, 0.6),
-      labels = scales::percent_format()) +
-    labs(title = "Posterior for Expected Probability of Candidate Support Among Women",
-          subtitle = "Women are most likely to support Clinton",
-          x = "Posterior Probability of Expected Vote Probability",
-          y = "Count",
-          fill = "Sex")
-```
-
-<!-- AC: There's no hint here.  -->
-
-```{r temperance-15-test, include = FALSE}
-fit_nes |> 
-  add_epred_draws(newdata = tibble(sex = c("Female", "Male"))) |>
-  select(sex, .category, .epred) |> 
-  ggplot(aes(x = .epred, fill = sex)) +
-    geom_histogram(bins = 100) +
-    facet_grid(~ .category) +
-    scale_x_continuous(breaks = c(0.05, 0.3, 0.6),
-      labels = scales::percent_format()) +
-    labs(title = "Posterior for Expected Probability of Candidate Support Among Women",
-          subtitle = "Women are most likely to support Clinton",
-          x = "Posterior Probability of Expected Vote Probability",
-          y = "Count",
-          fill = "Sex") 
-```
-
-### Exercise 16
-
-Create a new code chunk in `analysis.qmd`. Label it with `#| label: plot`. Copy/paste the code which creates your graphic. Don't forget to add the code to create the `ndata` tibble. `Command/Ctrl + Shift + K` to ensure that it all works as intended.
+`Command/Ctrl + Shift + K` to ensure that it all works as intended.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("analysis.qmd", start = -13)
+tutorial.helpers::show_file("XX.qmd", start = -8)
 ```
 
 CP/CR.
 
-```{r temperance-16}
+```{r temperance-5}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1636,12 +1619,11 @@ question_text(NULL,
 	rows = 3)
 ```
 
-### Exercise 17
+### Exercise 6
 
-Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
+Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
-
-```{r temperance-17}
+```{r temperance-6}
 question_text(NULL,
 	message = "Using data from the National Election Studies (NES) survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. Our results might be biased by differential non-response among different categories of voters. We modeled pres_vote, a character variable, as a multinomial logistic regression model. Women are most likely to support Clinton. About 53% of women claim to support Clinton, although that number could be as high as 58% or as low as 48%.",
 	answer(NULL, correct = TRUE),
@@ -1652,14 +1634,14 @@ question_text(NULL,
 
 ### 
 
-Edit the summary paragraph in `analysis.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
+Add a final sentence to your summary paragraph in your QMD as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
 
-### Exercise 18
+### Exercise 7
 
-Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval.
+Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-18}
+```{r temperance-7}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1668,9 +1650,9 @@ question_text(NULL,
 	rows = 3)
 ```
 
-### Exercise 19
+### Exercise 8
 
-Rearrange the material in `analysis.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
+Rearrange the material in your QMD so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
 At the Console, run:
 
@@ -1680,7 +1662,24 @@ tutorial.helpers::show_file("analysis.qmd")
 
 CP/CR.
 
-```{r temperance-19}
+```{r temperance-8}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+This is the version of your QMD file which your teacher is most likely to take a close look at.
+
+### Exercise 9
+
+Publish your rendered QMD to Rpubs. Choose a sensible slug. Copy/paste the resulting url below.
+
+```{r temperance-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1693,11 +1692,11 @@ question_text(NULL,
 
 Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
 
-### Exercise 20
+### Exercise 10
 
-Publish `analysis.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
+Copy/paste the url to your Github repo.
 
-```{r temperance-20}
+```{r temperance-10}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1706,10 +1705,12 @@ question_text(NULL,
 	rows = 3)
 ```
 
+### 
+
 ## Summary
 ### 
 
-This tutorial covered [Chapter 8: Four Parameters: Categorical](https://ppbds.github.io/primer/four-parameters-categorical.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
+This tutorial supports [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
 
 
 
