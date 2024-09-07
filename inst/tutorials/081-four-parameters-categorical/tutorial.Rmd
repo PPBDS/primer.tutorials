@@ -19,7 +19,7 @@ library(gt)
 library(tidyverse)
 library(primer.data)
 library(tidymodels)
-library(broom)
+library(gtsummary)
 library(equatiomatic)
 library(marginaleffects)
 
@@ -35,7 +35,22 @@ nes_92 <- nes |>
     pres_vote == "Democrat" ~ "Clinton",
     pres_vote == "Republican" ~ "Bush",
     pres_vote == "Third Party" ~ "Perot",
-  ))
+  )) 
+
+#fit_nes <- multinom_reg() |> 
+#  set_engine("glmnet") |>
+#  set_mode("classification") |>
+#  fit(pres_vote ~ sex, data = nes_92)
+
+#error when running the model: 
+#  Error in `check_outcome()`:
+#! For a classification model, the outcome should be a `factor`, not a `character`.
+#Backtrace:
+# 1. generics::fit(...)
+# 2. parsnip::fit.model_spec(...)
+# 3. parsnip:::form_xy(...)
+# 4. parsnip:::xy_xy(...)
+# 5. parsnip:::check_outcome(env$y, object)
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -343,7 +358,7 @@ question_text(NULL,
 
 ### 
 
-Can we use data from `nes` to predict the voting behavior of men and women in the US this year? When was the data collected? Is the question in the survey across year the same? 
+The central problem for Wisdom is: Can we use data from `nes` to predict the voting behavior of men and women in the US this year? When was the data collected? Is the question in the survey across year the same? 
 
 ### Exercise 2
 
@@ -377,7 +392,7 @@ question_text(NULL,
 
 ### 
 
-This problem is predictive so there are only covariates. In our problem, the covariate is each individual's sex. 
+This problem is predictive so there are only covariates. In our problem, one of the covariates is each individual's sex. 
 
 ### Exercise 4
 
@@ -604,26 +619,9 @@ tibble(ID = c("1", "2", "...", "10", "11", "...", "103,754,865"),
   tab_spanner(label = "Covariate", columns = c(sex))
 ```
 
-Like all aspects of a data science problem, the Preceptor Table evolves as we work on the problem. For example, at the start, we aren't sure what right-hand side variables will be included in the model, so we are not yet sure which covariates must be in the Preceptor Table.
+Like all aspects of a data science problem, the Preceptor Table evolves as we work on the problem. 
 
 ### Exercise 14
-
-Write one sentence describing the data you have to answer your question.
-
-```{r wisdom-14}
-question_text(NULL,
-	message = "This dataset contains information starting from 1948, before and after each presidential election, and combines questions about voters' political attitudes with extensive biographical information.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-Some variables of interest are `sex` and `pres_vote`. We will look at these more in depth later on. Before we continue questioning our data, let's update our `analysis.qmd` file. Professional data scientists always store their work somewhere safe. This is so you don't lose your code even if something happens to your computer.
-
-### Exercise 15
 
 In `analysis.qmd`, load the **tidyverse** and the **primer.data** packages in a new code chunk. Label it as the setup code chunk by adding `#| label: setup`. Render the file.
 
@@ -642,7 +640,7 @@ show_file("analysis.qmd", start = -5)
 
 CP/CR.
 
-```{r wisdom-15}
+```{r wisdom-14}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -655,19 +653,19 @@ question_text(NULL,
 
 Render again. Everything looks nice because we have added code to make the file look better and more professional.
 
-### Exercise 16
+### Exercise 15
 
 Run `glimpse()` on `nes`.
 
-```{r wisdom-16, exercise = TRUE}
+```{r wisdom-15, exercise = TRUE}
     
 ```
 
-```{r wisdom-16-hint-1, eval = FALSE}
+```{r wisdom-15-hint-1, eval = FALSE}
 glimpse(nes)
 ```
 
-```{r wisdom-16-test, include = FALSE}
+```{r wisdom-15-test, include = FALSE}
 glimpse(nes)
 ```
 
@@ -678,20 +676,20 @@ The `nes` data set has 18 variables, including political attitudes and biographi
 Note that the answer for both `sex` and `education` are words, but they are different in terms of type. Specifically, the former is character and the latter is factor. This is because for `sex`, we cannot give a ranking for Female and Male, but we can do that with `education`.
 
 
-### Exercise 17
+### Exercise 16
 
 Pipe `nes` to `filter()` and set the argument `year` to `1992`.  
 
-```{r wisdom-17, exercise = TRUE}
+```{r wisdom-16, exercise = TRUE}
 
 ```
 
-```{r wisdom-17-hint-1, eval = FALSE}
+```{r wisdom-16-hint-1, eval = FALSE}
 nes |> 
   filter (...)
 ```
 
-```{r wisdom-17-test, include = FALSE}
+```{r wisdom-16-test, include = FALSE}
 nes |> 
   filter(year == 1992)
 ```
@@ -700,23 +698,23 @@ nes |>
 
 This only looks at data from the year 1992.
 
-### Exercise 18
+### Exercise 17
 
 Continue the pipe with `select()`, be sure to select the `pres_vote` and `sex` columns. Most data sets have some NA values, we have to get rid of these so that we can use the data. Continue the pipe with `drop_na()`.
 
-```{r wisdom-18, exercise = TRUE}
+```{r wisdom-17, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r wisdom-18-hint-1, eval = FALSE}
+```{r wisdom-17-hint-1, eval = FALSE}
 ... |>
   select(..., ...) |>
   drop_na()
 ```
 
-```{r wisdom-18-test, include = FALSE}
+```{r wisdom-17-test, include = FALSE}
 nes |> 
   filter(year == 1992) |>
   select(pres_vote, sex) |> 
@@ -727,13 +725,13 @@ nes |>
 
 We have to clean the data so we can focus on the specific numbers to answer our question. We only keep the data we need, which is the candidate voted and the sex of the voter.
 
-### Exercise 19
+### Exercise 18
 
 Finish the pipe with `mutate()`. Set the `pres_vote` argument to `case_when()`. Inside of `case_when()`, change `pres_vote` from the name of the political party to the name of the candidate that was voted.
 
 Good news. We did this for you! Just hit "Run Code".
 
-```{r wisdom-19, exercise = TRUE}
+```{r wisdom-18, exercise = TRUE}
 nes |> 
   filter(year == 1992) |>
   select(pres_vote, sex) |>
@@ -747,7 +745,7 @@ nes |>
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r wisdom-19-hint-1, eval = FALSE}
+```{r wisdom-18-hint-1, eval = FALSE}
 ... |> 
   mutate(pres_vote = case_when(
     pres_vote == "Democrat" ~ ...,
@@ -756,7 +754,7 @@ nes |>
   ))
 ```
 
-```{r wisdom-19-test, include = FALSE}
+```{r wisdom-18-test, include = FALSE}
 nes |> 
   filter(year == 1992) |>
   select(pres_vote, sex) |>
@@ -784,7 +782,7 @@ nes_92 |>
          fill = "Candidate")
 ```
 
-### Exercise 20
+### Exercise 19
 
 In `analysis.qmd`, add a new code chunk to the QMD, copy/paste the pipeline above and assign the result to the new object `nes92`: 
 
@@ -806,7 +804,7 @@ nes_92 <- nes |>
 show_file("analysis.qmd", start = -5)
 ```
 
-```{r wisdom-20}
+```{r wisdom-19}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -819,11 +817,11 @@ question_text(NULL,
 
 Now that you have an object `nes92`, a subset of `nes` that has been cleaned and narrowed down to meet the requirement of our question. 
 
-### Exercise 21
+### Exercise 20
 
 In your own words, define "validity" as we use the term.
 
-```{r wisdom-21}
+```{r wisdom-20}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -836,11 +834,11 @@ question_text(NULL,
 
 Validity is always about the *columns* in the Preceptor Table and the data. Just because columns from these two different tables have the same *name* does not mean that they are the same *thing*.
 
-### Exercise 22
+### Exercise 21
 
-Provide one reason why the assumption of validity might not hold for the outcome variable: `pres_vote`. Use the words "column" or "columns" in your answer.
+Provide one reason why the assumption of validity might not hold for the outcome variable: `pres_vote` or for one of the covariates. Use the words "column" or "columns" in your answer.
 
-```{r wisdom-22}
+```{r wisdom-21}
 question_text(NULL,
 	message = "People may claim that they voted for one candidate when they really voted for another. This causes the column `pres_vote` in the data we have do not match up with the `pres_vote` column in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -853,36 +851,21 @@ question_text(NULL,
 
 In order to consider the Preceptor Table and the data to be drawn from the same population, the columns from one must have a *valid correspondence* with the columns in the other. Validity, if true (or at least reasonable), allows us to construct the Population Table, which is the first step in Justice.
 
-### Exercise 23
-
-Provide one reason why the assumption of validity might not hold for the covariate: `sex`. Use the words "column" or "columns" in your answer.
-
-```{r wisdom-23}
-question_text(NULL,
-	message = "",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
 Because we control the Preceptor Table and, to a lesser extent, the original question, we can adjust those variables to be “closer” to the data that we actually have. This is another example of the iterative nature of data science. If the data is not close enough to the question, then we check with our boss/colleague/customer to see if we can modify the question in order to make the match between the data and the Preceptor Table close enough for validity to hold.
 
-### Exercise 24
+### Exercise 22
 
 Over the course of this tutorial, we will be creating a summary paragraph. The purpose of this exercise is to write the first two sentences of that paragraph.
 
-The first sentence is a general statement about the overall topic, mentioning both general class of the outcome variable and of at least one of the covariates. That sentence can be rhetorical. It can be trite, or even a platitude. The purpose of the sentence to let the reader know, gently, about our topic.
+The first sentence is a general statement about the overall topic, mentioning both general class of the outcome variable and of at least one of the covariates. It is **not** connected to the initial "Imagine that you are XX" which set the stage for this project. That sentence can be rhetorical. It can be trite, or even a platitude. The purpose of the sentence to let the reader know, gently, about our topic.
 
-The second sentence does two things. First, it introduces the data source. Second, it introduces the specific question.
+The second sentence does two things. First, it introduces the data source. Second, it introduces the specific question. The sentence can't be that long. Important aspects of the data include when/where it was gather, how many observations it includes and the organization (if famous) which collected it.
 
 Type your two sentences below.
 
-```{r wisdom-24}
+```{r wisdom-22}
 question_text(NULL,
-	message = "Using data from the National Election Studies survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election.",
+	message = "Understanding the voter preference of different genders is essential for a candidate to design the campaign strategy. Using data from the National Election Studies survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -975,13 +958,13 @@ Stability is all about *time*. Is the relationship among the columns in the Popu
 
 ### Exercise 4
 
-<!-- DK: Rewrite answer -->
+<!-- DK: Rewrite answer. DONE -->
 
 Provide one reason why the assumption of stability might not be true in this case.
 
 ```{r justice-4}
 question_text(NULL,
-	message = "Not all voters voted at the same moment in time.",
+	message = "The time of voting varies across individuals, some may voted right before the deadline while some voted weeks before the election. Their preferences at each time may be different.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1075,19 +1058,24 @@ This assumption is only relevant for causal models. We describe a model as "conf
 
 ### Exercise 9
 
-Summarize the state of your work so far in two or three sentences. Make reference to the data you have and to the question you are trying to answer. Feel free to copy from your answer at the end of the Wisdom Section. Mention at least one specific problem which casts doubt on your approach. 
+Write one sentence which highlights a potential weakness in your model. This will almost always be derived from possible problems with the assumptions discussed above. We will add this sentence to our summary paragraph. So far, our version of the summary paragraph looks like this:
 
+> Understanding the voter preference of different genders is essential for a candidate to design a campaign strategy. Using data from the National Election Studies survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election.
+
+Of course, your version will be somewhat different.
 
 ```{r justice-9}
 question_text(NULL,
-	message = "Using data from the National Election Studies (NES) survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. Our results might be biased by differential non-response among different categories of voters.",
+	message = "Understanding the voter preference of different genders is essential for a candidate to design a campaign strategy. Using data from the National Election Studies survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. ",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
 
-Edit the summary paragraph in `analysis.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`, and then commit/push.
+### 
+
+Add a weakness sentence to the summary paragraph in your QMD. You can modify your paragraph as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`, and then commit/push.
 
 ## Courage
 ### 
@@ -1132,11 +1120,17 @@ library(tidymodels)
 
 <!-- DK: Give probability family. Use new template.  -->
 
-The basic mathematical structure of the model is (mostly) determined by the type of outcome variable. 
+The probability family is determined by the outcome variable `pres_vote`. Because the outcome variable is a categorical value with 3 possible values, the probability family is the multinomial distribution. 
+
+If $Y$ is a categorical value (with 2+ possible values), the probability family is Multinomial.
+
+$$Y \sim \text{Mutinomial}(\rho_1, \rho_2, \rho_3, \ldots)$$
+
+where $\rho_1 + \rho_2 + \rho_3 + \ldots = 1$.
 
 ### Exercise 3
 
-Load the [**broom**](https://broom.tidymodels.org/) package.
+Load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary/) package.
 
 ```{r courage-3, exercise = TRUE}
 
@@ -1147,24 +1141,26 @@ library(...)
 ```
 
 ```{r courage-3-test, include = FALSE}
-library(broom)
+library(gtsummary)
 ```
 
 ### 
 
-<!-- XX: Discuss the link function. This is a "generic" link function which does not mention any of the variables in our actual problem. Choose 1 of these 2 starting sentences, followed by the basic link function:
+The link functions for 3 categorical variables are: 
 
-Because the outcome variable has a Bernoulli (or Categorical or Cumulative) distribution, the link function is logit. That is:
+$$
+\log \left( \frac{P(Y = 1 \mid X)}{P(Y = 3 \mid X)} \right) = X \beta_1
+$$
 
-Or: 
+$$
+\log \left( \frac{P(Y = 2 \mid X)}{P(Y = 3 \mid X)} \right) = X \beta_2
+$$
 
-Because the outcome variable has a Normal distribution, the link function is the identity. That is:
-
-```{r}
-#extract_eq(fit_XX$fit, intercept = "beta")
-```
-
--->
+where:
+- $P(Y = 1 \mid X)$ and $P(Y = 2 \mid X)$ are the probabilities of outcomes 1 and 2 given predictors $X$,
+- $P(Y = 3 \mid X)$ is the probability of the baseline outcome 3,
+- $X$ is the vector of predictor variables,
+- $\beta_1$ and $\beta_2$ are the coefficient vectors for outcomes 1 and 2, respectively.
 
 ### Exercise 4
 
@@ -1184,16 +1180,26 @@ library(equatiomatic)
 
 ### 
 
-Recall that a categorical variable (whether character or factor) like `sex` is turned into a $0/1$ "dummy" variable which is then re-named something like $sex_{Male}$. After all, we can't have words --- like "Male" or "Female" --- in a mathematical formula, hence the need for dummy variables.
+<!-- GK: There is an error when running this code.  -->
+<!-- This is the basic mathematical structure of our model: -->
 
+<!-- ```{r} -->
+<!-- extract_eq(fit_nes, wrap = TRUE, show_distribution = TRUE) -->
+<!-- ``` -->
+
+Of course, in a normal data science project, we would explore a variety of different combinations of independent variables before selecting a final set. Just pretend that we already did that.
+
+<!-- Error in UseMethod("extract_lhs", model) :  -->
+<!--   no applicable method for 'extract_lhs' applied to an object of class "c('multinom', 'nnet')" -->
+  
 ### Exercise 5
 
-Add `library(tidymodels)`, `library(broom)`, and `library(equatiomatic)` to the `setup` code chunk in `XX.qmd`. `Command/Ctrl + Shift + K`.
+Add `library(tidymodels)`, `library(gtsummary)`, and `library(equatiomatic)` to the `setup` code chunk in `XX.qmd`. `Command/Ctrl + Shift + K`.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("XX.qmd", pattern = "tidymodels|broom|equatiomatic")
+tutorial.helpers::show_file("XX.qmd", pattern = "tidymodels|gtsummary|equatiomatic")
 ```
 
 CP/CR.
@@ -1209,29 +1215,27 @@ question_text(NULL,
 
 ### 
 
-<!-- XX: If your model has one categorical variable with more than two values, then use the below paragraph, but edit it to use your variable, and its values, instead. If not, then just keep this paragraph but add a sentence which notes that there is no variable like this in your model. -->
-
-The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has three values --- "black", "hispanic", and "white" --- then the model creates two 0/1 dummy variables, giving them names like $race_{hispanic}$ and $race_{white}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
+Recall that a categorical variable (whether character or factor) like `sex` is turned into a $0/1$ "dummy" variable which is then re-named something like $sex_{Male}$. After all, we can't have words --- like "Male" or "Female" --- in a mathematical formula, hence the need for dummy variables.
 
 ### Exercise 6
 
-Because our outcome variable is [XX: binary or continuous or multinomial], start to create the model by using `[XX: logistic_reg(engine = "glm") or linear_reg(engine = "lm") or multinom_reg(engine = "glmnet")]`.
+Because our outcome variable is multinomial, start to create the model by using `multinom_reg(engine = "glmnet")`.
 
 ```{r courage-6, exercise = TRUE}
 
 ```
 
 ```{r courage-6-hint-1, eval = FALSE}
-XX
+multinom_reg(engine = ...)
 ```
 
 ```{r courage-6-test, include = FALSE}
-# XX
+multinom_reg(engine = "glmnet")
 ```
 
 ### 
 
-In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
+The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has three values --- "black", "hispanic", and "white" --- then the model creates two 0/1 dummy variables, giving them names like $race_{hispanic}$ and $race_{white}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied. However, note that there is no variable like this in our model.
 
 ### Exercise 7
 
@@ -1249,40 +1253,43 @@ Continue the pipe to `fit(XX, data = XX)`.
 ```
 
 ```{r courage-7-test, include = FALSE}
-# XX |> 
-#   fit(XX, data = XX)
+#multinom_reg(engine = "glmnet") |> 
+#  fit(pres_vote ~ sex, data = nes_92)
 ```
 
 ### 
 
 We can translate the fitted model into mathematics, including the best estimates of all the unknown parameters:
 
+<!-- GK: Also got the same error as above. -->
+
 ```{r}
 # XX: You might want to use the `coef_digits` argument to show fewer digits
 # after the decimal. wrap = TRUE is necessary for large models.
 
-#extract_eq(fit_XX$fit, 
+#extract_eq(fit_nes, 
 #           intercept = "beta", 
 #           use_coefs = TRUE)
 ```
 
 <!-- DK: Knowledge drop about error term going away and height with a hat -->
 
+There are three main differences between this representation of the model and our previous one. First, we replace the parameters with our best estimate of their values. Second, the error term is gone. Third, the dependent variable now has a "hat," indicating that it is our "fitted" value, our best guess as to the value of the outcome, given the values of the independent variables for any given unit.
+
 ### Exercise 8
 
-Behind the scenes of this tutorial, an object called `fit_XX` has been created which is the result of the code above. Type `fit_XX` and hit "Run Code." This generates the same results as using `print(fit_XX)`.
-
+Behind the scenes of this tutorial, an object called `fit_nes` has been created which is the result of the code above. Type `fit_nes` and hit "Run Code." This generates the same results as using `print(fit_nes)`.
 
 ```{r courage-8, exercise = TRUE}
 
 ```
 
 ```{r courage-8-hint-1, eval = FALSE}
-#fit_XX
+fit_nes
 ```
 
 ```{r courage-8-test, include = FALSE}
-#fit_XX
+#fit_nes
 ```
 
 ### 
@@ -1292,6 +1299,8 @@ Behind the scenes of this tutorial, an object called `fit_XX` has been created w
 <!-- The *code formula* includes `sex`, a character variable with two possible values: `"Male"` and `"Female"`. -->
 
 <!-- The *math formula* includes `sexMale`, a 0/1 dummy variable. -->
+
+In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
 
 ### Exercise 9
 
@@ -1327,7 +1336,7 @@ Add `*_cache` to `.gitignore` file. Commit and push. Cached objects are often la
 Create another code chunk in `analysis.qmd`. Add the chunk option: `label: math`. In that code chunk, add something like the below. You may find it useful to add the `coef_digits` argument to show fewer significant digits after the decimal.
 
 ```
-extract_eq(fit_XX$fit, 
+extract_eq(fit_nes, 
            intercept = "beta", 
            use_coefs = TRUE)
 ```
@@ -1368,9 +1377,11 @@ question_text(NULL,
 
 ### Exercise 11
 
+<!-- GK: The table results looks weird -->
+
 <!-- XX: You may use other arguments to tidy if that is useful. -->
 
-Run `tidy()` on `fit_XX` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
+Run `tidy()` on `fit_nes` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
 
 ```{r courage-11, exercise = TRUE}
 
@@ -1381,21 +1392,155 @@ tidy(..., conf.int = ...)
 ```
 
 ```{r courage-11-test, include = FALSE}
-# tidy(fit_XX, conf.int = TRUE)
+#tidy(fit_nes, conf.int = TRUE)
 ```
 
 ### 
+
+<!-- > tidy(fit_nes, conf.int = TRUE) -->
+<!-- # A tibble: 4 × 8 -->
+<!--   y.level term        estimate std.error -->
+<!--   <chr>   <chr>          <dbl>     <dbl> -->
+<!-- 1 Bush    (Intercept)    0.852     0.107 -->
+<!-- 2 Bush    sexMale       -0.420     0.144 -->
+<!-- 3 Clinton (Intercept)    1.31      0.101 -->
+<!-- 4 Clinton sexMale       -0.676     0.137 -->
+<!-- # ℹ 4 more variables: statistic <dbl>, -->
+<!-- #   p.value <dbl>, conf.low <dbl>, -->
+<!-- #   conf.high <dbl> -->
+
+`tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
 
 <!-- XX: Add at least three questions which involve the interpretation of numbers in the table. See the Cardinal Virtues vignette for detailed discussion. -->
 
 ### Exercise 12
 
-<!-- XX: We still have some details to worry about in terms of what the table should look like. Not sure on the best approach. If we use the gt() package, we need to load it. Maybe we just give all the code, includeing library(gt), and then can just copy it in. Ought to get rid of the statistic and p.value columns. -->
+```{r}
+#tidy(fit_nes, conf.int = TRUE) |> 
+#  select("term", "estimate", "conf.low", "conf.high")
+```
+
+Write a sentence interpreting the estimate for the Intercept.
+
+```{r courage-12}
+question_text(NULL,
+	message = "Our (best) guess/estimate for the average height of adult females is 161cm.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Our mathematical formula for this problem is:
+
+```{r}
+#extract_eq(fit_height,
+#           intercept = "beta")
+```
+
+Recall that we cannot have both "Male" and "Female" categories in the model. Instead, the Female category is incorporated into the intercept and becomes the reference case. Thus, it represents the average height of adult female.
+
+### Exercise 13
+
+```{r}
+#tidy(fit_height, conf.int = TRUE) |> 
+#  select("term", "estimate", "conf.low", "conf.high")
+```
+
+Write a sentence interpreting the estimate for `sexMale`.
+
+```{r courage-13}
+question_text(NULL,
+	message = "When comparing the average height of men versus women, our guess/estimate is that men are taller than women by about 14 centimeters.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Note how, whenever we consider non-treatment variables, we must never use terms like "cause," "impact" and so on. We can't make any statement which implies the existence of more than one potential outcome based on changes in non-treatment variables. We can't make any claims about within row effects. Instead, we can only compare across rows. Always use the phrase "when comparing X and Y" or something very similar.
+
+### Exercise 14
+
+```{r}
+#tidy(fit_height, conf.int = TRUE) |> 
+#  filter(term == "(Intercept)") |>
+#  select(conf.low, conf.high) |> 
+#  round()
+```
+
+Write a sentence interpreting the confidence interval for Intercept.
+
+```{r courage-14}
+question_text(NULL,
+	message = "There is a 95% chance that the true value of the Intercept is within the range 159 and 163 cm.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+When looking at the confidence interval, we examine whether it excludes zero. If not, then we can't be sure if the relationship is positive or negative.
+
+### Exercise 15
+
+```{r}
+#tidy(fit_height, conf.int = TRUE) |> 
+#  filter(term == "sexMale") |>
+#  select(conf.low, conf.high) |> 
+#  round()
+```
+
+Write a sentence interpreting the confidence interval for sexMale.
+
+```{r courage-15}
+question_text(NULL,
+	message = "There is a 95% chance that the true value of the coefficient of `sexMale` is within the range 11 and 17 centimeters.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Dummy variables must always be interpreted in the context of the base value for that variable, which is always included in the intercept. For example, the base value here is "Female/Male." (The base value is the first alphabetically by default for character variables. However, if it is a factor variable, you can change that by setting the order of the levels by hand.)
+
+### Exercise 16
+
+For interactive use, `tidy()` is very handy. But, for presenting our results, we should use a presentation package like **gtsummary**, which includes handy functions like `tbl_regression()`.
+
+Run `tbl_regression(fit_height)`.
+
+
+```{r courage-16, exercise = TRUE}
+
+```
+
+```{r courage-16-hint-1, eval = FALSE}
+tbl_regression(..)
+```
+
+```{r courage-16-test, include = FALSE}
+#tbl_regression(fit_nes)
+```
+
+### 
+
+See this [tutorial](https://www.danieldsjoberg.com/gtsummary/articles/tbl_regression.html) for a variety of options for customizing your table.
+
+### Exercise 17
 
 Create a new code chunk in `analysis.qmd`. Add a code chunk option: `label: table`. Add this code to the code chunk.
 
 ```
-tidy(fit_XX, conf.int = TRUE)
+tbl_regression(fit_nes)
 ```
 
 `Command/Ctrl + Shift + K`. 
@@ -1403,13 +1548,13 @@ tidy(fit_XX, conf.int = TRUE)
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("analysis.qmd", pattern = "tidy")
+tutorial.helpers::show_file("analysis.qmd", pattern = "tbl_regression")
 ```
 
 CP/CR.
 
 
-```{r courage-12}
+```{r courage-17}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1418,22 +1563,17 @@ question_text(NULL,
 	rows = 3)
 ```
 
-<!-- DK: Give some advice about making the table look more professional. Maybe show some code and the resulting nice looking table. -->
+### Exercise 18
 
+Add a sentence to your project summary. 
 
-### Exercise 13
-
-Add two sentence to your project summary. 
-
-First, mention a weakness in your model, derived from the questions above about the key assumptions of a data science problem.
-
-Second, explain the structure of the model. Something like: "I/we model Y [the concept of the outcome, not the variable name] as a [linear/logistic/multinomial/ordinal] function of X [and maybe other covariates]."
+Explain the structure of the model. Something like: "I/we model Y [the concept of the outcome, not the variable name] as a [linear/logistic/multinomial/ordinal] function of X [and maybe other covariates]."
 
 Recall the beginning of our version of the summary:
 
 > XX: Include what we suggested at the end of Justice
 
-```{r courage-13}
+```{r courage-18}
 question_text(NULL,
 	message = "Using data from the National Election Studies (NES) survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. Our results might be biased by differential non-response among different categories of voters. We modeled pres_vote, a character variable, as a multinomial logistic regression model. Women are most likely to support Clinton. ",
 	answer(NULL, correct = TRUE),
@@ -1445,81 +1585,6 @@ question_text(NULL,
 ### 
 
 Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to summary paragrah portion of your QMD. `Command/Ctrl + Shift + K`, and then commit/push.
-
-
-
-
-
-<!-- The vote of person $i$ takes on one of three possible values: Bush (Republican), Clinton (Democrat) or Perot (Third Party). The probability of each outcome is given by the respective $\rho$. And, by definition: -->
-
-<!-- $$ \rho_{bush} + \rho_{clinton} + \rho_{perot} = 1 $$ -->
-<!-- So, once we know two of the probabilities, we know the third. That means that we can't estimate them separately. If we do, we run the risk of violating this equality. We must estimate them together. Fortunately, **brms** takes care of all the details. -->
-
-### 
-
-<!-- Recall the logit link function from the Bernoulli model in Chapter 4: -->
-
-<!-- $$ -->
-<!-- \rho = \frac{e^{\beta_0}}{1 + e^{\beta_0}} -->
-<!-- $$ -->
-
-<!-- ###  -->
-
-<!-- We need to expand this in two ways: First, we have to allow for variables (in this case, the sex of the voter) to influence the probability.  -->
-
-
-<!-- $$ -->
-<!-- \rho = \frac{e^{\beta_0 + \beta_1 {male}}}{1 + e^{\beta_0 + \beta_1 {male}}} -->
-<!-- $$ -->
-
-<!-- The logit link function can be expanded just like a simple linear regression. We just add more terms, along with their associated coefficients. Regardless of how complex this term becomes, $\rho$ will remain bounded between 0 and 1. -->
-
-### 
-
-Second, we need to allow for three different $\rho$'s. This is the Categorical model:
-
-$$
-\begin{aligned}
-\rho_{clinton} &=& \frac{e^{\beta_{0, clinton} + \beta_{1, clinton} male}}{1 + e^{\beta_{0, clinton} + \beta_{1, clinton} male}}\\
-\rho_{perot} &=& \frac{e^{\beta_{0, perot} + \beta_{1, perot} male}}{1 + e^{\beta_{0, perot} + \beta_{1, perot} male}}\\
-\rho_{bush}  &=& 1 - \rho_{clinton} - \rho_{perot}
-\end{aligned}
-$$
-
-There is no longer just one $\beta_0$ and one $\beta_1$. Instead, there is $\beta_0$ for Clinton, labeled as $\beta_{0, clinton}$ and a $\beta_0$ for Perot, labeled as $\beta_{0, perot}$. The same applies to $\beta_1$. These parameters need to be different because being male has a different connection to the probability for voting for Clinton than it does for the probability for voting for Perot. We can't have a separate $\beta_0$ and $\beta_1$ for Bush because $\rho_{bush}$ is fully defined once we know $\rho_{clinton}$ and $\rho_{perot}$.
-
-### 
-
-```
-\begin{aligned}
-\rho_{clinton} &=& \frac{e^{\beta_{0, clinton} + \beta_{1, clinton} male}}{1 + e^{\beta_{0, clinton} + \beta_{1, clinton} male}}\\
-\rho_{perot} &=& \frac{e^{\beta_{0, perot} + \beta_{1, perot} male}}{1 + e^{\beta_{0, perot} + \beta_{1, perot} male}}\\
-\rho_{bush}  &=& 1 - \rho_{clinton} - \rho_{perot}
-\end{aligned}
-```
-
-Add the code to `analysis.qmd`. `Command/Ctrl + Shift + K`. Ensure that the formula looks correct.
-
-### 
-
-At the Console, run:
-
-```
-tutorial.helpers::show_file("analysis.qmd", start = -8)
-```
-
-<!-- AC: Not sure if it needs to be start = -8 since the added code is just 5 lines.  -->
-
-CP/CR.
-
-```{r courage-14}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
 
 ## Temperance
 ### 
@@ -1565,11 +1630,11 @@ We should be modest in the claims we make. The posteriors we create are never th
 
 ### Exercise 3
 
-What is the general topic we are investigating? What is the specific question we are trying to answer? 
+What is the specific question we are trying to answer? 
 
 ```{r temperance-3}
 question_text(NULL,
-	message = "Our general topic is: What is the relationship between sex and voting? Specifically, we want to know: What was the relationship between sex and voting in the 1992 US Presidential election among supporters of the three leading candidates: Clinton, Bush and Perot?",
+	message = "What was the relationship between sex and voting in the 1992 US Presidential election among supporters of the three leading candidates: Clinton, Bush and Perot?",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1586,7 +1651,7 @@ Enter this code into the exercise code block and hit "Run Code."
 
 ```
 plot_predictions(fit_XX, 
-                 conditions = c("XX", "XX")))
+                 conditions = "sex")
 ```                 
 
 ```{r temperance-4, exercise = TRUE}
@@ -1595,13 +1660,18 @@ plot_predictions(fit_XX,
 
 ```{r temperance-4-hint-1, eval = FALSE}
 plot_predictions(fit_XX, 
-                 conditions = c("XX", "XX")))
+                 conditions = ...)
 ```
 
 ```{r temperance-4-test, include = FALSE}
-# plot_predictions(fit_XX, 
-#                  conditions = c("XX", "XX")))
+#plot_predictions(fit_nes,
+#                 conditions = "sex")
 ```
+
+<!-- GK: Got this error:  -->
+<!-- Error: One of the `condition` and `by` -->
+<!--   arguments must be supplied, but not -->
+<!--   both. -->
 
 ### 
 
@@ -1615,7 +1685,7 @@ plot_predictions(fit_XX,
 
 ### Exercise 5
 
-Add `library(marginaleffects)` to the `XX.qmd` setup code chunk. 
+Add `library(marginaleffects)` to the `analysis.qmd` setup code chunk. 
 
 Create a new code chunk. Label it with `label: plot`. Copy/paste the code which creates your graphic. 
 
@@ -1624,7 +1694,7 @@ Create a new code chunk. Label it with `label: plot`. Copy/paste the code which 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("XX.qmd", start = -8)
+tutorial.helpers::show_file("analysis.qmd", start = -8)
 ```
 
 CP/CR.
