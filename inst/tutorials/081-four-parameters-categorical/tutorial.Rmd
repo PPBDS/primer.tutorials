@@ -37,9 +37,36 @@ nes_92 <- nes |>
     pres_vote == "Third Party" ~ "Perot",
   ))) 
 
-fit_nes <- multinom_reg() |>
- set_mode("classification") |>
- fit(pres_vote ~ sex, data = nes_92)
+fit_nes <- 
+  multinom_reg(engine = "nnet") |>
+  set_mode("classification") |>
+  fit(pres_vote ~ sex, data = nes_92)
+
+# Notice that tidy(fit_nes) produces estimates of 4 parameters, which, when
+# plugged into standard logistic formulas, would give us the probablities for
+# Clinton and Perod for men and women. The probability for Bush is then
+# calculated via subtraction.
+
+# I could not get simple plot_predictions() to work. Can you? I think it is
+# because marginaleffects does not deal well with situations like this.
+# Regardless, we can still have students make a nice looking plot with this
+# code.
+
+tmp_p <- plot_predictions(fit_nes, 
+                          by = "sex", 
+                          type = "prob", 
+                          draw = FALSE) |> 
+    ggplot(aes(x = group, y = estimate, color = sex)) +
+      geom_point(size = 3, position = position_dodge(width = 0.5)) +
+      geom_errorbar(aes(ymin = conf.low, 
+                        ymax = conf.high), 
+                    width = 0.2, 
+                    position = position_dodge(width = 0.5)) +
+      labs(title = "Voting Preferences by Candidate and Sex",
+           x = NULL,
+           y = "Estimated Proportion",
+           color = "Sex") +
+      theme_minimal() 
 
 #error when running the model: 
 #  Error in `check_outcome()`:
