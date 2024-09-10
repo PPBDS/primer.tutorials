@@ -37,9 +37,7 @@ nes_92 <- nes |>
     pres_vote == "Third Party" ~ "Perot",
   ))) 
 
-fit_nes <- 
-  multinom_reg(engine = "nnet") |>
-  set_mode("classification") |>
+fit_nes <- multinom_reg(engine = "nnet") |>
   fit(pres_vote ~ sex, data = nes_92)
 
 # Notice that tidy(fit_nes) produces estimates of 4 parameters, which, when
@@ -67,16 +65,6 @@ tmp_p <- plot_predictions(fit_nes,
            y = "Estimated Proportion",
            color = "Sex") +
       theme_minimal() 
-
-#error when running the model: 
-#  Error in `check_outcome()`:
-#! For a classification model, the outcome should be a `factor`, not a `character`.
-#Backtrace:
-# 1. generics::fit(...)
-# 2. parsnip::fit.model_spec(...)
-# 3. parsnip:::form_xy(...)
-# 4. parsnip:::xy_xy(...)
-# 5. parsnip:::check_outcome(env$y, object)
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -118,8 +106,6 @@ library(tidyverse)
 ```
 
 ### 
-
-<!-- XX: Report the source of the data, along with some background information about it. -->
 
 We will be using the data set about US people's voting result from [American National Election Studies](https://electionstudies.org/) survey. **The primer.data** package includes a version of the main data set with a selection of variables. The full ANES data is much richer than this relatively simple tibble.
 
@@ -324,7 +310,7 @@ Write a predictive question which connects the outcome variable `pres_vote` to `
 # "average" is implicit in the question.
 
 question_text(NULL,
-	message = "Which candidate is mostly voted by men.",
+	message = "What was the difference in voting preference of men and women in the 1992 US Presidential election among supporters of the three leading candidates: Clinton, Bush and Perot?.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -367,7 +353,7 @@ Our Quantity of Interest might appear too specific, too narrow to capture the fu
 
 Our question:
 
-> *Which candidate do men mostly support?*
+> *What was the difference in voting preference of men and women in the 1992 US Presidential election among supporters of the three leading candidates: Clinton, Bush and Perot?*
 
 ### Exercise 1
 
@@ -753,7 +739,7 @@ We have to clean the data so we can focus on the specific numbers to answer our 
 
 ### Exercise 18
 
-Finish the pipe with `mutate()`. Set the `pres_vote` argument to `case_when()`. Inside of `case_when()`, change `pres_vote` from the name of the political party to the name of the candidate that was voted.
+Finish the pipe with `mutate()`. Set the `pres_vote` argument to `as.factor(case_when())`. Inside of `case_when()`, change `pres_vote` from the name of the political party to the name of the candidate that was voted.
 
 Good news. We did this for you! Just hit "Run Code".
 
@@ -762,22 +748,22 @@ nes |>
   filter(year == 1992) |>
   select(pres_vote, sex) |>
   drop_na() |> 
-  mutate(pres_vote = case_when(
+  mutate(pres_vote = as.factor(case_when(
     pres_vote == "Democrat" ~ "Clinton",
     pres_vote == "Republican" ~ "Bush",
-    pres_vote == "Third Party" ~ "Perot"
-  ))
+    pres_vote == "Third Party" ~ "Perot",
+  )))
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r wisdom-18-hint-1, eval = FALSE}
 ... |> 
-  mutate(pres_vote = case_when(
+  mutate(pres_vote = as.factor(case_when(
     pres_vote == "Democrat" ~ ...,
     pres_vote == ... ~ "Bush",
     pres_vote == ... ~ ..
-  ))
+  )))
 ```
 
 ```{r wisdom-18-test, include = FALSE}
@@ -785,16 +771,16 @@ nes |>
   filter(year == 1992) |>
   select(pres_vote, sex) |>
   drop_na() |> 
-  mutate(pres_vote = case_when(
+  mutate(pres_vote = as.factor(case_when(
     pres_vote == "Democrat" ~ "Clinton",
     pres_vote == "Republican" ~ "Bush",
     pres_vote == "Third Party" ~ "Perot"
-  ))
+  )))
 ```
 
 ### 
 
-The data uses the name of the political party, but, we want the name of the candidate specifically.
+The data uses the name of the political party, but, we want the name of the candidate specifically. The type of `pres_vote` in the data set is character but the model only accepts factor variables. We have to change the type of `pres_vote` to factor using `as.factor()`.
 
 ```{r}
 nes_92 |> 
@@ -817,11 +803,11 @@ nes_92 <- nes |>
   filter(year == 1992) |> 
   select(sex, pres_vote) |> 
   drop_na() |> 
-  mutate(pres_vote = case_when(
+  mutate(pres_vote = as.factor(case_when(
     pres_vote == "Democrat" ~ "Clinton",
     pres_vote == "Republican" ~ "Bush",
     pres_vote == "Third Party" ~ "Perot",
-  ))
+  )))
 ```
 
 `Command/ctrl + Shift + K` follows. In the Console, run:
@@ -1046,13 +1032,8 @@ The reason that representativeness is important is because, when it is violated,
 We use information about the population to make inferences about the Preceptor Table. Provide one reason, involving the relationship between the population and the Preceptor Table, for why the assumption of representativeness might not be true in this case.
 
 ```{r justice-7}
-# XX: Again, try not use of the concept time. We want to save examples of
-# changes caused by time for the discussio about stability. Instead, focus on
-# why the Preceptor might not be representative of the population at that moment
-# in time. 
-
 question_text(NULL,
-	message = "XX",
+	message = "Since voting is a right, but not compulsory for everyone, the people who voted may not be representative of the entire population.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1062,8 +1043,6 @@ question_text(NULL,
 ### 
 
 Stability looks across time periods. Representativeness looks within time periods, for the most part. 
-
-<!-- XX: Use this comment when it is relevant to the problem at hand. Of course, it is sometimes the case that the Preceptor Table includes every row from the Population Table for that moment in time. In that case, the assumption representativeness is met, by definition, if we only consider that moment. So, in that case, the only possible violation of representativeness must involve a claim that this moment in time is not representative of the rest of the Population Table. -->
 
 ### Exercise 8
 
@@ -1092,7 +1071,7 @@ Of course, your version will be somewhat different.
 
 ```{r justice-9}
 question_text(NULL,
-	message = "Understanding the voter preference of different genders is essential for a candidate to design a campaign strategy. Using data from the National Election Studies survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. ",
+	message = "Understanding the voter preference of different genders is essential for a candidate to design a campaign strategy. Using data from the National Election Studies survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. However, since not everyone participates in the survey, the data might not be representative of the entire population.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1148,11 +1127,9 @@ library(tidymodels)
 
 The probability family is determined by the outcome variable `pres_vote`. Because the outcome variable is a categorical value with 3 possible values, the probability family is the multinomial distribution. 
 
-If $Y$ is a categorical value (with 2+ possible values), the probability family is Multinomial.
+$$Y \sim \text{Mutinomial}(\rho_{bush}, \rho_{clinton}, \rho_{perot})$$
 
-$$Y \sim \text{Mutinomial}(\rho_1, \rho_2, \rho_3, \ldots)$$
-
-where $\rho_1 + \rho_2 + \rho_3 + \ldots = 1$.
+where $$ \rho_{bush} + \rho_{clinton} + \rho_{perot} = 1 $$
 
 ### Exercise 3
 
@@ -1172,65 +1149,43 @@ library(gtsummary)
 
 ### 
 
-The link functions for 3 categorical variables are: 
+The link function, the basic mathematical structure of the model, is (mostly) determined by the type of outcome variable. The link function for a multinomial distribution is the *logit* link function.
 
 $$
-\log \left( \frac{P(Y = 1 \mid X)}{P(Y = 3 \mid X)} \right) = X \beta_1
+\begin{aligned}
+\rho_{clinton} &=& \frac{e^{\beta_{0, clinton} + \beta_{1, clinton} male}}{1 + e^{\beta_{0, clinton} + \beta_{1, clinton} male}}\\
+\rho_{perot} &=& \frac{e^{\beta_{0, perot} + \beta_{1, perot} male}}{1 + e^{\beta_{0, perot} + \beta_{1, perot} male}}\\
+\rho_{bush}  &=& 1 - \rho_{clinton} - \rho_{perot}
+\end{aligned}
 $$
 
-$$
-\log \left( \frac{P(Y = 2 \mid X)}{P(Y = 3 \mid X)} \right) = X \beta_2
-$$
+<!-- # Notice that tidy(fit_nes) produces estimates of 4 parameters, which, when -->
+<!-- # plugged into standard logistic formulas, would give us the probablities for -->
+<!-- # Clinton and Perod for men and women. The probability for Bush is then -->
+<!-- # calculated via subtraction. -->
 
-where:
-- $P(Y = 1 \mid X)$ and $P(Y = 2 \mid X)$ are the probabilities of outcomes 1 and 2 given predictors $X$,
-- $P(Y = 3 \mid X)$ is the probability of the baseline outcome 3,
-- $X$ is the vector of predictor variables,
-- $\beta_1$ and $\beta_2$ are the coefficient vectors for outcomes 1 and 2, respectively.
+The model when fitted produces estimates of 4 parameters which, when plugged into the standard logistic formulas, would give us the probabilities for Clinton and Perot for men and women. The probability for Bush is then calculated via subtraction.
 
 ### Exercise 4
 
-Load the [**equatiomatic**](https://datalorax.github.io/equatiomatic/) package.
-
-```{r courage-4, exercise = TRUE}
-
-```
-
-```{r courage-4-hint-1, eval = FALSE}
-library(...)
-```
-
-```{r courage-4-test, include = FALSE}
-library(equatiomatic)
-```
-
-### 
-
-<!-- GK: There is an error when running this code.  -->
-<!-- This is the basic mathematical structure of our model: -->
-
-<!-- ```{r} -->
-<!-- extract_eq(fit_nes, wrap = TRUE, show_distribution = TRUE) -->
-<!-- ``` -->
-
-Of course, in a normal data science project, we would explore a variety of different combinations of independent variables before selecting a final set. Just pretend that we already did that.
-
-<!-- Error in UseMethod("extract_lhs", model) :  -->
-<!--   no applicable method for 'extract_lhs' applied to an object of class "c('multinom', 'nnet')" -->
-  
-### Exercise 5
-
-Add `library(tidymodels)`, `library(gtsummary)`, and `library(equatiomatic)` to the `setup` code chunk in `XX.qmd`. `Command/Ctrl + Shift + K`.
+Add `library(tidymodels)`, `library(gtsummary)` to the `setup` code chunk in `analysis.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `analysis.qmd`. `Command/Ctrl + Shift + K`. 
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("XX.qmd", pattern = "tidymodels|gtsummary|equatiomatic")
+
+$$ Y \sim \text{Mutinomial}(\rho_{bush}, \rho_{clinton}, \rho_{perot}) $$
+
+$$ \begin{aligned}
+\rho_{clinton} &=& \frac{e^{\beta_{0, clinton} + \beta_{1, clinton} male}}{1 + e^{\beta_{0, clinton} + \beta_{1, clinton} male}}\\
+\rho_{perot} &=& \frac{e^{\beta_{0, perot} + \beta_{1, perot} male}}{1 + e^{\beta_{0, perot} + \beta_{1, perot} male}}\\
+\rho_{bush}  &=& 1 - \rho_{clinton} - \rho_{perot}
+\end{aligned} $$
 ```
 
 CP/CR.
 
-```{r courage-5}
+```{r courage-4}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1241,96 +1196,83 @@ question_text(NULL,
 
 ### 
 
-Recall that a categorical variable (whether character or factor) like `sex` is turned into a $0/1$ "dummy" variable which is then re-named something like $sex_{Male}$. After all, we can't have words --- like "Male" or "Female" --- in a mathematical formula, hence the need for dummy variables.
+Recall that a categorical variable (whether character or factor) like `sex` is turned into a $0/1$ "dummy" variable which is then re-named something like $male$ in this case that takes the value of `1` when the voter is Male and `0` when the voter is Female. After all, we can't have words --- like "Male" or "Female" --- in a mathematical formula, hence the need for dummy variables.
 
-### Exercise 6
+### Exercise 5
 
-Because our outcome variable is multinomial, start to create the model by using `multinom_reg(engine = "glmnet")`.
+Because our outcome variable is multinomial, start to create the model by using `multinom_reg(engine = "nnet")`.
 
-```{r courage-6, exercise = TRUE}
+```{r courage-5, exercise = TRUE}
 
 ```
 
-```{r courage-6-hint-1, eval = FALSE}
+```{r courage-5-hint-1, eval = FALSE}
 multinom_reg(engine = ...)
 ```
 
-```{r courage-6-test, include = FALSE}
-multinom_reg(engine = "glmnet")
+```{r courage-5-test, include = FALSE}
+multinom_reg(engine = "nnet")
 ```
 
 ### 
 
 The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has three values --- "black", "hispanic", and "white" --- then the model creates two 0/1 dummy variables, giving them names like $race_{hispanic}$ and $race_{white}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied. However, note that there is no variable like this in our model.
 
-### Exercise 7
+### Exercise 6
 
-Continue the pipe to `fit(XX, data = XX)`.
+Continue the pipe to `fit(pres_vote ~ sex, data = nes_92)`.
 
-```{r courage-7, exercise = TRUE}
+```{r courage-6, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r courage-7-hint-1, eval = FALSE}
+```{r courage-6-hint-1, eval = FALSE}
 ... |> 
   fit(..., data = ...)
 ```
 
-```{r courage-7-test, include = FALSE}
-#multinom_reg(engine = "glmnet") |> 
-#  fit(pres_vote ~ sex, data = nes_92)
+```{r courage-6-test, include = FALSE}
+multinom_reg(engine = "nnet") |> 
+  fit(pres_vote ~ sex, data = nes_92)
 ```
 
 ### 
 
 We can translate the fitted model into mathematics, including the best estimates of all the unknown parameters:
 
-<!-- GK: Also got the same error as above. -->
-
-```{r}
-# XX: You might want to use the `coef_digits` argument to show fewer digits
-# after the decimal. wrap = TRUE is necessary for large models.
-
-#extract_eq(fit_nes, 
-#           intercept = "beta", 
-#           use_coefs = TRUE)
-```
-
-<!-- DK: Knowledge drop about error term going away and height with a hat -->
+$$ \begin{aligned}
+\hat{\rho}_{clinton} &=& \frac{e^{0.45 - 0.25 male}}{1 + e^{0.45 - 0.25 male}}\\
+\hat{\rho}_{perot} &=& \frac{e^{-0.85 + 0.42 male}}{1 + e^{-0.85 + 0.42 male}}\\
+\hat{\rho}_{bush}  &=& 1 - \hat{\rho}_{clinton} - \hat{\rho}_{perot}
+\end{aligned} $$
 
 There are three main differences between this representation of the model and our previous one. First, we replace the parameters with our best estimate of their values. Second, the error term is gone. Third, the dependent variable now has a "hat," indicating that it is our "fitted" value, our best guess as to the value of the outcome, given the values of the independent variables for any given unit.
 
-### Exercise 8
+### Exercise 7
 
 Behind the scenes of this tutorial, an object called `fit_nes` has been created which is the result of the code above. Type `fit_nes` and hit "Run Code." This generates the same results as using `print(fit_nes)`.
 
-```{r courage-8, exercise = TRUE}
+```{r courage-7, exercise = TRUE}
 
 ```
 
-```{r courage-8-hint-1, eval = FALSE}
+```{r courage-7-hint-1, eval = FALSE}
 fit_nes
 ```
 
-```{r courage-8-test, include = FALSE}
-#fit_nes
+```{r courage-7-test, include = FALSE}
+fit_nes
 ```
 
 ### 
 
-<!-- XX: Consider a knowledge drops which highlights a 0/1 dummy variable which was created because a categorical variable was included in the model. -->
-
-<!-- The *code formula* includes `sex`, a character variable with two possible values: `"Male"` and `"Female"`. -->
-
-<!-- The *math formula* includes `sexMale`, a 0/1 dummy variable. -->
-
 In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
 
-### Exercise 9
+### Exercise 8
 
-Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_XX`. 
+Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_nes`. 
 
 `Command/Ctrl + Shift + K`. It may take some time to render `analysis.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `analysis.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
 
@@ -1344,7 +1286,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r courage-9}
+```{r courage-8}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1357,14 +1299,16 @@ question_text(NULL,
 
 Add `*_cache` to `.gitignore` file. Commit and push. Cached objects are often large. They don't belong on Github.
 
-### Exercise 10
+### Exercise 9
 
-Create another code chunk in `analysis.qmd`. Add the chunk option: `label: math`. In that code chunk, add something like the below. You may find it useful to add the `coef_digits` argument to show fewer significant digits after the decimal.
+Create another code chunk in `analysis.qmd`. Add the chunk option: `label: math`. In that code chunk, add something like the below. 
 
 ```
-extract_eq(fit_nes, 
-           intercept = "beta", 
-           use_coefs = TRUE)
+$$ \begin{aligned}
+\hat{\rho}_{clinton} &=& \frac{e^{0.45 - 0.25 male}}{1 + e^{0.45 - 0.25 male}}\\
+\hat{\rho}_{perot} &=& \frac{e^{-0.85 + 0.42 male}}{1 + e^{-0.85 + 0.42 male}}\\
+\hat{\rho}_{bush}  &=& 1 - \hat{\rho}_{clinton} - \hat{\rho}_{perot}
+\end{aligned} $$
 ```
 
 `Command/Ctrl + Shift + K`. 
@@ -1377,7 +1321,7 @@ tutorial.helpers::show_file("analysis.qmd", pattern = "extract")
 
 CP/CR.
 
-```{r courage-10}
+```{r courage-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1388,69 +1332,52 @@ question_text(NULL,
 
 ### 
 
-<!-- When you render your document, this formula will appear. -->
-
-<!-- ```{r} -->
-<!-- extract_eq(fit_XX$fit,  -->
-<!--            intercept = "beta",  -->
-<!--            use_coefs = TRUE) -->
-<!-- ``` -->
-
-<!-- This is our data generating mechanism. -->
+This is our data generating mechanism. 
 
 <!-- XX: Explain in words what the mathematical function means. That is, say in English what the formula means. -->
 
+$$ \begin{aligned}
+\hat{\rho}_{clinton} &=& \frac{e^{0.45 - 0.25 male}}{1 + e^{0.45 - 0.25 male}}\\
+\hat{\rho}_{perot} &=& \frac{e^{-0.85 + 0.42 male}}{1 + e^{-0.85 + 0.42 male}}\\
+\hat{\rho}_{bush}  &=& 1 - \hat{\rho}_{clinton} - \hat{\rho}_{perot}
+\end{aligned} $$
 
-### Exercise 11
 
-<!-- GK: The table results looks weird -->
-
-<!-- XX: You may use other arguments to tidy if that is useful. -->
+### Exercise 10
 
 Run `tidy()` on `fit_nes` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
 
-```{r courage-11, exercise = TRUE}
+```{r courage-10, exercise = TRUE}
 
 ```
 
-```{r courage-11-hint-1, eval = FALSE}
+```{r courage-10-hint-1, eval = FALSE}
 tidy(..., conf.int = ...)
 ```
 
-```{r courage-11-test, include = FALSE}
-#tidy(fit_nes, conf.int = TRUE)
+```{r courage-10-test, include = FALSE}
+tidy(fit_nes, conf.int = TRUE)
 ```
 
 ### 
-
-<!-- > tidy(fit_nes, conf.int = TRUE) -->
-<!-- # A tibble: 4 × 8 -->
-<!--   y.level term        estimate std.error -->
-<!--   <chr>   <chr>          <dbl>     <dbl> -->
-<!-- 1 Bush    (Intercept)    0.852     0.107 -->
-<!-- 2 Bush    sexMale       -0.420     0.144 -->
-<!-- 3 Clinton (Intercept)    1.31      0.101 -->
-<!-- 4 Clinton sexMale       -0.676     0.137 -->
-<!-- # ℹ 4 more variables: statistic <dbl>, -->
-<!-- #   p.value <dbl>, conf.low <dbl>, -->
-<!-- #   conf.high <dbl> -->
 
 `tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
 
 <!-- XX: Add at least three questions which involve the interpretation of numbers in the table. See the Cardinal Virtues vignette for detailed discussion. -->
 
-### Exercise 12
+### Exercise 11
 
 ```{r}
-#tidy(fit_nes, conf.int = TRUE) |> 
-#  select("term", "estimate", "conf.low", "conf.high")
+tidy(fit_nes, conf.int = TRUE) |> 
+  select("y.level","term", "estimate") |>
+  filter(y.level == "Clinton" & term == "(Intercept)") 
 ```
 
-Write a sentence interpreting the estimate for the Intercept.
+Write a sentence interpreting the estimate for the Intercept of Clinton.
 
-```{r courage-12}
+```{r courage-11}
 question_text(NULL,
-	message = "Our (best) guess/estimate for the average height of adult females is 161cm.",
+	message = "Our (best) guess/estimate for the probability of female voting for Clinton is 0.455, or 45.5%.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1459,27 +1386,21 @@ question_text(NULL,
 
 ### 
 
-Our mathematical formula for this problem is:
+Recall that we cannot have both "Male" and "Female" categories in the model. Instead, the Female category is incorporated into the intercept and becomes the reference case. Thus, it represents the the probability of female voting for Clinton.
+
+### Exercise 12
 
 ```{r}
-#extract_eq(fit_height,
-#           intercept = "beta")
-```
-
-Recall that we cannot have both "Male" and "Female" categories in the model. Instead, the Female category is incorporated into the intercept and becomes the reference case. Thus, it represents the average height of adult female.
-
-### Exercise 13
-
-```{r}
-#tidy(fit_height, conf.int = TRUE) |> 
-#  select("term", "estimate", "conf.low", "conf.high")
+tidy(fit_nes, conf.int = TRUE) |> 
+  select("y.level","term", "estimate") |>
+  filter(y.level == "Clinton" & term == "sexMale")
 ```
 
 Write a sentence interpreting the estimate for `sexMale`.
 
-```{r courage-13}
+```{r courage-12}
 question_text(NULL,
-	message = "When comparing the average height of men versus women, our guess/estimate is that men are taller than women by about 14 centimeters.",
+	message = "When comparing the probability of voting for Clinton of men and women, our guess/estimate is that the probability of voting for Clinton in Male decreases by 0.255 or 25.5%.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1490,20 +1411,19 @@ question_text(NULL,
 
 Note how, whenever we consider non-treatment variables, we must never use terms like "cause," "impact" and so on. We can't make any statement which implies the existence of more than one potential outcome based on changes in non-treatment variables. We can't make any claims about within row effects. Instead, we can only compare across rows. Always use the phrase "when comparing X and Y" or something very similar.
 
-### Exercise 14
+### Exercise 13
 
 ```{r}
-#tidy(fit_height, conf.int = TRUE) |> 
-#  filter(term == "(Intercept)") |>
-#  select(conf.low, conf.high) |> 
-#  round()
+tidy(fit_nes, conf.int = TRUE) |> 
+  select("y.level","term", "conf.low", "conf.high") |>
+  filter(y.level == "Clinton" & term == "(Intercept)")
 ```
 
 Write a sentence interpreting the confidence interval for Intercept.
 
-```{r courage-14}
+```{r courage-13}
 question_text(NULL,
-	message = "There is a 95% chance that the true value of the Intercept is within the range 159 and 163 cm.",
+	message = "There is a 95% chance that the true value of the Intercept is within the range of 0.309 and 0.602.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1514,20 +1434,19 @@ question_text(NULL,
 
 When looking at the confidence interval, we examine whether it excludes zero. If not, then we can't be sure if the relationship is positive or negative.
 
-### Exercise 15
+### Exercise 14
 
 ```{r}
-#tidy(fit_height, conf.int = TRUE) |> 
-#  filter(term == "sexMale") |>
-#  select(conf.low, conf.high) |> 
-#  round()
+tidy(fit_nes, conf.int = TRUE) |> 
+  select("y.level","term", "conf.low", "conf.high") |>
+  filter(y.level == "Clinton" & term == "sexMale")
 ```
 
 Write a sentence interpreting the confidence interval for sexMale.
 
-```{r courage-15}
+```{r courage-14}
 question_text(NULL,
-	message = "There is a 95% chance that the true value of the coefficient of `sexMale` is within the range 11 and 17 centimeters.",
+	message = "There is a 95% chance that the true value of the coefficient of `sexMale` is within the range -0.473 and -0.0381.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1538,30 +1457,30 @@ question_text(NULL,
 
 Dummy variables must always be interpreted in the context of the base value for that variable, which is always included in the intercept. For example, the base value here is "Female/Male." (The base value is the first alphabetically by default for character variables. However, if it is a factor variable, you can change that by setting the order of the levels by hand.)
 
-### Exercise 16
+### Exercise 15
 
 For interactive use, `tidy()` is very handy. But, for presenting our results, we should use a presentation package like **gtsummary**, which includes handy functions like `tbl_regression()`.
 
 Run `tbl_regression(fit_height)`.
 
 
-```{r courage-16, exercise = TRUE}
+```{r courage-15, exercise = TRUE}
 
 ```
 
-```{r courage-16-hint-1, eval = FALSE}
+```{r courage-15-hint-1, eval = FALSE}
 tbl_regression(..)
 ```
 
-```{r courage-16-test, include = FALSE}
-#tbl_regression(fit_nes)
+```{r courage-15-test, include = FALSE}
+tbl_regression(fit_nes)
 ```
 
 ### 
 
 See this [tutorial](https://www.danieldsjoberg.com/gtsummary/articles/tbl_regression.html) for a variety of options for customizing your table.
 
-### Exercise 17
+### Exercise 16
 
 Create a new code chunk in `analysis.qmd`. Add a code chunk option: `label: table`. Add this code to the code chunk.
 
@@ -1580,7 +1499,7 @@ tutorial.helpers::show_file("analysis.qmd", pattern = "tbl_regression")
 CP/CR.
 
 
-```{r courage-17}
+```{r courage-16}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1589,7 +1508,7 @@ question_text(NULL,
 	rows = 3)
 ```
 
-### Exercise 18
+### Exercise 17
 
 Add a sentence to your project summary. 
 
@@ -1599,9 +1518,9 @@ Recall the beginning of our version of the summary:
 
 > XX: Include what we suggested at the end of Justice
 
-```{r courage-18}
+```{r courage-17}
 question_text(NULL,
-	message = "Using data from the National Election Studies (NES) survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. Our results might be biased by differential non-response among different categories of voters. We modeled pres_vote, a character variable, as a multinomial logistic regression model. Women are most likely to support Clinton. ",
+	message = "Understanding the voter preference of different genders is essential for a candidate to design a campaign strategy. Using data from the National Election Studies survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. However, since not everyone participates in the survey, the data might not be representative of the entire population. We modeled voting result as a multinomial function of sex.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1660,7 +1579,7 @@ What is the specific question we are trying to answer?
 
 ```{r temperance-3}
 question_text(NULL,
-	message = "What was the relationship between sex and voting in the 1992 US Presidential election among supporters of the three leading candidates: Clinton, Bush and Perot?",
+	message = "What was the difference in voting preference of men and women in the 1992 US Presidential election among supporters of the three leading candidates: Clinton, Bush and Perot?",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1676,8 +1595,10 @@ Data science projects almost always begin with a broad topic of interest. Yet, i
 Enter this code into the exercise code block and hit "Run Code."
 
 ```
-plot_predictions(fit_XX, 
-                 conditions = "sex")
+plot_predictions(fit_nes,
+                 by = "sex", 
+                 type = "prob",
+                 draw = FALSE)
 ```                 
 
 ```{r temperance-4, exercise = TRUE}
@@ -1685,31 +1606,166 @@ plot_predictions(fit_XX,
 ```
 
 ```{r temperance-4-hint-1, eval = FALSE}
-plot_predictions(fit_XX, 
-                 conditions = ...)
+plot_predictions(fit_nes, 
+                 by = ...,
+                 type = ...,
+                 draw = ...)
 ```
 
 ```{r temperance-4-test, include = FALSE}
-#plot_predictions(fit_nes,
-#                 conditions = "sex")
+plot_predictions(fit_nes,
+                 by = "sex", 
+                 type = "prob",
+                 draw = FALSE)
 ```
-
-<!-- GK: Got this error:  -->
-<!-- Error: One of the `condition` and `by` -->
-<!--   arguments must be supplied, but not -->
-<!--   both. -->
 
 ### 
 
+This code returns the estimated probabilities of voting for each candidate, for male and female. 
+
+<!-- GK: The result here is different compared to the one after running `fit_ness`. Possible explanation ?:  the intercept coefficient from the fitted model (0.4553900) represents the log-odds, whereas the predicted probabilities from plot_predictions() represent the chances of a voter choosing Clinton based on sex, transformed from those log-odds. -->
+
 <!-- XX: The knowledge drop MUST discuss the estimate (and its uncertainty) that you go on to include in your summary paragraph. You MUST discuss how you are reading, roughly, the values for the estimate and the confidence interval by looking at this plot. -->
 
-<!-- XX: There are a lot of interesting options in plot_predictions. Check them out. You may want to use some of them in your plot. I think `points` is quite interesting. Feel free to add a couple more questions which add some options.  -->
-
-<!-- XX: You can use the draw = FALSE option to return a tibble which can then be piped directly into ggplot.  -->
-
-<!-- XX: If such a plot would be complex and/or the tutorial is long enough, you can just include all the code for a plot in the exercise code chunk and tell students to just press "Run Code." This will, at least, allow them to see what a good plot looks like. -->
-
 ### Exercise 5
+
+Let's make a nice plot to visualize our results. Continue the pipe with `ggplot()`, setting `x` equals `group`, `y` equals `estimate`, and `color` equals `sex` in the `aes()` function. Note that this will return a plain graph since we have not mapped any data points to the graph yet.
+
+```{r temperance-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-5-hint-1, eval = FALSE}
+... |>
+  ggplot(aes(x = ..., y = ..., color = ...))
+```
+
+```{r temperance-5-test, include = FALSE}
+plot_predictions(fit_nes,
+                 by = "sex", 
+                 type = "prob",
+                 draw = FALSE) |> 
+  ggplot(aes(x = group, y = estimate, color = sex))
+```
+
+### 
+
+### Exercise 6
+
+Add a `geom_point()` layer to the graph. Set the argument `size` equal `3` and `position` equal `position_dodge(width = 0.5)`. 
+
+```{r temperance-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-6-hint-1, eval = FALSE}
+... |>
+  ggplot(aes(x = ..., y = ..., color = ...)) + 
+  geom_point(size = ..., position = ...)
+```
+
+```{r temperance-6-test, include = FALSE}
+plot_predictions(fit_nes,
+                 by = "sex", 
+                 type = "prob",
+                 draw = FALSE) |> 
+  ggplot(aes(x = group, y = estimate, color = sex)) + 
+  geom_point(size = 3, position = position_dodge(width = 0.5))
+```
+
+### 
+
+### Exercise 7
+
+Add a `geom_errorbar()` layer to the graph. In the `aes()` argument, set `ymin` equal `conf.low`, `ymax` equal `conf.high`, `width` equal `0.2` and `position` equal `position_dodge(width = 0.5)`.
+
+```{r temperance-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-7-hint-1, eval = FALSE}
+... |>
+  ggplot(aes(x = ..., y = ..., color = ...)) + 
+  geom_point(size = ..., position = ...) +
+  geom_errorbar(aes(ymin = ..., ymax = ..., width = ..., position = ...))
+```
+
+```{r temperance-7-test, include = FALSE}
+plot_predictions(fit_nes,
+                 by = "sex", 
+                 type = "prob",
+                 draw = FALSE) |> 
+  ggplot(aes(x = group, y = estimate, color = sex)) + 
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.5))
+```
+
+### 
+
+### Exercise 8
+
+Finally add title, label for x-axis and y-axis to the graph. Remeber that your graph should look like this: 
+
+```{r}
+plot_predictions(fit_nes, 
+                  by = "sex", 
+                  type = "prob", 
+                  draw = FALSE) |> 
+    ggplot(aes(x = group, y = estimate, color = sex)) +
+      geom_point(size = 3, position = position_dodge(width = 0.5)) +
+      geom_errorbar(aes(ymin = conf.low, 
+                        ymax = conf.high), 
+                    width = 0.2, 
+                    position = position_dodge(width = 0.5)) +
+      labs(title = "Voting Preferences by Candidate and Sex",
+           x = NULL,
+           y = "Estimated Proportion",
+           color = "Sex") +
+      theme_minimal() 
+```
+
+```{r temperance-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-8-hint-1, eval = FALSE}
+... |>
+    ggplot(aes(x = ..., y = ..., color = ...)) +
+      geom_point(size = ..., position = ...) +
+      geom_errorbar(aes(ymin = ..., ymax = ..., width = ..., position = ...)) +
+      labs(title = ..., x = ..., y = ..., color = ...) +
+      theme_minimal()
+```
+
+```{r temperance-8-test, include = FALSE}
+plot_predictions(fit_nes, 
+                  by = "sex", 
+                  type = "prob", 
+                  draw = FALSE) |> 
+    ggplot(aes(x = group, y = estimate, color = sex)) +
+      geom_point(size = 3, position = position_dodge(width = 0.5)) +
+      geom_errorbar(aes(ymin = conf.low, 
+                        ymax = conf.high), 
+                    width = 0.2, 
+                    position = position_dodge(width = 0.5)) +
+      labs(title = "Voting Preferences by Candidate and Sex",
+           x = NULL,
+           y = "Estimated Proportion",
+           color = "Sex") +
+      theme_minimal() 
+```
+
+### 
+
+### Exercise 9
 
 Add `library(marginaleffects)` to the `analysis.qmd` setup code chunk. 
 
@@ -1725,7 +1781,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r temperance-5}
+```{r temperance-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1734,13 +1790,13 @@ question_text(NULL,
 	rows = 3)
 ```
 
-### Exercise 6
+### Exercise 10
 
 Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
-```{r temperance-6}
+```{r temperance-10}
 question_text(NULL,
-	message = "Using data from the National Election Studies (NES) survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. Our results might be biased by differential non-response among different categories of voters. We modeled pres_vote, a character variable, as a multinomial logistic regression model. Women are most likely to support Clinton. About 53% of women claim to support Clinton, although that number could be as high as 58% or as low as 48%.",
+	message = "Understanding the voter preference of different genders is essential for a candidate to design a campaign strategy. Using data from the National Election Studies survey of US citizens, we seek to understand the relationship between voter preference and sex in the 1992 Presidential election. However, since not everyone participates in the survey, the data might not be representative of the entire population. We modeled voting result as a multinomial function of sex. Women are most likely to support Clinton. About 53% of women claim to support Clinton, although that number could be as high as 58% or as low as 48%.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1752,20 +1808,20 @@ question_text(NULL,
 Add a final sentence to your summary paragraph in your QMD as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
 
-### Exercise 7
+### Exercise 11
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-7}
+```{r temperance-11}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
+	try_again_button = "As we would tell our boss, it would not be shocking to find out that the voting preference was less or more than our estimate. This is because a lot of the assumptions we make during the process of building a model, the processes in Wisdom, are subject to error. Perhaps our data did not match the future as well as we had hoped. In such cases, increase the confidence interval since the assumptions of your model are always false.",
 	incorrect = NULL,
 	rows = 3)
 ```
 
-### Exercise 8
+### Exercise 12
 
 Rearrange the material in your QMD so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
@@ -1777,7 +1833,7 @@ tutorial.helpers::show_file("analysis.qmd")
 
 CP/CR.
 
-```{r temperance-8}
+```{r temperance-12}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1790,11 +1846,11 @@ question_text(NULL,
 
 This is the version of your QMD file which your teacher is most likely to take a close look at.
 
-### Exercise 9
+### Exercise 13
 
 Publish your rendered QMD to Rpubs. Choose a sensible slug. Copy/paste the resulting url below.
 
-```{r temperance-9}
+```{r temperance-13}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1807,11 +1863,11 @@ question_text(NULL,
 
 Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
 
-### Exercise 10
+### Exercise 14
 
 Copy/paste the url to your Github repo.
 
-```{r temperance-10}
+```{r temperance-14}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
