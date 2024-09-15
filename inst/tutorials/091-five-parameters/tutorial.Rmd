@@ -19,6 +19,7 @@ library(tidyverse)
 library(brms)
 library(tidybayes)
 library(primer.data)
+library(marginaleffects)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
@@ -28,18 +29,16 @@ df1 <- governors |>
   filter(year > 1945) |> 
   select(last_name, year, state, sex, lived_after, election_age)
 
-# fit_all <- brm(data = df1,
-#                formula = lived_after ~ sex*election_age,
-#                silent = 2,
-#                refresh = 0,
-#                seed = 13)
-# 
-# write_rds(fit_all, "data/fit_all.rds")
+df2 <- df1 |> mutate(sex = recode(sex,
+    "Male" = 0, "Female" = 1))
+
+ fit_all <- lm(lived_after ~ sex * election_age, data = df2)
+
+ write_rds(fit_all, "data/fit_all.rds")
 
 fit_all <- read_rds("data/fit_all.rds")
 
-ndata <- tibble(sex = c("Male", "Female"), 
-                election_age = 50)
+governor <- data.frame(sex = 1, election_age = 52)
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -1303,15 +1302,7 @@ question_text(NULL,
 ## Temperance
 ### 
 
-<!-- XX: Choose one. -->
-
-*Temperance is a tree which as for its root very little contentment, and for its fruit calm and peace.* - Buddha
-*Temperance is the greatest of all virtues. It subdues every passion and emotion, and almost creates a Heaven upon Earth.* - Joseph Smith Jr.
-*Temperance is a bridle of gold; he, who uses it rightly, is more like a god than a man.* - Robert Burton
-*Temperance is the firm and moderate dominion of reason over passion and other unrighteous impulses of the mind.* - Marcus Tullius Cicero
-*Temperance to be a virtue must be free, and not forced.* - Philip Massinger
-*Temperance is simply a disposition of the mind which binds the passion.* - Thomas Aquinas
-
+Temperance is a tree which as for its root very little contentment, and for its fruit calm and peace.* - Buddha
 
 ### Exercise 1
 
@@ -1357,7 +1348,7 @@ What is the specific question we are trying to answer?
 
 ```{r temperance-3}
 question_text(NULL,
-	message = "XX: This might be the same question as we started with in Wisdom. But it is also OK if it is different. I think . . .",
+	message = "What is the causal effect of how many years a governor will live after being elected based off of sex?",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1369,44 +1360,120 @@ question_text(NULL,
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic more broadly.
 
 
-<!-- XX: There should be a bunch of questions here, covering examples of plot_predictions(), plot_comparisons(), averages and maybe even slopes. We want to run multiple versions of plot_predictions(), dropping knowledge each time which connects what we see to our coefficients, especially those which we asked interpretation questions about. See the Cardinal Virtues vignette for some examples. The last such question creates the plot which is then included in the QMD. 
-
-Below, we just show one plot_predictions() question, but your tutorial should really have several. -->
-
 ### Exercise 4
 
 Enter this code into the exercise code block and hit "Run Code."
 
 ```
-plot_predictions(fit_XX, 
-                 conditions = c("XX", "XX")))
-```                 
+plot_predictions(fit_all, 
+                 condition = "sex")
+```               
 
 ```{r temperance-4, exercise = TRUE}
 
 ```
 
 ```{r temperance-4-hint-1, eval = FALSE}
-plot_predictions(fit_XX, 
-                 conditions = c("XX", "XX")))
+plot_predictions(fit_all, 
+                 condition = ...))
 ```
 
 ```{r temperance-4-test, include = FALSE}
-# plot_predictions(fit_XX, 
-#                 conditions = c("XX", "XX")))
+plot_predictions(fit_all, 
+                 condition = "sex")
+```
+
+###
+
+In the plot above, we examine the predicted life expectancy (lived_after) for males and females (sex), with the corresponding confidence intervals to illustrate uncertainty in these estimates. The solid points represent the model’s predicted life expectancy for each group, while the vertical error bars show the 95% confidence intervals. By comparing these intervals, we can assess the reliability of the estimates. If the confidence intervals between the two groups overlap significantly, it suggests there is no statistically significant difference in life expectancy based on sex. However, if the intervals do not overlap, this would indicate a meaningful difference between the two groups. These estimates, derived from the linear model, provide insight into how sex influences life expectancy post-election.
+
+### Exercise 5
+
+We can compare the differences in ages a female vs male would live after being elected at different ages using `comparisons()`. 
+
+```
+comparisons(fit_all, newdata = governor)
+```               
+
+```{r temperance-4, exercise = TRUE}
+
+```
+
+```{r temperance-4-hint-1, eval = FALSE}
+comparisons(fit_all, newdata = governor)
+```
+
+```{r temperance-4-test, include = FALSE}
+comparisons(fit_all, newdata = governor)
 ```
 
 ### 
 
-<!-- XX: The knowledge drop MUST discuss the estimate (and its uncertainty) that you go on to include in your summary paragraph. You MUST discuss how you are reading, roughly, the values for the estimate and the confidence interval by looking at this plot. -->
+From this we can see that males are expected to live significantly fewer years than females after being elected, with an average difference of 11.7 years. This gap is statistically significant (p < 0.001), meaning the result is unlikely due to chance. The confidence interval suggests that the difference could range from 4.7 to 18.6 fewer years for males compared to females, indicating a consistent and substantial disparity in post-election life expectancy between the sexes.
 
-<!-- XX: There are a lot of interesting options in plot_predictions. Check them out. You may want to use some of them in your plot. I think `points` is quite interesting. Feel free to add a couple more questions which add some options.  -->
+### Exercise 6
 
-<!-- XX: You can use the draw = FALSE option to return a tibble which can then be piped directly into ggplot.  -->
+Using `plot_comparisons` we can see the difference between life expectancy, and how it changes as election_age increases for both males and females.
 
-<!-- XX: If such a plot would be complex and/or the tutorial is long enough, you can just include all the code for a plot in the exercise code chunk and tell students to just press "Run Code." This will, at least, allow them to see what a good plot looks like. -->
+```
+plot_comparisons(fit_all,
+  variables = "election_age",
+condition = "sex")
+```               
 
-### Exercise 5
+```{r temperance-4, exercise = TRUE}
+
+```
+
+```{r temperance-4-hint-1, eval = FALSE}
+plot_comparisons(fit_all,
+  variables = "election_age",
+  condition = "sex") +
+  scale_x_continuous(breaks = c(0, 1), labels = c("Male (0)", "Female (1)")) +
+  labs(x = "Sex", y = "Predicted Life Expectancy")
+```
+
+```{r temperance-4-test, include = FALSE}
+plot_comparisons(fit_all,
+  variables = "election_age",
+  condition = "sex") +
+  scale_x_continuous(breaks = c(0, 1), labels = c("Male (0)", "Female (1)")) +
+  labs(x = "Sex", y = "Predicted Life Expectancy")
+```
+
+###
+
+From this we can see that the life expectancy for females has a greater range for the confidence intervals.The plot shows the estimated effect of the variable election_age on an outcome, conditioned by sex. For males, the estimate appears more negative with a narrow confidence interval, indicating a relatively precise estimate. In contrast, for females, the estimate is closer to zero but has a much wider confidence interval, reflecting greater uncertainty in the effect for this group. The overlap in confidence intervals between the two groups suggests that the difference in effect between the two sexes may not be statistically significant.
+
+### Exercise 7
+This plot shows the estimated effect of the variable sex on an outcome, conditioned by different values of election_age (40, 50, and 60). 
+```
+plot_comparisons(fit_all,
+  variables = "sex",
+condition = list(election_age = c(40, 50, 60)))
+```               
+
+```{r temperance-4, exercise = TRUE}
+
+```
+
+```{r temperance-4-hint-1, eval = FALSE}
+plot_comparisons(fit_all,
+  variables = "sex",
+condition = list(election_age = c(40, 50, 60)))
+```
+
+```{r temperance-4-test, include = FALSE}
+plot_comparisons(fit_all,
+  variables = "sex",
+condition = list(election_age = c(40, 50, 60)))
+```
+
+### 
+
+In other words, the plot is comparing the estimated effect of sex at different ages. It indicates how the impact of sex on the outcome might differ for people of different ages. The "comparison" axis is likely representing the difference between the two groups defined by sex (e.g., male vs. female), with the confidence interval showing the uncertainty around these estimates.
+
+### Exercise 8
 
 Add `library(marginaleffects)` to your QMD setup code chunk. 
 
@@ -1433,14 +1500,14 @@ question_text(NULL,
 
 ### 
 
-### Exercise 6
+### Exercise 9
 
 Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
 
 ```{r temperance-6}
 question_text(NULL,
-	message = "XX",
+	message = "The quantity of interest in out problem is the causal effect of sex in terms of how many year the unit will live after being elected. The standard error of our data is 22.10477, indicating that the estimate of -53.3 years could fluctuate by approximately ±22.1 years due to variability in the data.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1451,13 +1518,13 @@ question_text(NULL,
 
 Add a final sentence to your summary paragraph in your QMD as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
-### Exercise 7
+### Exercise 10
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
 ```{r temperance-7}
 question_text(NULL,
-	message = "XX: This is another example in which the quality of your answer is important. You might or might not suggest an alternate estimate. I always adjust the estimate toward my own subjective sense of a long-run average and/or typical value and/or zero. But that is not necessary. However, you should always increase the confidence interval since the assumptions of your model are always false.",
+	message = "The estimates for the effect of sex and the associated uncertainty might be wrong due to potential omitted variables, such as health or socioeconomic factors, which could bias the results. Additionally, measurement error or multicollinearity between sex and election_age may inflate the standard error and widen the confidence interval, making the results less reliable. A more robust approach, such as bootstrapping or a Bayesian method, could yield more accurate estimates with reduced uncertainty, potentially narrowing the confidence interval.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1466,7 +1533,7 @@ question_text(NULL,
 
 ### 
 
-### Exercise 8
+### Exercise 11
 
 Rearrange the material in your QMD so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
@@ -1491,7 +1558,7 @@ question_text(NULL,
 
 This is the version of your QMD file which your teacher is most likely to take a close look at.
 
-### Exercise 9
+### Exercise 12
 
 Publish your rendered QMD to Rpubs. Choose a sensible slug. Copy/paste the resulting url below.
 
@@ -1508,7 +1575,7 @@ question_text(NULL,
 
 Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
 
-### Exercise 10
+### Exercise 13
 
 Copy/paste the url to your Github repo.
 
