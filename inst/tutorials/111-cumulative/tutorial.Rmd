@@ -328,7 +328,6 @@ question_text(NULL,
 
 ### 
 
-
 The central problem for Wisdom is: Can we use survey data from the Cooperative Election Study to understand presidential approval and ideology for all adults in the US?
 
 
@@ -1133,15 +1132,9 @@ question_text(NULL,
 
 A statistical model consists of two parts: the *probability family* and the *link function*. The probability family is the probability distribution which generates the randomness in our data. The link function is the mathematical formula which links our data to the unknown parameters in the probability distribution. 
 
-### 
-
-Because `approval` is an ordinal variable, we assume that an individual's approval is produced from a Cumulative distribution.
-
-$$ approval_i  \sim Cumulative(\rho_{strongly\_positive}, \rho_{positive}, \rho_{neutral}, \rho_{negative}, \rho_{strongly\_negative}) $$
-
 ### Exercise 2
 
-Load the **broom** package.
+Load the [**tidymodels**](https://www.tidymodels.org/) package.
 
 ```{r courage-2, exercise = TRUE}
 
@@ -1152,7 +1145,28 @@ library(...)
 ```
 
 ```{r courage-2-test, include = FALSE}
-library(broom)
+library(tidymodels)
+```
+
+### 
+
+Because `approval` is an ordinal variable, we assume that an individual's approval is produced from a Cumulative distribution.
+
+$$ approval_i  \sim Cumulative(\rho_{strongly\_positive}, \rho_{positive}, \rho_{neutral}, \rho_{negative}, \rho_{strongly\_negative}) $$
+### Exercise 3
+
+Load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary/) package.
+
+```{r courage-3, exercise = TRUE}
+
+```
+
+```{r courage-3-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r courage-3-test, include = FALSE}
+library(gtsummary)
 ```
 
 ### 
@@ -1160,25 +1174,46 @@ library(broom)
 Because the outcome variable has a Cumulative distribution, the link function is logit. That is:
 
 $$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 x_1 + \dots)}}$$
+### Exercise 4
 
-### Exercise 3
+Load the [**equatiomatic**](https://datalorax.github.io/equatiomatic/) package.
 
-Add `library(broom)` to the `setup` code chunk in `analysis.qmd`. Copy and paste the below code for the mathematical structure of the model to the body of `analysis.qmd`. `Command/Ctrl + Shift + K`. 
+```{r courage-4, exercise = TRUE}
 
 ```
-$$ approval_i  \sim Cumulative(\rho_{strongly\_positive}, \rho_{positive}, \rho_{neutral}, \rho_{negative}, \rho_{strongly\_negative})$$
-$$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 x_1 + \dots)}}$$
+
+```{r courage-4-hint-1, eval = FALSE}
+library(...)
 ```
+
+```{r courage-4-test, include = FALSE}
+library(equatiomatic)
+```
+
+### 
+
+This is the basic mathematical structure of our model:
+
+```{r}
+extract_eq(fit_approval, wrap = TRUE, show_distribution = TRUE)
+```
+
+Of course, in a normal data science project, we would explore a variety of different combinations of independent variables before selecting a final set. Just pretend that we already did that.
+
+
+### Exercise 5
+
+Add `library(tidymodels)`, `library(gtsummary)`, and `library(equatiomatic)` to the `setup` code chunk in your QMD. `Command/Ctrl + Shift + K`.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("analysis.qmd", pattern = "broom|\\$\\$")
+tutorial.helpers::show_file("analysis.qmd", pattern = "tidymodels|gtsummary|equatiomatic")
 ```
 
 CP/CR.
 
-```{r courage-3}
+```{r courage-5}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1192,54 +1227,56 @@ question_text(NULL,
 Of course, our model must make use of the variables we actually have. Consider:
 
 $$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 ideologyLiberal+\beta_2 ideologyModerate + \dots)}}$$
+Recall that a categorical variable (whether character or factor) like `sex` is turned into a $0/1$ "dummy" variable which is then re-named something like $sex_{Male}$. After all, we can't have words --- like "Male" or "Female" --- in a mathematical formula, hence the need for dummy variables.
 
-### Exercise 4
+### Exercise 6
 
 Create a model using `polr()` from the **MASS** package. We recommend that you do *not* load the **MASS** package, either here or ever. The reason is that **MASS** contains functions `filter()` and `select()` which are not the same as the two functions, with the same names, from the **dplyr** package, which is a part of the *Tidyverse*. This can cause all sorts of difficult-to-diagnose errors. Instead, we use the double colon notation: `MASS::polr()`. This allows us to access the `polr()` function without loading the **MASS** library, although the library must be installed on your computer.
 
 Your arguments to `MASS::polr()` should be `formula = approval ~ ideology + faminc + education` and `data = x`. 
 
-```{r courage-4, exercise = TRUE}
+```{r courage-6, exercise = TRUE}
 
 ```
 
-```{r courage-4-hint-1, eval = FALSE}
+```{r courage-6-hint-1, eval = FALSE}
 MASS::polr(formula = approval ~ ... + faminc + education,
     ... = x)
 ```
 
 ### 
 
-The Cumulative family leads to ordinal regression.
+The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has seven values --- "White", "Black", "Hispanic", "Asian", "Native American", "Mixed", and "Middle Eastern" --- then the model creates six 0/1 dummy variables, giving them names like $race_{Black}$ and $race_{Hispanic}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
 
-### Exercise 5
+### Exercise 7
 
 Behind the scenes, we have used `polr()` to create an object named `fit_approval`. This version was created using `x` so it has more rows than the one you created in the previous exercise.
 
 Type `fit_approval` and hit "Run Code." This generates the same results as using `print(fit_approval)`.
 
-```{r courage-5, exercise = TRUE}
+```{r courage-7, exercise = TRUE}
 
 ```
 
-```{r courage-5-hint-1, eval = FALSE}
+```{r courage-7-hint-1, eval = FALSE}
 fit_approval
 ```
 
-```{r courage-5-test, include = FALSE}
+```{r courage-7-test, include = FALSE}
 fit_approval
 ```
 
 ### 
 
-Recall that a categorical variable (whether character or factor) like `sex` is turned into a $0/1$ "dummy" variable which is then re-named something like $sex_{Male}$. After all, we can't have words --- like "Male" or "Female" --- in a mathematical formula, hence the need for dummy variables.
+In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
 
-The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has three values --- "black", "hispanic", and "white" --- then the model creates two 0/1 dummy variables, giving them names like $race_{hispanic}$ and $race_{white}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
+### Exercise 8
 
+Create a new code chunk in your QMD. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_approval`. 
 
-### Exercise 6
+`Command/Ctrl + Shift + K`. It may take some time to render your QMD, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render your QMD, as long as you have not changed the code, Quarto will just load up the saved fitted object.
 
-Create a new code chunk in `analysis.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `polr()` into the code chunk, assigning the result to `fit_approval`.  `Command/Ctrl + Shift + K`. 
+To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
 
 At the Console, run:
 
@@ -1249,7 +1286,40 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r courage-6}
+```{r courage-8}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 8)
+```
+
+### 
+
+Add `*_cache` to `.gitignore` file. Commit and push. Cached objects are often large. They don't belong on Github.
+
+### Exercise 9
+
+Create another code chunk in your QMD. Add the chunk option: `label: math`. In that code chunk, add something like the below. You may find it useful to add the `coef_digits` argument to show fewer significant digits after the decimal.
+
+```
+extract_eq(fit_approval, 
+           intercept = "beta", 
+           use_coefs = TRUE)
+```
+
+`Command/Ctrl + Shift + K`. 
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", pattern = "extract")
+```
+
+CP/CR.
+
+```{r courage-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1260,28 +1330,35 @@ question_text(NULL,
 
 ### 
 
-By including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `analysis.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
+When you render your document, this formula will appear.
 
-To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
+```{r}
+extract_eq(fit_approval, 
+           intercept = "beta", 
+           use_coefs = TRUE)
+```
 
+This is our data generating mechanism.
 
-### Exercise 7
+<!-- XX: Explain in words what the mathematical function means. That is, say in English what the formula means. DK: Need some examples. -->
+
+### Exercise 10
 
 Run `tidy()` on `fit_approval` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model. (This might take 30 seconds or so.)
 
-```{r courage-7, exercise = TRUE}
+```{r courage-10, exercise = TRUE}
 
 ```
 
-```{r courage-7-hint-1, eval = FALSE}
+```{r courage-10-hint-1, eval = FALSE}
 tidy(..., conf.int = ...)
 ```
 
-<!-- Note that there is no test case for these and some other functions because they take too long to run. -->
+### 
 
-### Exercise 8
+`tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
 
-Write a sentence interpreting the `-0.1` estimate for `educationHigh School Graduate`.
+### Exercise 11
 
 ```{r}
 tidy_approval |> 
@@ -1289,7 +1366,9 @@ tidy_approval |>
   filter(str_detect(term, "^education"))
 ```
 
-```{r courage-8}
+Write a sentence interpreting the `-0.1` estimate for `educationHigh School Graduate`.
+
+```{r courage-11}
 question_text(NULL,
 	message = "When comparing (only) high school graduates with people who didn't go to high school, high school graduates have lower value, meaning that they are less likely to approve of the president.",
 	answer(NULL, correct = TRUE),
@@ -1306,9 +1385,7 @@ Negative coefficients suggest that higher values of the predictor decrease the l
 
 Larger coefficients (either positive or negative) indicate a stronger relationship between the predictor and the latent approval score.
 
-### Exercise 9
-
-Write a sentence interpreting the `-0.43` to `-0.19` confidence interval for `educationSome Collegee`. 
+### Exercise 12
 
 ```{r}
 tidy_approval |> 
@@ -1316,7 +1393,9 @@ tidy_approval |>
   filter(str_detect(term, "^education"))
 ```
 
-```{r courage-9}
+Write a sentence interpreting the `-0.43` to `-0.19` confidence interval for `educationSome Collegee`. 
+
+```{r courage-12}
 question_text(NULL,
 	message = "We do not know the true value for the coefficient for educationSome College, but we can be 95% confident that it lies somewhere between -0.43 and -0.19.",
 	answer(NULL, correct = TRUE),
@@ -1331,9 +1410,7 @@ If the credible interval includes zero, the effect is less likely to be signific
 
 The intercept is always the first value for any variable. For example, the intercept for `education` is `No HS`, and intercept for `ideology` is `Very Liberal`. This is why these values do not show up with `tidy(fit_approval)`. 
 
-### Exercise 10
-
-Write a sentence interpreting the `5.43` estimate for `ideologyVeryConservative`.
+### Exercise 13
 
 ```{r}
 tidy_approval |> 
@@ -1341,9 +1418,11 @@ tidy_approval |>
   filter(str_detect(term, "^ideology"))
 ```
 
-```{r courage-10}
+Write a sentence interpreting the `5.45` estimate for `ideologyVeryConservative`.
+
+```{r courage-13}
 question_text(NULL,
-	message = "If we compare people who are very conservative with people who are very liberal (the base category which is included in the intercept), the very conservative people approve of the president more. Because of the complexity of the mathematics of the model, 5.43 does not have a natural interpretation in terms of its magnitude.",
+	message = "If we compare people who are very conservative with people who are very liberal (the base category which is included in the intercept), the very conservative people approve of the president more. Because of the complexity of the mathematics of the model, 5.45 does not have a natural interpretation in terms of its magnitude.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1356,11 +1435,70 @@ question_text(NULL,
 
 In ordinal regression, these intercepts define the points on the latent variable scale at which the response variable transitions from one category to the next.The probability of falling into a specific category is determined by the relationship between these intercepts and the predictors.
 
-### Exercise 11
+### Exercise 14
 
-Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using, specifying the functional form and the dependent variable. Add one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
+<!-- GK: This takes too long to run  -->
 
-```{r courage-11}
+For interactive use, `tidy()` is very handy. But, for presenting our results, we should use a presentation package like **gtsummary**, which includes handy functions like `tbl_regression()`.
+
+Run `tbl_regression(fit_XX)`.
+
+
+```{r courage-14, exercise = TRUE}
+
+```
+
+```{r courage-14-hint-1, eval = FALSE}
+tbl_regression(..)
+```
+
+```{r courage-14-test, include = FALSE}
+tbl_regression(fit_XX)
+```
+
+### 
+
+See this [tutorial](https://www.danieldsjoberg.com/gtsummary/articles/tbl_regression.html) for a variety of options for customizing your table.
+
+### Exercise 15
+
+Create a new code chunk in your QMD. Add a code chunk option: `label: table`. Add this code to the code chunk.
+
+```
+tbl_regression(fit_approval)
+```
+
+`Command/Ctrl + Shift + K`. 
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", pattern = "tbl_regression")
+```
+
+CP/CR.
+
+
+```{r courage-15}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### Exercise 16
+
+Add a sentence to your project summary. 
+
+Explain the structure of the model. Something like: "I/we model Y [the concept of the outcome, not the variable name] as a [linear/logistic/multinomial/ordinal] function of X [and maybe other covariates]."
+
+Recall the beginning of our version of the summary:
+
+> Using the CES, which is one of the largest political surveys in the United States, we seek to understand the relationship between presidential approval and political ideology in 2020. One concern is that survey respondents might be systematically different from other Americans.
+
+```{r courage-16}
 question_text(NULL,
 	message = "Using the CES, which is one of the largest political surveys in the United States, we seek to understand the relationship between presidential approval and political ideology in 2020. One concern is that survey respondents might be systematically different from other Americans. We are using a cumulative model for ordinal regression.",
 	answer(NULL, correct = TRUE),
@@ -1371,9 +1509,7 @@ question_text(NULL,
 
 ### 
 
-One relationship we have noticed is that conservatives tend to support the 2020 president more than liberals. 
-
-
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to summary paragrah portion of your QMD. `Command/Ctrl + Shift + K`, and then commit/push.
 
 ## Temperance
 ### 
@@ -1544,8 +1680,6 @@ question_text(NULL,
 ```
 
 ### 
-
-
 
 ## Summary
 ### 
