@@ -1539,6 +1539,89 @@ Read our answer. It will not be the same as yours. You can, if you want, change 
 
 <!-- Show the students the results. Assign it to an object z, potentially dropping lots of useless columns. Then use z to make a nice looming ggplot. -->
 
+<!-- MP:
+8/15 Madhavan
+This is an ideal plot
+
+Where is the column for ideology??
+Here are all the problems I was noticing, and I need some help to fix
+1. There should not be p-values of zero, for the strongly disapprove/disapprove/somewhat approve columns. (model overfitting)
+2. Infinite S-values, this could suggest that the model is not doing calculations correctly
+3. I think the problem with the model is confidence intervals might be overlapping?
+4. I don't think this is a algorithm problem, a simple check with summary of fit_approval() shows that it does work as intended
+5. For example if you run this code the probability is completley bonkers
+ggplot(predictions_output, aes(x = ideology, y = estimate, fill = approval)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Predicted Approval Ratings by Ideology",
+       x = "Ideology",
+       y = "Estimated Approval Probability") +
+  theme_minimal()
+
+
+-->
+<!--MP: 
+8/21 Madhavan
+I found the problem maybe?
+# A tibble: 5 × 5
+# Groups:   ideology [5]
+  ideology          approval             mean_estimate min_estimate max_estimate
+  <fct>             <ord>                        <dbl>        <dbl>        <dbl>
+1 Very Liberal      Approve / Somewhat …           0.2      0.00437        0.913
+2 Liberal           Approve / Somewhat …           0.2      0.00739        0.851
+3 Moderate          Approve / Somewhat …           0.2      0.0204         0.489
+4 Conservative      Approve / Somewhat …           0.2      0.0122         0.605
+5 Very Conservative Approve / Somewhat …           0.2      0.00567        0.805
+the mean_estimate is not supposed to be the exact same..
+
+here's the list of problem's im encountering, models having the same estimate, the original problem, and models that are completley wrong "the one bonkers example that I gave", the part I think that's confusing me is stuff like this: 
+
+# A tibble: 5 × 2
+  ideology          total_estimate
+  <fct>                      <dbl>
+1 Very Liberal                   1
+2 Liberal                        1
+3 Moderate                       1
+4 Conservative                   1
+5 Very Conservative              1
+  -->
+
+<!-- I might have fixed it with this plot:
+temp is just a random thing I made.
+
+temp$group<- factor(temp$group, levels = c(
+  "Strongly Disapprove",
+  "Disapprove / Somewhat Disapprove",
+  "Neither Approve nor Disapprove",
+  "Approve / Somewhat Approve",
+  "Strongly Approve"
+))
+
+ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
+  geom_bar(stat = "identity") +
+  scale_fill_brewer(palette = "RdBu") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of Approval Levels by Ideology",
+       x = "Ideology",
+       y = "Proportion",
+       fill = "Approval Level") +
+  coord_flip()  
+
+ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = sprintf("%.2f", estimate)), 
+            position = position_stack(vjust = 0.5),
+            size = 3) +
+  scale_fill_brewer(palette = "RdBu") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of Approval Levels by Ideology",
+       x = "Ideology",
+       y = "Proportion",
+       fill = "Approval Level") +
+  coord_flip()
+  -->
+
 ### Exercise 1
 
 In your own words, describe the use of Temperance in data science.
