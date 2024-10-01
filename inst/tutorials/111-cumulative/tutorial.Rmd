@@ -54,6 +54,14 @@ fit_approval <- MASS::polr(approval ~ ideology + education,
 # write_rds(tidy_approval, file = "data/tidy_approval.rds")
 tidy_approval <- read_rds("data/tidy_approval.rds")
 
+# tbl_approval <- tbl_regression(fit_approval)
+# write_rds(tbl_approval, file = "data/tbl_approval.rds")
+tbl_approval <- read_rds("data/tbl_approval.rds")
+
+results <- plot_predictions(fit_approval,
+                            condition = c("ideology"),
+                            draw = FALSE)
+
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -439,7 +447,7 @@ question_text(NULL,
 <!-- 4 Approve / Somewhat Approve        7791 -->
 <!-- 5 Strongly Approve                 14107 -->
 
-Again, `approval` has five values: "Strongly Approve", "Approve / Somewhat Approve", "Neither Approve Nor Disapprove", "Disapprove / Somewhat Disapprove", and "Never Heard / Not Sure". These five values give us five numbers. If there were only two values, approve or not approve, then there would only be two numbers we would care about.
+Again, `approval` has five values: "Strongly Approve", "Approve / Somewhat Approve", "Neither Approve Nor Disapprove", "Strongly Disapprove". These five values give us five numbers. If there were only two values, approve or not approve, then there would only be two numbers we would care about.
 
 Regardless, the central lesson is always the same: *You can never look at your data too much.*
 
@@ -669,11 +677,13 @@ Pipe `ces` to `filter()` with `year` set to `2020` inside of it using `==`.
 ```
 
 ```{r wisdom-17-hint-1, eval = FALSE}
-ces |> filter(...)
+ces |> 
+  filter(...)
 ```
 
 ```{r wisdom-17-test, include = FALSE}
-ces |> filter(year == 2020)
+ces |> 
+  filter(year == 2020)
 ```
 
 ### 
@@ -690,11 +700,14 @@ Continue the pipe to `select()` and have `approval`, `education`, `faminc`, and 
 
 <button onclick="transfer_code(this)">Copy previous code</button>
 ```{r wisdom-18-hint-1, eval = FALSE}
-... |> select(...)
+... |> 
+  select(...)
 ```
 
 ```{r wisdom-18-test, include = FALSE}
-ces |> filter(year == 2020) |> select(approval, education, faminc, ideology)
+ces |> 
+  filter(year == 2020) |> 
+  select(approval, education, faminc, ideology)
 ```
 
 ### 
@@ -1454,7 +1467,7 @@ In ordinal regression, these intercepts define the points on the latent variable
 
 ### Exercise 14
 
-<!-- GK: This takes too long to run  -->
+<!-- DK: Change so that we tell them about the command, tell them we have already created the object behind the scenes, and then tell them to just print out the object because it takes a minute to create. Then, in the QMD question, make sure they do it with cache = TRUE, and then use that object to be printed out in the next chunk. -->
 
 For interactive use, `tidy()` is very handy. But, for presenting our results, we should use a presentation package like **gtsummary**, which includes handy functions like `tbl_regression()`.
 
@@ -1533,11 +1546,131 @@ Read our answer. It will not be the same as yours. You can, if you want, change 
 
 *Temperance is the greatest of all virtues. It subdues every passion and emotion, and almost creates a Heaven upon Earth.* - Joseph Smith Jr.
 
+```{r}
+# plot_predictions(fit_approval,
+#                  condition = c("ideology"),
+#                  draw = FALSE)
+```
+
+```{r}
+# results
+```
+
+```{r}
+# results |> 
+#   select(group, estimate, ideology)
+```
+
+
+
+
+```{r}
+# results |> 
+#   select(group, estimate, ideology, conf.low, conf.high) |> 
+#   ggplot(aes(x = ideology, y = estimate, fill = group)) +
+#     geom_bar(stat = "identity") +
+#     geom_text(aes(label = sprintf("%.2f", estimate)), 
+#               position = position_stack(vjust = 0.5),
+#               size = 3) +
+#     scale_fill_brewer(palette = "RdBu") +
+#     theme_minimal() +
+#     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#     labs(title = "Distribution of Approval Levels by Ideology",
+#          x = "Ideology",
+#          y = "Proportion",
+#          fill = "Approval Level") +
+#     coord_flip()
+```
+
+
+
 <!-- DK: Some notes: -->
 
-<!-- plot_predictions(fit_approval, condition = c("ideology"), draw = FALSE) -->
 
 <!-- Show the students the results. Assign it to an object z, potentially dropping lots of useless columns. Then use z to make a nice looming ggplot. -->
+
+<!-- MP:
+8/15 Madhavan
+This is an ideal plot
+
+Where is the column for ideology??
+Here are all the problems I was noticing, and I need some help to fix
+1. There should not be p-values of zero, for the strongly disapprove/disapprove/somewhat approve columns. (model overfitting)
+2. Infinite S-values, this could suggest that the model is not doing calculations correctly
+3. I think the problem with the model is confidence intervals might be overlapping?
+4. I don't think this is a algorithm problem, a simple check with summary of fit_approval() shows that it does work as intended
+5. For example if you run this code the probability is completley bonkers
+ggplot(predictions_output, aes(x = ideology, y = estimate, fill = approval)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Predicted Approval Ratings by Ideology",
+       x = "Ideology",
+       y = "Estimated Approval Probability") +
+  theme_minimal()
+
+
+-->
+<!--MP: 
+8/21 Madhavan
+I found the problem maybe?
+# A tibble: 5 × 5
+# Groups:   ideology [5]
+  ideology          approval             mean_estimate min_estimate max_estimate
+  <fct>             <ord>                        <dbl>        <dbl>        <dbl>
+1 Very Liberal      Approve / Somewhat …           0.2      0.00437        0.913
+2 Liberal           Approve / Somewhat …           0.2      0.00739        0.851
+3 Moderate          Approve / Somewhat …           0.2      0.0204         0.489
+4 Conservative      Approve / Somewhat …           0.2      0.0122         0.605
+5 Very Conservative Approve / Somewhat …           0.2      0.00567        0.805
+the mean_estimate is not supposed to be the exact same..
+
+here's the list of problem's im encountering, models having the same estimate, the original problem, and models that are completley wrong "the one bonkers example that I gave", the part I think that's confusing me is stuff like this: 
+
+# A tibble: 5 × 2
+  ideology          total_estimate
+  <fct>                      <dbl>
+1 Very Liberal                   1
+2 Liberal                        1
+3 Moderate                       1
+4 Conservative                   1
+5 Very Conservative              1
+  -->
+
+<!-- I might have fixed it with this plot:
+temp is just a random thing I made.
+
+temp$group<- factor(temp$group, levels = c(
+  "Strongly Disapprove",
+  "Disapprove / Somewhat Disapprove",
+  "Neither Approve nor Disapprove",
+  "Approve / Somewhat Approve",
+  "Strongly Approve"
+))
+
+ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
+  geom_bar(stat = "identity") +
+  scale_fill_brewer(palette = "RdBu") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of Approval Levels by Ideology",
+       x = "Ideology",
+       y = "Proportion",
+       fill = "Approval Level") +
+  coord_flip()  
+
+ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = sprintf("%.2f", estimate)), 
+            position = position_stack(vjust = 0.5),
+            size = 3) +
+  scale_fill_brewer(palette = "RdBu") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of Approval Levels by Ideology",
+       x = "Ideology",
+       y = "Proportion",
+       fill = "Approval Level") +
+  coord_flip()
+  -->
 
 ### Exercise 1
 
@@ -1594,9 +1727,202 @@ question_text(NULL,
 
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic broadly.
 
-
-
 ### Exercise 4
+
+Enter this code into the exercise code block and hit "Run Code."
+
+```
+plot_predictions(fit_approval,
+                 condition = c("ideology"),
+                 draw = FALSE)
+```                 
+
+```{r temperance-4, exercise = TRUE}
+
+```
+
+```{r temperance-4-hint-1, eval = FALSE}
+plot_predictions(...,
+                 ... = c("ideology"),
+                 ... = FALSE))
+```
+
+```{r temperance-4-test, include = FALSE}
+plot_predictions(fit_approval,
+                 condition = c("ideology"),
+                 draw = FALSE)
+```
+
+### 
+
+<!-- ### Exercise 5 -->
+
+<!-- We only need `group`, `estimate`, `ideology`, `conf.low` and `conf.high` from the object `fit_approval`. Only keep these columns using the command `select()`. Assign the result to a new object called `z`.  -->
+
+
+<!-- ```{r temperance-5, exercise = TRUE} -->
+
+<!-- ``` -->
+
+<!-- <button onclick = "transfer_code(this)">Copy previous code</button> -->
+
+<!-- ```{r temperance-5-hint-1, eval = FALSE} -->
+<!-- z <- ... |> -->
+<!--   select(group, estimate, ideology, conf.low, conf.high) -->
+<!-- ``` -->
+
+<!-- ```{r temperance-5-test, include = FALSE} -->
+<!-- z <- plot_predictions(fit_approval, -->
+<!--                  condition = c("ideology"), -->
+<!--                  draw = FALSE)  -->
+<!-- z |> select(group, estimate, ideology, conf.low, conf.high) -->
+<!-- ``` -->
+
+<!-- ###  -->
+
+### Exercise 5
+
+Let's make a nice plot to visualize our results. Continue a pipe with `ggplot()`, setting `x` equals `group`, `y` equals `estimate`, and `color` equals `ideology` in the `aes()` function. Note that this will return a plain graph since we have not mapped any data points to the graph yet.
+
+```{r temperance-5, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-5-hint-1, eval = FALSE}
+... |>
+  ggplot(aes(x = ..., y = ..., color = ...))
+```
+
+```{r temperance-5-test, include = FALSE}
+plot_predictions(fit_approval,
+                 condition = c("ideology"),
+                 draw = FALSE) |> 
+  ggplot(aes(x = group, y = estimate, color = ideology))
+```
+
+### 
+
+### Exercise 6
+
+Add a `geom_point()` layer to the graph. Set the argument `size` equal `3` and `position` equal `position_dodge(width = 0.5)`. 
+
+```{r temperance-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-6-hint-1, eval = FALSE}
+... |>
+  ggplot(aes(x = ..., y = ..., color = ...)) + 
+  geom_point(size = ..., position = ...)
+```
+
+```{r temperance-6-test, include = FALSE}
+plot_predictions(fit_approval,
+                 condition = c("ideology"),
+                 draw = FALSE) |> 
+  ggplot(aes(x = group, y = estimate, color = ideology)) + 
+  geom_point(size = 3, position = position_dodge(width = 0.5)) 
+```
+
+### 
+
+### Exercise 7
+
+<!-- GK: Got some error with this command since it does not show the uncertainty range -->
+
+Add a `geom_errorbar()` layer to the graph. In the `aes()` argument, set `ymin` equal `conf.low`, `ymax` equal `conf.high`, `width` equal `0.2` and `position` equal `position_dodge(width = 0.5)`.
+
+```{r temperance-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-7-hint-1, eval = FALSE}
+... |>
+  ggplot(aes(x = ..., y = ..., color = ...)) + 
+  geom_point(size = ..., position = ...) +
+  geom_errorbar(aes(ymin = ..., ymax = ..., width = ..., position = ...))
+```
+
+```{r temperance-7-test, include = FALSE}
+# plot_predictions(fit_approval,
+#                 condition = c("ideology"),
+#                 draw = FALSE) |>
+#   select(group, estimate, ideology, conf.low, conf.high) |> 
+#   ggplot(aes(x = group, y = estimate, color = ideology)) + 
+#     geom_point(size = 0.1, 
+#                position = position_dodge(width = 0.5)) + 
+#     geom_errorbar(aes(ymin = conf.low,
+#                       ymax = conf.high),
+#                   width = 0.2,
+#                   position = position_dodge(width = 0.5))
+```
+
+### 
+
+### Exercise 8
+
+Finally add title, label for x-axis and y-axis to the graph. Remeber that your graph should look like this: 
+
+```{r}
+#plot_predictions(fit_approval,
+#                 condition = c("ideology"),
+#                 draw = FALSE) |> 
+#    ggplot(aes(x = group, y = estimate, color = ideology)) +
+#      geom_point(size = 3, position = position_dodge(width = 0.5)) +
+#      geom_errorbar(aes(ymin = conf.low, 
+#                        ymax = conf.high), 
+#                    width = 0.2, 
+#                    position = position_dodge(width = 0.5)) +
+#      labs(title = "",
+#           x = NULL,
+#           y = "Estimated Proportion",
+#           color = "Ideology") +
+#      theme_minimal() 
+```
+
+```{r temperance-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r temperance-8-hint-1, eval = FALSE}
+... |>
+    ggplot(aes(x = ..., y = ..., color = ...)) +
+      geom_point(size = ..., position = ...) +
+      geom_errorbar(aes(ymin = ..., ymax = ..., width = ..., position = ...)) +
+      labs(title = ..., x = ..., y = ..., color = ...) +
+      theme_minimal()
+```
+
+```{r temperance-8-test, include = FALSE}
+#plot_predictions(fit_approval,
+#                 condition = c("ideology"),
+#                 draw = FALSE) |> 
+#    ggplot(aes(x = group, y = estimate, color = ideology)) +
+#      geom_point(size = 3, position = position_dodge(width = 0.5)) +
+#      geom_errorbar(aes(ymin = conf.low, 
+#                        ymax = conf.high), 
+#                    width = 0.2, 
+#                    position = position_dodge(width = 0.5)) +
+#      labs(title = "Voting Preferences by Candidate and Sex",
+#           x = NULL,
+#           y = "Estimated Proportion",
+#           color = "Ideology") +
+#      theme_minimal() 
+```
+
+### 
+
+<!-- DK: Use the new template. -->
+
+### Exercise 9
 
 Create a new code chunk in `analysis.qmd`. Label it with `label: plot`. Copy/paste the code which creates your graphic. Don't forget that, at the top of this chunk, you must include code which creates the `ndata` object.
 
@@ -1610,7 +1936,7 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r temperance-4}
+```{r temperance-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1623,11 +1949,11 @@ question_text(NULL,
 
 We could have made many graphs with this data to highlight different things. It is important to only keep information in that is useful and has relationships with the outcome variable. 
 
-### Exercise 5
+### Exercise 10
 
 Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
 
-```{r temperance-5}
+```{r temperance-10}
 question_text(NULL,
 	message = "Using the CES, which is one of the largest political surveys in the United States, we seek to understand the relationship between presidential approval and political ideology in 2020. One concern is that survey respondents might be systematically different from other Americans. We are using a cumulative model for ordinal regression. People who are very conservative are more likely to approve the president higher by about 5.6 compared to people who are very liberal. We are 95% confident that the true value is between 4.9 and 6.2.",
 	answer(NULL, correct = TRUE),
@@ -1640,11 +1966,11 @@ question_text(NULL,
 
 Edit the summary paragraph in `analysis.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
-### Exercise 6
+### Exercise 11
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted. 
 
-```{r temperance-6}
+```{r temperance-11}
 question_text(NULL,
 	message = "Our estimates and confidence intervals might not be wrong because the data is not perfect. We have noticed some potential problems such as in validity; people could be lying about thier approval of the president or misidentifying their ideology. These concerns can cause our findings to be inaccurate. The true estimate and confidence interval might be different. The interval would be bigger because we have uncertainties about the data.",
 	answer(NULL, correct = TRUE),
@@ -1657,7 +1983,7 @@ question_text(NULL,
 
 There is almost always uncertainty associated with our conclusions. It is important to notice and acknowledge the potential problems with the data. 
 
-### Exercise 7
+### Exercise 12
 
 Rearrange the material in `analysis.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
@@ -1669,7 +1995,7 @@ tutorial.helpers::show_file("analysis.qmd")
 
 CP/CR.
 
-```{r temperance-7}
+```{r temperance-12}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1683,11 +2009,11 @@ question_text(NULL,
 Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
 
 
-### Exercise 8
+### Exercise 13
 
 Publish `analysis.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
 
-```{r temperance-8}
+```{r temperance-13}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
