@@ -17,8 +17,6 @@ library(tutorial.helpers)
 library(gt)
 
 library(tidyverse)
-library(brms)          # Delete soon
-library(tidybayes)     # Delete soon
 library(primer.data)
 library(tidymodels)
 library(marginaleffects)
@@ -31,16 +29,28 @@ df1 <- governors |>
   filter(year > 1945) |> 
   select(last_name, year, state, sex, lived_after, election_age)
 
-df2 <- df1 |> mutate(sex = recode(sex,
-    "Male" = 0, "Female" = 1))
 
- #fit_all <- lm(lived_after ~ election_age + sex, data = df1)
+ #fit_all <- lm(lived_after ~ election_age*sex, data = df1)
 
  #write_rds(fit_all, "data/fit_all.rds")
 
 fit_all <- read_rds("data/fit_all.rds")
 
-governor <- data.frame(sex = 1, election_age = 52)
+governor <- data.frame(sex = c("Male", "Female"), election_age = 52)
+
+coefficients <- coef(fit_all)
+
+# Extract individual coefficients by name
+intercept <- coefficients["(Intercept)"]
+election_age <- coefficients["election_age"]
+female_intercept <- intercept
+female_slope <- election_age
+interaction_term <- coefficients["election_age:sexMale"]
+sex_male <- coefficients["sexMale"]
+
+male_intercept <- intercept + sex_male
+male_slope <- election_age + interaction_term
+
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -48,7 +58,6 @@ governor <- data.frame(sex = 1, election_age = 52)
 
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
-
 
 ## Introduction
 ### 
@@ -343,11 +352,11 @@ This problem is causal so one of the covariates is a treatment. In our problem, 
  
 ### Exercise 4
 
-Create a Github repo called `tutorial-9`. Make sure to click the "Add a README file" check box.
+Create a Github repo called `analysis`. Make sure to click the "Add a README file" check box.
 
 Connect the Github repo to an R project on your computer. Give the R project the same name.
 
-Select `File -> New File -> Quarto Document ...`. Provide a title -- `"5 Paramters"` -- and an author (you). Render the document and save it as `tutorial-9.qmd`.
+Select `File -> New File -> Quarto Document ...`. Provide a title -- `"5 Paramters"` -- and an author (you). Render the document and save it as `analysis.qmd`.
 
 Edit the `.gitignore` by adding `*Rproj`. Save and commit this in the Git tab. Push the commit.
 
@@ -472,7 +481,6 @@ ggplot(df1, aes(x = election_age, y = lived_after, color = sex)) +
   theme_minimal()
 ```
 
-
 ### Exercise 10
 
 Define a causal effect. (Note that the model in this tutorial is predictive, not causal. We just want to make sure you understand what a causal model is.)
@@ -581,7 +589,7 @@ execute:
 In the Console, run:
 
 ```         
-show_file("tutorial-9.qmd", start = -5)
+show_file("analysis.qmd", start = -5)
 ```
 
 CP/CR.
@@ -820,7 +828,7 @@ Note: Your paragraph doesn't necessarily have to be as long as ours is :)
 
 ### 
 
-Edit the summary paragraph in `tutorial-9.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`, and then commit/push.
+Edit the summary paragraph in `analysis.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`, and then commit/push.
 
 ## Courage
 ### 
@@ -883,7 +891,7 @@ library(...)
 library(gtsummary)
 ```
 
-###
+### 
 
 The link function, the basic mathematical structure of the model, is (mostly) determined by the type of outcome variable. 
 
@@ -893,7 +901,7 @@ $$\mu = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \ldots$$
 
 ### Exercise 4
 
-Load the [**equatiomatic**](https://datalorax.github.io/equatiomatic/) package.
+Load the [**marginaleffects**](https://marginaleffects.com/) package.
 
 ```{r courage-4, exercise = TRUE}
 
@@ -904,6 +912,25 @@ library(...)
 ```
 
 ```{r courage-4-test, include = FALSE}
+library(marginaleffects)
+```
+
+### 
+
+We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
+### Exercise 5
+
+Load the [**equatiomatic**](https://datalorax.github.io/equatiomatic/) package.
+
+```{r courage-5, exercise = TRUE}
+
+```
+
+```{r courage-5-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r courage-5-test, include = FALSE}
 library(equatiomatic)
 ```
 
@@ -920,19 +947,19 @@ extract_eq(fit_all,
 
 Of course, in a normal data science project, we would explore a variety of different combinations of independent variables before selecting a final set. Just pretend that we already did that.
 
-### Exercise 5
+### Exercise 6
 
-Add `library(tidymodels)`, `library(gtsummary)`, and `library(equatiomatic)` to the `setup` code chunk in your QMD. `Command/Ctrl + Shift + K`.
+Add `library(tidymodels)`, `library(gtsummary)`, `library(equatiomatic)`, and `library(marginaleffects)` to the `setup` code chunk in your QMD. `Command/Ctrl + Shift + K`.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("tutorial-9.qmd", pattern = "tidymodels|gtsummary|equatiomatic")
+tutorial.helpers::show_file("XX.qmd", pattern = "tidymodels|gtsummary|equatiomatic|marginaleffects")
 ```
 
 CP/CR.
 
-```{r courage-5}
+```{r courage-6}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -943,21 +970,21 @@ question_text(NULL,
 
 ### 
 
-There is some reason to be suspicious of the pre-1945 data. Moreover, the assumption of stability is more difficult to maintain the further back in time our data go.
+Recall that a categorical variable (whether character or factor) like `sex` is turned into a $0/1$ "dummy" variable which is then re-named something like $sex_{Male}$. After all, we can't have words --- like "Male" or "Female" --- in a mathematical formula, hence the need for dummy variables.
 
-### Exercise 6
+### Exercise 7
 
 Because our outcome variable is continuous, start to create the model by using `linear_reg(engine = "lm")`.
 
-```{r courage-6, exercise = TRUE}
+```{r courage-7, exercise = TRUE}
 
 ```
 
-```{r courage-6-hint-1, eval = FALSE}
+```{r courage-7-hint-1, eval = FALSE}
 linear_reg(engine = "...")
 ```
 
-```{r courage-6-test, include = FALSE}
+```{r courage-7-test, include = FALSE}
 linear_reg(engine = "lm")
 ```
 
@@ -968,22 +995,22 @@ The same approach applies to a categorical covariate with $N$ values. Such cases
 Note there is no variable like this in our problem.
 
 
-### Exercise 7
+### Exercise 8
 
 Continue the pipe to `fit(lived_after ~ election_age, data = df1)`.
 
-```{r courage-7, exercise = TRUE}
+```{r courage-8, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r courage-7-hint-1, eval = FALSE}
+```{r courage-8-hint-1, eval = FALSE}
 ... |> 
   fit(..., data = ...)
 ```
 
-```{r courage-7-test, include = FALSE}
+```{r courage-8-test, include = FALSE}
 linear_reg(engine = "lm") |> 
    fit(lived_after ~ election_age, data = df1)
 ```
@@ -1003,20 +1030,20 @@ There are three main differences between this representation of the model and ou
 
 
 
-### Exercise 8
+### Exercise 9
 
 Behind the scenes of this tutorial, an object called `fit_all` has been created which is the result of the code above. Type `fit_all` and hit "Run Code." This generates the same results as using `print(fit_all)`.
 
 
-```{r courage-8, exercise = TRUE}
+```{r courage-9, exercise = TRUE}
 
 ```
 
-```{r courage-8-hint-1, eval = FALSE}
+```{r courage-9-hint-1, eval = FALSE}
 fit_all
 ```
 
-```{r courage-8-test, include = FALSE}
+```{r courage-9-test, include = FALSE}
 fit_all
 ```
 
@@ -1025,7 +1052,7 @@ fit_all
 In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
 
 
-### Exercise 9
+### Exercise 10
 
 Create a new code chunk in your QMD. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_all`. 
 
@@ -1036,12 +1063,12 @@ To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("tutorial-9.qmd", start = -8)
+tutorial.helpers::show_file("analysis.qmd", start = -8)
 ```
 
 CP/CR.
 
-```{r courage-9}
+```{r courage-10}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1054,6 +1081,7 @@ question_text(NULL,
 
 Add `*_cache` to `.gitignore` file. Commit and push. Cached objects are often large. They don't belong on Github.
 
+### Exercise 11
 
 Create another code chunk in your QMD. Add the chunk option: `label: math`. In that code chunk, add something like the below. You may find it useful to add the `coef_digits` argument to show fewer significant digits after the decimal.
 
@@ -1071,12 +1099,12 @@ extract_eq(fit_XX,
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("tutorial-9.qmd", pattern = "extract")
+tutorial.helpers::show_file("analysis.qmd", pattern = "extract")
 ```
 
 CP/CR.
 
-```{r courage-10}
+```{r courage-11}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1099,19 +1127,19 @@ This is our data generating mechanism.
 
 Our formula is relating `lived_after` to `election_age`, meaning that we are saying we can predict `lived_after` based off of `election_sge`, because they are proportional
 
-### Exercise 11
+### Exercise 12
 
 Run `tidy()` on `fit_all` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
 
-```{r courage-11, exercise = TRUE}
+```{r courage-12, exercise = TRUE}
 
 ```
 
-```{r courage-11-hint-1, eval = FALSE}
+```{r courage-12-hint-1, eval = FALSE}
 tidy(..., conf.int = ...)
 ```
 
-```{r courage-11-test, include = FALSE}
+```{r courage-12-test, include = FALSE}
 tidy(fit_all, conf.int = TRUE)
 ```
 
@@ -1119,22 +1147,22 @@ tidy(fit_all, conf.int = TRUE)
 
 `tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
 
-### Exercise 12
+### Exercise 13
 
 For interactive use, `tidy()` is very handy. But, for presenting our results, we should use a presentation package like **gtsummary**, which includes handy functions like `tbl_regression()`.
 
 Run `tbl_regression(fit_all)`.
 
 
-```{r courage-12, exercise = TRUE}
+```{r courage-13, exercise = TRUE}
 
 ```
 
-```{r courage-12-hint-1, eval = FALSE}
+```{r courage-13-hint-1, eval = FALSE}
 tbl_regression(..)
 ```
 
-```{r courage-12-test, include = FALSE}
+```{r courage-13-test, include = FALSE}
 tbl_regression(fit_all)
 ```
 
@@ -1143,7 +1171,7 @@ tbl_regression(fit_all)
 See this [tutorial](https://www.danieldsjoberg.com/gtsummary/articles/tbl_regression.html) for a variety of options for customizing your table.
 
 
-### Exercise 13
+### Exercise 14
 
 Create a new code chunk in your QMD. Add a code chunk option: `label: table`. Add this code to the code chunk.
 
@@ -1156,13 +1184,13 @@ tbl_regression(fit_all)
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("tutorial-9.qmd", pattern = "tbl_regression")
+tutorial.helpers::show_file("analysis.qmd", pattern = "tbl_regression")
 ```
 
 CP/CR.
 
 
-```{r courage-13}
+```{r courage-14}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1171,7 +1199,7 @@ question_text(NULL,
 	rows = 3)
 ```
 
-###
+### 
 
 We can make the table look nice using `modify_header(label ~ "...")` to add a header.
 
@@ -1181,7 +1209,7 @@ Like this:
 tbl_regression(fit_all) |> modify_header(label ~ "Regression Analysis of Factors Predicting Years Lived After Election")
 ```
 
-### Exercise 14
+### Exercise 15
 
 Add a sentence to your project summary. 
 
@@ -1189,7 +1217,7 @@ Explain the structure of the model. Something like: "I/we model Y [the concept o
 
 Recall the beginning of our version of the summary: "Using data from all deceased gubernatorial candidates in the United States from elections held between 1945 and 2012, we seek to forecast candidate longevity in state-wide US races post-election. There is concern that longevity for gubernatorial candidates will differ significantly from that for candidates in Senate and other state-wide elections."
 
-```{r courage-14}
+```{r courage-15}
 question_text( NULL,
   "We model ages governors lived after being elected as a linear function of election_age, seeking to predict the variable `lived_after`.",
   answer(NULL, correct = TRUE),
@@ -1226,32 +1254,12 @@ question_text(NULL,
 
 Courage gave us the data generating mechanism. Temperance guides us in the use of the DGM — or the “model” — we have created to answer the question with which we began. We create posteriors for the quantities of interest. 
 
+
 ### Exercise 2
-
-Load the [**marginaleffects**](https://marginaleffects.com/) package.
-
-```{r temperance-2, exercise = TRUE}
-
-```
-
-```{r temperance-2-hint-1, eval = FALSE}
-library(...)
-```
-
-```{r temperance-2-test, include = FALSE}
-library(marginaleffects)
-```
-
-### 
-
-We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
-
-
-### Exercise 3
 
 What is the specific question we are trying to answer? 
 
-```{r temperance-3}
+```{r temperance-2}
 question_text(NULL,
 	message = "How long do political candidates live after the election?",
 	answer(NULL, correct = TRUE),
@@ -1265,7 +1273,7 @@ question_text(NULL,
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic more broadly.
 
 
-### Exercise 4
+### Exercise 3
 
 Enter this code into the exercise code block and hit "Run Code."
 
@@ -1274,16 +1282,16 @@ plot_predictions(fit_all,
                  condition = "election_age")
 ```               
 
-```{r temperance-4, exercise = TRUE}
+```{r temperance-3, exercise = TRUE}
 
 ```
 
-```{r temperance-4-hint-1, eval = FALSE}
+```{r temperance-3-hint-1, eval = FALSE}
 plot_predictions(fit_all, 
                  condition = ...))
 ```
 
-```{r temperance-4-test, include = FALSE}
+```{r temperance-3-test, include = FALSE}
 plot_predictions(fit_all,
                  condition = "election_age")
 ```
@@ -1292,7 +1300,7 @@ plot_predictions(fit_all,
 
 In the plot above, we examine the predicted life expectancy (lived_after) for the age of election.
 
-### Exercise 5
+### Exercise 4
 
 We can compare the differences in ages a female vs male would live after being elected at different ages using `comparisons()`. 
 
@@ -1300,15 +1308,15 @@ We can compare the differences in ages a female vs male would live after being e
 comparisons(fit_all, newdata = governor)
 ```               
 
-```{r temperance-5, exercise = TRUE}
+```{r temperance-4, exercise = TRUE}
 
 ```
 
-```{r temperance-5-hint-1, eval = FALSE}
+```{r temperance-4-hint-1, eval = FALSE}
 comparisons(fit_all, newdata = governor)
 ```
 
-```{r temperance-5-test, include = FALSE}
+```{r temperance-4-test, include = FALSE}
 comparisons(fit_all, newdata = governor)
 ```
 
@@ -1316,7 +1324,7 @@ comparisons(fit_all, newdata = governor)
 
 From this we can see that males are expected to live significantly fewer years than females after being elected, with an average difference of 11.7 years. This gap is statistically significant (p < 0.001), meaning the result is unlikely due to chance. The confidence interval suggests that the difference could range from 4.7 to 18.6 fewer years for males compared to females, indicating a consistent and substantial disparity in post-election life expectancy between the sexes.
 
-### Exercise 6
+### Exercise 5
 
 Using `plot_comparisons` we can see the difference between life expectancy, and how it changes as election_age increases for both males and females.
 
@@ -1326,19 +1334,19 @@ plot_comparisons(fit_all,
 condition = "sex")
 ```               
 
-```{r temperance-6, exercise = TRUE}
+```{r temperance-5, exercise = TRUE}
 
 ```
 
-```{r temperance-6-hint-1, eval = FALSE}
+```{r temperance-5-hint-1, eval = FALSE}
 plot_comparisons(fit_all,
   variables = "election_age",
   condition = "sex") +
-  scale_x_continuous(breaks = c(0, 1), labels = c("Male (0)", "Female (1)")) +
+  scale_x_discrete(breaks = c(0, 1), labels = c("Male (0)", "Female (1)")) +
   labs(x = "Sex", y = "Predicted Life Expectancy")
 ```
 
-```{r temperance-6-test, include = FALSE}
+```{r temperance-5-test, include = FALSE}
 # plot_comparisons(fit_all,
 #   variables = "election_age",
 #   condition = "sex") +
@@ -1348,38 +1356,76 @@ plot_comparisons(fit_all,
 
 ### 
 
-From this we can see that the life expectancy for females has a greater range for the confidence intervals.The plot shows the estimated effect of the variable election_age on an outcome, conditioned by sex. For males, the estimate appears more negative with a narrow confidence interval, indicating a relatively precise estimate. In contrast, for females, the estimate is closer to zero but has a much wider confidence interval, reflecting greater uncertainty in the effect for this group. The overlap in confidence intervals between the two groups suggests that the difference in effect between the two sexes may not be statistically significant.
+From this, we can see that males are expected to live 11.7 fewer years than females after being elected, with an average difference of -11.7 years. This gap is statistically significant (p < 0.001), meaning the result is highly unlikely due to chance. The confidence interval suggests that the difference could range from -18.6 to -4.7 fewer years for males compared to females, indicating a consistent and substantial disparity in post-election life expectancy between the sexes. Additionally, for every one-year increase in election age, the expected post-election lifespan decreases slightly by 0.056 years, though this result is not statistically significant (p = 0.879), indicating that election age does not have a meaningful effect on post-election life expectancy.
 
-### Exercise 7
+### Exercise 6
 
-This plot shows the estimated effect of the variable sex on an outcome, conditioned by different values of election_age (40, 50, and 60). 
+For further analysis, we can create a plot that shows the slope of women and their expected age lived after to mens. Enter this code into your console.
+
+```ggplot(fit_all, aes(x = election_age, y = lived_after, color = sex)) +
+  geom_point() +
+  geom_abline(intercept = female_intercept,
+              slope = female_slope, 
+              color = "#F8766D", 
+              size = 1) +
+  geom_abline(intercept = male_intercept,
+              slope = male_slope,
+              color = "#00BFC4", 
+              size = 1) +
+  labs(title = "Interaction Model",
+       subtitle = "Comparing post election lifespan across sex",
+       x = "Average Age at Time of Election", 
+       y = "Years Lived Post-Election", 
+       color = "Sex") +
+  theme_classic()```
+
+
+```{r temperance-6, exercise = TRUE}
+
 ```
-plot_comparisons(fit_all,
-  variables = "sex",
-condition = list(election_age = c(40, 50, 60)))
-```               
 
-```{r temperance-7, exercise = TRUE}
-
+```{r temperance-6-hint-1, eval = FALSE}
+ggplot(fit_all, aes(x = election_age, y = lived_after, color = sex)) +
+  geom_point() +
+  geom_abline(intercept = ...,
+              slope = female_slope, 
+              color = "#F8766D", 
+              size = 1) +
+  geom_abline(... = male_intercept,
+              slope = male_slope,
+              color = "#00BFC4", 
+              size = 1) +
+  labs(title = "Interaction Model",
+       subtitle = "Comparing post election lifespan across sex",
+       x = "Average Age at Time of Election", 
+       y = "Years Lived Post-Election", 
+       color = "Sex") +
+ ...()
 ```
 
-```{r temperance-7-hint-1, eval = FALSE}
-plot_comparisons(fit_all,
-  variables = "sex",
-condition = list(election_age = c(40, 50, 60)))
-```
+```{r temperance-6-test, include = FALSE}
+ggplot(fit_all, aes(x = election_age, y = lived_after, color = sex)) +
+  geom_point() +
+  geom_abline(intercept = female_intercept,
+              slope = female_slope, 
+              color = "#F8766D", 
+              size = 1) +
+  geom_abline(intercept = male_intercept,
+              slope = male_slope,
+              color = "#00BFC4", 
+              size = 1) +
+  labs(title = "Interaction Model",
+       subtitle = "Comparing post election lifespan across sex",
+       x = "Average Age at Time of Election", 
+       y = "Years Lived Post-Election", 
+       color = "Sex") +
+  theme_classic()
 
-```{r temperance-7-test, include = FALSE}
-plot_comparisons(fit_all,
-  variables = "sex",
-condition = list(election_age = c(40, 50, 60)))
 ```
 
 ### 
 
-In other words, the plot is comparing the estimated effect of sex at different ages. It indicates how the impact of sex on the outcome might differ for people of different ages. The "comparison" axis is likely representing the difference between the two groups defined by sex (e.g., male vs. female), with the confidence interval showing the uncertainty around these estimates.
-
-### Exercise 8
+### Exercise 7
 
 Add `library(marginaleffects)` to your QMD setup code chunk. 
 
@@ -1390,12 +1436,12 @@ Create a new code chunk. Label it with `label: plot`. Copy/paste the code which 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("tutorial-9.qmd", start = -8)
+tutorial.helpers::show_file("analysis.qmd", start = -8)
 ```
 
 CP/CR.
 
-```{r temperance-8}
+```{r temperance-7}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1406,12 +1452,12 @@ question_text(NULL,
 
 ### 
 
-### Exercise 9
+### Exercise 8
 
 Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
 
-```{r temperance-9}
+```{r temperance-8}
 question_text(NULL,
 	message = "The quantity of interest in our problem is `lived_after`, as a function of `election_age`. The estimate of -0.86 represents the effect size, indicating how much the outcome is expected to change for a one-unit change in the predictor. The uncertainty around this estimate is captured by the 95% confidence interval, which ranges from -0.93 to -0.78. This range tells us that, with 95% confidence, the true effect lies within this interval. The fact that the confidence interval does not include zero indicates that the effect is statistically significant. Additionally, the p-value of less than 0.001 further supports this, suggesting that there is a very low probability that the observed effect is due to chance. Despite the significance, the confidence interval provides a valuable measure of uncertainty, showing that while the effect is negative, there is some variability in its exact magnitude.",
 	answer(NULL, correct = TRUE),
@@ -1424,11 +1470,11 @@ question_text(NULL,
 
 Add a final sentence to your summary paragraph in your QMD as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
-### Exercise 10
+### Exercise 9
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-10}
+```{r temperance-9}
 question_text(NULL,
 	message = "The estimates for the quantities of interest and their associated uncertainty might be wrong due to issues like model misspecification, such as failing to include important predictors or incorrect assumptions about linearity. Additionally, multicollinearity between variables could inflate standard errors, leading to wider confidence intervals, and small or unrepresentative sample sizes can exacerbate these problems. To improve the accuracy of both the estimates and their uncertainty, a more robust approach like generalized least squares (GLS) or bootstrapping methods for confidence intervals could be considered. These methods would account for potential violations of assumptions, providing more reliable estimates and more realistic uncertainty intervals.",
 	answer(NULL, correct = TRUE),
@@ -1439,19 +1485,19 @@ question_text(NULL,
 
 ### 
 
-### Exercise 11
+### Exercise 10
 
 Rearrange the material in your QMD so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("tutorial-9.qmd")
+tutorial.helpers::show_file("analysis.qmd")
 ```
 
 CP/CR.
 
-```{r temperance-11}
+```{r temperance-10}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1464,11 +1510,11 @@ question_text(NULL,
 
 This is the version of your QMD file which your teacher is most likely to take a close look at.
 
-### Exercise 12
+### Exercise 11
 
 Publish your rendered QMD to Rpubs. Choose a sensible slug. Copy/paste the resulting url below.
 
-```{r temperance-12}
+```{r temperance-11}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1481,11 +1527,11 @@ question_text(NULL,
 
 Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
 
-### Exercise 13
+### Exercise 12
 
 Copy/paste the url to your Github repo.
 
-```{r temperance-13}
+```{r temperance-12}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
