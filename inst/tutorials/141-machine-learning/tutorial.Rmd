@@ -68,8 +68,46 @@ loans <- read_csv("https://raw.githubusercontent.com/vincentarelbundock/Rdataset
 fit_loans_model <- rand_forest(mode = "regression", engine = "ranger", mtry = 8, trees = 100, min_n = 17) 
   fit_loans <- fit_loans_model |> fit(interest_rate ~ balance + homeownership + verified_income + total_credit_utilized + num_historical_failed_to_pay + application_type + term + installment + loan_status + loan_purpose + loan_amount + total_collection_amount_ever + total_credit_limit + debt_to_income + annual_income, data = loans)
   
-# plot_predictions(fit_loans, condition = "debt_to_income")
+
+
+  
 ```
+
+
+
+
+```{r}
+pctiles <- quantile(loans$debt_to_income, probs = seq(0, 1, length.out = 101), na.rm = TRUE)
+nd <- datagrid(debt_to_income = pctiles, newdata = loans)
+plot_predictions(fit_loans, by = "debt_to_income", newdata = nd)
+```
+
+these two both plots are the same, just the one with pctiles converts debt_to_income to percentages to create a range of values, while the other one just uses the existing values.
+
+```{r}
+loans <- loans[!is.na(loans$debt_to_income), ]
+nd1 <- datagrid(debt_to_income = loans$debt_to_income, newdata = loans)
+  
+plot_predictions(fit_loans, by = "debt_to_income", newdata = nd) + geom_point(data = loans, aes(x = debt_to_income, y = interest_rate), alpha = 0.04) + geom_smooth(data = loans, aes(x = debt_to_income, y = interest_rate), se = FALSE, color = "orange") +
+    labs(x = "Debt to Income)", y = "Predicted interest rate",
+         title = "Predicted interest rate for different values of debt to income") +
+    theme_bw()
+
+```
+
+
+this one uses condition but is similar to the other two plots
+```{r}
+loans1 <- loans |> drop_na()
+plot_predictions(fit_loans, condition = "debt_to_income", newdata = loans1)
+```
+
+
+```{r}
+loans1 <- loans |> drop_na()
+plot_predictions(fit_loans, by = "debt_to_income", newdata = loans1)
+```
+
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
 ```
