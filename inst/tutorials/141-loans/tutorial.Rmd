@@ -36,8 +36,9 @@ options(tutorial.exercise.timelimit = 600,
 
 loans <- read_csv("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/refs/heads/master/csv/openintro/loans_full_schema.csv", show_col_types = FALSE)
 
-fit_loans_model <- rand_forest(mode = "regression", engine = "ranger", mtry = 4, trees = 5000, min_n = 4) 
-  fit_loans <- fit_loans_model |> fit(interest_rate ~ balance + homeownership + verified_income + total_credit_utilized + num_historical_failed_to_pay + application_type + term + installment + loan_status + loan_purpose + loan_amount + total_collection_amount_ever + total_credit_limit + debt_to_income + annual_income, data = loans)
+fit_loans_model <- rand_forest(mode = "regression", engine = "ranger", mtry = 4, trees = 500, min_n = 4) 
+
+fit_loans <- fit_loans_model |> fit(interest_rate ~ homeownership + annual_income +  debt_to_income + delinq_2y + total_credit_lines + open_credit_lines + total_credit_limit + total_credit_utilized + total_collection_amount_ever + current_installment_accounts + loan_amount + term + grade + sub_grade + initial_listing_status + balance, data = loans)
   
 
 
@@ -53,12 +54,12 @@ plot_predictions(fit_loans, by = "debt_to_income", newdata = nd)
 these two both plots are the same, just the one with pctiles converts debt_to_income to percentages to create a range of values, while the other one just uses the existing values.
 
 ```{r}
-loans <- loans[!is.na(loans$debt_to_income), ]
-nd1 <- datagrid(debt_to_income = loans$debt_to_income, newdata = loans)
+loans <- loans[!is.na(loans$homeownership), ]
+nd1 <- datagrid(homeownership = loans$homeownership, newdata = loans)
   
-plot_predictions(fit_loans, by = "debt_to_income", newdata = nd) + geom_point(data = loans, aes(x = debt_to_income, y = interest_rate), alpha = 0.04) + geom_smooth(data = loans, aes(x = debt_to_income, y = interest_rate), se = FALSE, color = "orange") +
-    labs(x = "Debt to Income)", y = "Predicted interest rate",
-         title = "Predicted interest rate for different values of debt to income") +
+plot_predictions(fit_loans, by = "homeownership", newdata = nd) + geom_point(data = loans, aes(x = homeownership, y = interest_rate), alpha = 0.04) + geom_smooth(data = loans, aes(x = debt_to_income, y = interest_rate), se = FALSE, color = "orange") +
+    labs(x = "homeownership", y = "Predicted interest rate",
+         title = "Predicted interest rate for different values of homeownership") +
     theme_bw()
 
 ```
@@ -66,13 +67,19 @@ plot_predictions(fit_loans, by = "debt_to_income", newdata = nd) + geom_point(da
 this one uses condition but is similar to the other two plots
 ```{r}
 loans1 <- loans |> drop_na()
-plot_predictions(fit_loans, condition = "debt_to_income", newdata = loans1)
+plot_predictions(fit_loans, condition = "homeownership", newdata = loans1)
 ```
 
 ```{r}
 loans1 <- loans |> drop_na()
-plot_predictions(fit_loans, by = "debt_to_income", newdata = loans1)
+plot_predictions(fit_loans, by = "homeownership", newdata = loans1)
 ```
+
+```{r}
+loans1 <- loans |> drop_na()
+plot_predictions(fit_loans, by = "total_credit_limit", newdata = loans1)
+```
+
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
 ```
@@ -195,11 +202,11 @@ This data comes from Lending Club (https://www.lendingclub.com/info/statistics.a
 
 ### Exercise 4
 
-XX is the broad topic of this tutorial. Given that topic, which variable in `XX` should we use as our outcome variable? 
+interest rate is the broad topic of this tutorial. Given that topic, which variable in `loans` should we use as our outcome variable? 
 
 ```{r the-question-4}
 question_text(NULL,
-	message = "XX: A sentence about the outcome variable which we will be using.",
+	message = "The outcome variable is the interest_rate of the loan.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -208,9 +215,15 @@ question_text(NULL,
 
 ### 
 
-We will use `XX` as our outcome variable.
+We will use `interest_rate` as our outcome variable.
 
-<!-- XX: Create a simple plot of the outcome variable. Do not use any code chunk labels for this code chunk. The subtitle should highlight some aspect of the data. Plot does not need to be fancy but it should be competent, with axis labels, nice formatting and so on. We don't show students the code. You can add more knowledge below the plot, if you like. -->
+```{r}
+loans |> ggplot(aes(x = interest_rate)) +
+  geom_histogram() + 
+  scale_x_continuous(breaks = seq(0, 30, by = 2), labels = function(x) paste0(x, "%")) +
+  labs(x = "Interest Rate (%)", y = "Count")
+```
+
 
 A data scientist should always look at a plot of the outcome variable.
 
@@ -305,12 +318,12 @@ Any causal connection means exploring the *within row* difference between two po
 
 <!-- XX: Replace stuff like `[XX: the tibble]` with just the name of the tibble, i.e., `trains`. -->
 
-Let's consider a *predictive* model. Which variable in `[XX: the tibble]` do you think might have an important connection to `XX: the outcome variable`? 
+Let's consider a *predictive* model. Which variable in `loans` do you think might have an important connection to `interest_rate`? 
 
 
 ```{r the-question-8}
 question_text(NULL,
-	message = "XX: Describe one of the key covariates whose connection to the outcome variable we might want to explore.",
+	message = "Really any of the covariates would work, but the ones we will be exploring in this tutorial will be homeownership, ...",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
