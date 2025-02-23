@@ -14,16 +14,13 @@ description: 'Tutorial: Loans'
 ```{r setup, include = FALSE}
 library(learnr)
 library(tutorial.helpers)
-library(gt)
 
-# DK: Add questions for loading up openintro and ranger.
+# DK: Add questions for loading up openintro and ranger. Done
 
 library(tidyverse)
 library(openintro)
 library(tidymodels)
 library(ranger)
-library(gtsummary)
-library(equatiomatic)
 library(marginaleffects)
 
 knitr::opts_chunk$set(echo = FALSE)
@@ -36,48 +33,65 @@ options(tutorial.exercise.timelimit = 600,
 
 loans <- read_csv("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/refs/heads/master/csv/openintro/loans_full_schema.csv", show_col_types = FALSE)
 
-fit_loans_model <- rand_forest(mode = "regression", engine = "ranger", mtry = 4, trees = 500, min_n = 4) 
+fit_loans_model <- rand_forest(
+  mode = "regression",
+  engine = "ranger",
+  mtry = 1,
+  trees = 1e4,    
+  min_n = 5      
+)
 
-fit_loans <- fit_loans_model |> fit(interest_rate ~ homeownership + annual_income +  debt_to_income + delinq_2y + total_credit_lines + open_credit_lines + total_credit_limit + total_credit_utilized + total_collection_amount_ever + current_installment_accounts + loan_amount + term + grade + sub_grade + initial_listing_status + balance, data = loans)
-  
+loans_split <- initial_split(loans, prop = 0.50)
+loans_train <- training(loans_split)
+loans_test <- testing(loans_split)
+
+fit_loans <- fit_loans_model %>%
+  fit(interest_rate ~  paid_interest + 
+        paid_principal + inquiries_last_12m + term + total_debit_limit + total_credit_limit, data = loans_train)
+ 
 
 
   
 ```
 
 ```{r}
-pctiles <- quantile(loans$debt_to_income, probs = seq(0, 1, length.out = 101), na.rm = TRUE)
-nd <- datagrid(debt_to_income = pctiles, newdata = loans)
-plot_predictions(fit_loans, by = "debt_to_income", newdata = nd)
-```
-
-these two both plots are the same, just the one with pctiles converts debt_to_income to percentages to create a range of values, while the other one just uses the existing values.
-
-```{r}
-loans <- loans[!is.na(loans$homeownership), ]
-nd1 <- datagrid(homeownership = loans$homeownership, newdata = loans)
-  
-plot_predictions(fit_loans, by = "homeownership", newdata = nd) + geom_point(data = loans, aes(x = homeownership, y = interest_rate), alpha = 0.04) + geom_smooth(data = loans, aes(x = debt_to_income, y = interest_rate), se = FALSE, color = "orange") +
-    labs(x = "homeownership", y = "Predicted interest rate",
-         title = "Predicted interest rate for different values of homeownership") +
-    theme_bw()
-
+ggplot(loans, aes(x = interest_rate, color = term, group = term)) +
+    geom_histogram(aes(y = ..count..), bins = 30, position = "identity", fill = "white", alpha = 0.5) + 
+    geom_density(aes(y = ..count..), color = "red") +  
+    geom_density(data = subset(loans, term == "60"), aes(y = ..count..), color = "blue") +  
+  scale_color_manual(values = c("36" = "red", "60" = "blue")) +
+    labs(title = "Distribution of Interest Rates by Term",
+         x = "Interest Rate",
+         y = "Count") + theme_classic()
 ```
 
 this one uses condition but is similar to the other two plots
 ```{r}
-loans1 <- loans |> drop_na()
-plot_predictions(fit_loans, condition = "homeownership", newdata = loans1)
+
+
+loans$term <- as.factor(loans$term)
+
+
+ggplot(loans, aes(x = interest_rate, color = term, group = term)) +
+    geom_histogram(aes(y = ..count..), bins = 30, fill = "white", position = "identity", alpha = 0.5) +
+    geom_density(aes(y = ..count..)) + 
+  scale_color_manual(values = c("36" = "red", "60" = "blue")) +
+    labs(title = "Distribution of Interest Rates by Term",
+         x = "Interest Rate",
+         y = "Count") +
+    theme_classic()
+
+
 ```
 
 ```{r}
 loans1 <- loans |> drop_na()
-plot_predictions(fit_loans, by = "homeownership", newdata = loans1)
+plot_predictions(fit_loans, by = "term", newdata = loans1)
 ```
 
 ```{r}
 loans1 <- loans |> drop_na()
-plot_predictions(fit_loans, by = "total_credit_limit", newdata = loans1)
+plot_predictions(fit_loans, by = "paid_principal", newdata = loans1)
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -185,9 +199,27 @@ library(openintro)
 
 ### Exercise 3
 
+Load the [**ranger**] package.
+
+```{r the-question-3, exercise = TRUE}
+
+```
+
+```{r the-question-3-hint-1, eval = FALSE}
+library(ranger)
+```
+
+```{r the-question-3-test, include = FALSE}
+library(ranger)
+```
+
+### 
+
+### Exercise 4
+
 After loading **openintro** in your Console, type `?loans_full_schema` in the Console, and paste in the Description below.
 
-```{r the-question-3}
+```{r the-question-4}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -200,11 +232,11 @@ question_text(NULL,
 
 This data comes from Lending Club (https://www.lendingclub.com/info/statistics.action), which provides a very large, open set of data on the people who received loans through their platform.
 
-### Exercise 4
+### Exercise 5
 
 Interest rates are the broad topic of this tutorial. Given that topic, which variable in `loans` should we use as our outcome variable? 
 
-```{r the-question-4}
+```{r the-question-5}
 question_text(NULL,
 	message = "The mosr useful outcome variable is `interest_rate`, which is the interest rate charged for the loan.",
 	answer(NULL, correct = TRUE),
@@ -217,39 +249,40 @@ question_text(NULL,
 
 We will use `interest_rate` as our outcome variable.
 
-<!-- DK: Add title and subtitle. Add caption which gives source. Make x-axis go to zero, highlighting the lack of loans less than 5%. -->
+<!-- DK: Add title and subtitle. Add caption which gives source. Make x-axis go to zero, highlighting the lack of loans less than 5%.done --> 
 
 ```{r}
 loans |> 
-  ggplot(aes(x = interest_rate)) +
-  geom_bar() +
-  labs(x = "Interest Rate", y = "Count")
+  filter(!is.na(interest_rate) & is.finite(interest_rate)) |>  # Removes NA and Inf values
+  ggplot(aes(x = interest_rate)) +  
+  geom_histogram(bins = 80, fill = "lightblue", color = "black") +
+  geom_density(color = "red", size = 1) +
+  scale_x_continuous(
+    limits = c(0, max(loans$interest_rate, na.rm = TRUE)),  # Force x-axis to start at 0
+    breaks = seq(0, max(loans$interest_rate, na.rm = TRUE), by = 2),
+    labels = function(x) paste0(x, "%"),
+    expand = c(0, 0)  # Ensures the axis starts exactly at 0
+  ) +
+  theme_minimal() +
+  labs(x = "Interest Rate", y = "Count", title = "Count of Interest Rates Used for Loans", subtitle = "Note the absence of interest rates below 5%", caption = "Source: Lending Club at https://www.lendingclub.com/info/statistics.action")
+
+
 ```
 
 A data scientist should always look at a plot of the outcome variable.
 
-### Exercise 5
+### Exercise 6
 
 Let's imagine a brand new variable which **does not exists** in the data. This variable should be binary, meaning that it only takes on one of two values. It should also, at least in theory, by manipulable. In other words, if the value of the variable is "X," or whatever, then it generates one potential outcome and if it is "Y," or whatever, it generates another potential outcome.
 
 Describe this imaginary variable and how might we manipulate its value.
 
-<!-- XX: Include these two sentences if this is a causal model: -->
-
 <!-- For now, ignore the actual treatment variable `XX` which we will be using later in the analysis. The point of this exercise is to reinforce our understanding of the [Rubin Causal Model](https://ppbds.github.io/primer/rubin-causal-model.html). -->
 
-
-```{r the-question-5}
-# XX: In your answer, and for the next few questions, always treat this
-# imaginary variable as real by putting backticks around the name. For example,
-# with nhanes data, we might imagine a variable called `vitamin` for which `1`
-# means that the individual ate vitamins growing up and `0` means they did not.
-# Using the words "treatment group" and "control group" as part of your answer
-# is often helpful since it reinforces the fact that we are using the Rubin
-# Causal Model.
-
+<!-- SU: to clarify, do i need to talk about how "theoretically" we can manipulate whether a person has debt or not? -->
+```{r the-question-6}
 question_text(NULL,
-	message = "XX: (This is an example answer.) Imagine a variable called `phone_call` which has a value of `1` if the person received a phone call urging them to vote and `0` if they did not receive such a phone call. We, meaning the organization in charge of making such phone calls, can manipulate this variable by deciding, either randomly or otherwise, whether or not we will call a specific individual.",
+	message = "Imagine a variable called `debt` which has a value of `1` if the person has debt, and `0` have no debt. We, meaning the organization in charge of making such phone calls, can choose which individuals to call, based on whether they have debt or not.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -260,14 +293,14 @@ question_text(NULL,
 
 Any data set can be used to construct a causal model as long as there is at least one covariate that we can, at least in theory, manipulate. It does not matter whether or not anyone did, in fact, manipulate it. 
 
-### Exercise 6
+### Exercise 7
 
-Given our (imaginary) treatment variable `XX`, how many potential outcomes are there for each [XX: unit]? Explain why.
+Given our (imaginary) treatment variable `debt`, how many potential outcomes are there for each person? Explain why.
 
 
-```{r the-question-6}
+```{r the-question-7}
 question_text(NULL,
-	message = "There are two potential outcomes because the treatment variable `XX` takes on two posible values: list-the-values-here, i.e., exposure to Spanish-speakers on a train paltform versus no such exposure.",
+	message = "There are two potential outcomes because the treatment variable `debt` takes on two possible values: no debt, or having debt.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -279,30 +312,13 @@ question_text(NULL,
 The same data set can be used to create, separately, lots and lots of different models, both causal and predictive. We can just use different outcome variables and/or specify different treatment variables. This is a *conceptual* framework we apply to the data. It is never inherent in the data itself.
 
 
-### Exercise 7
+### Exercise 8
 
-In a few sentences, specify the two different values for the imaginary treatment variable `XX`, for a single unit, guess at the potential outcomes which would result, and then determine the causal effect for that unit given those guesses.
+In a few sentences, specify the two different values for the imaginary treatment variable `debt`, for a single unit, guess at the potential outcomes which would result, and then determine the causal effect for that unit given those guesses.
 
-```{r the-question-7}
-# XX: Replace [XX: unit] with a better word below given the actual data set we
-# are using. Replace all the XX terms as appropriate.
-
-# XX: For a given individual, assume that the value of the treatment variables
-# might be 'exposure to Spanish-speakers' or 'no exposure'. If the individual
-# gets 'exposure to Spanish-speakers', then her attitude toward immigration
-# would be 10. If the individual gets 'no exposure', then her attitude would be
-# 8. The causal effect on the outcome of a treatment of exposure to
-# Spanish-speakers versus no exposure is 10 - 8 --- i.e., the difference between
-# two potential outcomes --- which equals 2, which is the causal effect.
-
-# XX: If the outcome is a character variable, like Strongly Approve, then there
-# is no simple metric on which we can pinpoint the causal effect. That is, the
-# causal effect is still defined --- as, in this example, the difference between
-# Strongly Approve and Neutral --- but can not be expressed as a number, at
-# least without further work.
-
+```{r the-question-8}
 question_text(NULL,
-	message = "For a given [XX: unit], assume that the value of the treatment variable might be [XX: treatment] or [XX: control]. If the [XX: unit] gets [XX: treatment], then [XX: the outcome] would be [XX: a number/character]. If the [XX: unit] gets [XX: control], then [XX: the outcome] would be [XX: a different number or character]. The causal effect on the outcome of a treatment of [XX: treatment] versus [XX: control] is [XX: a number] - [XX: a different number] --- i.e., the difference between two potential outcomes --- which equals [XX: the causal effect], which is the causal effect.",
+	message = "For a given person, assume that the value of the treatment variable might be debt] or no debt. If the person gets debt, then interest rate would be higher, like 14%. If the person gets no debt, then the interest rate would be 8%. The causal effect on the outcome of a treatment of debt versus no debt is 14 - 8 --- i.e., the difference between two potential outcomes --- which equals 6(%), which is the causal effect.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -315,16 +331,14 @@ The the definition of a causal effect is the difference between two potential ou
 
 Any causal connection means exploring the *within row* difference between two potential outcomes. We don't need to look at any other rows to have that conversation.
 
-### Exercise 8
-
-<!-- XX: Replace stuff like `[XX: the tibble]` with just the name of the tibble, i.e., `trains`. -->
+### Exercise 9
 
 Let's consider a *predictive* model. Which variable in `loans` do you think might have an important connection to `interest_rate`? 
 
 
-```{r the-question-8}
+```{r the-question-9}
 question_text(NULL,
-	message = "Really any of the covariates would work, but the ones we will be exploring in this tutorial will be homeownership, ...",
+	message = "Really any of the covariates would work, but the ones we will be exploring in this tutorial will be paid_interest, paid_principal, inquiries_last_12m, term, total_debit_limit, and total_credit_limit",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -335,13 +349,13 @@ question_text(NULL,
 
 With a predictive model, there is only one outcome for each individual unit. There are not two potential outcomes because we are not considering any of the covariates to be a treatment variable. We assuming that the values of all covariates are "fixed." 
 
-### Exercise 9
+### Exercise 10
 
-Specify two different groups of [XX: units] which have specific value for [XX: covariate] and which might have different average values for the [XX: outcome].  
+Specify two different groups of loans which have specific value for `term` and which might have different average values for the `interest_rate`.  
 
-```{r the-question-9}
+```{r the-question-10}
 question_text(NULL,
-	message = "XX: Consider two groups, the first with a value for [XX: covariate] of [XX: a value] and the second with value [XX: a different value]. Those two groups might have different average values for the outcome variable.",
+	message = "Consider two groups, the first with a value for term of 30 and the second with value 60. Those two groups might have different average values for the outcome variable.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -352,22 +366,13 @@ question_text(NULL,
 
 In predictive models, do not use words like "cause," "influence," "impact," or anything else which suggests causation. The best phrasing is in terms of "differences" between groups of units with different values for the covariate of interest.
 
-### Exercise 10
+### Exercise 11
 
-Write a [XX: choose causal or predictive] question which connects the outcome variable `XX` to `XXZ`, the covariate of interest. 
+Write a predictive question which connects the outcome variable `interest_rate` to `term`, the covariate of interest. 
 
-```{r the-question-10}
-# XX: If it is causal, you should use key causal language in the question, like
-# "What is the causal effect of the treatment on the outcome?" Example: "What is
-# the causal effect of exposure to Spanish-speakers on attitudes toward
-# immigration?" If the model is predictive, the question should clearly compare
-# two groups of units. "What is the difference in the outcome variable between
-# two groups of units?" Example:  "What is the difference in immigration
-# attitudes between Democrats and Republicans?" In both cases, the word
-# "average" is implicit in the question.
-
+```{r the-question-11}
 question_text(NULL,
-	message = "XX: Give your question.",
+	message = "What is the difference in interest rates between loans with a term of 30 months versus loans with a term of 60 months",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -376,27 +381,17 @@ question_text(NULL,
 
 ### 
 
-We call the answer to this question is your "Quantity of Interest." 
-
-Our Quantity of Interest might appear too specific, too narrow to capture the full complexity of the topic. There are many, many numbers which we are interested in, many numbers that we want to know. But we don't need to list them all here! We just need to choose one of them since our goal is just to have a specific number which helps to guide us in the creation of the Preceptor Table and, then, the model.
+The same can be said for paid_interest, paid_principal, inquiries_last_12m, total_debit_limit, and total_credit_limit, but since they are quantitative data, we will use terms, the qualitative variable to make it easier.
 
 
 ## Wisdom
 ### 
 
-<!-- XX: Pick one. -->
-
-*The only true wisdom is in knowing you know nothing.* - Socrates
-*Patience is the companion of wisdom.* - Saint Augustine
-*Wonder is the beginning of wisdom.* - Socrates
-*Wisdom begins in wonder.* - Plato
-*The doorstep to the temple of wisdom is a knowledge of our own ignorance.* - Benjamin Franklin
-*It is the province of knowledge to speak, and it is the privilege of wisdom to listen.* - Oliver Wendell Holmes Sr.
 *All we can know is that we know nothing. And that’s the height of human wisdom.* - Leo Tolstoy
 
 Our question:
 
-> *XX: Repeat the question with which you ended The Question topic.*
+> *What is the difference in interest rates between loans with a term of 30 months versus loans with a term of 60 months*
 
 ### Exercise 1
 
@@ -448,19 +443,15 @@ question_text(NULL,
 
 ### 
 
-<!-- XX: Pick one, and edit, as appropriate: -->
-
-<!-- XX: This problem is causal so one of the covariates is a treatment. In our problem, the treatment is the type of postcard that the resident receives. There is a potential outcome for each possible value of the treatment. -->
-
-<!-- XX: This problem is predictive so [insert something about comparing the outcomes for two different groups] -->
+This problem is predictive so we will compare the average interest rates for loans with a term of 30 months and ones with a term of 60 months.
 
 ### Exercise 4
 
-Create a Github repo called `XX`. Make sure to click the "Add a README file" check box.
+Create a Github repo called `loans`. Make sure to click the "Add a README file" check box.
 
 Connect the Github repo to an R project on your computer. Give the R project the same name.
 
-Select `File -> New File -> Quarto Document ...`. Provide a title -- `"[XX: Your Title]"` -- and an author (you). Render the document and save it as `XX.qmd`.
+Select `File -> New File -> Quarto Document ...`. Provide a title -- `"Loans"` -- and an author (you). Render the document and save it as `XX.qmd`.
 
 Edit the `.gitignore` by adding `*Rproj`. Save and commit this in the Git tab. Push the commit.
 
@@ -492,7 +483,7 @@ What are the units for this problem?
 
 ```{r wisdom-5}
 question_text(NULL,
-	message = "XX",
+	message = "Loans",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -510,7 +501,7 @@ What is the outcome variable for this problem?
 
 ```{r wisdom-6}
 question_text(NULL,
-	message = "XX",
+	message = "Interest_rate",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -528,7 +519,7 @@ What are some covariates which you think might be useful for this problem, regar
 
 ```{r wisdom-7}
 question_text(NULL,
-	message = "XX. Answer should be some sensible variables which are plausibly connected to the outcome. Some should be in the data but some shouldn't. You might also add that `You need to have variable X` if the question itself mentions that variable.",
+	message = "Paid interest, paid principal, inquiries in last 12m, total debit limit, total_credit_limit, past debt, credit score, etc. ",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -536,6 +527,8 @@ question_text(NULL,
 ```
 
 ### 
+
+Many answers can be said here, as long as they include the ones we include in the machine learning process.
 
 The term "covariates" is used in at least three ways in data science. First, it is all the variables which might be useful, regardless of whether or not we have the data. Second, it is all the variables for which we have data. Third, it is the set of variables in the data which we end up using in the model.
 
@@ -547,7 +540,7 @@ What are the treatments, if any, for this problem?
 
 ```{r wisdom-8}
 question_text(NULL,
-	message = "XX",
+	message = "N/a",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -565,7 +558,7 @@ What moment in time does the Preceptor Table refer to?
 
 ```{r wisdom-9}
 question_text(NULL,
-	message = "XX",
+	message = "WE care about the present since we are looking to take out a loan with the lowest interest rate in current time.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -575,17 +568,22 @@ question_text(NULL,
 ### 
 
 ```{r}
-## XX: Make a nice looking plot which shows the outcome variable on the y-axis
-## and the most important/interesting covariate/treatment on the x-axis. This
-## doesn't really go here, but we want to show the plot after discussing
-## covariates and treatments above. We don't show the code. Plot does not need
-## to be fancy, but it should be competent, with a title, a subtitle which
-## highlights the main takeaway from the plot, axis labels and so on.
+loans$term <- as.factor(loans$term)
+
+
+ggplot(loans, aes(x = interest_rate, color = term, group = term)) +
+    geom_histogram(aes(y = ..count..), bins = 30, fill = "white", position = "identity", alpha = 0.5) +
+    geom_density(aes(y = ..count..)) + 
+  scale_color_manual(values = c("36" = "red", "60" = "blue")) +
+    labs(title = "Distribution of Interest Rates by Term",
+         x = "Interest Rate",
+         y = "Count") +
+    theme_classic()
 ```
 
 ### Exercise 10
 
-Define a causal effect. [XX: Include this if the model is predictive: (Note that the model in this tutorial is predictive, not causal. We just want to make sure you understand what a causal model is.)]
+Define a causal effect. Note that this is still a predictive model
 
 ```{r wisdom-10}
 question_text(NULL,
@@ -623,7 +621,7 @@ How does the motto "No causal inference without manipulation." apply in this pro
 
 ```{r wisdom-12}
 question_text(NULL,
-	message = "XX",
+	message = "This is a predictive model, so it does not apply in this problem.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -632,9 +630,6 @@ question_text(NULL,
 
 ### 
 
-<!-- XX: With a tutorial which uses a predictive model, it is fair for your answer to this question to be. "The motto does not apply because this is a predictive, not causal, model." -->
-
-<!-- XX: For a causal model, can you really manipulate the treatments? In reality or in theory? How? What details would need to change to make this more or less plausible? -->
 
 ### Exercise 13
 
@@ -650,6 +645,8 @@ question_text(NULL,
 ```
 
 ### 
+
+<!-- SU: not sure what the preceptor table should look like for this problem -->
 
 The Preceptor Table for this problem looks something like this:
 
@@ -711,7 +708,8 @@ Like all aspects of a data science problem, the Preceptor Table evolves as we wo
 
 
 
-### Exercise 14
+### Exercise 14 
+<!-- SU: has loans been added to primer.data? -->
 
 <!-- XX: Switch primer.data for whichever package you got your data from. -->
 
@@ -1105,11 +1103,9 @@ $$Y \sim \text{Mutinomial}(\rho_1, \rho_2, \rho_3, \ldots)$$
 where $\rho_1 + \rho_2 + \rho_3 + \ldots = 1$.
 
 
-
-
 ### Exercise 3
 
-Load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary/) package.
+Load the [**marginaleffects**](https://marginaleffects.com/) package.
 
 ```{r courage-3, exercise = TRUE}
 
@@ -1120,70 +1116,6 @@ library(...)
 ```
 
 ```{r courage-3-test, include = FALSE}
-library(gtsummary)
-```
-
-### 
-
-<!-- XX: Choose the appropriate structure. Delete the others. Still need to add the math for multinomial and cumulative. These are all based on how extract_eq() represents things. -->
-
-The link function, the basic mathematical structure of the model, is (mostly) determined by the type of outcome variable. 
-
-For a continuous outcome variable, we use a linear model for the link function:
-
-$$\mu = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \ldots$$
-
-For a binary outcome variable, we use a log-odds model:
-
-$$
-\log\left[ \frac { \rho }{ 1 - \rho } \right] = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \ldots 
-$$
-The link functions for categorical and cumulative variables are also built out of log-odds link functions.
-
-
-### Exercise 4
-
-Load the [**equatiomatic**](https://datalorax.github.io/equatiomatic/) package.
-
-```{r courage-4, exercise = TRUE}
-
-```
-
-```{r courage-4-hint-1, eval = FALSE}
-library(...)
-```
-
-```{r courage-4-test, include = FALSE}
-library(equatiomatic)
-```
-
-### 
-
-This is the basic mathematical structure of our model:
-
-```{r}
-# extract_eq(fit_XX, 
-#            intercept = "beta", 
-#            wrap = TRUE, 
-#            show_distribution = TRUE)
-```
-
-Of course, in a normal data science project, we would explore a variety of different combinations of independent variables before selecting a final set. Just pretend that we already did that.
-
-
-### Exercise 5
-
-Load the [**marginaleffects**](https://marginaleffects.com/) package.
-
-```{r courage-5, exercise = TRUE}
-
-```
-
-```{r courage-5-hint-1, eval = FALSE}
-library(...)
-```
-
-```{r courage-5-test, include = FALSE}
 library(marginaleffects)
 ```
 
@@ -1193,9 +1125,9 @@ We should be modest in the claims we make. The posteriors we create are never th
 
 
 
-### Exercise 6
+### Exercise 4
 
-Add `library(tidymodels)`, `library(gtsummary)`, `library(equatiomatic)`, and `library(marginaleffects)` to the `setup` code chunk in your QMD. `Command/Ctrl + Shift + K`.
+Add `library(tidymodels)`, and `library(marginaleffects)` to the `setup` code chunk in your QMD. `Command/Ctrl + Shift + K`.
 
 At the Console, run:
 
@@ -1205,7 +1137,7 @@ tutorial.helpers::show_file("XX.qmd", pattern = "tidymodels|gtsummary|equatiomat
 
 CP/CR.
 
-```{r courage-6}
+```{r courage-4}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1227,19 +1159,19 @@ Recall that a categorical variable (whether character or factor) like `sex` is t
 
 <!-- DK: Discuss what one might put here. Like the example from 5 parameter chapter, with three versions of the model, with increasing complexity. -->
 
-### Exercise 7
+### Exercise 5
 
 Because our outcome variable is [XX: binary or continuous or multinomial or cumulative], start to create the model by using `[XX: logistic_reg(engine = "glm") or linear_reg(engine = "lm") or multinom_reg(engine = "glmnet")]`.
 
-```{r courage-7, exercise = TRUE}
+```{r courage-5, exercise = TRUE}
 
 ```
 
-```{r courage-7-hint-1, eval = FALSE}
+```{r courage-5-hint-1, eval = FALSE}
 XX
 ```
 
-```{r courage-7-test, include = FALSE}
+```{r courage-5-test, include = FALSE}
 # XX
 ```
 
@@ -1251,22 +1183,22 @@ The same approach applies to a categorical covariate with $N$ values. Such cases
 
 
 
-### Exercise 8
+### Exercise 6
 
 Continue the pipe to `fit(XX, data = XX)`.
 
-```{r courage-8, exercise = TRUE}
+```{r courage-6, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r courage-8-hint-1, eval = FALSE}
+```{r courage-6-hint-1, eval = FALSE}
 ... |> 
   fit(..., data = ...)
 ```
 
-```{r courage-8-test, include = FALSE}
+```{r courage-6-test, include = FALSE}
 # XX |> 
 #   fit(XX, data = XX)
 ```
@@ -1286,20 +1218,20 @@ We can translate the fitted model into mathematics, including the best estimates
 
 There are three main differences between this representation of the model and our previous one. First, we replace the parameters with our best estimate of their values. Second, the error term is gone. Third, the dependent variable now has a "hat," indicating that it is our "fitted" value, our best guess as to the value of the outcome, given the values of the independent variables for any given unit.
 
-### Exercise 9
+### Exercise 7
 
 Behind the scenes of this tutorial, an object called `fit_XX` has been created which is the result of the code above. Type `fit_XX` and hit "Run Code." This generates the same results as using `print(fit_XX)`.
 
 
-```{r courage-9, exercise = TRUE}
+```{r courage-7, exercise = TRUE}
 
 ```
 
-```{r courage-9-hint-1, eval = FALSE}
+```{r courage-7-hint-1, eval = FALSE}
 fit_XX
 ```
 
-```{r courage-9-test, include = FALSE}
+```{r courage-7-test, include = FALSE}
 # fit_XX
 ```
 
@@ -1307,7 +1239,7 @@ fit_XX
 
 In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
 
-### Exercise 10
+### Exercise 8
 
 Create a new code chunk in your QMD. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_XX`. 
 
@@ -1323,7 +1255,7 @@ tutorial.helpers::show_file("XX.qmd", start = -8)
 
 CP/CR.
 
-```{r courage-10}
+```{r courage-8}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1336,7 +1268,7 @@ question_text(NULL,
 
 Add `*_cache` to `.gitignore` file. Commit and push. Cached objects are often large. They don't belong on Github.
 
-### Exercise 11
+### Exercise 9
 
 Create another code chunk in your QMD. Add the chunk option: `label: math`. In that code chunk, add something like the below. You may find it useful to add the `coef_digits` argument to show fewer significant digits after the decimal.
 
@@ -1358,7 +1290,7 @@ tutorial.helpers::show_file("XX.qmd", pattern = "extract")
 
 CP/CR.
 
-```{r courage-11}
+```{r courage-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1382,19 +1314,19 @@ This is our data generating mechanism.
 <!-- XX: Explain in words what the mathematical function means. That is, say in English what the formula means. DK: Need some examples. -->
 
 
-### Exercise 12
+### Exercise 10
 
 Run `tidy()` on `fit_XX` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
 
-```{r courage-12, exercise = TRUE}
+```{r courage-10, exercise = TRUE}
 
 ```
 
-```{r courage-12-hint-1, eval = FALSE}
+```{r courage-10-hint-1, eval = FALSE}
 tidy(..., conf.int = ...)
 ```
 
-```{r courage-12-test, include = FALSE}
+```{r courage-10-test, include = FALSE}
 # tidy(fit_XX, conf.int = TRUE)
 ```
 
@@ -1404,22 +1336,22 @@ tidy(..., conf.int = ...)
 
 <!-- XX: Add at least three questions which involve the interpretation of numbers in the table. See the Cardinal Virtues vignette for detailed discussion. You should usually include a call to tidy() at the top of each question, hereby making it easier for students to see what you are talking about. You don't have to do this, if you don't want to. But be aware that scrolling up and can be annoying for students. -->
 
-### Exercise 13
+### Exercise 11
 
 For interactive use, `tidy()` is very handy. But, for presenting our results, we should use a presentation package like **gtsummary**, which includes handy functions like `tbl_regression()`.
 
 Run `tbl_regression(fit_XX)`.
 
 
-```{r courage-13, exercise = TRUE}
+```{r courage-11, exercise = TRUE}
 
 ```
 
-```{r courage-13-hint-1, eval = FALSE}
+```{r courage-11-hint-1, eval = FALSE}
 tbl_regression(..)
 ```
 
-```{r courage-13-test, include = FALSE}
+```{r courage-11-test, include = FALSE}
 # tbl_regression(fit_XX)
 ```
 
@@ -1427,7 +1359,7 @@ tbl_regression(..)
 
 See this [tutorial](https://www.danieldsjoberg.com/gtsummary/articles/tbl_regression.html) for a variety of options for customizing your table.
 
-### Exercise 14
+### Exercise 12
 
 Create a new code chunk in your QMD. Add a code chunk option: `label: table`. Add this code to the code chunk.
 
@@ -1446,7 +1378,7 @@ tutorial.helpers::show_file("XX.qmd", pattern = "tbl_regression")
 CP/CR.
 
 
-```{r courage-14}
+```{r courage-12}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1458,7 +1390,7 @@ question_text(NULL,
 <!-- XX: Give some advice about making the table look more professional. Maybe show some code and the resulting nice looking table. At the very least, include a title and a caption with the data source. -->
 
 
-### Exercise 15
+### Exercise 13
 
 Add a sentence to your project summary. 
 
@@ -1468,7 +1400,7 @@ Recall the beginning of our version of the summary:
 
 > XX: Include what we suggested at the end of Justice
 
-```{r courage-15}
+```{r courage-13}
 question_text(NULL,
 	message = "XX",
 	answer(NULL, correct = TRUE),
