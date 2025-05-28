@@ -1,6 +1,6 @@
 ---
 title: Five Parameters
-author: David Kane, Sanaka Dash and Satvika Upperla
+author: David Kane and Satvika Upperla
 tutorial:
   id: 091-five-parameters
 output:
@@ -25,8 +25,7 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
-# Revisit some of this code. Do we really need all the coefficient stuff? 
-# Is fit_all a good name?
+
 
 x <- governors |> 
   filter(year > 1945) |> 
@@ -35,8 +34,6 @@ x <- governors |>
 # fit_years <- lm(lived_after ~ election_age*sex, data = x)
 # write_rds(fit_years, "data/fit_years.rds")
 fit_years <- read_rds("data/fit_years.rds")
-
-
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -46,8 +43,6 @@ fit_years <- read_rds("data/fit_years.rds")
 ```
 
 <!-- Change the title to include the word predictive? -->
-
-<!-- Once you decide the appropriate replacement for `fit_years` and `candidates.qmd`, you can do a global replace to fix them all. -->
 
 <!-- We are still wrestling with what to include in the topic introductions, i.e., the space between the topic header and the first exercise. -->
 
@@ -580,7 +575,7 @@ execute:
 In the Console, run:
 
 ```         
-show_file("analysis.qmd", start = -5)
+show_file("candidates.qmd", start = -5)
 ```
 
 CP/CR.
@@ -671,10 +666,7 @@ Continue the pipe with `select(last_name, year, state, sex, lived_after, electio
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r wisdom-17-hint-1, eval = FALSE}
-...
-  select(last_name, ..., state, sex, ..., election_age, region)
-```
+<!-- Hints with select() in them give me trouble, for unclear reasons . . . -->
 
 ```{r wisdom-17-test, include = FALSE}
 governors |> 
@@ -1357,7 +1349,7 @@ Pass the $\LaTeX$ from the basic model you created above and the result of the f
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("immigration.qmd", start = -3)
+tutorial.helpers::show_file("candidates.qmd", start = -3)
 ```
 
 CP/CR.
@@ -1424,7 +1416,7 @@ Make sure it works. You might need to add some new libraries, e.g., **knitr**, *
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("XX.qmd", end = -10)
+tutorial.helpers::show_file("candidates.qmd", end = -10)
 ```
 
 CP/CR.
@@ -1510,15 +1502,21 @@ DK: Maybe split the confidence interval comment below into two?
 
 ### Exercise 2
 
-<!-- XX: You can cut these three questions if you are using a model like random forest for which there are no interpretable parameters. -->
-
 Before using the DGM, we should make sure that we can interpret it.
 
 Recall the values for the parameters in our data generating mechanism:
 
+```{r}
+fit_years |> 
+	tidy(conf.int = TRUE) |> 
+	select(term, estimate, conf.low, conf.high)
+```
+
+Interpret 19.3, the value of the `(Intercept)`.
+
 ```{r temperance-2}
 question_text(NULL,
-	message = "Place correct answer here.",
+	message = "For female candidates, the terms which include `sexMale` and  `election_age:sexMale` are zeroed out. 19.3 would be the expected years lived after the election for candidates who are age 0 at the election, which is, of course, nonsense.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1526,13 +1524,22 @@ question_text(NULL,
 ```
 
 ###
+
+Dummy variables must always be interpreted in the context of the base value for that variable, which is generally included in the intercept. For example, the base value here is "Female." (The base value is the first alphabetically by default for character variables. However, if it is a factor variable, you can change that by setting the order of the levels by hand.)
 
 ### Exercise 3
 
+```{r}
+fit_years |> 
+	tidy(conf.int = TRUE) |> 
+	select(term, estimate, conf.low, conf.high)
+```
+
+Interpret -0.06, the value coefficient for `election_age`.
 
 ```{r temperance-3}
 question_text(NULL,
-	message = "Place correct answer here.",
+	message = "The older you are at the time of the election (i.e., the larger the value for `election_age`), the fewer years you can expect to live after the election. The negative value makes sense. The magnitude of 0.06 suggests that, if we compare two groups of female candidates --- so that `election_age:sexMale` is zeroed out --- who differ in age by twenty years, then the older group might live about one year less since -0.06 * 20 = -1.2. That seems much too small!",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1540,13 +1547,22 @@ question_text(NULL,
 ```
 
 ###
+
+Whenever we consider non-treatment variables, we must never use terms like "cause," "impact" and so on. We can't make any statement which implies the existence of more than one potential outcome based on changes in non-treatment variables. We can't make any claims about within row effects. Instead, we can only compare across rows. Always use the phrase "when comparing X and Y" or something very similar.
 
 ### Exercise 4
 
+```{r}
+fit_years |> 
+	tidy(conf.int = TRUE) |> 
+	select(term, estimate, conf.low, conf.high)
+```
+
+Interpret -0.8, the estimate for the coefficient of `election_age:sexMale`.
 
 ```{r temperance-4}
 question_text(NULL,
-	message = "Place correct answer here.",
+	message = "Relative to female candidates, male candidates who are older die much earlier than younger candidates. The -0.8 estimate suggests that male candidates who are twenty years older, live 16 years less after the election, compared to their younger peers. This seems much more plausible than the 1 year estimate for female candidates.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1555,23 +1571,46 @@ question_text(NULL,
 
 ###
 
-<!-- XX: You can add some more interpretation questions if you like, but three is probably enough. -->
+Numeric variables are harder to use in comparisons than binary variables because there are no longer just two well-defined groups to compare with each other. We must create those two groups ourselves. Fortunately, as long as there are no interaction terms, we can just pick two groups with any values for the variable. The most common two groups differ by one unit of the variable. But it is quite common to use groups which differ by more/less if doing so seems sensible and/or if it makes the math easier.
 
 ### Exercise 5
+
+```{r}
+fit_years |> 
+	tidy(conf.int = TRUE) |> 
+	select(term, estimate, conf.low, conf.high)
+```
+
+Interpret [-1.5, -0.07], the confidence interval for the coefficient of `election_age:sexMale`.
+
+```{r temperance-5}
+question_text(NULL,
+	message = "Our best estimate is that male candidates who are 20 years younger will live 16 years longer than their older male peers. But that is just an estimate. We are uncertain. It would not be surprising if the true value were as low as 1.4 years or as high as 30 years.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+In looking at a confidence interval, we first check whether or not it excludes zero.  If not, then we can't be sure if the relationship is positive or negative. For female candidates, the confidence interval includes zero, so we are not sure (absurdly!) if younger candidates live longer. This is probably a sign that we don't have enough observations for females. 
+
+### Exercise 6
 
 In the end, we don't really care about parameters, much less how to interpret them. Parameters are *imaginary*, like unicorns. We care about answers to our questions. Parameters are tools for answering questions. They aren't interesting in-and-of themselves. *In the modern world, all parameters are nuisance parameters.* 
 
 Load the [**marginaleffects**](https://marginaleffects.com/) package.
 
-```{r temperance-5, exercise = TRUE}
+```{r temperance-6, exercise = TRUE}
 
 ```
 
-```{r temperance-5-hint-1, eval = FALSE}
+```{r temperance-6-hint-1, eval = FALSE}
 library(...)
 ```
 
-```{r temperance-5-test, include = FALSE}
+```{r temperance-6-test, include = FALSE}
 library(marginaleffects)
 ```
 
@@ -1579,13 +1618,13 @@ library(marginaleffects)
 
 We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
 
-### Exercise 6
+### Exercise 7
 
 What is the specific question we are trying to answer? 
 
-```{r temperance-6}
+```{r temperance-7}
 question_text(NULL,
-	message = "XX: This might be the same question as we started with in Wisdom. But it is also OK if it is different. I think . . .",
+	message = "How long do political candidates live after the election?",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1596,24 +1635,19 @@ question_text(NULL,
 
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic more broadly.
 
-<!-- XX: Note that, in some circumstances, functions from the marginaleffects package will not work in exercise code chunks. That is annoying and has something to do with weird interactions involving the shiny prerendered settings on tutorials. So, we always have students perform the calls to functions like plot_predictions() in the Console, and then have them CP/CR. (Note that there is rarely an response, so they are really just copying/pasting them command itself.) Note that we can't run these function in the tutorial itself for the same reason. Make sure that your knowledge drops explain clearly what the graphic which the students have generated means. -->
 
-<!-- XX: There should be a bunch of questions here, covering examples of plot_predictions(), plot_comparisons(), averages and maybe even slopes. We want to run multiple versions of plot_predictions(), dropping knowledge each time which connects what we see to our coefficients, especially those which we asked interpretation questions about above. See the Cardinal Virtues vignette for some examples. The last such question creates a final plot which is then included in the QMD. 
-
-Below, we just show one plot_predictions() question, but your tutorial should really have several. -->
-
-### Exercise 7
+### Exercise 8
 
 At the Console, run this code:
 
 ```
 plot_predictions(fit_years, 
-                 condition = c("XX", "XX")))
+				 condition = c("sex"))
 ```             
 
 CP/CR, although note that there will be no response.
 
-```{r temperance-7}
+```{r temperance-8}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1624,15 +1658,43 @@ question_text(NULL,
 
 ### 
 
-<!-- XX: The knowledge drop MUST discuss the estimate (and its uncertainty) that you go on to include in your summary paragraph. You MUST discuss how you are reading, roughly, the values for the estimate and the confidence interval by looking at this plot. -->
+<!-- DK: Is this interpretation correct? For example, is this graphic conditional on using the mean age for the whole data set or the mean age for each sex? I think it is the former . . . -->
 
-<!-- XX: There are a lot of interesting options in plot_predictions. Check them out. You may want to use some of them in your plot. I think `points` is quite interesting. Feel free to add a couple more questions which add some options.  -->
+This graphic shows our estimates for the number of years lived after the election for male and female candidates separately. There is a lot going on here!
 
-<!-- XX: You can use the draw = FALSE option to return a tibble which can then be piped directly into ggplot.  -->
+First, there is much more uncertainty for female candidates than for male candidates, probably because there are so few females in the data.
 
-<!-- XX: If such a plot would be complex and/or the tutorial is long enough, you can just include all the code for a plot in the exercise code chunk and tell students to just press "Run Code." This will, at least, allow them to see what a good plot looks like. -->
+Second, male candidates live longer than female candidates. That is surprising since, in general, women live longer than men.
 
-### Exercise 8
+### Exercise 9
+
+At the Console, run:
+
+```
+plot_predictions(fit_years, 
+				 condition = c("election_age"))
+```             
+
+CP/CR, although note that there will be no response.
+
+```{r temperance-9}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+
+
+This graphic shows our estimates for the number of years lived after the election for candidates of different ages. 
+
+* 
+
+### Exercise 10
 
 Create a new code chunk in your QMD. Copy/paste the code which creates your graphic. 
 
@@ -1646,7 +1708,7 @@ tutorial.helpers::show_file("candidates.qmd", start = -8)
 
 CP/CR.
 
-```{r temperance-8}
+```{r temperance-10}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1660,11 +1722,11 @@ question_text(NULL,
 
 <!-- XX: Discuss more about what the model results are telling us. -->
 
-### Exercise 9
+### Exercise 11
 
 Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
-```{r temperance-9}
+```{r temperance-11}
 question_text(NULL,
 	message = "XX",
 	answer(NULL, correct = TRUE),
@@ -1677,11 +1739,11 @@ question_text(NULL,
 
 Add a final sentence to your summary paragraph in your QMD as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
-### Exercise 10
+### Exercise 12
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-10}
+```{r temperance-12}
 question_text(NULL,
 	message = "XX: This is another example in which the quality of your answer is important. You might or might not suggest an alternate estimate. I always adjust the estimate toward my own subjective sense of a long-run average and/or typical value and/or zero. But that is not necessary. However, you should always increase the confidence interval since the assumptions of your model are always false.",
 	answer(NULL, correct = TRUE),
@@ -1692,7 +1754,7 @@ question_text(NULL,
 
 ### 
 
-### Exercise 11
+### Exercise 13
 
 Rearrange the material in your QMD so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
@@ -1704,7 +1766,7 @@ tutorial.helpers::show_file("candidates.qmd")
 
 CP/CR.
 
-```{r temperance-11}
+```{r temperance-13}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1717,11 +1779,11 @@ question_text(NULL,
 
 This is the version of your QMD file which your teacher is most likely to take a close look at.
 
-### Exercise 12
+### Exercise 14
 
 Publish your rendered QMD to GitHub Pages. Copy/paste the resulting url below.
 
-```{r temperance-12}
+```{r temperance-14}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1734,11 +1796,11 @@ question_text(NULL,
 
 Commit/push everything.
 
-### Exercise 13
+### Exercise 15
 
 Copy/paste the url to your Github repo.
 
-```{r temperance-13}
+```{r temperance-15}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
