@@ -31,7 +31,8 @@ x <- governors |>
   filter(year > 1945) |> 
   select(last_name, year, state, sex, lived_after, election_age, region)
 
-# fit_years <- lm(lived_after ~ election_age*sex, data = x)
+# fit_years <- linear_reg(engine = "lm") |> 
+#   fit(lived_after ~ election_age*sex, data = x)
 # write_rds(fit_years, "data/fit_years.rds")
 fit_years <- read_rds("data/fit_years.rds")
 ```
@@ -962,7 +963,7 @@ Load the [**tidymodels**](https://www.tidymodels.org/) package.
 ```
 
 ```{r courage-2-hint-1, eval = FALSE}
-library(...)
+library(tidymodels)
 ```
 
 ```{r courage-2-test, include = FALSE}
@@ -987,7 +988,7 @@ Load the [**broom**](https://broom.tidymodels.org/) package.
 ```
 
 ```{r courage-3-hint-1, eval = FALSE}
-library(...)
+library(broom)
 ```
 
 ```{r courage-3-test, include = FALSE}
@@ -1478,28 +1479,6 @@ question_text(NULL,
 
 Courage gave us the data generating mechanism. Temperance guides us in the use of the DGM — or the “model” — we have created to answer the question(s) with which we began. We create posteriors for the quantities of interest. 
 
-<!-- XX: Add at least three questions which involve the interpretation of numbers in the table. We have created three empty questions below these commentary blocks for you. The first question --- and maybe all the questions? --- shows a table of the parameter values at the start. For models with lots of parameters, you need to restrict what the table displays. See the Cardinal Virtues vignette for detailed discussion. You must provide an excellent answer to each of the questions. -->
-
-<!-- Your main job is to provide a clear question and an excellent answer. So, you are using "yes-answer" type exercises. But what about the knowledge drops? Consider some prototype knowledge drops in the list below. Pick and choose among them, editing them as you see fit. In many cases, you can just copy/paste them as they are. But you must choose ones which apply to that particular question and/or the answer you provide.  These are mostly from the Cardinal Virtues vignette. Here they are:
-
-* Whenever we consider non-treatment variables, we must never use terms like "cause," "impact" and so on. We can't make any statement which implies the existence of more than one potential outcome based on changes in non-treatment variables. We can't make any claims about within row effects. Instead, we can only compare across rows. Always use the phrase "when comparing X and Y" or something very similar.
-
-* Dummy variables must always be interpreted in the context of the base value for that variable, which is generally included in the intercept. For example, the base value here is "asian/pacific islander." (The base value is the first alphabetically by default for character variables. However, if it is a factor variable, you can change that by setting the order of the levels by hand.)
-
-* The interpretation of a treatment variable is very different than the interpretation of a standard covariate. The key point is that there is no such thing as a causal (versus preditive) data set nor a causal (versus predictive) R code formula. You can use the same data set (and the same R code!) for both causal and predictive models. The difference lies in the assumptions you make.
-
-* Most of the time parameters in a model have no direct relationship with any population value in which we might be interested. This is especially true in complex and/or non-linear models. That is, in those cases, a coefficient like $\beta_1$ does not "mean" anything. But, in simple, small, linear models, it sometimes happens that a parameter does correspond to something real.
-
-DK: Maybe split the confidence interval comment below into two?
-
-* We look for two things in the confidence interval. First, does it exclude zero? If not, then we can't be sure if the relationship is positive or negative. Second, does it overlap with the confidence intervals for other dummy columns derived from this variable? If so, then we can be sure that the ordering as to which comparisons are bigger. 
-
-* Numeric variables are harder to use in comparisons than binary variables because there are no longer just two well-defined groups to compare with each other. We must create those two groups ourselves. Fortunately, as long as there are no interaction terms, we can just pick two groups with any values for the variable. The most common two groups differ by one unit of the variable. But it is quite common to use groups which differ by more/less if doing so seems sensible and/or if it makes the math easier.
-
-* We recommend the verb "adjust" in place of "control" when discussing the effect of including other variables in the model. Example: "The causal effect of exposure to Spanish-speakers is 1.5, adjusting for other variables like age and party." The word "adjusting" is better than the word "controlling" because it demonstrates some humility.
-
--->
-
 ### Exercise 2
 
 Before using the DGM, we should make sure that we can interpret it.
@@ -1512,7 +1491,7 @@ fit_years |>
 	select(term, estimate, conf.low, conf.high)
 ```
 
-Interpret 19.3, the value of the `(Intercept)`.
+Interpret 19.3, the estimate for the `(Intercept)`.
 
 ```{r temperance-2}
 question_text(NULL,
@@ -1535,7 +1514,7 @@ fit_years |>
 	select(term, estimate, conf.low, conf.high)
 ```
 
-Interpret -0.06, the value coefficient for `election_age`.
+Interpret -0.06, the estimate for the coefficient for `election_age`.
 
 ```{r temperance-3}
 question_text(NULL,
@@ -1581,7 +1560,7 @@ fit_years |>
 	select(term, estimate, conf.low, conf.high)
 ```
 
-Interpret [-1.5, -0.07], the confidence interval for the coefficient of `election_age:sexMale`.
+Interpret [-1.5, -0.07], the confidence interval for the estimate of the coefficient of `election_age:sexMale`.
 
 ```{r temperance-5}
 question_text(NULL,
@@ -1606,9 +1585,12 @@ Load the [**marginaleffects**](https://marginaleffects.com/) package.
 
 ```
 
+<!-- DK: This is throwing an error, as if it is trying to run this code (which then fails) even though it is a hint. This happened above in the select() call as well. Is there some code above which is causing hint code to be run when it shouldn't be?
+
 ```{r temperance-6-hint-1, eval = FALSE}
 library(...)
-```
+``` 
+-->
 
 ```{r temperance-6-test, include = FALSE}
 library(marginaleffects)
@@ -1642,7 +1624,7 @@ At the Console, run this code:
 
 ```
 plot_predictions(fit_years, 
-				 condition = c("sex"))
+				 by = "sex")
 ```             
 
 CP/CR, although note that there will be no response.
@@ -1658,21 +1640,26 @@ question_text(NULL,
 
 ### 
 
-<!-- DK: Is this interpretation correct? For example, is this graphic conditional on using the mean age for the whole data set or the mean age for each sex? I think it is the former . . . -->
+<!-- DK: What value of election_age do these predictions assume? -->
+
+```{r}
+plot_predictions(fit_years, 
+				 by = "sex")
+```
 
 This graphic shows our estimates for the number of years lived after the election for male and female candidates separately. 
 
 * There is much more uncertainty for female candidates than for male candidates, probably because there are so few females in the data.
 
-* Male candidates live longer than female candidates. That is surprising since, in general, women live longer than men.
+* Male candidates live longer than female candidates. That is surprising since, in general, women live longer than men. One explanation might be that, in our data, female candidates are older.
 
 ### Exercise 9
 
 At the Console, run:
 
 ```
-plot_predictions(fit_years, 
-				 condition = c("election_age"))
+plot_predictions(fit_years,
+				by = c("election_age"))
 ```             
 
 CP/CR, although note that there will be no response.
@@ -1688,13 +1675,49 @@ question_text(NULL,
 
 ### 
 
-
+```{r}
+plot_predictions(fit_years, 
+				 by = c("election_age"))
+```
 
 This graphic shows our estimates for the number of years lived after the election for candidates of different ages. 
 
-* 
+* The older you are at the election, the fewer years you can expect to live after the election.
+
+* The plot is a bit of a mess since it (poorly) combines the strong negative correlation we see for male candidates and the flat relationship for (the many fewer) female candidates.
+
+I suspect that this awkward display is a bug in the **marginaleffects** package.
 
 ### Exercise 10
+
+At the Console, run:
+
+```
+plot_predictions(fit_years, 
+				 by = c("election_age", "sex"))
+```             
+
+CP/CR, although note that there will be no response.
+
+```{r temperance-10}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+```{r}
+plot_predictions(fit_years, 
+				 by = c("election_age", "sex"))
+```
+
+
+
+### Exercise 11
 
 Create a new code chunk in your QMD. Copy/paste the code which creates your graphic. 
 
@@ -1708,7 +1731,7 @@ tutorial.helpers::show_file("candidates.qmd", start = -8)
 
 CP/CR.
 
-```{r temperance-10}
+```{r temperance-11}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1722,11 +1745,11 @@ question_text(NULL,
 
 <!-- XX: Discuss more about what the model results are telling us. -->
 
-### Exercise 11
+### Exercise 12
 
 Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
-```{r temperance-11}
+```{r temperance-12}
 question_text(NULL,
 	message = "XX",
 	answer(NULL, correct = TRUE),
@@ -1739,11 +1762,11 @@ question_text(NULL,
 
 Add a final sentence to your summary paragraph in your QMD as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
-### Exercise 12
+### Exercise 13
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-12}
+```{r temperance-13}
 question_text(NULL,
 	message = "XX: This is another example in which the quality of your answer is important. You might or might not suggest an alternate estimate. I always adjust the estimate toward my own subjective sense of a long-run average and/or typical value and/or zero. But that is not necessary. However, you should always increase the confidence interval since the assumptions of your model are always false.",
 	answer(NULL, correct = TRUE),
@@ -1754,7 +1777,7 @@ question_text(NULL,
 
 ### 
 
-### Exercise 13
+### Exercise 14
 
 Rearrange the material in your QMD so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
 
@@ -1765,23 +1788,6 @@ tutorial.helpers::show_file("candidates.qmd")
 ```
 
 CP/CR.
-
-```{r temperance-13}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### 
-
-This is the version of your QMD file which your teacher is most likely to take a close look at.
-
-### Exercise 14
-
-Publish your rendered QMD to GitHub Pages. Copy/paste the resulting url below.
 
 ```{r temperance-14}
 question_text(NULL,
@@ -1794,13 +1800,30 @@ question_text(NULL,
 
 ### 
 
-Commit/push everything.
+This is the version of your QMD file which your teacher is most likely to take a close look at.
 
 ### Exercise 15
 
-Copy/paste the url to your Github repo.
+Publish your rendered QMD to GitHub Pages. Copy/paste the resulting url below.
 
 ```{r temperance-15}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+Commit/push everything.
+
+### Exercise 16
+
+Copy/paste the url to your Github repo.
+
+```{r temperance-16}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
