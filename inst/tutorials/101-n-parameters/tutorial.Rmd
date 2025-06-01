@@ -16,16 +16,18 @@ library(learnr)
 library(tutorial.helpers)
 library(gt)
 
-library(tidyverse)
 library(primer.data)
+library(tidyverse)
 library(tidymodels)
-library(equatiomatic)
-library(broom)
+library(broom)        # Or broom.mixed. Not sure if we ever need broom.helpers?
 library(marginaleffects)
+
+library(easystats)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
+
 
 x <- shaming |> 
   mutate(civ_engage = primary_00 + primary_02 + primary_04 + 
@@ -40,12 +42,15 @@ x <- shaming |>
                     "Sometimes Vote", 
                     "Always Vote"))) 
 
+# DK: Save these objects out.					
+
 fit_vote <- logistic_reg(engine = "glm") |> 
   fit(as.factor(primary_06) ~ 
         age + sex + treatment*voter_class, 
       data = x)
 
-tidy_vote <- tidy(fit_vote, conf_int = TRUE)
+coefs <- tidy(fit_vote, conf.int = TRUE) |>
+	select(term, estimate, conf.low, conf.high)	  
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -54,7 +59,21 @@ tidy_vote <- tidy(fit_vote, conf_int = TRUE)
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
 
-<!-- DK: Consider using draw = FALSE in plot_comparisons and then creating a better looking plot. Should have the same scales in each facet. Should have better facet titles. Should organize the facets in some sensible way. Or maybe the facets should be voter_class so that we can see that Neightbors is (almost) always better. -->
+<!-- OPEN ISSUES: -->
+
+<!-- Deal with decimals when showing tidy() table of coefficients. -->
+
+<!-- The question just gets you started. It leads to the creation of the model.  -->
+
+<!-- Need some discussion in Question about when/how we start to move from the data to the Preceptor Table. That is, our current examples of coming up with a causal question and with a predictive question center around the actual data. That is fine, but our question will be about the Preceptor Table. Need to make that transition clearer. OR SHOULD THE ENTIRE THE QUESTION TOPIC have nothing to do with the actual data . . . -->
+
+<!-- Give better guidance as to the question. I am thinking, more and more, that the specific question is one that can apply to both the data and the Preceptor Table. That is, there are no details about time or location which prevent it from applying in both cases. -->
+
+<!-- Both a causal effect and a prediction are much fuzzier notions than you might think because their are so many, depending on AGGREGATION. That is, you might ask for the average causal effect, or the average causal effect for men and for women, or for the difference in average causal effect between men and women, or . . . The key point is that all these questions are trivial to answer if you have the Preceptor Table *and* they might require very different approaches given that we don't. This is where the power/flexibility of marginaleffects can come in handy. -->
+
+<!-- Think about the connections among all the material in the initial chunk of each section. How does the "Imagine that you are . . . " of the Introduction connect to the material discussion in the Question into, and then Wisdom and so on. There is nothing wrong with the silly quotes. (Or is there? Are we wasting student time?) But we should do more with that space. Maybe the current version of the summary paragraph goes there? -->
+
+<!-- I worry that we dive too quickly into problems with stability and representativeness, at least when coming up with counter-examples. But how else to handle this? -->
 
 ## Introduction
 ### 
@@ -63,26 +82,25 @@ This tutorial supports [*Preceptor’s Primer for Bayesian Data Science: Using t
 
 The world confronts us. Make decisions we must.
 
-Imagine that you are running for Governor of Texas in the next election. You have a campaign budget. Your goal is to win the election. Winning the election involves convincing people to vote for you *and* getting your supporters to vote. Should you send postcards to registered voters likely to vote for you? What should those postcards say? 
-
+Imagine that you are running for Governor of Texas in the next election. You have a campaign budget. Your goal is to win the election. Winning the election involves convincing people to vote for you *and* getting your supporters to vote. Should you send postcards to registered voters? What should those postcards say? Does the effect of the postcards vary for different types of voters? 
 
 ## The Question
 ### 
 
-*A prudent question is one half of wisdom.* - Francis Bacon
+*The important thing is not to stop questioning.* - Albert Einstein
 
-> *What is the causal effect on voting of receiving a postcard which encourages one to vote?*
+Running for any political office, much less governor of a large state, is difficult. You have resources --- money, volunteers, surrogates, your own time. You have goals --- increase your name recognition, raise money, attack your opponent, persuade undecided voters, get your supporters to vote. There are thousands of decisions to make. One option is to send postcards to potential voters. What happens if you do?
 
 ### Exercise 1
 
-Load **tidyverse**.
+Load [**tidyverse**](https://www.tidyverse.org/) package.
 
 ```{r the-question-1, exercise = TRUE}
 
 ```
 
 ```{r the-question-1-hint-1, eval = FALSE}
-library(...)
+library(tidyverse)
 ```
 
 ```{r the-question-1-test, include = FALSE}
@@ -93,16 +111,18 @@ library(tidyverse)
 
 The data come from “[Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment](https://doi.org/10.1017/S000305540808009X)” by Gerber, Green, and Larimer (2008).
 
+Abstract: Voter turnout theories based on rational self-interested behavior generally fail to predict significant turnout unless they account for the utility that citizens receive from performing their civic duty. We distinguish between two aspects of this type of utility, intrinsic satisfaction from behaving in accordance with a norm and extrinsic incentives to comply, and test the effects of priming intrinsic motives and applying varying degrees of extrinsic pressure. A large-scale field experiment involving several hundred thousand registered voters used a series of mailings to gauge these effects. Substantially higher turnout was observed among those who received mailings promising to publicize their turnout to their household or their neighbors. These findings demonstrate the profound importance of social pressure as an inducement to political participation.
+
 ### Exercise 2
 
-Load the **primer.data** package.
+Load the [**primer.data**](https://ppbds.github.io/primer.data/) package.
 
 ```{r the-question-2, exercise = TRUE}
 
 ```
 
 ```{r the-question-2-hint-1, eval = FALSE}
-library(...)
+library(primer.data)
 ```
 
 ```{r the-question-2-test, include = FALSE}
@@ -115,17 +135,15 @@ A version of the data is available in the `shaming` tibble.
 
 ### Exercise 3
 
-Familiarize yourself with the data by loading **primer.data** at the Console and then typing `?shaming`.
-
-Find the year which this experiment took place and how many households were in the experiment. Write your answers below.
+After loading **primer.data** in your Console, type `?shaming` in the Console, and paste in the Description below.
 
 ```{r the-question-3}
 question_text(NULL,
-	message = "The experiment was conducted prior to the August 2006 primary election in Michigan. A total of 180,000 households were part of this experiment.",
 	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 6)
+	rows = 3)
 ```
 
 ### 
@@ -147,35 +165,34 @@ question_text(NULL,
 
 ### 
 
-There were many more people age 18-22 registered to Michigan in 2006 than age 27-31. It is unclear to us why that should be.
+<!-- DK: Discuss treatments. Explain this plot. -->
 
 ```{r}
 x |> 
-ggplot(aes(x = age, fill = factor(primary_06))) +
-    geom_bar(position = "dodge") +
-    scale_fill_manual(values = c("0" = "skyblue", "1" = "coral"),
-                      labels = c("0" = "Did Not Vote", 
-                                 "1" = "Voted"),
-                      name = NULL) +
-    scale_y_continuous(labels = label_comma()) +
-    labs(title = "Voting Behavior in the 2006 Michigan Primary",
-         subtitle = "Old people are much more likely to vote",
-         x = "Age",
-         y = NULL,
-         caption = "Gerber, Green, and Larimer (2008)")
+  sample_frac(0.05) |> 
+  ggplot(aes(x = treatment, y = primary_06)) +
+    geom_jitter(alpha = 0.03, height = 0.1) +
+    scale_y_continuous(breaks = c(0, 1), labels = c("No", "Yes")) +
+    labs(title = "Postcard and Voting Behavior in Michigan",
+         subtitle = "Postcards increase likelihood of voting.",
+         x = "Type of Postcard",
+         y = "Voted in 2006 Primary Election",
+         caption = "Random sample of 5% of the data from Gerber, Green, and Larimer (2008)")
 ```
 
-Regardless, the central lesson is always the same: *You can never look at your data too much.*
 
 ### Exercise 5
 
-Let's imagine a brand new variable which **does not exists** in the data. This variable should be binary, meaning that it only takes on one of two values. It should also, at least in theory, by manipulable. In other words, if the value of the variable is "X," or whatever, then it generates one potential outcome and if it is "Y," or whatever, it generates another potential outcome.
+Let's imagine a brand new variable which **does not exists** in the data. This variable should be binary, meaning that it only takes on one of two values. It should also, at least in theory, by manipulable. In other words, if the value of the variable is "3," or whatever, then it generates one potential outcome and if it is "9," or whatever, it generates another potential outcome.
 
 Describe this imaginary variable and how might we manipulate its value.
 
+For now, ignore the actual treatment variable `treatment` which we will be using later in the analysis. The point of this exercise is to reinforce our understanding of the [Rubin Causal Model](https://ppbds.github.io/primer/rubin-causal-model.html).
+
+
 ```{r the-question-5}
 question_text(NULL,
-	message = "Imagine a variable called `phone_call` which has a value of `1` if the person received a phone call urging them to vote and `0` if they did not receive such a phone call. We, meaning the organization in charge of making such phone calls, can manipulate this variable by deciding, either randonly or otherwise, whether or not we will call a specific individual.",
+	message = "Imagine a variable called `phone_call` which has a value of `1` if the person received a phone call urging them to vote and `0` if they did not receive such a phone call. We, meaning the organization in charge of making such phone calls, can manipulate this variable by deciding, either randomly or otherwise, whether or not we will call a specific individual.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -188,11 +205,11 @@ Any data set can be used to construct a causal model as long as there is at leas
 
 ### Exercise 6
 
-Given our imaginary treatment variable `phone_call`, how many potential outcomes are there for each person? Explain why.
+Given our (imaginary) treatment variable `phone_call`, how many potential outcomes are there for each person? Explain why.
 
 ```{r the-question-6}
 question_text(NULL,
-	message = "There are 2 potential outcomes because the treatment variable `phone_call` takes on 2 posible values: received a get-out-the-vote phone call or did not.",
+	message = "There are 2 potential outcomes because the treatment variable `phone_call` takes on 2 possible values: received a get-out-the-vote phone call or did not.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -201,15 +218,15 @@ question_text(NULL,
 
 ### 
 
-The same data set can be used to create, separately, lots and lots of different models, both causal and predictive. We can just use different outcome variables and/or specify different treatment variables. All of this stuff is a *conceptual* framework we apply to the data. It is never inherent in the data itself.
+The same data set can be used to create, separately, lots and lots of different models, both causal and predictive. We can just use different outcome variables and/or specify different treatment variables. This is a *conceptual* framework we apply to the data. It is never inherent in the data itself.
 
 ### Exercise 7
 
-In a few sentences, specify two different values for the imaginary treatment variable `phone_call`, for a single unit, and then guess at the potential outcomes which would result, and then determine the causal effect for that unit given those guesses.
+In a few sentences, specify the two different values for the imaginary treatment variable `phone_call`, for a single unit, guess at the potential outcomes which would result, and then determine the causal effect for that unit given those guesses.
 
 ```{r the-question-7}
 question_text(NULL,
-	message = "For a given person, assume that the value of the treatment variable might be received a phone call or did not receive phone call. If the person gets the phone call, then her voting behavior would be that she did vote. If the person gets no phone call, then her voting behavioor might be not to vote. The causal effect on the outcome of a treatment of receiving-call versus no-call is voting minus not voting --- i.e., the difference between two potential outcomes --- which does not have a numeric value. That difference is still the causal effect, even if we can't assign a number to it. In many cases, we will just assign arbitray numbers to the outcomes --- say 1 for voting and 0 for not-voting. Doing so allows us to repory a numeric causal effect. But keep in mind that any such numbers are arbitrary.",
+	message = "For a given person, assume that the value of the treatment variable might be received a phone call or did not receive phone call. If the person gets the phone call, then her voting behavior would be that she did vote. If the person gets no phone call, then her voting behavior might be not to vote. The causal effect on the outcome of a treatment of receiving-call versus no-call is voting minus not voting --- i.e., the difference between two potential outcomes --- which does not have a numeric value. That difference is still the causal effect, even if we can't assign a number to it. In many cases, we will just assign arbitrary numbers to the outcomes --- say 1 for voting and 0 for not-voting. Doing so allows us to report a numeric causal effect. But keep in mind that any such numbers are arbitrary.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -218,10 +235,9 @@ question_text(NULL,
 
 ### 
 
-The the definition of a causal effect as the difference between two potential outcomes. Of course, you can't just say that the causal effect is 10. The exact value depends on which potential outcome comes first in the subtraction and which second. There is, perhaps, a default sense in which the causal effect is defined as treatment minus control. 
+The definition of a causal effect is the difference between two potential outcomes. Of course, you can't just say that the causal effect is 10. The exact value depends on which potential outcome comes first in the subtraction and which second. There is, perhaps, a default sense in which the causal effect is defined as treatment minus control. 
 
-Any causal connection means exploring the *within row* different between two potential outcomes. We don't need to look at any other rows to have that conversation.
-
+Any causal connection means exploring the *within row* difference between two potential outcomes. We don't need to look at any other rows to have that conversation.
 
 ### Exercise 8
 
@@ -240,13 +256,15 @@ question_text(NULL,
 
 With a predictive model, there is only one outcome for each individual unit. There are not two potential outcomes because we are not considering any of the covariates to be a treatment variable. We assuming that the values of all covariates are "fixed." 
 
+There are no "treatments" in predictive models. There are only covariates.
+
 ### Exercise 9
 
-Write a few sentences which specify two different groups of voters with different values for `age`. Explain that the outcome variable might differ between these two groups.
+Specify two different groups of people which have different values for `age` and which might have different average values for the `primary_06`.  
 
 ```{r the-question-9}
 question_text(NULL,
-	message = "Some people might have a value for `age` younger than 40. Others might have a value older than 40. Those two groups will, on average, have different values for the outcome variable.",
+	message = "Some people might have a value for `age` younger than 40. Others might have a value older than 40. Those two groups will, on average, have different values for the `primary_06`.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -255,15 +273,15 @@ question_text(NULL,
 
 ### 
 
-In predictive models, do not use words like "cause," "influence," "impact," or anything else which suggests causation. The best phrasing is in terms of "differences" between groups of units with different values for the covariate of interest.
+In predictive models, do not use words like "cause," "influence," "impact," or anything else which suggests causation. The best phrasing is in terms of "differences" between groups of units with different values for a covariate of interest.
 
 ### Exercise 10
 
-Write a causal question which connects the outcome variable `primary_06` to a covariate of interest.
+Write a causal question which connects the outcome variable `primary_06` to `treatment`, the covariate of interest. 
 
 ```{r the-question-10}
 question_text(NULL,
-	message = "What is the causal effect of postcards on voting in the 2006 Michigan election?",
+	message = "What is the causal effect on voting of receiving a postcard which encourages one to vote?",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -272,37 +290,18 @@ question_text(NULL,
 
 ### 
 
-It is OK if you did not write what is written in the answer! There are lots of interesting questions which one might write.
+The answer to this question is your "Quantity of Interest." 
 
-For this tutorial, our question is:
-
-> *What is the causal effect of postcards on voting?*
-
-### Exercise 11
-
-What is the Quantity of Interest which might help us to explore the answer to our question?
-
-```{r the-question-11}
-question_text(NULL,
-	message = "The average causal effect on voting of receiving a 'Neighbors' post card.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-Our Quantity of Interest might appear too specific, too narrow to capture the full complexity of the topic. There are many, many numbers which we are interested in, many numbers that we want to know. But we don't need to list them all here! We just need to choose one of them since our goal is just to have a specific number which helps to guide us in the creation of the Preceptor Table and, then, the model.
+Our Quantity of Interest might appear too specific, too narrow to capture the full complexity of the topic. There are many, many numbers in which we are interested, many numbers that we want to know. But we don't need to list them all here! We just need to choose one of them since our goal is just to have a specific number which helps to guide us in the creation of the Preceptor Table and, then, the model.
 
 ## Wisdom
 ### 
 
-*All we can know is that we know nothing. And that’s the height of human wisdom.* - Leo Tolstoy
+*Wonder is the beginning of wisdom.* - Socrates
 
 Our question:
 
-> *What is the causal effect of postcards on voting?*
+> *What is the causal effect on voting of receiving a postcard which encourages one to vote?*
 
 ### Exercise 1
 
@@ -319,7 +318,7 @@ question_text(NULL,
 
 ### 
 
-Can we use data from a primary election in Michigan in 2006 to predict behavior in a general election in Texas today?
+The central problem for Wisdom is: Can we use data from a primary election in 2006 in Michigan to estimate the relationships in Texas today?
 
 ### Exercise 2
 
@@ -327,7 +326,7 @@ Define a Preceptor Table.
 
 ```{r wisdom-2}
 question_text(NULL,
-	message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, we can easily calculate the quantities of interest.",
+	message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, we can easily calculate the quantity of interest.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -336,15 +335,181 @@ question_text(NULL,
 
 ### 
 
-The more experience you get as a data scientist, the more that you will come to understand that the Four Cardinal Virtues are not a one-way path. Instead, we circle round and round. Our initial question, instead of being fixed forever, is modified as we learn more about the data, and as we experiment with different modeling approaches.
+The Preceptor Table does not include all the covariates which you will eventually include in your model. It only includes covariates which you need to answer your question.
 
 ### Exercise 3
 
+Run `glimpse()` on `shaming`.
+
+CP/CR.
+
+```{r wisdom-3, exercise = TRUE}
+
+```
+
+```{r wisdom-3-test, include = FALSE}
+
+```
+
+###
+
+Our outcome variable, `primary_06`, is just 0/1, indicating whether or not someone voted in the 2006 Michigan primary election. But that is not what we, as a gubernatorial candidate, really care about! We want to know who someone voted for, or at least which party, not whether or not they voted. Annoying! 
+
+### Exercise 4
+
+Pipe `shaming` to `count(treatment)`.
+
+CP/CR.
+
+```{r wisdom-4, exercise = TRUE}
+
+```
+
+```{r wisdom-4-test, include = FALSE}
+shaming |> 
+    count(treatment)
+```
+
+###
+
+Most people did not receive a postcard at all. They are the control case. Everyone else had a 25% chance of receiving a postcard, each with a different message. Those are the four possible treatments.
+
+### Exercise 5
+
+Run this code:
+
+```{r wisdom-5, exercise = TRUE}
+shaming |> 
+  mutate(civ_engage = primary_00 + primary_02 + primary_04 + 
+                      general_00 + general_02 + general_04) |> 
+   count(civ_engage)            
+```
+
+```{r wisdom-5-test, include = FALSE}
+shaming |> 
+  mutate(civ_engage = primary_00 + primary_02 + primary_04 + 
+               general_00 + general_02 + general_04) |> 
+   count(civ_engage)  
+```
+
+###
+
+We are interested in the causal effect of postcards. But we suspect that the causal effect varies. It is different for different sorts of people, for example people who differ in their level of civic engagement. For simplicity, we create such a measure based on how often someone voted in the previous six elections. 
+
+### Exercise 6
+
+Replace `count(civ_engage)` with a `select()` statement which only keeps these variables: `primary_06`, `treatment`, `sex`, `age`, `civ_engage`. 
+
+```{r wisdom-6, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r wisdom-6-hint-1, eval = FALSE}
+... |> 
+	select(primary_06, treatment, sex, age, civ_engage)
+```
+
+```{r wisdom-6-test, include = FALSE}
+shaming |> 
+  mutate(civ_engage = primary_00 + primary_02 + primary_04 + 
+               general_00 + general_02 + general_04) |> 
+  select(primary_06, treatment, sex, age, civ_engage)
+```
+
+###
+
+The sooner we restrict our tibble to just the variables we care about, the better. Of course, nothing prevents us from circling back and looking at other variables which might be important. But, at some point, you make your best guess and then move on.
+
+
+### Exercise 7
+
+Use AI to continue the pipe to add a new variable, `voter_class`, a factor which takes on the values "Always Vote" when `civ_engage %in% c(5, 6)`, "Sometimes Vote" when `civ_engage %in% c(3, 4)`, and "Rarely Vote" when `civ_engage %in% c(1, 2)`. Also, the levels for `voter_class` are ordered with "Rarely Vote" the lowest and "Always Vote" the highest.
+
+
+```{r wisdom-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r wisdom-7-hint-1, eval = FALSE}
+
+```
+
+```{r wisdom-7-test, include = FALSE}
+shaming |> 
+  mutate(civ_engage = primary_00 + primary_02 + primary_04 + 
+               general_00 + general_02 + general_04) |> 
+  select(primary_06, treatment, sex, age, civ_engage) |> 
+  mutate(voter_class = factor(
+    case_when(
+      civ_engage %in% c(5, 6) ~ "Always Vote",
+      civ_engage %in% c(3, 4) ~ "Sometimes Vote",
+      civ_engage %in% c(1, 2) ~ "Rarely Vote"),
+         levels = c("Rarely Vote", 
+                    "Sometimes Vote", 
+                    "Always Vote"))) 
+```
+
+###
+
+Our code looks like this:
+
+````
+shaming |> 
+  mutate(civ_engage = primary_00 + primary_02 + primary_04 + 
+               general_00 + general_02 + general_04) |> 
+  select(primary_06, treatment, sex, age, civ_engage) |> 
+  mutate(voter_class = factor(
+    case_when(
+      civ_engage %in% c(5, 6) ~ "Always Vote",
+      civ_engage %in% c(3, 4) ~ "Sometimes Vote",
+      civ_engage %in% c(1, 2) ~ "Rarely Vote"),
+         levels = c("Rarely Vote", 
+                    "Sometimes Vote", 
+                    "Always Vote")))
+````
+
+Your code might look different, but it should have the same effect.
+
+### Exercise 8
+
+Behind the scenes, we have assigned the result of this pipe to `x`. Type `x` and hit `Enter`.
+
+```{r wisdom-8, exercise = TRUE}
+
+```
+
+```{r wisdom-8-test, include = FALSE}
+x
+```
+
+###
+
+````
+> x
+A tibble: 344,084 × 6
+   primary_06 treatment   sex      age civ_engage voter_class   
+        <int> <fct>       <chr>  <int>      <int> <fct>         
+ 1          0 Civic Duty  Male      65          4 Sometimes Vote
+ 2          0 Civic Duty  Female    59          4 Sometimes Vote
+ 3          1 Hawthorne   Male      55          4 Sometimes Vote
+ 4          1 Hawthorne   Female    56          4 Sometimes Vote
+ 5          1 Hawthorne   Female    24          4 Sometimes Vote
+ 6          0 No Postcard Male      25          1 Rarely Vote 
+````
+
+Note how the process of cleaning the data starts to make the data, which is just a table with rows and columns, look like the Preceptor Table. This is necessary since we soon, conceptually, stack the Preceptor Table on top of the data in order to make the Population Table.
+
+### Exercise 9
+
 Describe the key components of Preceptor Tables in general, without worrying about this specific problem. Use words like "units," "outcomes," and "covariates."
 
-```{r wisdom-3}
+```{r wisdom-9}
 question_text(NULL,
-	message = "The rows of the Preceptor Table are the units. The outcome is at least one of the columns. If the problem is causal, there will be at least two (potential) outcome columns. The other columns are covariates. If the problem is causal, at least one of the covariates will be a treatment.",
+	message = "The rows of the Preceptor Table are the units. The outcome is at least one of the columns. If the problem is causal, there will be at least two (potential) outcome columns. The other columns are covariates. If the problem is causal, at least one of the covariates will considered a treatment.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -353,17 +518,17 @@ question_text(NULL,
 
 ### 
 
-This problem is causal so one of the covariates is a treatment. In our problem, the treatment is the type of postcard that the resident receives.
+This problem is causal so one of the covariates is a treatment. In our problem, the treatment is `treatment`. There is a potential outcome for each of the 5 possible values of the treatment.
 
-### Exercise 4
+### Exercise 10
 
-Create a Github repo called `n-parameters`. Make sure to click the "Add a README file" check box.
+Create a Github repo called `postcards`. Make sure to click the "Add a README file" check box.
 
-Connect the `n-parameters` Github repo to an R project on your computer. Name the R project `n-parameters` also.
+Connect the Github repo to a project on your computer. Use a folder name which matches your repo name.
 
-Select `File -> New File -> Quarto Document ...`. Provide a title (`"N Parameters"`) and an author (you). Render the document and save it as `causal_effect.qmd`.
+Select `File -> New File -> Quarto Document ...`. Provide a title -- `"Voting and Postcards"` -- and an author (you). Render the document and save it as `postcards.qmd`.
 
-Edit the `.gitignore` by adding `*Rproj`. Save and commit this in the Git tab. Push the commit.
+Edit the `.gitignore` by adding `*_files` and a blank line. Save and push.
 
 In the Console, run:
 
@@ -373,24 +538,24 @@ show_file(".gitignore")
 
 CP/CR.
 
-```{r wisdom-4}
+```{r wisdom-10}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 3)
+	rows = 7)
 ```
 
 ### 
 
-Remove everything below the YAML header from `causal_effect.qmd` and render the file. `Command/Ctrl + Shift + K` renders the file, this automatically saves the file as well.
+We model units, but we only really care about aggregates.
 
-### Exercise 5
+### Exercise 11
 
 What are the units for this problem?
 
-```{r wisdom-5}
+```{r wisdom-11}
 question_text(NULL,
 	message = "The units of our Preceptor Table are individual voters in Texas around the time of the next election.",
 	answer(NULL, correct = TRUE),
@@ -401,15 +566,15 @@ question_text(NULL,
 
 ### 
 
-There is no one correct answer for these types of questions, it all depends on the question we are answering. We could have focused on all voters throughout America. For this tutorial, we will be focusing on just individual voters in Texas.
+Specifying the Preceptor Table forces us to think clearly about the units and outcomes implied by the question. The resulting discussion sometimes leads us to modify the question with which we started. No data science project follows a single direction. We always backtrack. There is always dialogue.
 
-### Exercise 6
+### Exercise 12
 
-What moment in time does the Preceptor Table refer to? It might be helpful to refer to the [N Parameters chapter](https://ppbds.github.io/primer/n-parameters.html).
+What is the outcome variable for this problem?
 
-```{r wisdom-6}
+```{r wisdom-12}
 question_text(NULL,
-	message = "We care about the upcoming Texas election.",
+	message = "Candidate voted for in next Texas gubernatorial election.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -418,17 +583,103 @@ question_text(NULL,
 
 ### 
 
-There is no one correct answer, just like many other parts of the Preceptor Table. It all depends on the question we are trying to answer.
+The outcome variable that we really care about is often not the outcome variable included in our data. In this case, the Preceptor Table outcome is which candidate a person voted for. The data does not include the voting decision! Instead, it just records whether or not someone voted. Those are not the same things!
 
-We can include the time in our question:
+This compromise --- working with what we *have* rather than what we really *want* --- is a part of most data science work in the real world.
 
-> *What will be the causal effect of postcards on voting in the 2026 Texas election?*
+In this case, we adjust our Preceptor Table to match our data more closely. Instead of looking at the effect of postcards on who someone votes for, we will focus on the effect of postcards on someone's decision to vote at all.
 
-### Exercise 7
+### Exercise 13
+
+What is a covariate which you think might be useful for this problem, regardless of whether or not it might be included in the data?
+
+```{r wisdom-13}
+question_text(NULL,
+	message = "Donation history. I bet that people who have donated money to a candidate are much more likely to vote than those who have not.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+The term "covariates" is used in at least three ways in data science. First, it is all the variables which might be useful, regardless of whether or not we have the data. Second, it is all the variables for which we have data. Third, it is the set of variables in the data which we end up using in the model.
+
+### Exercise 14
+
+What are the treatments, if any, for this problem?
+
+```{r wisdom-14}
+question_text(NULL,
+	message = "The `treatment` variable indicates the type of postcard that someone received, including no postcard at all. The values of `treatment` are 'No Postcard', 'Civic Duty', 'Hawthorne', 'Self', and 'Neighbors'.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Remember that a treatment is just another covariate which, for the purposes of this specific problem, we are assuming can be manipulated, thereby, creating five potential outcomes for each unit.
+
+### Exercise 15
+
+What moment in time does the Preceptor Table refer to?
+
+```{r wisdom-15}
+question_text(NULL,
+	message = "We care about the upcoming Texas election.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+```{r}
+x |> 
+    ggplot(aes(x = age, fill = factor(primary_06))) +
+        geom_bar(position = "dodge") +
+        scale_fill_manual(values = c("0" = "skyblue", "1" = "coral"),
+                          labels = c("0" = "Did Not Vote", 
+                                     "1" = "Voted"),
+                          name = NULL) +
+        scale_y_continuous(labels = label_comma()) +
+        labs(title = "Voting Behavior in the 2006 Michigan Primary",
+             subtitle = "Old people are much more likely to vote",
+             x = "Age",
+             y = NULL,
+             caption = "Gerber, Green, and Larimer (2008)")
+```
+
+There were many more people age 18-22 registered to Michigan in 2006 than age 27-31. It is unclear to us why that should be.
+
+> *You can never look at the data too much. -- Mark Engerman*
+
+### Exercise 16
+
+Define a causal effect. 
+
+```{r wisdom-16}
+question_text(NULL,
+	message = "A causal effect is the difference between two potential outcomes.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+According to the Rubin Causal Model, there must be two (or more) potential outcomes for any discussion of causation to make sense. This is simplest to discuss when the treatment only has two different values, thereby generating only two potential outcomes. 
+
+### Exercise 17
 
 What is the fundamental problem of causal inference?
 
-```{r wisdom-7}
+```{r wisdom-17}
 question_text(NULL,
 	message = "The fundamental problem of causal inference is that we can only observe one potential outcome.",
 	answer(NULL, correct = TRUE),
@@ -439,15 +690,15 @@ question_text(NULL,
 
 ### 
 
-If we observe that a person who got a postcard ended up voting, we can never know for sure that the postcard *caused* that person to vote because we will never know what the outcome would have been if that person didn't get a postcard.
+If the treatment variable is continuous (like income), then there are lots and lots of potential outcomes, one for each possible value of the treatment variable. 
 
-### Exercise 8
+### Exercise 18
 
-How does the motto "No causal inference without manipulation." apply in this problem?
+How does the motto "No causation without manipulation" apply in this problem?
 
-```{r wisdom-8}
+```{r wisdom-18}
 question_text(NULL,
-	message = "If we did not have any manipulation, so we did not send out any postcards and instead did an observational study, then we would never be able to create a causal inference. We need to have treatments so we can compare the outcome between the different groups of treatments.",
+	message = "The motto works because we can manipulate, randomly or otherwise, who receives which postcard. Since the treatment variable can be manipulated, it is reasonable to estimate a causal effect.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -456,13 +707,13 @@ question_text(NULL,
 
 ### 
 
-We have to choose a variable that we can change to be the treatment. If we do not have such variable that we can manipulate, then we would have to create a predictive model instead. For example, if we were focused on household income, one conclusion may be: Rich people are more likely to vote than poor people. Correlation does not mean causation, we cannot assume that wealth directly causes people to have more civic engagement. In order to find a causation relationship, we would need to manipulate the treatment so that we can measure its effect on the outcome.
+We need to keep track of how these issues apply to both our Preceptor Table and our data. 
 
-### Exercise 9
+### Exercise 19
 
-Describe in words the Preceptor Table for this problem.
+Describe in words the Preceptor Table for this problem. Assume that, in addition to `treatment`, we are interested in a covariate connected to some measure of "civic engagement."
 
-```{r wisdom-9}
+```{r wisdom-19}
 question_text(NULL,
 	message = "The Preceptor Table has 5 columns. There is a column for the ID, two for the outcomes: Voting After Control and Voting After Treatment. There two covariates: Treatment and Engagement. Each row represents one individual.",
 	answer(NULL, correct = TRUE),
@@ -501,11 +752,15 @@ tibble(ID = c("1", "2", "...", "10", "11", "...", "N"),
   tab_spanner(label = "Outcomes", columns = c(voting_after_control, voting_after_treated))
 ```
 
-### Exercise 10
+Like all aspects of a data science problem, the Preceptor Table evolves as we continue our work. In particular, although the first version of the Preceptor Table (what we really want) included which candidate each person voted for, now --- given the limitations of our data --- we just ask whether or not each person voted at all.
 
-In `causal_effect.qmd`, load the **tidyverse** and the **primer.data** packages in a new code chunk. Label it the set up by adding `#| label: setup`. Render the file.
+Also, some of our covariates will evolve. We might use the simple integer measure of civic engagement --- How many of the last six elections did the person vote in? --- or the three values for class of voter. There is no right answer.
 
-Notice that the file does not look good because it is has code that is showing and it also has messages. To take care of this, add `#| message: false` to remove all the messages in the setup chunk. Also add the following to the YAML header to remove all echo from the whole file:
+### Exercise 20
+
+In your QMD, load the **tidyverse** and the **primer.data** packages in a new code chunk. Render the file.
+
+Notice that the file does not look good because the code is visible and there are annoying messages. To take care of this, add `#| message: false` to remove all the messages in the `setup` chunk. Also add the following to the YAML header to remove all code echos from the whole file:
 
 ```         
 execute: 
@@ -515,226 +770,54 @@ execute:
 In the Console, run:
 
 ```         
-show_file("causal_effect.qmd", start = -5)
+show_file("postcards.qmd", start = -5)
 ```
 
 CP/CR.
 
-```{r wisdom-10}
+```{r wisdom-20}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 3)
+	rows = 6)
 ```
 
 ### 
 
 Render again. Everything looks nice because we have added code to make the file look better and more professional.
 
+### Exercise 21
 
-### Exercise 11
-
-Run `glimpse()` on `shaming`.
-
-```{r wisdom-11, exercise = TRUE}
-
-```
-
-```{r wisdom-11-hint-1, eval = FALSE}
-glimpse(...)
-```
-
-```{r wisdom-11-test, include = FALSE}
-glimpse(shaming)
-```
-
-### 
-
-`glimpse()` gives us a look at the raw data contained within the `shaming` data set. The variables which begin with `primary` or `general` indicate whether or not the indvidual voted in thos elections.
-
-
-
-### Exercise 12
-
-Pipe `shaming` to `count()` with `treament` inside of it.
-
-```{r wisdom-12, exercise = TRUE}
-
-```
-
-```{r wisdom-12-hint-1, eval = FALSE}
-shaming |> 
-  count(...)
-```
-
-```{r wisdom-12-test, include = FALSE}
-shaming |> 
-  count(treatment)
-```
-
-### 
-
-Four types of treatments were used in the experiment, with voters receiving one of the four types of mailing. All of the mailing treatments carried the message, “DO YOUR CIVIC DUTY - VOTE!”. 
-
-### Exercise 13
-
-Pipe `shaming` to the following:
-
-```         
-mutate(
-  civ_engage = primary_00 + primary_02 + primary_04 + 
-               general_00 + general_02 + general_04) |> 
-select(primary_06, treatment, sex, age, civ_engage)
-```
-
-```{r wisdom-13, exercise = TRUE}
-
-```
-
-```{r wisdom-13-hint-1, eval = FALSE}
-shaming |> 
-  mutate(...)
-```
-
-```{r wisdom-13-test, include = FALSE}
-shaming |> 
-  mutate(
-    civ_engage = primary_00 + primary_02 + primary_04 + 
-                 general_00 + general_02 + general_04) |> 
-  select(primary_06, treatment, sex, age, civ_engage)
-```
-
-### 
-
-We want to create a variable which captures the amount of civic engagement for each person. Since we don't have data about any other political activities, we define `civ_engage` as the number of elections participated in over the prior 6 elections.
-
-### Exercise 14
-
-Continue the pipe with the following:
-
-```         
-mutate(voter_class = factor(
-  case_when(
-    civ_engage %in% c(5, 6) ~ "Always Vote",
-    civ_engage %in% c(3, 4) ~ "Sometimes Vote",
-    civ_engage %in% c(1, 2) ~ "Rarely Vote"),
-       levels = c("Rarely Vote", 
-                  "Sometimes Vote", 
-                  "Always Vote"))) 
-```
-
-```{r wisdom-14, exercise = TRUE}
-
-```
-
-```{r wisdom-14-test, include = FALSE}
-shaming |> 
-  mutate(
-    civ_engage = primary_00 + primary_02 + primary_04 + 
-                 general_00 + general_02 + general_04) |> 
-  select(primary_06, treatment, sex, age, civ_engage) |> 
-  mutate(voter_class = factor(
-  case_when(
-    civ_engage %in% c(5, 6) ~ "Always Vote",
-    civ_engage %in% c(3, 4) ~ "Sometimes Vote",
-    civ_engage %in% c(1, 2) ~ "Rarely Vote"),
-       levels = c("Rarely Vote", 
-                  "Sometimes Vote", 
-                  "Always Vote"))) 
-```
-
-### 
-
-Classifying voters into three large groups, based on their voting history, will allow us to examine any heterogeneity in the causal effects. That is, perhaps receiving a postcard has a different average causal effect on people who always vote than it does on people who never vote.
-
-```{r}
-x |> 
-  sample_frac(0.5) |> 
-  ggplot(aes(x = civ_engage, y = primary_06)) +
-    geom_jitter(alpha = 0.03, height = 0.1) +
-    scale_x_continuous(breaks = 1:6) + 
-    scale_y_continuous(breaks = c(0, 1), labels = c("No", "Yes")) +
-    labs(title = "Civic Engagement and Voting Behavior in Michigan",
-         subtitle = "Past voting predicts future voting.",
-         x = "Civic Engagement",
-         y = "Voted in 2006 Primary Election",
-         caption = "Random sample of 5% of the data from Gerber, Green, and Larimer (2008)")
-```
-
-It is certainly the case that people who had voted more in the past were more likely to vote in the 2006 primary. 
-
-### Exercise 15
-
-We have assigned the result of this pipe to an object named `x`. Type `x` and hit "Run Code."
-
-```{r wisdom-15, exercise = TRUE}
-
-```
-
-```{r wisdom-15-hint-1, eval = FALSE}
-x
-```
-
-```{r wisdom-15-test, include = FALSE}
-x
-```
-
-### 
-
-Of course, when doing the analysis, you don’t know when you start what you will be using at the end. Data analysis is a circular process. We mess with the data. We do some modeling. We mess with the data on the basis of what we learned from the models. With this new data, we do some more modeling. And so on.
-
-
-
-### Exercise 16
-
-Add the code from the pipe above and set it to an object named `x` in a new code chunk in `causal_effect.qmd`. 
-
-
-```         
-x <- shaming |> 
-  mutate(civ_engage = primary_00 + primary_02 + primary_04 + 
-               general_00 + general_02 + general_04) |> 
-  select(primary_06, treatment, sex, age, civ_engage) |> 
-  mutate(voter_class = factor(
-    case_when(
-      civ_engage %in% c(5, 6) ~ "Always Vote",
-      civ_engage %in% c(3, 4) ~ "Sometimes Vote",
-      civ_engage %in% c(1, 2) ~ "Rarely Vote"),
-         levels = c("Rarely Vote", 
-                    "Sometimes Vote", 
-                    "Always Vote"))) 
-```
-
-Render the file.
+Add a new code chunk which creates the object `x`, using the code above.
 
 In the Console, run:
 
 ```         
-show_file("causal_effect.qmd", start = -5)
+show_file("postcards.qmd", start = -5)
 ```
 
 CP/CR.
 
-```{r wisdom-16}
+```{r wisdom-21}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 3)
+	rows = 6)
 ```
 
 ### 
 
-In the `.gitignore`, add `*_files` so that we do not commit those junk files. Commit and push.
+Render again. 
 
-### Exercise 17
+### Exercise 22
 
 In your own words, define "validity" as we use the term.
 
-```{r wisdom-17}
+```{r wisdom-22}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -745,15 +828,15 @@ question_text(NULL,
 
 ### 
 
-In order to consider the two data sets to be drawn from the same population, the columns from one must have a valid correspondence with the columns in the other.
+Validity is always about the *columns* in the Preceptor Table and the data. Just because columns from these two different tables have the same *name* does not mean that they are the same *thing*.
 
-### Exercise 18
+### Exercise 23
 
-Provide one reason why the assumption of validity might not hold for the variable: `primary_06`. Use the words "column" or "columns" in your answer.
+Provide one reason why the assumption of validity might not hold for the outcome variable `primary_06` or for one of the covariates. Use the words "column" or "columns" in your answer.
 
-```{r wisdom-18}
+```{r wisdom-23}
 question_text(NULL,
-	message = "The voting column in a our data is for a primary election in 2006 in Michigan. The voting coloumn in the Preceptor Table is for a general election in Texas in 2026. Those are not the same things.",
+	message = "The output column in the data is whether or not someone voted in a primary election. The output column in the Preceptor Table is, now, whether or not someone voted in a general election. But primary elections and general elections are not the same thing! It is a violation of validity to pretend that they are.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -762,22 +845,25 @@ question_text(NULL,
 
 ### 
 
-Fortunately, at least for our continued use of this example, we will assume that validity holds. The outcome variable in our data and in our Preceptor Table are close enough — even though one is for a primary election while the other is for a general election — that we can just stack them. 
+In order to consider the Preceptor Table and the data to be drawn from the same population, the columns from one must have a *valid correspondence* with the columns in the other. Validity, if true (or at least reasonable), allows us to construct the Population Table, which is the first step in Justice.
 
-### Exercise 19
+Because we control the Preceptor Table and, to a lesser extent, the original question, we can adjust those variables to be “closer” to the data that we actually have. This is another example of the iterative nature of data science. If the data is not close enough to the question, then we check with our boss/colleague/customer to see if we can modify the question in order to make the match between the data and the Preceptor Table close enough for validity to hold.
+
+Despite these potential problems, we will assume that validity holds since it, mostly (?), does.
+
+### Exercise 24
 
 Over the course of this tutorial, we will be creating a summary paragraph. The purpose of this exercise is to write the first two sentences of that paragraph.
 
-The first sentence is a general statement about the overall topic, mentioning both general class of the outcome variable and of at least one of the covariates. That sentence can be rhetorical. It can be trite, or even a platitude. The purpose of the sentence to let the reader know, gently, about our topic.
+The first sentence is a general statement about the overall topic, mentioning both the general class of the outcome variable and of at least one of the covariates. It is **not** connected to the initial "Imagine that you are XX" which set the stage for this project. That sentence can be rhetorical. It can be trite, or even a platitude. The purpose of the sentence to let the reader know, gently, about our topic.
 
-The second sentence does two things. First, it introduces the data source. Second, it introduces the specific question.
+The second sentence does two things. First, it introduces the data source. Second, it introduces the specific question. The sentence can't be that long. Important aspects of the data include when/where it was gather, how many observations it includes and the organization (if famous) which collected it.
 
 Type your two sentences below.
 
-
-```{r wisdom-19}
+```{r wisdom-24}
 question_text(NULL,
-	message = "Efforts to get your supporters to vote have always been a part of US political campaigns. Using the data from a 2006 experiment in Michigan, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026.",
+	message = "Sending postcards and other mailings to registered voters is a traditional part of US political campaigns. Using data from a 2006 experiment in Michigan, we seek to explore the likely causal effects of sending postcards to voters in the current gubernatorial campaign in Texas.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -786,16 +872,16 @@ question_text(NULL,
 
 ### 
 
-Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to `causal_effect.qmd`, `Command/Ctrl + Shift + K`, and then commit/push.
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to your QMD, `Command/Ctrl + Shift + K`, and then commit/push.
 
 ## Justice
 ### 
 
-*It is in justice that the ordering of society is centered.* - Aristotle
+*Justice delayed is justice denied.* - William E. Gladstone
 
 ### Exercise 1
 
-In your own words, name the four key components of Justice for working on a data science problem.
+In your own words, name the four key components of Justice when working on a data science problem.
 
 ```{r justice-1}
 question_text(NULL,
@@ -842,7 +928,7 @@ question_text(NULL,
 
 ### 
 
-Stability is all about *time*. Is the relationship among the columns in the Population Table stable over time? In particular, is the relationship --- which is another way of saying "mathematical formula" --- at the time the data was gathered the same as the relationship at the (generally later) time referenced by the Preceptor Table.
+The longer the time period covered by the Preceptor Table (and the data), the more suspect the assumption of stability becomes. 
 
 ### Exercise 4
 
@@ -860,7 +946,6 @@ question_text(NULL,
 ### 
 
 A change in time or the distribution of the data does not, in and of itself, demonstrate a violation of stability. Stability is about the parameters: $\beta_0$, $\beta_1$ and so on. Stability means these parameters are the same in the data as they are in the population as they are in the Preceptor Table.
-
 
 ### Exercise 5
 
@@ -884,7 +969,6 @@ Ideally, we would like both the Preceptor Table *and* our data to be random samp
 We do not use the data, directly, to estimate missing values in the Preceptor Table. Instead, we use the data to learn about the overall population. Provide one reason, involving the relationship between the data and the population, for why the assumption of representativeness might not be true in this case. 
 
 ```{r justice-6}
-
 question_text(NULL,
 	message = "All the data is from Michigan, which is, by definition, not necessarily representative of all the other states in the country.",
 	answer(NULL, correct = TRUE),
@@ -896,7 +980,6 @@ question_text(NULL,
 ### 
 
 The reason that representativeness is important is because, when it is violated, the estimates for the model parameters might be biased. 
-
 
 ### Exercise 7
 
@@ -947,15 +1030,19 @@ question_text(NULL,
 
 ### 
 
-The great advantage of randomized assignment of treatment is that it guarantees unconfoundedness. There is no way for treatment assignment to be correlated with anything, including potential outcomes, if treatment assignment is random.
+The great advantage of randomized assignment of treatment is that it guarantees unconfoundedness, *if the randomization is done correctly*. There is no way for treatment assignment to be correlated with anything, including potential outcomes, if treatment assignment is random, and *if the experimental set up worked as designed.* Sadly, in the real world, there are sometimes problems.
 
 ### Exercise 10
 
-Summarize the state of your work so far in two or three sentences. Make reference to the data you have and to the question you are trying to answer. Feel free to copy from your answer at the end of the Wisdom Section. Mention one specific problem which casts doubt on your approach.
+Write one sentence which highlights a potential weakness in your model. This will almost always be derived from possible problems with the assumptions discussed above. We will add this sentence to our summary paragraph. So far, our version of the summary paragraph looks like this:
+
+> Sending postcards and other mailings to registered voters is a traditional part of US political campaigns. Using data from a 2006 experiment in Michigan, we seek to explore the likely causal effects of sending postcards to voters in the current gubernatorial campaign in Texas.
+
+Of course, your version will be somewhat different.
 
 ```{r justice-10}
 question_text(NULL,
-	message = "Using the data from an experiment to find out whether and to what extent people are motivated to vote by social pressure, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026. Stability might not be true because the way people view politics has changed from 2006 because of new things such as social media.",
+	message = "We are concerned that data from Michigan might not be representative of the United States as a whole.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -964,12 +1051,36 @@ question_text(NULL,
 
 ### 
 
-Edit the summary paragraph in `causal_effect.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`, and then commit/push.
+Add a weakness sentence to the summary paragraph in your QMD. You can modify your paragraph as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`, and then commit/push.
+
 
 ## Courage
 ### 
 
-*Courage is being scared to death, but saddling up anyway.* - John Wayne
+
+*Courage is going from failure to failure without losing enthusiasm.* - Winston Churchill
+
+<!-- 
+Overall structure of this section:
+
+3) Change the code so that the model is different and/or more complex. Maybe ask a question about the two models. Maybe just tell the student what she should notice.
+
+4) Add a third model. There is just no excuse not to have three models, even if they each only require  one or two questions.
+
+5) Choose among models. In early tutorials, this might just involve looking at coefficient values/significance. Later, we might use a more formal approach from easystats. At least one model should be checked for posterior prediction problems.
+
+5a) Run the equivalent of pp_check on the last model, just to confirm that things looks good.
+
+6) Once we have our DGM, we can create the LaTeX math: we have the mathematical formula which specifies exactly which variables to include and how to transform them. All the parameters replaced by our estimates and with the error term dropped. The dependent variable wears a hat. This is our data generating mechanism.
+
+7) Produce a two sentence summary. Add it to the quarto doc. The first sentence gives the form of the model, including a reminder as to the distribution of the dependent variable. (Hmm. Is that right? The distribution of the dependent variable in the data might not be exactly the same as the distribution of the predictions. Compare the 3 -- 15 integer values of att_end to the normal values from hat att_end.) The second sentence tells us something about the model, generally involving the sign of one of the covariates.
+
+The Quarto document should include the last two descriptions: the DGM and a two sentence description of the DGM. 
+
+When we have a model, like random forest, without a simple mathematical structure, we still need the written description. Indeed, it is even more important in this case. Would it be useful to also have a diagram of some type which explains what a random forest is, perhaps a PNG which could be included in the document?
+
+It is important that tutorial writers use AI to create excellent answers, which we then share with students.
+-->
 
 ### Exercise 1
 
@@ -990,7 +1101,7 @@ A statistical model consists of two parts: the *probability family* and the *lin
 
 ### Exercise 2
 
-Load the **tidymodels** package.
+Load the [**tidymodels**](https://www.tidymodels.org/) package.
 
 ```{r courage-2, exercise = TRUE}
 
@@ -1006,13 +1117,17 @@ library(tidymodels)
 
 ### 
 
-Because `primary_06` is a binary variable, we assume that the outcome of voting (or not) is produced from a Bernoulli distribution.
+The probability family is determined by the outcome variable $Y$. 
 
-$$ primary\_06_i  \sim Bernoulli(\rho) $$
+Since $Y$ is a binary variable (with exactly two possible values), the probability family is Bernoulli.
+
+$$Y \sim \text{Bernoulli}(\rho)$$
+
+where $\rho$ is the probability that one of the two possible values --- conventionally referred to as `1` or `TRUE` --- occurs. By definition, $1 - \rho$ is the probability of the other value.
 
 ### Exercise 3
 
-Load the **broom** package.
+Load the [**broom**](https://broom.tidymodels.org/) package.
 
 ```{r courage-3, exercise = TRUE}
 
@@ -1028,41 +1143,42 @@ library(broom)
 
 ### 
 
-Because the outcome variable has a Bernoulli distribution, the link function is logit. That is:
+The link function, the basic mathematical structure of the model, is (mostly) determined by the type of outcome variable. 
 
-```{r}
-extract_eq(fit_vote$fit, intercept = "beta")
-```
+For a binary outcome variable, we use a log-odds model:
+
+$$
+\log\left[ \frac { \rho }{ 1 - \rho } \right] = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \ldots 
+$$
+
 
 ### Exercise 4
 
-Load the **equatiomatic** package.
+Use AI to come up with a $\LaTeX$ representation of the mathematical structure of the model, with $Y$ as the dependent variable and $X_1$, $X_2$ and so on as the independent variables. This version will not have the values of any parameters since we have not, yet, estimated them. Confirm that the code works by placing it in your QMD and then rendering. Paste that $\LaTeX$ code below.
 
-```{r courage-4, exercise = TRUE}
-
+```{r courage-4}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 5)
 ```
 
-```{r courage-4-hint-1, eval = FALSE}
-library(...)
-```
+###
 
-```{r courage-4-test, include = FALSE}
-library(equatiomatic)
-```
+<!-- DK; Add AI version here and in template_tutorial. -->
 
-### 
-
-Recall that a categorical variable (whether character or factor) like `treatment` is turned into a $0/1$ "dummy" variable which is then re-named something like $treatmentNeighbors$. After all, we can't have words --- like "Neighbors" or "Civic Duty" --- in a mathematical formula, hence the need for dummy variables.
-
+We use generic variables --- $Y$, $X_1$ and so on --- because our purpose is to describe the general mathematical structure of the model, independent of the specific variables we will eventually choose to use.
 
 ### Exercise 5
 
-Add `library(tidymodels)`, `library(broom)`, and `library(equatiomatic)` to the `setup` code chunk in `causal_effect.qmd`. `Command/Ctrl + Shift + K`.
+Add `library(tidymodels)` and `library(broom)` to the `setup` code chunk in your QMD. `Command/Ctrl + Shift + K`.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("causal_effect.qmd", pattern = "tidymodels|broom|equatiomatic")
+tutorial.helpers::show_file("postcards.qmd", pattern = "tidymodels|broom")
 ```
 
 CP/CR.
@@ -1078,9 +1194,7 @@ question_text(NULL,
 
 ### 
 
-The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. Since `treatment` has five values --- "No Postcard", "Civic Duty", "Hawthorne", "Self", "Neighbors" --- the model creates four 0/1 dummy variables, giving them names like $treatmentCivic Duty$, $treatmentHawthorne$ and so on. The results for the *first* category, which is "No Postcard" are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied. 
-
-It is convenient for the control condition to be included in the intercept.
+Having decided on the basic mathematical structure of the model, a choice mostly driven by the distribution of our outcome variable, we now turn toward estimating the model.
 
 ### Exercise 6
 
@@ -1090,105 +1204,223 @@ Because our outcome variable is binary, start to create the model by using `logi
 
 ```
 
-```{r courage-6-hint-1, eval = FALSE}
-logistic_reg(engine = "glm")
-```
-
 ```{r courage-6-test, include = FALSE}
 logistic_reg(engine = "glm")
 ```
 
 ### 
 
-In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
+The *[tidymodels](https://www.tidymodels.org/)* framework is the most popular one in the R world for estimating models. *[Tidy Modeling with R](https://www.tmwr.org/)* by Max Kuhn and Julia Silge is a great book introduction.
 
 ### Exercise 7
 
-<!-- DK: Does it mess up marginaleffects to as.factor on the fly like this? Should this be done in a recipe step instead? Perhaps this is a could occasion to introduce recipes? -->
-
-Continue the pipe to `fit(as.factor(primary_06) ~ age_z + sex + treatment + voter_class + treatment*voter_class, data = x)`. The "glm" engine requires that the outcome variable be a factor, so we need to transform `primary_06` during the fitting process.
-
+Continue the pipe to `fit(as.factor(primary_06) ~ sex, data = x)`.
 
 ```{r courage-7, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r courage-7-hint-1, eval = FALSE}
-logistic_reg(engine = "glm") |> 
-  fit(as.factor(primary_06) ~ age + sex + treatment + 
-        voter_class + treatment*voter_class, 
-      data = x)
+... |> 
+  fit(..., data = ...)
 ```
 
 ```{r courage-7-test, include = FALSE}
 logistic_reg(engine = "glm") |> 
-  fit(as.factor(primary_06) ~ age + sex + treatment + 
-        voter_class + treatment*voter_class, 
-      data = x)
+	fit(as.factor(primary_06) ~ sex, data = x)
 ```
 
 ### 
 
-We can translate the fitted model into mathematics, including the best estimates of all the unknown parameters:
+If you tried, `fit(primary_06 ~ sex, data = x)` instead, you would get an error message: "For a classification model, the outcome should be a <factor>, not an integer vector." We can fix this by either transforming `primary_06` into a factor on-the-fly, as we do here, or by going back to our data cleaning code and fixing it there.
 
-```{r}
-extract_eq(fit_vote$fit, 
-           intercept = "beta", 
-           use_coefs = TRUE,
-           wrap = TRUE)
-```
-
-$$
-\begin{aligned}
-\log\left[ \frac { \widehat{P( \operatorname{primary\_06} = \operatorname{1} )} }{ 1 - \widehat{P( \operatorname{primary\_06} = \operatorname{1} )} } \right] &= -2.43 + 0.01(\operatorname{age}) + 0.04(\operatorname{sex}_{\operatorname{Male}}) + 0.09(\operatorname{treatment}_{\operatorname{Civic\ Duty}})\ + \\
-&\quad 0.07(\operatorname{treatment}_{\operatorname{Hawthorne}}) + 0.2(\operatorname{treatment}_{\operatorname{Self}}) + 0.36(\operatorname{treatment}_{\operatorname{Neighbors}}) + 0.82(\operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}})\ + \\
-&\quad 1.61(\operatorname{voter\_class}_{\operatorname{Always\ Vote}}) + 0.03(\operatorname{treatment}_{\operatorname{Civic\ Duty}} \times \operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}}) + 0.06(\operatorname{treatment}_{\operatorname{Hawthorne}} \times \operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}}) + 0.05(\operatorname{treatment}_{\operatorname{Self}} \times \operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}})\ + \\
-&\quad 0.04(\operatorname{treatment}_{\operatorname{Neighbors}} \times \operatorname{voter\_class}_{\operatorname{Sometimes\ Vote}}) - 0.05(\operatorname{treatment}_{\operatorname{Civic\ Duty}} \times \operatorname{voter\_class}_{\operatorname{Always\ Vote}}) + 0.06(\operatorname{treatment}_{\operatorname{Hawthorne}} \times \operatorname{voter\_class}_{\operatorname{Always\ Vote}}) - 0.01(\operatorname{treatment}_{\operatorname{Self}} \times \operatorname{voter\_class}_{\operatorname{Always\ Vote}})\ + \\
-&\quad 0.01(\operatorname{treatment}_{\operatorname{Neighbors}} \times \operatorname{voter\_class}_{\operatorname{Always\ Vote}})
-\end{aligned}
-$$
-
+Recall that a categorical variable (whether character or factor) like `sex` is turned into a $0/1$ "dummy" variable which is then re-named something like $sex{Male}$. After all, we can't have words --- like "Male" or "Female" --- in a mathematical formula, hence the need for dummy variables.
 
 ### Exercise 8
 
-Behind the scenes of this tutorial, an object called `fit_vote` has been created which is the result of the code above. Type `fit_vote` and hit "Run Code." This generates the same results as using `print(fit_vote)`.
-
+Continue the pipe with `tidy(conf.int = TRUE)`.
 
 ```{r courage-8, exercise = TRUE}
 
 ```
 
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
 ```{r courage-8-hint-1, eval = FALSE}
-fit_vote
+...
+  tidy(... = TRUE)
 ```
 
 ```{r courage-8-test, include = FALSE}
+logistic_reg(engine = "glm") |> 
+	fit(as.factor(primary_06) ~ sex, data = x) |> 
+	tidy(conf.int = TRUE)
+```
+
+### 
+
+The meaning of the magnitude of the coefficient values are much harder to interpret in logistic models then they are in linear models. But, the fact that the coefficient is positive means that men are more likely to vote than women, and the fact that the confidence interval excludes zero means that we can be fairly certain of that claim.
+
+### Exercise 9
+
+Change the call to `fit()` to `fit(as.factor(primary_06) ~ voter_class, data = x)`.
+
+```{r courage-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-9-hint-1, eval = FALSE}
+... |> 
+  fit(..., data = ...)
+  ...
+```
+
+```{r courage-9-test, include = FALSE}
+logistic_reg(engine = "glm") |> 
+	fit(as.factor(primary_06) ~ voter_class, data = x) |> 
+	tidy(conf.int = TRUE)
+```
+
+### 
+
+The same dummy variable approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. Since `voter_class` has three values --- "Rarely Vote", "Sometimes Vote", and "Always Vote" --- the model creates two 0/1 dummy variables, giving them names like $voter_classSometimes Vote$ and $voter_classAlways Vote$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
+
+Because the coefficients of the dummy variables for "Sometimes Vote" and "Always Vote" are positive, and their confidence intervals exclude zero, we can be fairly certain that people in these categories are more likely to vote than "Rarely Vote" voters.
+
+### Exercise 10
+
+Change the call to `fit()` to `fit(as.factor(primary_06) ~ sex + age + treatment*voter_class, data = x)`.
+
+```{r courage-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-10-test, include = FALSE}
+# Already tested above.
+```
+
+### 
+
+The more variables we add, the more difficult it is to interpret the meaning of any particular coefficient. But interpretation also becomes less important. We don't really care about coefficients. We care about using our model to estimate quantities of interest.
+
+### Exercise 11
+
+Behind the scenes of this tutorial, an object called `fit_vote` has been created which is the result of the code above. Type `fit_vote` and hit "Run Code." This generates the same results as using `print(fit_vote)`.
+
+```{r courage-11, exercise = TRUE}
+
+```
+
+```{r courage-11-hint-1, eval = FALSE}
+fit_vote
+```
+
+```{r courage-11-test, include = FALSE}
 fit_vote
 ```
 
 ### 
 
-The *code formula* includes `sex`, a character variable with two possible values: `"Male"` and `"Female"`.
+In data science, **we deal with words, math, and code, but the most important of these is code.** We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
 
-The *math formula* includes `sexMale`, a 0/1 dummy variable.
+### Exercise 12
 
-### Exercise 9
+Load the **[easystats](https://easystats.github.io/easystats/)** package.
 
-Create a new code chunk in `causal_effect.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_XX`. 
+```{r courage-12, exercise = TRUE}
 
-`Command/Ctrl + Shift + K`. It may take some time to render `causal_effect.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `causal_effect.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
+```
 
-To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
+```{r courage-12-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r courage-12-test, include = FALSE}
+library(easystats)
+```
+
+###
+
+We don't add **easystats** to the QMD because we are only using it for an interactive check of our fitted model. However, the [easystats ecosystem](https://easystats.github.io/easystats/) has a variety of interesting functions and packages which you might want to explore.
+
+### Exercise 13
+
+In the Console, run `check_predictions(fit_vote)`. (This will produce an error.) CP/CR.
+
+```{r courage-13, exercise = TRUE}
+
+```
+
+```{r courage-13-hint-1, eval = FALSE}
+check_predictions(...)
+```
+
+```{r courage-13-test, include = FALSE}
+# check_predictions(fit_vote)
+```
+
+###
+
+It is not clear to us why `check_predictions()` fails for this model. Our apologies!
+
+### Exercise 14
+
+Ask AI to create $\LaTeX$ code for this model. Add the code to your QMD. `Cmd/Ctrl + Shift + K`.
+
+Make sure the resulting display looks good. For example, you don't want an absurd number of figures to the left of the decimal. If the model is too long, you will need to spread it across several lines. You may need to go back-and-forth with the AI a few times.
+
+Once the $\LaTeX$ code looks good, paste it below.
+
+```{r courage-14}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+###
+
+<!-- DK: Need AI! -->
+
+<!-- XX: Replace these examples with your code. Might want to give a hint about the hat dependent variable and the lack of an error term in the instructions above. -->
+
+Our formula looks like:
+
+$$\widehat{\text{att_end}} = 8.45 + 1.55 \cdot \text{treatment}_{\text{Treated}}$$
+
+It was created with:
+
+````
+$$\widehat{\text{att_end}} = 8.45 + 1.55 \cdot \text{treatment}_{\text{Treated}}$$
+````
+
+Note the differences. First, we have replaced the parameters with our best estimates. Second, we have dropped the error term because this is a formula for predicting the value for our outcome variable. Third, the left-hand side variable is $\widehat{\text{XX}}$ instead of $\text{XX}$ because this formula generates our estimated `XX`. A hat indicates an estimated value.
+
+This is our data generating mechanism.
+
+### Exercise 15
+
+Create a new code chunk in your QMD. Add a code chunk option: `#| cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_vote`. 
+
+`Command/Ctrl + Shift + K`. It may take some time to render your QMD, depending on how complex your model is. But, by including `#| cache: true` you cause Quarto to cache the results of the chunk. The next time you render your QMD, as long as you have not changed the code, Quarto will just load up the saved fitted object.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("causal_effect.qmd", start = -8)
+tutorial.helpers::show_file("postcards.qmd", start = -8)
 ```
 
 CP/CR.
 
-```{r courage-9}
+```{r courage-15}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1199,64 +1431,95 @@ question_text(NULL,
 
 ### 
 
-### Exercise 10
+To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
 
-Create another code chunk in `XX.qmd`. Add the chunk option: `label: math`. In that code chunk, add something like the below. You may find it useful to add the `coef_digits` argument to show fewer significant digits after the decimal.
+### Exercise 16
 
-```
-extract_eq(fit_vote$fit, 
-           intercept = "beta", 
-           use_coefs = TRUE,
-           wrap = TRUE)
-```
-
-`Command/Ctrl + Shift + K`. 
+Add `*_cache` to `.gitignore` file. Cached objects are often large. They don't belong on Github.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("XX.qmd", pattern = "extract")
+tutorial.helpers::show_file(".gitignore")
 ```
 
 CP/CR.
 
-```{r courage-10}
+```{r courage-16}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 3)
+	rows = 6)
+```
+
+###
+
+Because of the change in your `.gitignore` (assuming that you saved it), the cache directory should not appear in the Source Control panel because Git is ignoring it, as instructed. Commit and push. 
+
+### Exercise 17
+
+In the Console, run `tidy()` on `fit_vote` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
+
+```{r courage-17, exercise = TRUE}
+
+```
+
+```{r courage-17-hint-1, eval = FALSE}
+tidy(..., conf.int = ...)
+```
+
+```{r courage-17-test, include = FALSE}
+tidy(fit_vote, conf.int = TRUE)
 ```
 
 ### 
 
-When you render your document, this formula will appear.
+`tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
 
-```{r}
-extract_eq(fit_vote$fit, 
-           intercept = "beta", 
-           use_coefs = TRUE,
-           wrap = TRUE)
+### Exercise 18
+
+Create a new code chunk in your QMD. Ask AI to help you make a nice looking table from the tibble which is returned by `tidy()` Insert that code into the QMD. 
+
+`Command/Ctrl + Shift + K`. 
+
+Make sure it works. You might need to add some new libraries, e.g., **tinytable**, **knitr**, **gt**, **kable**, **flextable**, et cetera, to the `setup` code chunk, if you use any functions from these packages, all of which have strengths and weaknesses for making tables.
+
+<!-- DK: AI needed again! -->
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("postcards.qmd", end = -10)
 ```
 
-This is our data generating mechanism.
+CP/CR.
 
-### Exercise 11
+```{r courage-18}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 12)
+```
 
-Add two sentence to your project summary. 
+At the very least, yor table should include a title and a caption with the data source. The more you use AI, the better you will get at doing so.
 
-First, mention a weakness in your model, derived from the questions above about the key assumptions of a data science problem.
+### Exercise 19
 
-Second, explain the structure of the model. Something like: "I/we model Y [the concept of the outcome, not the variable name] as a [linear/logistic/multinomial/oridinal] function of X [and maybe other covariates]."
+Add a sentence to your project summary. 
+
+Explain the structure of the model. Something like: "I/we model XX [the concept of the outcome, not the variable name], [insert description of values of XX], as a [linear/logistic/multinomial/ordinal] function of XX [and maybe other covariates]." 
 
 Recall the beginning of our version of the summary:
 
-> Efforts to get your supporters to vote have always been a part of US political campaigns. Using the data from a 2006 experiment in Michigan, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026.
+> Sending postcards and other mailings to registered voters is a traditional part of US political campaigns. Using data from a 2006 experiment in Michigan, we seek to explore the likely causal effects of sending postcards to voters in the current gubernatorial campaign in Texas. We are concerned that data from Michigan might not be representative of the United States as a whole.
 
-```{r courage-11}
+```{r courage-19}
 question_text(NULL,
-	message = "The rise of social media use may have changed the efficacy of postcards in changing individual behavior. We model voting as a logistic function of treatment --- meaning type of postcard received, if any --- along with prior voting behavior, sex and age.",
+	message = "We model whether or not a person voted as a logistic function of postcard received interacted with a measure of voter engagement, along with sex and age.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1265,13 +1528,12 @@ question_text(NULL,
 
 ### 
 
-Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to `causal_effects.qmd`, `Command/Ctrl + Shift + K`, and then commit/push.
-
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to summary paragraph portion of your QMD. `Command/Ctrl + Shift + K`, and then commit/push.
 
 ## Temperance
 ### 
 
-*Temperance is simply a disposition of the mind which binds the passion.* - Thomas Aquinas
+*Temperance is a bridle of gold; he, who uses it rightly, is more like a god than a man.* - Robert Burton
 
 ### Exercise 1
 
@@ -1279,7 +1541,7 @@ In your own words, describe the use of Temperance in data science.
 
 ```{r temperance-1}
 question_text(NULL,
-	message = "Temperance uses the data generating mechanism to answer the questions with which we began. Humility reminds us that this answer is always a lie. We can also use the DGM to calculate many similar quantities of interest, displaying the results graphically.",
+	message = "Temperance uses the data generating mechanism to answer the question with which we began. Humility reminds us that this answer is always a lie. We can also use the DGM to calculate many similar quantities of interest, displaying the results graphically.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1288,21 +1550,104 @@ question_text(NULL,
 
 ### 
 
-Temperance guides us in the use of the DGM — or the “model” — we have created to answer the questions with which we began.
+Courage gave us the data generating mechanism. Temperance guides us in the use of the DGM — or the “model” — we have created to answer the question(s) with which we began. We create posteriors for the quantities of interest. 
+
+<!-- XX: Add at least three questions which involve the interpretation of numbers in the table. We have created three empty questions below these commentary blocks for you. The first question --- and maybe all the questions? --- shows a table of the parameter values at the start. For models with lots of parameters, you need to restrict what the table displays. See the Cardinal Virtues vignette for detailed discussion. You must provide an excellent answer to each of the questions. -->
+
+<!-- Your main job is to provide a clear question and an excellent answer. So, you are using "yes-answer" type exercises. But what about the knowledge drops? Consider some prototype knowledge drops in the list below. Pick and choose among them, editing them as you see fit. In many cases, you can just copy/paste them as they are. But you must choose ones which apply to that particular question and/or the answer you provide.  These are mostly from the Cardinal Virtues vignette. Here they are:
+
+* Whenever we consider non-treatment variables, we must never use terms like "cause," "impact" and so on. We can't make any statement which implies the existence of more than one potential outcome based on changes in non-treatment variables. We can't make any claims about within row effects. Instead, we can only compare across rows. Always use the phrase "when comparing X and Y" or something very similar.
+
+* Dummy variables must always be interpreted in the context of the base value for that variable, which is generally included in the intercept. For example, the base value here is "asian/pacific islander." (The base value is the first alphabetically by default for character variables. However, if it is a factor variable, you can change that by setting the order of the levels by hand.)
+
+* The interpretation of a treatment variable is very different than the interpretation of a standard covariate. The key point is that there is no such thing as a causal (versus preditive) data set nor a causal (versus predictive) R code formula. You can use the same data set (and the same R code!) for both causal and predictive models. The difference lies in the assumptions you make.
+
+* Most of the time parameters in a model have no direct relationship with any population value in which we might be interested. This is especially true in complex and/or non-linear models. That is, in those cases, a coefficient like $\beta_1$ does not "mean" anything. But, in simple, small, linear models, it sometimes happens that a parameter does correspond to something real.
+
+DK: Maybe split the confidence interval comment below into two?
+
+* We look for two things in the confidence interval. First, does it exclude zero? If not, then we can't be sure if the relationship is positive or negative. Second, does it overlap with the confidence intervals for other dummy columns derived from this variable? If so, then we can be sure that the ordering as to which comparisons are bigger. 
+
+* Numeric variables are harder to use in comparisons than binary variables because there are no longer just two well-defined groups to compare with each other. We must create those two groups ourselves. Fortunately, as long as there are no interaction terms, we can just pick two groups with any values for the variable. The most common two groups differ by one unit of the variable. But it is quite common to use groups which differ by more/less if doing so seems sensible and/or if it makes the math easier.
+
+* We recommend the verb "adjust" in place of "control" when discussing the effect of including other variables in the model. Example: "The causal effect of exposure to Spanish-speakers is 1.5, adjusting for other variables like age and party." The word "adjusting" is better than the word "controlling" because it demonstrates some humility.
+
+-->
 
 ### Exercise 2
 
+<!-- XX: You can cut these three questions if you are using a model like random forest for which there are no interpretable parameters. -->
+
+Before using the DGM, we should make sure that we can interpret it.
+
+Recall the values for the parameters in our data generating mechanism:
+
+```{r}
+coefs
+```
+
+```{r temperance-2}
+question_text(NULL,
+	message = "Place correct answer here.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+### Exercise 3
+
+```{r}
+coefs
+```
+
+```{r temperance-3}
+question_text(NULL,
+	message = "Place correct answer here.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+### Exercise 4
+
+```{r}
+coefs
+```
+
+```{r temperance-4}
+question_text(NULL,
+	message = "Place correct answer here.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+<!-- XX: You can add some more interpretation questions if you like, but three is probably enough. -->
+
+### Exercise 5
+
+In the end, we don't really care about parameters, much less how to interpret them. Parameters are *imaginary*, like unicorns. We care about answers to our questions. Parameters are tools for answering questions. They aren't interesting in-and-of themselves. *In the modern world, all parameters are nuisance parameters.* 
+
 Load the [**marginaleffects**](https://marginaleffects.com/) package.
 
-```{r temperance-2, exercise = TRUE}
+```{r temperance-5, exercise = TRUE}
 
 ```
 
-```{r temperance-2-hint-1, eval = FALSE}
+```{r temperance-5-hint-1, eval = FALSE}
 library(...)
 ```
 
-```{r temperance-2-test, include = FALSE}
+```{r temperance-5-test, include = FALSE}
 library(marginaleffects)
 ```
 
@@ -1310,92 +1655,13 @@ library(marginaleffects)
 
 We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
 
-### Exercise 3
-
-What is the general topic we are investigating? What is the specific question we are trying to answer?
-
-```{r temperance-3}
-question_text(NULL,
-	message = "What is the causal effect, on the probability of voting, of different postcards on voters of different levels of political engagement?",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic broadly.
-
-### Exercise 4
-
-Enter this code into the exercise code block and hit "Run Code."
-
-```
-plot_comparisons(fit_vote$fit,
-                 variables = "treatment",
-                 by = "voter_class",
-                 newdata = "balanced",
-                 type = "response")
-```                 
-
-```{r temperance-4, exercise = TRUE}
-
-```
-
-```{r temperance-4-test, include = FALSE}
-plot_comparisons(fit_vote$fit,
-                 variables = "treatment",
-                 by = "voter_class",
-                 newdata = "balanced",
-                 type = "response")
-```
-
-### 
-
-We are interested in the average treatment effect of postcards. There are 4 different postcards, each of which can be compared to what would have happened if the voter did not receive any postcard.
-
-### Exercise 5
-
-Add `library(marginaleffects)` to the `XX.qmd` setup code chunk. Create a new code chunk. Label it with `label: plot`. Copy/paste the code which creates your graphic. 
-
-`Command/Ctrl + Shift + K` to ensure that it all works as intended.
-
-At the Console, run:
-
-```
-tutorial.helpers::show_file("causal_effect.qmd", pattern = "marginaleffects")
-```
-
-CP/CR.
-
-
-```{r temperance-5}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### 
-
-These four treatment effects, however, are heterogeneous. They vary depending on an individual’s voting history, which we organize into three categories: Rarely Vote, Sometimes Vote and Always Vote. So, we have 12 different average treatment effects, one for each possible combination of postcard and voting history.
-
-
 ### Exercise 6
 
-Add the final one to two sentences to your project summary. This sentence must provide an estimate for at least one Quantity of Interest and its associated confidence interval. Your Quanity of Interest can be different than the one you started with.
-
-Recall our current version of the summary. (It is OK if your version is different.)
-
-> Efforts to get your supporters to vote have always been a part of US political campaigns. Using the data from a 2006 experiment in Michigan, we seek to forecast the causal effect on voter participation of sending postcards in the Texas gubernatorial general election of 2026. The rise of social media use may have changed the efficacy of postcards in changing individual behavior. We model voting as a logistic function of treatment --- meaning type of postcard received, if any --- along with prior voting behavior, sex and age.
-
+What is the specific question we are trying to answer? 
 
 ```{r temperance-6}
 question_text(NULL,
-	message = "The causal effect of receiving a postcard varies based both on its message and the level of political engagement of the person receiving it. ",
+	message = "XX: This might be the same question as we started with in Wisdom. But it is also OK if it is different. I think . . .",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1404,40 +1670,69 @@ question_text(NULL,
 
 ### 
 
-Edit your summary paragraph in `causal_effect.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
+Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic more broadly.
+
+<!-- XX: There should be a bunch of questions here, covering examples of plot_predictions(), plot_comparisons(), averages and maybe even slopes. We want to run multiple versions of plot_predictions(), dropping knowledge each time which connects what we see to our coefficients, especially those which we asked interpretation questions about above. See the Cardinal Virtues vignette for some examples. The last such question creates a final plot which is then included in the QMD. 
+
+Below, we just show one plot_predictions() question, but your tutorial should really have several. -->
 
 ### Exercise 7
 
-Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
+Run this code:
 
-```{r temperance-7}
-question_text(NULL,
-	message = "Perhaps our data did not match the future as well as we had hoped. We estimate that the treatment effect of the Neighbors postcard to be between 8% to 10%, but the reality might not be in this interval.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
+```
+plot_predictions(fit_vote, 
+                 condition = c("XX", "XX")))
+```       
+
+```{r temperance-7, exercise = TRUE}
+
+```
+
+```{r temperance-7-test, include = FALSE}
+
 ```
 
 ### 
 
-> *The world is always more uncertain than our models would have us believe.*
+<!-- XX: The knowledge drop MUST discuss the estimate (and its uncertainty) that you go on to include in your summary paragraph. You MUST discuss how you are reading, roughly, the values for the estimate and the confidence interval by looking at this plot. -->
 
-Ultimately, we try to account for our uncertainty in our estimates. Even with this safeguard, we aren’t surprised if we are a bit off.
+<!-- XX: There are a lot of interesting options in plot_predictions. Check them out. You may want to use some of them in your plot. I think `points` is quite interesting. Add a couple more questions which use different argument values and/or add other options.  -->
+
+<!-- XX: You can use the draw = FALSE option to return a tibble which can then be piped directly into ggplot.  -->
 
 ### Exercise 8
 
-Rearrange the material in `causal_effect.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
+<!-- XX: After you have run several marginaleffects functions, it is time to finish up, to create your final plot. In this question, have them run the final marginaleffects function, the one that will form the basis of the final plot. -->
 
-At the Console, run:
+Run this code:
 
-```         
-tutorial.helpers::show_file("causal_effect.qmd")
+```
+plot_predictions(fit_vote, 
+                 condition = c("XX", "XX")))
+```       
+
+```{r temperance-8, exercise = TRUE}
+
 ```
 
-CP/CR.
+```{r temperance-8-test, include = FALSE}
 
-```{r temperance-8}
+```
+
+### 
+
+<!-- XX: Make some comments about what this plot is telling us, especially with regard to the questions with which we began. What are the most important takeaways from this plot? (Obviously, this will -->
+
+### Exercise 9
+
+Work interactively with your QMD to make a beautiful version of this plot. Your title should highlight the key variables. Your subtitle should describe the key takeaway, the sentence/conclusion which readers will, you hope, remember. Your caption should mention the data source. Your axis labels should look nice.
+
+This plot is not directly connected to your question. It answers lots of questions! It might be used by lots of different people. 
+
+Copy the code for your plot here:
+
+```{r temperance-9}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1446,16 +1741,105 @@ question_text(NULL,
 	rows = 20)
 ```
 
+###
+
+Data science often involves this-back-and-forth style of work. First, we need to make a single chunk of code, in this case, a new plot, work well. This requires interactive work between the QMD and the Console. Second, we need to ensure that the entire QMD runs correctly on its own.
+
+### Exercise 10
+
+Finalize the new graphics code chunk in your QMD.
+
+`Command/Ctrl + Shift + K` to ensure that it all works as intended. Don't forget to add `library(marginaleffects)` to your `setup` code chunk.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("postcards.qmd", start = -8)
+```
+
+CP/CR.
+
+```{r temperance-10}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 10)
+```
+
+
+### 
+
+
+<!-- XX: Discuss some limitations of this model. Remind us of some of the reasons to demonstrate humility. -->
+
+### Exercise 11
+
+Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
+
+```{r temperance-11}
+question_text(NULL,
+	message = "XX",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Add a final sentence to your summary paragraph in your QMD as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
+
+### Exercise 12
+
+Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
+
+```{r temperance-12}
+question_text(NULL,
+	message = "XX: This is another example in which the quality of your answer is important. You might or might not suggest an alternate estimate. I always adjust the estimate toward my own subjective sense of a long-run average and/or typical value and/or zero. But that is not necessary. However, you should always increase the confidence interval since the assumptions of your model are always false.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Always go back to your Preceptor Table, the information which, if you had it, would make answering your question easy. In almost all real world cases, the Preceptor Table and the data are fairly different, not least because validity never holds perfectly. So, even a perfectly estimated statistical model is rarely as useful as we might like.
+
+### Exercise 13
+
+Rearrange the material in your QMD so that the order is graphic, followed by paragraph.  Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. You can keep or discard the math and any other material at your own discretion.
+
+`Command/Ctrl + Shift + K` to ensure that everything works.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("postcards.qmd")
+```
+
+CP/CR.
+
+```{r temperance-13}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 30)
+```
+
 ### 
 
 This is the version of your QMD file which your teacher is most likely to take a close look at.
 
+### Exercise 14
 
-### Exercise 9
+Publish your rendered QMD to GitHub Pages. Copy/paste the resulting url below.
 
-Publish `causal_effect.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
-
-```{r temperance-9}
+```{r temperance-14}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1466,13 +1850,34 @@ question_text(NULL,
 
 ### 
 
-Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
+Commit/push everything.
 
+### Exercise 15
+
+Copy/paste the url to your Github repo.
+
+```{r temperance-15}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+We can never know all the entries in the Preceptor Table. That knowledge is reserved for God. If all our assumptions are correct, then our DGM is true, it accurately describes the way in which the world works. There is no better way to predict the future, or to model the past, than to use it. Sadly, this will only be the case with toy examples involving things like coins and dice. We hope that our DGM is close to the true DGM but, since our assumption are never perfectly correct, our DGM will always be different. The estimated magnitude and importance of that difference is a matter of judgment.
+
+The world confronts us. Make decisions we must.
 
 ## Summary
 ### 
 
-This tutorial covered [Chapter 10: N Parameters](https://ppbds.github.io/primer/n-parameters.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
+This tutorial supports [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
+
+<!-- XX: Give the final plot and our summary paragraph. And a note indicating how this information might be helpful to the Imagine person we created at the start.  -->
+
 
 ```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
 ```
