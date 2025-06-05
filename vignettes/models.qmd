@@ -1,0 +1,45 @@
+---
+title: "Models"
+author: "Anish Talla"
+format: html
+editor: visual
+execute: 
+  echo: false
+---
+
+```{r}
+library(brms)
+library(tidybayes)
+library(ggplot2)
+library(dplyr)
+library(scales)
+```
+
+$$ biden_i = \mu + \epsilon_i $$
+
+```{r model, cache=TRUE}
+fit_bern <- brm(formula = biden ~ 1,
+                data = poll_data,
+                family = bernoulli(),
+                refresh = 0,
+                silent = 2,
+                seed = 9)
+```
+
+```{r plot}
+fit_bern %>%
+  add_epred_draws(newdata = ndata) %>%
+  select(.epred) %>%
+  ggplot(aes(x = .epred)) +
+  geom_density(aes(y = after_stat(count / sum(count)))) +
+  scale_x_continuous(labels = percent_format()) +
+  scale_y_continuous(labels = percent_format()) +
+  labs(
+    title = "Predicted Proportion of Votes for Joe Biden",
+    subtitle = "Based on Bayesian intercept-only model",
+    x = "Proportion of Votes",
+    y = "Density"
+  )
+```
+
+So far, we have polling data collected in March 2024 by YouGov from 1,559 individuals, and we utilize this data to estimate the proportion of votes Joe Biden will receive in the 2024 election.
