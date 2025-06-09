@@ -85,28 +85,241 @@ ndata <- tibble(.rows = 1)
 <!-- Some concerns that this is too long. -->
 
 ## Introduction
-### 
+### hi
 
 This tutorial supports [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
 
 The world confronts us. Make decisions we must.
 
+Imagine you are a political strategist in early 2024. The election is close, and resources are limited. To allocate them wisely, you need to estimate Joe Biden’s true level of voter support—not just in a single poll, but the underlying probability that a voter will choose him. 
+
+## The Question
+### 
+
+*It is not the answer that enlightens, but the question.* - Eugene Ionesco
+
+With this project, we’re not trying to predict every detail about the 2024 election. That would be impossible. Instead, we’re focusing on a question that we can actually begin to answer: what proportion of all votes will be cast for Joe Biden? 
+
+### Exercise 1
+
+Load [**tidyverse**](https://www.tidyverse.org/) package.
+
+```{r the-question-1, exercise = TRUE}
+
+```
+
+```{r the-question-1-hint-1, eval = FALSE}
+library(tidyverse)
+```
+
+```{r the-question-1-test, include = FALSE}
+library(tidyverse)
+```
+
+### 
+
+The polling data comes from a YouGov survey of 1,559 U.S. adult citizens conducted March 10-12, 2024.
+
+### Exercise 2
+
+Load the [**primer.data**](https://ppbds.github.io/primer.data/) package.
+
+```{r the-question-2, exercise = TRUE}
+
+```
+
+```{r the-question-2-hint-1, eval = FALSE}
+library(primer.data)
+```
+
+```{r the-question-2-test, include = FALSE}
+library(primer.data)
+```
+
+### 
+
+A version of the data from **YouGov's March 2024 poll** is available in the `poll_data tibble`. This tibble consists of 1,559 rows and 1 column.
+
+### Exercise 3
+
+After creating `poll_data`, examine its structure. In the Console, type `glimpse(poll_data)` and describe the data structure below.
+
+```{r the-question-3}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+### 
+
+The data comes from a YouGov poll conducted March 10-12, 2024, surveying 1,559 US adult citizens about their voting intentions for the 2024 presidential election. The specific question asked was: 
+"If an election for president were going to be held now and the Democratic nominee was Joe Biden and the Republican nominee was Donald Trump, would you vote for…"  
+For our analysis, we focus only on whether respondents indicated they would vote for Biden (coded as 1) or not (coded as 0).
+
+### Exercise 4
+
+**Models** is the broad topic of this tutorial. Given that topic, which variable in `poll_data` should we use as our outcome variable?
+
+
+```{r the-question-4}
+question_text(NULL,
+	message = "biden: A binary outcome variable indicating whether a respondent supports Joe Biden (1) or not (0) in the upcoming election.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 2)
+```
+
+### 
+
+We will use `biden` as our outcome variable.
+
+```{r}
+poll_data |> 
+  ggplot(aes(x = factor(biden))) +
+  geom_bar(fill = "steelblue") +
+  labs(
+    title = "Distribution of Support for Joe Biden",
+    subtitle = "About 42% of respondents said they would vote for Biden",
+    x = "Would Vote for Biden (1 = Yes, 0 = No)",
+    y = "Number of Respondents"
+  ) +
+  theme_minimal(base_size = 14)
+```
+
+### Exercise 5
+
+Let's imagine a brand new variable which **does not exists** in the data. This variable should be binary, meaning that it only takes on one of two values. It should also, at least in theory, be manipulable. In other words, if the value of the variable is "3," or whatever, then it generates one potential outcome and if it is "9," or whatever, it generates another potential outcome.
+
+
+Describe this imaginary variable and how might we manipulate its value.
+
+```{r the-question-5}
+question_text(NULL,
+	message = "Imagine a variable called `trump_ad` which has a value of `1` if the person was shown a pro-Trump advertisement and `0` if they were not shown the ad. We can manipulate this variable by deciding, either randomly or otherwise, whether or not a specific individual sees the advertisement.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Any data set can be used to construct a causal model as long as there is at least one covariate that we can, at least in theory, manipulate. It does not matter whether or not anyone did, in fact, manipulate it. 
+
+### Exercise 6
+
+Given our (imaginary) treatment variable `trump_ad`, how many potential outcomes are there for each `trump_ad` unit? Explain why.
+
+```{r the-question-6}
+question_text(NULL,
+	message = "There are two potential outcomes because the treatment variable `trump_ad` takes on two possible values: `1` (exposure to a pro-Trump advertisement) versus `0` (no such exposure).",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+The same data set can be used to create, separately, lots and lots of different models, both causal and predictive. We can just use different outcome variables and/or specify different treatment variables. This is a *conceptual* framework we apply to the data. It is never inherent in the data itself.
+
+### Exercise 7
+
+In a few sentences, specify the two different values for the imaginary treatment variable `trump_ad`, for a single unit, guess at the potential outcomes which would result, and then determine the causal effect for that unit given those guesses.
+
+```{r the-question-7}
+question_text(NULL,
+	message = "For a given voter, the treatment variable might be **exposure to a pro-Trump advertisement** or **no exposure**. If exposed, their support for `biden` is `0`; if not, it's `1`. The causal effect is `0 - 1 = -1` for this voter.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+The definition of a causal effect is the difference between two potential outcomes. Of course, you can't just say that the causal effect is 10. The exact value depends on which potential outcome comes first in the subtraction and which second. There is, perhaps, a default sense in which the causal effect is defined as treatment minus control. 
+
+Any causal connection means exploring the *within row* difference between two potential outcomes. We don't need to look at any other rows to have that conversation.
+
+### Exercise 8
+
+<!-- XX: Replace stuff like `XX: the tibble` with just the name of the tibble, i.e., `trains`. -->
+
+Let's consider a *predictive model*. Which variable in `poll_data` do you think might have an important connection to `biden?`
+
+```{r the-question-8}
+question_text(NULL,
+	message = "One key covariate to explore is `age`, since voter preferences often vary by age group.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 2)
+```
+
+### 
+
+With a predictive model, there is only one outcome for each individual unit. There are not two potential outcomes because we are not considering any of the covariates to be a treatment variable. We assuming that the values of all covariates are "fixed." 
+
+There are no "treatments" in predictive models. There are only covariates.
+
+### Exercise 9
+
+Specify two different groups of **voters** which have different values for **age** and which might have different average values for the `biden` outcome.
+
+```{r the-question-9}
+question_text(NULL,
+	message = "Consider two groups, the first with a value for age of **25** and the second with a value of **65**. Those two groups might have different average values for the outcome variable `biden`.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+In predictive models, do not use words like "cause," "influence," "impact," or anything else which suggests causation. The best phrasing is in terms of "differences" between groups of units with different values for a covariate of interest.
+
+### Exercise 10
+
+Write a **causal question** which connects the outcome variable `biden` to `trump_ad`, the covariate of interest.
+
+Example: What is the effect of being exposed to a **trump_ad** on a voter's likelihood of supporting `biden`?
+
+```{r the-question-10}
+question_text(NULL,
+	message = "What is the causal effect of exposure to a `trump_ad` on support for `biden`?",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+The answer to this question is your "Quantity of Interest." 
+
+Our Quantity of Interest might appear too specific, too narrow to capture the full complexity of the topic. There are many, many numbers in which we are interested, many numbers that we want to know. But we don't need to list them all here! We just need to choose one of them since our goal is just to have a specific number which helps to guide us in the creation of the Preceptor Table and, then, the model.
+
 
 ## Wisdom
 ### 
 
-*The only true wisdom is in knowing you know nothing.* - Socrates
+*Wonder is the beginning of wisdom.* - Socrates
 
-The general question we are interested in is the future results of the 2024 election, as seen from a survey conducted March 2024.
+The general question we are interested in is the future results of the 2024 election, as seen from a survey conducted March of 2024.
 
 Our specific question:
 
 > *What proportion of all votes will be cast for Joe Biden in the 2024 election?*
 
-
 ### Exercise 1
 
-In your own words, describe the key components of Wisdom when working on a data science problem.
+In your own words, describe the key components of Wisdom when working on a data science problem. What should you keep in mind before jumping into modeling?
 
 ```{r wisdom-1}
 question_text(NULL,
@@ -116,6 +329,10 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+### 
+
+The central problem for **Wisdom** is: Can we use data from a March 2024 YouGov poll of U.S. adult citizens to understand the variables/relationships in **a table showing voter support for Biden across different sources and time periods?**
 
 ### Exercise 2
 
@@ -150,7 +367,7 @@ question_text(NULL,
 
 ### 
 
-The way I like to think of it is that the units are the objects that are being affected (rows), while the outcome column is how the units are being affected.
+ The way I like to think of it is that the units are the objects that are being affected (rows), while the outcome column is how the units are being affected.
 
 
 ### Exercise 4
@@ -168,13 +385,31 @@ question_text(NULL,
 	rows = 6)
 ```
 
+
 ### Exercise 5
 
-What is the outcome for this problem?
+What are the units for this problem?
 
 ```{r wisdom-5}
 question_text(NULL,
-	message = "The outcome is whether the vote was cast for Biden or not.",
+	message = "The units are individual survey respondents.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Specifying the Preceptor Table forces us to think clearly about the units and outcomes implied by the question. The resulting discussion sometimes leads us to modify the question with which we started. No data science project follows a single direction. We always backtrack. There is always dialogue.
+
+### Exercise 6
+
+What is the outcome for this problem?
+
+```{r wisdom-6}
+question_text(NULL,
+	message = "The outcome is whether a person voted for Joe Biden—1 for yes, 0 for no.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -187,12 +422,28 @@ Looking at the question, having the outcome as "the candidate for whom the vote 
 
 Realistically, then, this question only has 1 outcome. This means that the problem would be a predictive model.
 
+### Exercise 7
 
-### Exercise 6
+What is a covariate which you think might be useful for this problem, regardless of whether or not it might be included in the data?
+
+```{r wisdom-7}
+question_text(NULL,
+	message = "A plausible covariate is `age`, as it may influence voting preferences.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+The term "covariates" is used in at least three ways in data science. First, it is all the variables which might be useful, regardless of whether or not we have the data. Second, it is all the variables for which we have data. Third, it is the set of variables in the data which we end up using in the model.
+
+### Exercise 8
 
 What are the treatments, if any, for this problem?
 
-```{r wisdom-6}
+```{r wisdom-8}
 question_text(NULL,
 	message = "There is no treatment.",
 	answer(NULL, correct = TRUE),
@@ -206,13 +457,13 @@ question_text(NULL,
 This is a predictive model, not a causal model, so there are no treatments, by definition. Recall that treatment is just a covariate which, given the question we are trying to answer, might at least in theory be manipulable.
 
 
-### Exercise 7
+### Exercise 9
 
 What moment in time does the Preceptor Table refer to?
 
-```{r wisdom-7}
+```{r wisdom-9}
 question_text(NULL,
-	message = "Just after Election Day, 2024",
+	message = "Just after Election Day (November), 2024",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -224,13 +475,13 @@ question_text(NULL,
 Take note of the date of the Preceptor Table, as this will be different from our data. When working with multiple data sources, it's important to keep track of the date and how the information may be affected by it.
 
 
-### Exercise 8
+### Exercise 10
 
-Describe in words what the Preceptor Table would look like for this problem.
+Define a causal effect. (Note that the model in this tutorial is predictive, not causal. We just want to make sure you understand what a causal model is.)
 
-```{r wisdom-8}
+```{r wisdom-10}
 question_text(NULL,
-	message = "There is one row for each voter in the 2024 US presidential election. There is one output column indicating whether or not the voter voted for Biden (1) or not (0).",
+	message = "A causal effect is the difference between two potential outcomes.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -261,11 +512,11 @@ On the other hand, let's take a look at our data for today:
 The data we have came from a YouGov poll [pdf](https://github.com/PPBDS/primer/blob/master/sources/you-gov-2024-03-12.pdf) of 1,559 US adult citizens, conducted March 10 - 12, 2024. 
 
 
-### Exercise 9
+### Exercise 11
 
 Run the following code to see what our data looks like in a data table.
 
-```{r wisdom-9, exercise = TRUE}
+```{r wisdom-11, exercise = TRUE}
 #| echo: false
 tibble(poll_ID = c("1", "2", 
                    "...", "200", "201", "...", "1,559"),
@@ -280,7 +531,7 @@ tibble(poll_ID = c("1", "2",
     cols_align(align = "center", columns = everything())
 ```
 
-```{r wisdom-9-test, include = FALSE}
+```{r wisdom-11-test, include = FALSE}
 #| echo: false
 tibble(poll_ID = c("1", "2", 
                    "...", "200", "201", "...", "1,559"),
@@ -305,15 +556,15 @@ Note the following:
 3. The variable labels differ. “Voted for Biden” is not the same thing as “Would Vote for Biden.
 
 
-### Exercise 10
+### Exercise 12
 
 <!-- DK: Make all this consistent with the template. Shouldn't students, for example, render the qmd before deleting all the junk, so that they can be sure their set up is good? - DONE -->
 
-Create a new Quarto Document. Set the title to `Models` and the author to you.  Render the document to make sure it works, using `Control/Command + Shift + K`. Remove all the junk after the YAML header. Inside of the YAML header, add `execute: echo: false`. Save the file as `models.qmd`. Note that the `.qmd` extension will be added automatically.
+Create a new Quarto document titled `models.qmd`. Set the author to your name. Edit the YAML, Add `execute: echo: false` to hide code chunks in the final output. Press `Ctrl/Cmd + Shift + K` to check for errors *before* deleting the template text. Remove all default text below the YAML header. Run `tutorial.helpers::show_file("models.qmd")` in the Console to confirm your file matches expectations. 
 
 Type `tutorial.helpers::show_file("models.qmd")` into the Console. CP/CR.
 
-```{r wisdom-10}
+```{r wisdom-12}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -331,29 +582,29 @@ The question from the poll that we will be analyzing is:
 The allowed choices are “Joe Biden,” “Donald Trump,” “Other,” “Not Sure,” and “I would not vote.” 
 
 
-### Exercise 11
+### Exercise 13
 
 Load up the **tidyverse** package
 
-```{r wisdom-11, exercise = TRUE}
+```{r wisdom-13, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r wisdom-11-hint-1, eval = FALSE}
+```{r wisdom-13-hint-1, eval = FALSE}
 library(tidyverse)
 ```
 
-```{r wisdom-11-test, include = FALSE}
+```{r wisdom-13-test, include = FALSE}
 library(tidyverse)
 ```
 
-### Exercise 12
+### Exercise 14
 
 Create a new code chunk in the Quarto Document. Add `#| label: setup` and `#| message: FALSE`. Load in the **tidyverse** library there as well. Render the document to check that you get no error messages. In the console, run `tutorial.helpers::show_file("analysis.qmd", start = -5)`. CP/CR
 
-```{r wisdom-12}
+```{r wisdom-14}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -362,11 +613,11 @@ question_text(NULL,
 	rows = 3)
 ```
 
-### Exercise 13
+### Exercise 15
 
 In your own words, define "validity" as the term is used in the *Primer*.
 
-```{r wisdom-13}
+```{r wisdom-15}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -380,14 +631,14 @@ question_text(NULL,
 42% of those polled indicated Joe Biden. Although rounding makes it impossible to know for sure, we will assume that 655 of the 1,559 “US adult citizens” would vote for Biden. 
 
 
-### Exercise 14
+### Exercise 16
 
 Provide one reason why the assumption of validity might not hold for this problem.
 
 
-```{r wisdom-14}
+```{r wisdom-16}
 question_text(NULL,
-	message = "People sometimes don't vote for the person they claim they are going to vote for.",
+	message = "People sometimes don't vote for the person they claim they are going to vote for. For example, some Biden supporters might tell pollsters they’re undecided (to avoid political arguments) but vote for him in private. This can contribute to differences in poll responses vs actual votes.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -396,10 +647,10 @@ question_text(NULL,
 
 ### 
 
-What we tell other people we will do is often not what we actually do. Consider a voter who is embarrassed about her support for Biden. Perhaps she perceives the interviewer as a Republican and doesn't care to admit to him, in March, her support for Biden. But, in November, in the privacy of the polling booth, she votes for Biden. In her case, the outcome from the data (what she told the pollster) did not have a *valid* correspondence with her behavior in the polling booth.
+People don’t always do what they say they’ll do. Imagine a voter who feels awkward admitting she supports Biden. Maybe she thinks the pollster is a Republican, so when asked in March, she says she’s undecided or supports someone else. But in November, when she’s alone in the voting booth, she votes for Biden. In this case, what she told the pollster didn’t match what she actually did. In this case, her response to the poll did not have a *valid* correspondence with her behavior in the polling booth.
 
 
-### Exercise 15
+### Exercise 17
 
 Summarize the state of your work so far in one sentence. 
 
@@ -411,7 +662,7 @@ Note: In any question related to polling, you always want to include the name of
 
 <!-- DK: Is this questions repeated twice? - DONE -->
 
-```{r wisdom-15}
+```{r wisdom-17}
 question_text(NULL,
 	message = "Using data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, we seek to understand what proportion of voters will support Biden in the 2024 election.",
 	answer(NULL, correct = TRUE),
@@ -428,6 +679,8 @@ Edit your answer as you see fit, but do not copy/paste our answer exactly. Add t
 ### 
 
 *Justice is truth in action.* - Benjamin Disraeli
+
+In data science, Justice revolves around concerns and reasons our models might fail despite careful work. We’ll examine four key assumptions and their potential weaknesses. 
 
 
 ### Exercise 1
@@ -477,12 +730,12 @@ population_table
 
 ### 
 
-Notice how, although the Population Table is helping us by adding data, the data that it's adding doesn't convey validity, i.e. it is measuring a different metric (in this case the voters' opinions from different time periods). We don't know if the voters' opinions changed over that time period, making the data invalid.
+While the Population Table provides valuable information, it's important to recognize its limitations. For instance, if it includes polling data from March to predict voting behavior in November, we must question its validity. Relying on outdated polling data may not accurately reflect the electorate's voting trends. This makes the data invalid for our purpose. 
 
 
 ### Exercise 4
 
-In your own words, define the assumption of "stability" when employed in the context of data science.
+In your own words, define the assumption of "stability" in the context of data science.
 
 
 ```{r justice-4}
@@ -519,7 +772,7 @@ Stability might become important as we think about the actual process by which w
 
 ### Exercise 6
 
-In your own words, define the assumption of "representativeness" when employed in the context of data science.
+In your own words, define the assumption of "representativeness" in the context of data science.
 
 
 ```{r justice-6}
@@ -552,6 +805,8 @@ question_text(NULL,
 
 ### 
 
+Always ask: Whose voices are missing? How might their absence distort our view?
+
 Imagine that YouGov only polled residents in Washington DC. That would be bad, even if everyone polled answered truthfully. We would end up with data which was much more pro-Biden than the country as a whole.
 
 The assumption of representativeness is never completely true. We can only hope/assume that it is true enough that the inferences we draw from our data can be roughly applied to our question. Let’s assume that is this case.
@@ -559,7 +814,7 @@ The assumption of representativeness is never completely true. We can only hope/
 
 ### Exercise 8
 
-In your own words, define the assumption of "unconfoundedness" when employed in the context of data science.
+In your own words, define the assumption of "unconfoundedness" in the context of data science.
 
 ```{r justice-8}
 question_text(NULL,
@@ -572,7 +827,7 @@ question_text(NULL,
 
 ### 
 
-This assumption is only relevant for causal models. We describe a model as "confounded" if this is not true. Since this is a predicative model, unconfoundedness is not relevant.
+This assumption guards against hidden biases but is only relevant for causal claims. We describe a model as "confounded" if this is not true. Since this is a predicative model, unconfoundedness is not relevant.
 
 
 
@@ -673,7 +928,7 @@ question_text(NULL,
 
 ### Exercise 5
 
-Add `library(brms)` and `library(tidybayes)` to `models.qmd`. `Command/Ctrl + Shift + K`. At the Console, run:
+Add `library(brms)` and `library(tidybayes)` to `models.qmd`. `Command/Ctrl + Shift + K`. In the Console, run:
 
 ```
 tutorial.helpers::show_file("models.qmd", pattern = "brms|tidybayes")
@@ -971,7 +1226,7 @@ question_text(NULL,
 
 Update `models.qmd`. Add the mathematical formula, in $\LaTeX$ and surrounded by double dollar signs, for your model. Third, add a new code chunk which creates the table of model parameters. `Command/Ctrl + Shift + K` to ensure that everything works.
 
-At the Console, run:
+In the Console, run:
 
 ```
 tutorial.helpers::show_file("models.qmd", start = -8)
@@ -1007,6 +1262,10 @@ The knowledge drops for all four of these questions allow you to explain/teach m
 
 *Temperance is a tree which as for its root very little contentment, and for its fruit calm and peace.* - Buddha
 
+Temperance means practicing restraint and not rushing to judgment. In any kind of work, including data analysis, this leads to peace of mind and stronger results.
+
+In this project, we show temperance by being careful with our models. We don’t jump to causal claims. Instead, we build slowly, check our assumptions, and focus on what the data can actually support.
+
 
 ### Exercise 1
 
@@ -1040,13 +1299,13 @@ Data science projects almost always begin with a broad topic of interest. Yet, i
 
 ### Exercise 3
 
-To answer our question, we need to create a `newdata` object. Which variables (e.g., which columns) do we need to include in this object?
+To answer our question, we need to create a `newdata` object. Which variables (columns) should this object include?
 
 Note that this is in general, and not related to this tutorial in any way.
 
 ```{r temperance-3}
 question_text(NULL,
-	message = "All the variables which are on the right side of the formula.",
+	message = "All variables on the right side of the model formula (the covariates).",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1331,7 +1590,8 @@ question_text(NULL,
 
 ### Exercise 15
 
-Rearrange the material in `models.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
+Rearrange `models.qmd` so the order is: graphic, paragraph, math, and table. Use good judgment on chunk placement. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic.  
+Check with `Ctrl/Cmd + Shift + K.`
 
 
 At the Console, run:
