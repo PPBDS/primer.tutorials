@@ -16,8 +16,7 @@ library(learnr)
 library(tutorial.helpers)
 library(tidyverse)
 library(gt)  
-library(brms)
-library(tidybayes)
+
 library(tidymodels)
 library(marginaleffects)
 library(broom)
@@ -28,23 +27,13 @@ options(tutorial.exercise.timelimit = 600,
 
 # DK: Change poll data to be a factor variable.		
 
-# poll_data <- tibble(biden = as.factor(c(rep("Yes", 655), 
-#                                         rep("No", 904))))
+poll_data <- tibble(biden = as.factor(c(rep("Yes", 655), 
+                                        rep("No", 904))))
 
 
 # logistic_reg(engine = "glm") |> 
 # 	fit(biden ~ 1, data = poll_data)
 
-
-# fit_bern <- brm(formula = biden ~ 1,
-#                 data = poll_data,
-#                 family = bernoulli(),
-#                 refresh = 0,
-#                 silent = 2,
-#                 seed = 12)
-# write_rds(fit_bern, "data/fit_bern.rds")
-
-fit_bern <- read_rds("data/fit_bern.rds")
 
 population_table <- 
 tibble(source = c("...", "...", "...","...",  
@@ -80,7 +69,6 @@ tibble(source = c("...", "...", "...","...",
   cols_align(align = "left", columns = c(source)) |>
   fmt_markdown(columns = everything())
 
-ndata <- tibble(.rows = 1)
 
 ```
 
@@ -937,322 +925,27 @@ question_text(NULL,
 	rows = 5)
 ```
 
-### Exercise 5
+<!-- DK: Here is some leftover junk which might be useful. -->
 
-Add `library(brms)` and `library(tidybayes)` to `models.qmd`. `Command/Ctrl + Shift + K`. In the Console, run:
+<!-- The "Intercept" is the key part of the model. Because the family is Bernoulli and the link function an identity, the model we are estimating looks like: -->
 
-```
-tutorial.helpers::show_file("models.qmd", pattern = "brms|tidybayes")
-```
+<!-- $$ biden_i =  \mu + \epsilon_i $$ -->
 
-CP/CR.
+<!-- $biden_i$ is a binary variable indicating whether or not voter $i$ voted for Biden. $\mu$ is true proportion of Biden voters. $\epsilon_i$ is the "error term," the difference between the vote of person $i$ and the true proportion of Biden voters. $\mu$, also called the "Intercept," is about 0.42. The value of `biden` is either `0` or `1`. So, the value of $\epsilon$ is either -0.42 or + 0.58. No other value is possible. -->
 
-```{r courage-5}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
 
-### Exercise 6
+<!-- Write a few sentences which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using. Then, add a sentence which tells us something about the model.
 
-Run this code in order to generate the polling data.
 
-```{r courage-6, exercise = TRUE}
-poll_data <- tibble(biden = c(rep(1, 655), 
-                              rep(0, 904)))
-
-slice_sample(poll_data, n = 10)
-```
-
-```{r courage-6-test, include = FALSE}
-poll_data <- tibble(biden = c(rep(1, 655), 
-                              rep(0, 904)))
-
-slice_sample(poll_data, n = 10)
-```
-
-### 
-
-We don't care exactly who voted for Biden and who did not. In that sense, the rows of the data (and the Preceptor Table) are "exchangeable," which means (roughly) that nothing changes if we re-arrange the IDs of any of the rows.
-
-
-### Exercise 7
-
-Use `brm()` to fit a model. Use the arguments: `formula = biden ~ 1`, `data = poll_data`, `family = bernoulli()`, `refresh = 0`, `silent = 2`, and `seed = 9`.
-
-
-```{r courage-7, exercise = TRUE}
-
-```
-
-```{r courage-7-hint-1, eval = FALSE}
-brm(formula = ...,
-    ... = poll_data,
-    family = bernoulli(),
-    ... = 0,
-    silent = ...,
-    ... = 9)
-```
-
-This will take a little while to run. 
-
-### 
-
-An interesting thing to note in this model is the inclusion of `seed`. In computer science, a *seed* causes a random process to produce the same answer as long as the same seed is used. Fitting Bayesian models requires an algorithm which uses randomness. Running `brm()` twice will produce very slightly different answers, although the answers will not be substantively different enough to matter.
-
-However, for teaching, we want your answer to be identical to ours. If we both use the same seed, it will be.
-
-
-### Exercise 8
-
-Behind the scenes, we have assigned the result of this call to `brm()` to a new object: `fit_bern`. Type `fit_bern` and hit "Run Code."
-
-```{r courage-8, exercise = TRUE}
-
-```
-
-```{r courage-8-hint-1, eval = FALSE}
-fit_bern
-```
-
-```{r courage-8-test, include = FALSE}
-fit_bern
-```
-
-### 
-
-Here's a way that you can understand the concept of `seed`:
-
-If you played MineCraft as a kid, then it's the same concept here. If you load the same seed, it loads up the same world.
-
-
-### Exercise 9
-
-Run `family()` on `fit_bern`. `family()` provides information about the "family" of the error term and the link between it and the dependent variable. 
-
-```{r courage-9, exercise = TRUE}
-
-```
-
-```{r courage-9-hint-1, eval = FALSE}
-family(...)
-```
-
-```{r courage-9-test, include = FALSE}
-family(fit_bern)
-```
-
-### 
-
-`bernoulli()` indicates a Bernoulli distribution, which is a probability distribution for a random variable that has exactly two possible outcomes. It is used to model situations with binary outcomes, such as success/failure, yes/no, or true/false.
-
-
-### Exercise 10
-
-Run `formula()` on `fit_bern`. `formula()` returns the statistical equation which relates the dependent variable to the independent variable(s). 
-
-```{r courage-10, exercise = TRUE}
-
-```
-
-```{r courage-10-hint-1, eval = FALSE}
-formula(...)
-```
-
-```{r courage-10-test, include = FALSE}
-formula(fit_bern)
-```
-
-### 
-
-In this case, we have the simplest possible formula. `biden`, which is a zero/one binary variable is a function of a constant. There are no independent variables.
-
-
-### Exercise 11
-
-Run `nobs()` on `fit_bern`. The `nobs()` function returns the **n**umber of **obs**ervations.
-
-```{r courage-11, exercise = TRUE}
-
-```
-
-```{r courage-11-hint-1, eval = FALSE}
-nobs(...)
-```
-
-```{r courage-11-test, include = FALSE}
-nobs(fit_bern)
-```
-
-### 
-
-In this case, we get the answer of `1559`, which indicates that we have 1,559 useful, non-error observations in our data.
-
-<!-- DK: Knowledge drop. - DONE -->
-
-
-### Exercise 12
-
-Add this formula --- `$$ biden_i =  \mu + \epsilon_i $$` --- to `model.qmd`.  `Command/Ctrl + Shift + K`. Ensure that the formula looks correct. 
-
-Run `show_file("models.qmd", pattern = "biden_i")`
-
-```{r courage-12}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### 
-
-The "Intercept" is the key part of the model. Because the family is Bernoulli and the link function an identity, the model we are estimating looks like:
-
-$$ biden_i =  \mu + \epsilon_i $$
-
-$biden_i$ is a binary variable indicating whether or not voter $i$ voted for Biden. $\mu$ is true proportion of Biden voters. $\epsilon_i$ is the "error term," the difference between the vote of person $i$ and the true proportion of Biden voters. $\mu$, also called the "Intercept," is about 0.42. The value of `biden` is either `0` or `1`. So, the value of $\epsilon$ is either -0.42 or + 0.58. No other value is possible.
-
-
-### Exercise 13
-
-Create a new code chunk in `models.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model using `brm()` into the code chunk, assigning the result to `fit_bern`. 
-
-`Command/Ctrl + Shift + K`. It may take some time to render `models.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `models.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
-
-To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
-
-At the Console, run:
-
-```
-tutorial.helpers::show_file("models.qmd", start = -10)
-```
-
-CP/CR.
-
-```{r courage-13}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### 
-
-What you entered in the previous exercise is $\LaTeX$ math. The "_" symbol causes what follows to be a subscript. The "\" symbol causes $\LaTeX$ to evaluate what follows as a special operator. In this case `\rho` generates the Greek letter $\rho$.
-
-Note that in order to enter math in $\LaTeX$, the math has to be surrounded by dollar signs: `$`. If you use a single dollar sign (one at the start and one at the end), then the mathematics is rendered in the text of the paragraph in which it appears. If you use double dollar signs, `$$`, the the math is rendered with a skipped line both before and after.
-
-
-### Exercise 14
-
-Run `posterior_interval()` on `fit_bern`. The `posterior_interval()` function returns 95% intervals for all the parameters in our model.
-
-```{r courage-14, exercise = TRUE}
-
-```
-
-```{r courage-14-hint-1, eval = FALSE}
-posterior_interval(...)
-```
-
-```{r courage-14-test, include = FALSE}
-posterior_interval(fit_bern)
-```
-
-### 
-
-There are several parameters in the model, almost all of them so-called "nuisance" parameters, meaning that we don't care about them. Their particular values don't really help us to directly calculate any quantity of interest.
-
-
-### Exercise 15
-
-Run `fixef()` on `fit_bern`. The `fixef()` returns information about the **fix**ed **ef**fects in the model.
-
-```{r courage-15, exercise = TRUE}
-
-```
-
-```{r courage-15-hint-1, eval = FALSE}
-fixef(...)
-```
-
-```{r courage-15-test, include = FALSE}
-fixef(fit_bern)
-```
-
-This estimates that Biden's approval rating will go down by roughly 32 units, with an estimated error rate of 5 units. Remember these numbers, as we will be converting them into proper percentages later.
-
-
-### Exercise 16
-
-Run `pp_check()` on `fit_bern` with the `type` argument set to `"bars"`.  The `pp_check()` runs a **p**osterior **p**redictive check.
-
-
-```{r courage-16, exercise = TRUE}
-
-```
-
-```{r courage-16-hint-1, eval = FALSE}
-pp_check(...,  type = "...")
-```
-
-```{r courage-16-test, include = FALSE}
-pp_check(fit_bern,  type = "bars")
-```
-
-### 
-
-In this case, there are two possible outcomes: 0/1. The actual values in the data are labeled `y`. We use our fitted model, `fit_bern` to generate 10 alternate data sets, 10 "fake" data sets. What might the number of votes for (and not for) Biden look like if `fit_bern` is true. The graphic demonstrates that the fake data is very similar to the real data, thus suggesting that our model has captured reality, at least somewhat. 
-
-If the fake data had looked very different from the real data, there is a problem with our model.
-
-
-
-
-### Exercise 17
-
-Write a few sentences which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using. Then, add a sentence which tells us something about the model.
-
-```{r courage-17}
 question_text(NULL,
 	message = "Using data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, we seek to understand what proportion of voters will support Biden in the 2024 election. Biden’s popularity might change significantly over the course of the election campaign. In the poll, Biden’s support was much less than 50%.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
-```
+-->
 
-### 
 
-**95% Credible Interval:** The credible interval ranges from -0.43 to -0.27. This means that with 95% probability, the true log-odds of support for Biden lies within this range. Converting these bounds to probabilities, we would have a 95% credible interval for the probability of support for Biden of approximately 39% to 43%.
-
-### Exercise 18
-
-Update `models.qmd`. Add the mathematical formula, in $\LaTeX$ and surrounded by double dollar signs, for your model. Third, add a new code chunk which creates the table of model parameters. `Command/Ctrl + Shift + K` to ensure that everything works.
-
-In the Console, run:
-
-```
-tutorial.helpers::show_file("models.qmd", start = -8)
-```
-
-CP/CR.
-
-```{r courage-18}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
 
 ## Temperance
 ### 
@@ -1330,323 +1023,25 @@ question_text(NULL,
 
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic broadly.
 
-### Exercise 4
 
-To answer our question, we need to create a `newdata` object. Which variables (columns) should this object include?
+<!-- DK: Some potentially useful leftover junk. -->
 
-Note that this is in general, and not related to this tutorial in any way.
 
-```{r temperance-4}
-question_text(NULL,
-	message = "All variables on the right side of the model formula (the covariates).",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
+<!-- Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI. 
 
-### 
 
-A `newdata` tibble must include columns for all the right-hand side variables --- all the "covariates" --- in the model, and with all the same variable names and, mostly, variable types.
-
-But, in this case, we are using an intercept-only model, so there are no variables on the right-hand side of the formula.
-
-
-### Exercise 5
-
-Here is the R code which creates the `newdata` object: `tibble(.rows = 1)`. Type it into the code exercise block and hit "Run Code."
-
-
-```{r temperance-5, exercise = TRUE}
-
-```
-
-```{r temperance-5-hint-1, eval = FALSE}
-newdata <- tibble(... = 1)
-```
-
-```{r temperance-5-test, include = FALSE}
-newdata <- tibble(.rows = 1)
-```
-
-### 
-
-With an intercept-only model, there is only one possible answer since we can't choose different values for the variables in the formula. So, the `ndata` object only has one row.
-
-### Exercise 6
-
-Behind the scenes, this tibble has already been assigned to us as `ndata`. Type this into the box below to make sure that it works.
-
-```{r temperance-6, exercise = TRUE}
-
-```
-
-```{r temperance-6-hint-1, eval = FALSE}
-ndata
-```
-
-```{r temperance-6-test, include = FALSE}
-ndata
-```
-
-<!-- Knowledge drop. -->
-
-### Exercise 7
-
-Now that we have the `newdata` object, we can create a pipe which uses out fitted model to answer our question. Begin by typing `fit_bern` and clicking "Run Code."
-
-```{r temperance-7, exercise = TRUE}
-
-```
-
-```{r temperance-7-hint-1, eval = FALSE}
-
-```
-
-```{r temperance-7-test, include = FALSE}
-
-```
-
-### Exercise 8
-
-Recall the question that we were answering:
-
-> What proportion of all votes will be cast for Joe Biden in the 2024 election?
-
-Let's make a graph to answer this question.
-
-<!-- AC: I'm also getting "no applicable method for 'ungroup' applied to an object of class "brmsfit"" here. - DONE  -->
-
-Start by piping `fit_bern` to `add_epred_draws()`, with `newdata = ndata` being the argument. Now continue the pipe to `select()`, selecting `.epred` as the argument.
-
-```{r temperance-8, exercise = TRUE}
-
-```
-
-```{r temperance-8-hint-1, eval = FALSE}
-... |> 
-  add_epred_draws(...) |> 
-  ...(.epred) |> 
-```
-
-```{r temperance-8-test, include = FALSE}
-fit_bern |> 
-  add_epred_draws(newdata = ndata) |> 
-  select(.epred)
-```
-
-### 
-
-It's crucial to understand the value of the `add_epred_draws()` function. For starters, it generates a series of predicted values from the posterior distribution for the new data. These predictions represent the distribution of the intercept's expected value.
-
-
-### Exercise 9
-
-Now continue the pipe to `ggplot()`, setting `x` to `.epred` inside of the aesthetics. 
-
-```{r temperance-9, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-9-hint-1, eval = FALSE}
-... |>
-  ggplot(...(x = ...))
-```
-
-```{r temperance-9-test, include = FALSE}
-fit_bern |> 
-  add_epred_draws(newdata = ndata) |> 
-  select(.epred) |> 
-  ggplot(aes(x = .epred))
-```
-
-This will create a blank plot because we didn't add anything yet.
-
-### 
-
-The function `add_epred_draws()` is so powerful because, unlike `add_predicted_draws()`, it doesn't factor in any additional randomness of individual observations. Essentially, it assumes that the data was recorded absolutely perfectly, and therefore generates a model that represents a picture-perfect scenario.
-
-
-### Exercise 10
-
-Let's add `geom_density()`, setting `y` to `after_stat(count / sum(count))` inside of aesthetics. Remember to add `geom_density()` with a `+` instead of a `|>`!
-
-```{r temperance-10, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-10-hint-1, eval = FALSE}
-... +
-  ...(aes(... = after_stat(... / sum(...))))
-```
-
-```{r temperance-10-test, include = FALSE}
-fit_bern |> 
-  add_epred_draws(newdata = ndata) |> 
-  select(.epred) |> 
-  ggplot(aes(x = .epred)) +
-    geom_density(aes(y = after_stat(count / sum(count))))
-```
-
-### 
-
-By setting `y = after_stat(count / sum(count))`, the density plot is normalized such that the total area under the curve is equal to 1. This makes it easier to interpret the plot as a probability distribution.
-
-The y-axis now represents the proportion of the total observations that fall within each bin, which is useful for visualizing the distribution of the expected predictions.
-
-
-### Exercise 11
-
-It would also be a good idea to include `scale_x_continuous(labels = scales::percent_format())` and `scale_y_continuous(labels = scales::percent_format())`. Remember to also add these with a `+` rather than a `|>`. 
-
-```{r temperance-11, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-11-hint-1, eval = FALSE}
-... +
- ...(labels = ...::percent_format()) +
- scale_y_continuous(... = scales::...())
-```
-
-```{r temperance-11-test, include = FALSE}
-fit_bern |> 
-  add_epred_draws(newdata = ndata) |> 
-  select(.epred) |> 
-  ggplot(aes(x = .epred)) +
-    geom_density(aes(y = after_stat(count / sum(count))))  +
-    scale_x_continuous(labels = scales::percent_format()) +
-    scale_y_continuous(labels = scales::percent_format())
-```
-
-### 
-
-The `scale_x_continous` (and its `y` version) modify the values on that scale (`x` or `y`).
-
-The argument `labels = scales::percent_format()` ensures that the values are in `%` format.
-
-
-### Exercise 12
-
-Finish it off by adding labels for the title, subtitle, and the axes using `labs()`. 
-
-```{r temperance-12, exercise = TRUE}
-
-```
-
-<button onclick = "transfer_code(this)">Copy previous code</button>
-
-```{r temperance-12-hint-1, eval = FALSE}
-... +
- labs(...)
-```
-
-```{r temperance-12-test, include = FALSE}
-# does this still work of the test chunk is left blank?
-```
-
-Your finished graph should look something like this:
-
-```{r}
-#| echo: false
-#| warning: false
-
-fit_bern |> 
-  add_epred_draws(newdata = ndata) |> 
-  select(.epred) |> 
-  ggplot(aes(x = .epred)) +
-    geom_density(aes(y = after_stat(count/sum(count))))  +
-    labs(title = expression(paste("Posterior Distribution for  ", rho)),
-         subtitle = "There is a 95% chance for a value between 40% and 45%.",
-         x = expression(paste("Proportion, ", rho, ", of Votes for Biden")),
-         y = "Probability") +
-    scale_x_continuous(labels = scales::percent_format()) +
-    scale_y_continuous(labels = scales::percent_format())
-```
-
-### Exercise 13
-
-Create a new code chunk in `models.qmd`. Label it with `label: plot`. Copy/paste the code which creates your graphic. `Command/Ctrl + Shift + K` to ensure that it all works as intended.
-
-At the Console, run:
-
-```
-tutorial.helpers::show_file("models.qmd", start = -8)
-```
-
-CP/CR.
-
-```{r temperance-13}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### Exercise 14
-
-Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI. 
-
-```{r temperance-14}
 question_text(NULL,
 	message = "Using data from a YouGov poll of 1,559 US adult citizens, conducted March 10 - 12, 2024, we seek to understand what proportion of voters will support Biden in the 2024 election. Biden’s popularity might change significantly over the course of the election campaign. In the poll, Biden’s support was much less than 50%. We estimate that Biden’s percentage of the vote in Election Day will be about 42%, plus or minus 2.5%.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
-```
 
 ### 
 
-Edit the summary paragraph in `models.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
-
-### Exercise 15
-
-Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval.
-
-```{r temperance-15}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### Exercise 16
-
-Rearrange `models.qmd` so the order is: graphic, paragraph, math, and table. Use good judgment on chunk placement. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic.  
-Check with `Ctrl/Cmd + Shift + K.`
+Edit the summary paragraph in `models.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`. -->
 
 
-At the Console, run:
-
-```
-tutorial.helpers::show_file("models.qmd")
-```
-
-CP/CR.
-
-```{r temperance-16}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### 
-
-Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
 
 ## Summary
 ### 
