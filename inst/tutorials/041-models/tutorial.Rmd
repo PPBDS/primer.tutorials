@@ -367,9 +367,15 @@ The way I like to think of it is that the units are the objects that are being a
 
 ### Exercise 4
 
-Create a Github repo called `tutorial-4`. Connect it to a new R Project called `tutorial-4`. Edit the `.gitignore` file to ignore the Rproj file.
+Create a Github repo called `models`. Make sure to click the "Add a README file" check box.
 
-In the Console, run `tutorial.helpers::show_file(".gitignore")`. CP/CR.
+Connect the Github repo to an R project on your computer. Give the R project the same name.
+
+Select `File -> New File -> Quarto Document ...`. Provide a title (`"models"`) and an author (you). Render the document and save it as `analysis.qmd`.
+
+Edit the `.gitignore` by adding `*Rproj`. Save and push.
+
+In the Console, run:
 
 ```{r wisdom-4}
 question_text(NULL,
@@ -589,7 +595,7 @@ execute:
 In the Console, run:
 
 ```         
-show_file("XX.qmd", start = -5)
+show_file("analysis.qmd", start = -5)
 ```
 
 CP/CR.
@@ -815,7 +821,7 @@ This assumption is only relevant for causal models. We describe a model as "conf
 
 Write one sentence which highlights a potential weakness in your model. This will almost always be derived from possible problems with the assumptions discussed above. We will add this sentence to our summary paragraph. So far, our version of the summary paragraph looks like this:
 
-Public opinion polls provide crucial but imperfect snapshots of voter sentiment during campaigns. Using March 2024 YouGov survey data from 1,559 U.S. adults, we estimate the proportion of votes Joe Biden will receive in the November election.
+Public opinion polls provide crucial but imperfect snapshots of voter sentiment during campaigns. Using March 2024 YouGov survey data from 1,559 U.S. adults, we estimate the proportion of votes Joe Biden will receive in the November election. 
 
 Of course, your version will be somewhat different.
 
@@ -925,6 +931,416 @@ question_text(NULL,
 	rows = 5)
 ```
 
+**Prompt to AI:**  
+"Create LaTeX code for a logistic regression model where the outcome is binary Biden vote (1 = voted for Biden, 0 = didn't vote for Biden), showing the probability formulation and distribution assumption."
+
+**Resulting Model:**
+
+$$P(\text{BidenVote} = 1) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 \text{Age} + \beta_2 \text{Income} + \beta_3 \text{Education})}}$$
+
+with $\text{BidenVote} \sim \text{Bernoulli}(p)$ where $p$ is the modeled probability.
+
+### Exercise 5
+
+Add `library(tidymodels)` and `library(broom)` to the `setup` code chunk in your QMD. `Command/Ctrl + Shift + K`.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", pattern = "library")
+```
+
+CP/CR.
+
+```{r courage-5}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+Having decided on the basic mathematical structure of the model, a choice mostly driven by the distribution of our outcome variable, we now turn toward estimating the model.
+
+### Exercise 6
+
+Because our outcome variable is **binary**, start to create the model by entering `logistic_reg(engine = "glm")`.
+
+```{r courage-6, exercise = TRUE}
+
+```
+
+```{r courage-6-hint-1, eval = FALSE}
+logistic_reg(engine = "glm")
+```
+
+```{r courage-6-test, include = FALSE}
+library(parsnip)
+logistic_reg(engine = "glm")
+```
+
+### 
+
+The *[tidymodels](https://www.tidymodels.org/)* framework is the most popular one in the R world for estimating models. *[Tidy Modeling with R](https://www.tmwr.org/)* by Max Kuhn and Julia Silge is a great introduction.
+
+### Exercise 7
+
+<!-- XX: Fit the model to a single categorical variable, ideally one with just two levels, like sex. If that is not possible, use your best judgment as to what to do instead. -->
+
+Continue the pipe to `fit(XX, data = poll_data).`
+
+```{r courage-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-7-hint-1, eval = FALSE}
+... |>
+  fit(..., data = ...)
+```
+
+```{r courage-7-test, include = FALSE}
+
+  fit(BidenVote ~ biden, data = poll_data)
+
+```
+
+###
+
+The `biden` variable is already in binary format, representing whether someone voted for Biden (1) or not (0). Since logistic regression models require a binary outcome, `biden` can be used directly without needing to convert it into dummy variables.
+
+However, if `biden` were stored as a text variable like "yes" or "no", R would automatically convert it into a dummy variable — typically coding "yes" as 1 and "no" as 0 — so it can be used in the logistic regression model.
+
+### Exercise 8
+
+Continue the pipe with `tidy(conf.int = TRUE)`.
+
+```{r courage-8, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-8-hint-1, eval = FALSE}
+...
+  tidy(... = TRUE)
+```
+
+```{r courage-8-test, include = FALSE}
+# ...
+#   tidy(conf.int = TRUE)
+```
+
+###
+
+The intercept $\beta_0$ is the log-odds of voting for Biden when all predictors are zero. Each coefficient $\beta_i$ shows how the log-odds change with a one-unit increase in that predictor, holding others constant. Confidence intervals indicate plausible ranges for these estimates.
+
+### Exercise 9
+
+<!-- AT: Discuss with preceptor about how to handle this as there is only one variable in the data -->
+
+<!-- XX: Fit the model to a different categorical variable, ideally one with three or more levels, like race. If that is not possible, use your best judgment as to what to do instead. -->
+
+<!-- AT: Still need to fix the fit() functions -->
+
+Change the call to `fit()` to `fit(XX, data = poll_data)`.
+
+```{r courage-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-9-hint-1, eval = FALSE}
+... |>
+  fit(..., data = ...)
+  ...
+```
+
+```{r courage-9-test, include = FALSE}
+# ...
+```
+
+###
+
+<!-- XX: Edit this paragraph to use an example of a categorical variable from your model, if one is available. -->
+
+The same dummy variable approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has three values --- "black", "hispanic", and "white" --- the model creates two 0/1 dummy variables, giving them names like $race_{hispanic}$ and $race_{white}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
+
+<!-- XX: Consider fitting more versions of the model, discussing what you notice. Eventually, you will decide on a final version of the model. That is the one which you fit in the next question. -->
+
+### Exercise 10
+
+<!-- XX: Fit the model one last time. -->
+
+Change the call to `fit()` to `fit(XX, data = poll_data)`.
+
+```{r courage-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-10-hint-1, eval = FALSE}
+... |>
+  fit(..., data = ...)
+  ...
+```
+
+```{r courage-10-test, include = FALSE}
+# XX |>
+#   fit(XX, data = poll_data)
+#   tidy(conf.int = TRUE)
+```
+
+###
+
+<!-- XX: Some commentary about why this is the model that you are choosing. -->
+
+<!-- XX: Consider including: -->
+
+<!-- The more variables we add, the more difficult it is to interpret the meaning of any particular coefficient. But interpretation also becomes less important. We don't really care about coefficients. We care about using our model to estimate quantities of interest. -->
+
+### Exercise 11
+
+Behind the scenes of this tutorial, an object called `fit_XX` has been created which is the result of the code above. Type `fit_XX` and hit "Run Code." This generates the same results as using `print(fit_XX)`.
+
+```{r courage-11, exercise = TRUE}
+
+```
+
+```{r courage-11-hint-1, eval = FALSE}
+fit_XX
+```
+
+```{r courage-11-test, include = FALSE}
+# fit_XX
+```
+
+###
+
+In data science, **we deal with words, math, and code, but the most important of these is code.** We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters.
+
+### Exercise 12
+
+Load the **[easystats](https://easystats.github.io/easystats/)** package.
+
+```{r courage-12, exercise = TRUE}
+
+```
+
+```{r courage-12-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r courage-12-test, include = FALSE}
+library(easystats)
+```
+
+###
+
+We don't add **easystats** to the QMD because we are only using it for an interactive check of our fitted model. However, the [easystats ecosystem](https://easystats.github.io/easystats/) has a variety of interesting functions and packages which you might want to explore.
+
+### Exercise 13
+
+In the Console, run `check_predictions(fit_biden)`. CP/CR.
+
+```{r courage-13, exercise = TRUE}
+
+```
+
+```{r courage-13-hint-1, eval = FALSE}
+check_predictions(...)
+```
+
+```{r courage-13-test, include = FALSE}
+check_predictions(fit_biden)
+```
+
+###
+
+```{r}
+check_predictions(fit_biden)
+```
+
+The model uses only an intercept, so it predicts the same probability of Biden support for everyone—just the overall average. It's a simple baseline but doesn't explain any variation. To improve it, we’d need to add predictors like age or education.
+
+### Exercise 14
+
+Ask AI to create $\LaTeX$ code for this model, including our variable names and estimates for all the coefficients. Because this is a fitted model, the dependent variable will have a "hat" and the formula will not include an error term.
+
+Add the code to your QMD. `Cmd/Ctrl + Shift + K`.
+
+Make sure the resulting display looks good. For example, you don't want an absurd number of figures to the right of the decimal. If the model is too long, you will need to spread it across several lines. You may need to go back-and-forth with the AI a few times.
+
+Once the $\LaTeX$ code looks good, paste it below.
+
+```{r courage-14}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+###
+
+<!-- XX: Replace these examples with your code. -->
+
+Our formula looks like:
+
+$$\widehat{\text{att_end}} = 8.45 + 1.55 \cdot \text{treatment}_{\text{Treated}}$$
+
+It was created with:
+
+````
+$$\widehat{\text{att_end}} = 8.45 + 1.55 \cdot \text{treatment}_{\text{Treated}}$$
+````
+
+Note the differences. First, we have replaced the parameters with our best estimates. Second, we have dropped the error term because this is a formula for predicting the value for our outcome variable. Third, the left-hand side variable is $\widehat{\text{XX}}$ instead of $\text{XX}$ because this formula generates our estimated `XX`. A hat indicates an estimated value.
+
+**This is our data generating mechanism.**
+
+A data generating mechanism is just a formula, something which we can write down and implement with computer code.
+
+### Exercise 15
+
+Create a new code chunk in your QMD. Add a code chunk option: `#| cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_XX`.
+
+`Command/Ctrl + Shift + K`. It may take some time to render your QMD, depending on how complex your model is. But, by including `#| cache: true` you cause Quarto to cache the results of the chunk. The next time you render your QMD, as long as you have not changed the code, Quarto will just load up the saved fitted object.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", start = -8)
+```
+
+CP/CR.
+
+```{r courage-15}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 8)
+```
+
+###
+
+To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
+
+### Exercise 16
+
+Add `*_cache` to `.gitignore` file. Cached objects are often large. They don't belong on Github.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file(".gitignore")
+```
+
+CP/CR.
+
+```{r courage-16}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Because of the change in your `.gitignore` (assuming that you saved it), the cache directory should not appear in the Source Control panel because Git is ignoring it, as instructed. Commit and push.
+
+### Exercise 17
+
+In the Console, run `tidy()` on `fit_bern` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
+
+```{r courage-17, exercise = TRUE}
+
+```
+
+```{r courage-17-hint-1, eval = FALSE}
+tidy(..., conf.int = ...)
+```
+
+```{r courage-17-test, include = FALSE}
+# tidy(fit_bern, conf.int = TRUE)
+```
+
+###
+
+`tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
+
+### Exercise 18
+
+Create a new code chunk in your QMD. Ask AI to help you make a nice looking table from the tibble which is returned by `tidy()`. You don't have to include all the variables which `tidy()` produces. We often just show the estimate and the confidence intervals.
+
+Insert that code into the QMD.
+
+`Command/Ctrl + Shift + K`.
+
+Make sure it works. You might need to add some new libraries, e.g., **[tinytable](https://vincentarelbundock.github.io/tinytable/)**, **[knitr](https://yihui.org/knitr/)**, **[gt](https://gt.rstudio.com/)**, **[kableExtra](https://haozhu233.github.io/kableExtra/)**, **[flextable](https://davidgohel.github.io/flextable/)**, **[modelsummary](https://modelsummary.com/)**, et cetera, to the `setup` code chunk, if you use any functions from these packages, all of which have strengths and weaknesses for making tables.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", end = -10)
+```
+
+CP/CR.
+
+```{r courage-18}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 12)
+```
+
+###
+
+<!-- XX: Consider showing your table, and the code which you used to create it. -->
+
+At the very least, your table should include a title and a caption with the data source. The more you use AI, the better you will get at doing so.
+
+### Exercise 19
+
+Add a sentence to your project summary.
+
+Explain the structure of the model. Something like: "I/we model XX [the concept of the outcome, not the variable name], [insert description of values of XX], as a [linear/logistic/multinomial/ordinal] function of XX [and maybe other covariates]."
+
+Recall the beginning of our version of the summary:
+
+Public opinion polls provide crucial but imperfect snapshots of voter sentiment during campaigns. Using March 2024 YouGov survey data from 1,559 U.S. adults, we estimate the proportion of votes Joe Biden will receive in the November election. Our estimates may be biased if late-deciding voters break differently for Biden than survey respondents who expressed firm preferences in March.
+
+```{r courage-19}
+question_text(NULL,
+	message = "We model voting preference [the probability of supporting Biden in the election], where responses are coded as 1 (voted for Biden) or 0 (did not vote for Biden), as a logistic function of age, income level, and party identification. The model accounts for both continuous (age) and categorical (income, party ID) predictors, with the logistic transformation ensuring predicted probabilities remain between 0 and 1",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to the summary paragraph portion of your QMD. `Command/Ctrl + Shift + K`, and then commit/push.
+
+
+
+
+
+
 <!-- DK: Here is some leftover junk which might be useful. -->
 
 <!-- The "Intercept" is the key part of the model. Because the family is Bernoulli and the link function an identity, the model we are estimating looks like: -->
@@ -948,13 +1364,13 @@ question_text(NULL,
 
 
 ## Temperance
-### 
+###
 
 <!-- XX: Discuss newdata objects slowly. "A newdata tibble must include columns for all the right-hand side variables --- all the "covariates" --- in the model, and with all the same variable names and, mostly, variable types" - DONE
 
 First ask a question about which columns are needed in the newdata object. This might just be a written question. The answer is all the variables which are on the rightside of the formula. - DONE
 
-Second, ask a question about which values you want those variables to have. That is not easy! Again, a written answer. For each row in the newdata tibble, you get a new posterior. How many posteriors do you want? 
+Second, ask a question about which values you want those variables to have. That is not easy! Again, a written answer. For each row in the newdata tibble, you get a new posterior. How many posteriors do you want?
 
 Third, give them the R code which creates the newdata object. All they need to do is run it. Asking them to create it, even after you help them figure out the columns (question 1) and rows (question 2) is too hard, at least until they get more experiences. - DONE
 
@@ -986,7 +1402,7 @@ question_text(NULL,
 
 ### Exercise 2
 
-In the end, we don't really care about parameters, much less how to interpret them. Parameters are *imaginary*, like unicorns. We care about answers to our questions. Parameters are tools for answering questions. They aren't interesting in-and-of themselves. *In the modern world, all parameters are nuisance parameters.* 
+In the end, we don't really care about parameters, much less how to interpret them. Parameters are *imaginary*, like unicorns. We care about answers to our questions. Parameters are tools for answering questions. They aren't interesting in-and-of themselves. *In the modern world, all parameters are nuisance parameters.*
 
 Load the [**marginaleffects**](https://marginaleffects.com/) package.
 
@@ -1002,13 +1418,13 @@ library(...)
 library(marginaleffects)
 ```
 
-### 
+###
 
 We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
 
 ### Exercise 3
 
-What is the general topic we are investigating? What is the specific question we are trying to answer? 
+What is the general topic we are investigating? What is the specific question we are trying to answer?
 
 ```{r temperance-3}
 question_text(NULL,
@@ -1019,15 +1435,210 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### 
+###
 
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic broadly.
+
+### Exercise 4
+
+Run this code:
+
+```
+plot_predictions(fit_bern,
+                 condition = c("age", "sex"))
+```
+
+```{r temperance-4, exercise = TRUE}
+
+```
+
+```{r temperance-4-test, include = FALSE}
+
+```
+
+###
+
+<!-- XX: The knowledge drop MUST discuss the estimate (and its uncertainty) that you go on to include in your summary paragraph. You MUST discuss how you are reading, roughly, the values for the estimate and the confidence interval by looking at this plot. -->
+
+<!-- XX: There are a lot of interesting options in plot_predictions. Check them out. You may want to use some of them in your plot. I think `points` is quite interesting. Add a couple more questions which use different argument values and/or add other options.  -->
+
+<!-- XX: You can use the draw = FALSE option to return a tibble which can then be piped directly into ggplot.  -->
+
+### Exercise 5
+
+<!-- XX: After you have run several marginaleffects functions, it is time to finish up, to create your final plot. In this question, have them run the final marginaleffects function, the one that will form the basis of the final plot. -->
+
+Run this code:
+
+```
+plot_predictions(fit_bern,
+                 condition = c("age", "sex")))
+```
+
+```{r temperance-5, exercise = TRUE}
+
+```
+
+```{r temperance-5-test, include = FALSE}
+
+```
+
+###
+
+### Exercise 6
+
+Work interactively with your QMD to make a beautiful version of this plot. Your title should highlight the key variables. Your subtitle should describe the key takeaway, the sentence/conclusion which readers will, you hope, remember. Your caption should mention the data source. Your axis labels should look nice.
+
+This plot is not directly connected to your question. It answers lots of questions! It might be used by lots of different people.
+
+Copy the code for your plot here:
+
+```{r temperance-6}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 20)
+```
+
+###
+
+Data science often involves this-back-and-forth style of work. First, we need to make a single chunk of code, in this case, a new plot, work well. This requires interactive work between the QMD and the Console. Second, we need to ensure that the entire QMD runs correctly on its own.
+
+### Exercise 7
+
+Finalize the new graphics code chunk in your QMD.
+
+`Command/Ctrl + Shift + K` to ensure that it all works as intended. Don't forget to add `library(marginaleffects)` to your `setup` code chunk.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", start = -8)
+```
+
+CP/CR.
+
+```{r temperance-7}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 10)
+```
+
+
+###
+
+
+<!-- XX: Discuss some limitations of this model. Remind us of some of the reasons to demonstrate humility. -->
+
+### Exercise 8
+
+Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
+
+```{r temperance-8}
+question_text(NULL,
+	message = "One quantity of interest is the overall probability that a respondent supports Biden, which our model estimates using only an intercept. This gives a single predicted value for all observations, reflecting the average level of support in the dataset.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Add a final sentence to your summary paragraph in your QMD as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
+
+### Exercise 9
+
+Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
+
+```{r temperance-9}
+question_text(NULL,
+	message = "The model uses only an intercept and assumes a representative sample, but real-world data often involves unmeasured factors and sampling bias. Because of this, the estimate may be off, and the confidence interval should be wider to reflect greater uncertainty.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Always go back to your Preceptor Table, the information which, if you had it, would make answering your question easy. In almost all real world cases, the Preceptor Table and the data are fairly different, not least because validity never holds perfectly. So, even a perfectly estimated statistical model is rarely as useful as we might like.
+
+### Exercise 10
+
+Rearrange the material in your QMD so that the order is graphic, followed by the paragraph. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. You can keep or discard the math and any other material at your own discretion.
+
+`Command/Ctrl + Shift + K` to ensure that everything works.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd")
+```
+
+CP/CR.
+
+```{r temperance-10}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 30)
+```
+
+###
+
+This is the version of your QMD file which your teacher is most likely to take a close look at.
+
+### Exercise 11
+
+Publish your rendered QMD to GitHub Pages. Copy/paste the resulting url below.
+
+```{r temperance-11}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+###
+
+Commit/push everything.
+
+### Exercise 12
+
+Copy/paste the url to your Github repo.
+
+```{r temperance-12}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+###
+
+We can never know all the entries in the Preceptor Table. That knowledge is reserved for God. If all our assumptions are correct, then our DGM is true, it accurately describes the way in which the world works. There is no better way to predict the future, or to model the past, than to use it. Sadly, this will only be the case with toy examples involving things like coins and dice. We hope that our DGM is close to the true DGM but, since our assumptions are never perfectly correct, our DGM will always be different. The estimated magnitude and importance of that difference is a matter of judgment.
+
+The world confronts us. Make decisions we must.
+
+<!-- XX: Make some comments about what this plot is telling us, especially with regard to the questions with which we began. What are the most important takeaways from this plot? (Obviously, this will -->
 
 
 <!-- DK: Some potentially useful leftover junk. -->
 
 
-<!-- Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI. 
+<!-- Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage Section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
 
 
 question_text(NULL,
@@ -1037,16 +1648,16 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 6)
 
-### 
+###
 
 Edit the summary paragraph in `models.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`. -->
 
 
 
 ## Summary
-### 
+###
 
-This tutorial covered [Chapter 4: Models](https://ppbds.github.io/primer/models.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
+This tutorial covered [Chapter 4: Models](https://ppbds.github.io/primer/models.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
 
 
 
