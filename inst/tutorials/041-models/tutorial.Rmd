@@ -21,14 +21,18 @@ library(tidymodels)
 library(marginaleffects)
 library(broom)
 
+library(easystats)
+
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
 # DK: Change poll data to be a factor variable.		
 
+set.seed(10)
 poll_data <- tibble(biden = as.factor(c(rep("Yes", 655), 
-                                        rep("No", 904))))
+                                        rep("No", 904)))) |> 
+				slice_sample(prop = 1)
 
 
 fit_biden <- logistic_reg(engine = "glm") |> 
@@ -82,6 +86,8 @@ tibble(source = c("...", "...", "...","...",
 <!-- Learn about marginaleffects package and use a bunch of the functions which are in it, explaining what they mean. Don't worry if none of the functions work. That is OK! Just report that fact. -->
 
 <!-- predictions(fit_biden, type = "prob") -->
+
+
 <!-- plot_predictions(fit_biden, type = "prob", condition = "group") This is a nonsensical plot! But explain to students why! -->
 
 <!-- Final plot with  -->
@@ -566,29 +572,6 @@ question_text(NULL,
 
 ### 
 
-<!-- The Preceptor Table for this problem looks something like this: -->
-
-<!-- #| echo: false -->
-<!-- tibble(voter_id = c("1", "2", "...", "158,000,000"), -->
-<!--        biden_support = c("0", "1", "...", "0"), -->
-<!--        age_group = c("18-29", "65+", "...", "30-44"), -->
-<!--        region = c("South", "Midwest", "...", "Northeast")) |> -->
-
-<!--   gt() |> -->
-<!--   tab_header(title = "Preceptor Table: 2024 Presidential Election") |>  -->
-<!--   cols_label(voter_id = md("Voter ID"), -->
-<!--              biden_support = md("Voted for Biden (1=Yes)"), -->
-<!--              age_group = md("Age Group"), -->
-<!--              region = md("Region")) |> -->
-<!--   tab_style(cell_borders(sides = "right"), -->
-<!--             location = cells_body(columns = c(voter_id))) |> -->
-<!--   cols_align(align = "center") |> -->
-<!--   tab_spanner(label = "Outcome", columns = c(biden_support)) |> -->
-<!--   tab_spanner(label = "Covariates", columns = c(age_group, region)) |> -->
-<!--   fmt_markdown(columns = everything()) -->
-
-<!-- Like all aspects of a data science problem, the Preceptor Table evolves as we continue our work.  -->
-
 ### Exercise 14
 
 In your QMD, load the **tidyverse** and the **primer.data** packages in a new code chunk. Render the file.
@@ -995,9 +978,9 @@ The *[tidymodels](https://www.tidymodels.org/)* framework is the most popular on
 
 ### Exercise 7
 
-<!-- XX: Fit the model to a single categorical variable, ideally one with just two levels, like sex. If that is not possible, use your best judgment as to what to do instead. -->
+We want to fit a model with a single categorical predictor. We'll use biden, which contains "Yes"/"No" responses, and fit a logistic regression model with it as the outcome variable.
 
-Continue the pipe to `fit(XX, data = poll_data).`
+Continue the pipe to `fit(biden ~ 1, data = poll_data).`
 
 ```{r courage-7, exercise = TRUE}
 
@@ -1006,7 +989,7 @@ Continue the pipe to `fit(XX, data = poll_data).`
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r courage-7-hint-1, eval = FALSE}
-... |>
+logistic_reg(engine = "glm") |> 
   fit(..., data = ...)
 ```
 
@@ -1017,9 +1000,7 @@ logistic_reg(engine = "glm") |>
 
 ###
 
-The `biden` variable is already in binary format, representing whether someone voted for Biden (1) or not (0). Since logistic regression models require a binary outcome, `biden` can be used directly without needing to convert it into dummy variables.
-
-However, if `biden` were stored as a text variable like "yes" or "no", R would automatically convert it into a dummy variable — typically coding "yes" as 1 and "no" as 0 — so it can be used in the logistic regression model.
+The biden variable contains "Yes"/"No" responses, stored as a factor. When we use it in a logistic regression model, R automatically converts it into a dummy variable, treating one level (typically "Yes") as 1 and the other ("No") as 0.
 
 ### Exercise 8
 
@@ -1033,7 +1014,7 @@ Continue the pipe with `tidy(conf.int = TRUE)`.
 
 ```{r courage-8-hint-1, eval = FALSE}
 ...
-  tidy(... = TRUE)
+  tidy(conf.int = TRUE)
 ```
 
 ```{r courage-8-test, include = FALSE}
@@ -1044,13 +1025,15 @@ logistic_reg(engine = "glm") |>
 
 ###
 
-<!-- DK: Use response scale? -->
 
-The intercept $\beta_0$ is the log-odds of voting for Biden when all predictors are zero. Each coefficient $\beta_i$ shows how the log-odds change with a one-unit increase in that predictor, holding others constant. Confidence intervals indicate plausible ranges for these estimates.
+In a logistic regression model, the intercept (β₀) represents the log-odds of voting for Biden when all predictor variables are 0. The slope (β₁) shows how those log-odds change when the predictor increases by 1 unit.
 
 ### Exercise 9
 
-Behind the scenes of this tutorial, an object called `fit_XX` has been created which is the result of the code above. Type `fit_XX` and hit "Run Code." This generates the same results as using `print(fit_XX)`.
+Let’s fit the final version of our model — just the intercept. This tells us the ***overall level of support** for Biden in the poll.
+
+Change the call to fit() to `fit(biden ~ 1, data = poll_data)`
+
 
 ```{r courage-9, exercise = TRUE}
 
@@ -1061,26 +1044,56 @@ fit_XX
 ```
 
 ```{r courage-9-test, include = FALSE}
-# fit_XX
+
+logistic_reg(engine = "glm") |> 
+  fit(biden ~ 1, data = poll_data)
+   tidy(fit_biden, conf.int = TRUE)
+
 ```
 
 ###
 
-In data science, **we deal with words, math, and code, but the most important of these is code.** We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters.
+This final model includes no predictors — just an intercept. That’s all we need to estimate overall support for Biden.
+
+We’re not explaining why people support him. We’re just estimating how many do.
 
 ### Exercise 10
 
-Load the **[easystats](https://easystats.github.io/easystats/)** package.
+Behind the scenes, we’ve created an object called `fit_biden` that stores the model you just fit. Type `fit_biden` and hit "Run Code" to view the results.
+
 
 ```{r courage-10, exercise = TRUE}
 
 ```
 
 ```{r courage-10-hint-1, eval = FALSE}
-library(...)
+
+fit...
 ```
 
 ```{r courage-10-test, include = FALSE}
+fit_biden
+```
+
+###
+
+In data science, **we deal with words, math, and code, but the most important of these is code.** We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters.
+
+### Exercise 11
+
+Load the **[easystats](https://easystats.github.io/easystats/)** package.
+
+
+```{r courage-11, exercise = TRUE}
+
+```
+
+```{r courage-11-hint-1, eval = FALSE}
+
+library(...)
+```
+
+```{r courage-11-test, include = FALSE}
 library(easystats)
 ```
 
@@ -1088,27 +1101,32 @@ library(easystats)
 
 We don't add **easystats** to the QMD because we are only using it for an interactive check of our fitted model. However, the [easystats ecosystem](https://easystats.github.io/easystats/) has a variety of interesting functions and packages which you might want to explore.
 
-### Exercise 11
+### Exercise 12
 
-In the Console, run `check_predictions(extract_fit_engine(fit_biden))`. There will probably be an error. CP/CR.
+In the Console, run `check_predictions(fit_biden)`. CP/CR.
 
-```{r courage-11, exercise = TRUE}
+```{r courage-12, exercise = TRUE}
 
 ```
 
-```{r courage-11-hint-1, eval = FALSE}
+```{r courage-12-hint-1, eval = FALSE}
 check_predictions(extract_fit_engine(...))
 ```
 
-```{r courage-11-test, include = FALSE}
+```{r courage-12-test, include = FALSE}
 check_predictions(extract_fit_engine(fit_biden))
 ```
 
 ###
 
-<!-- DK: Explain the plot. -->
+```{r}
+check_predictions(extract_fit_engine(fit_biden))
+```
 
-### Exercise 12
+The model uses only an intercept, so it predicts the same probability of Biden support for everyone—just the overall average. It's a simple baseline but doesn't explain any variation. To improve it, we’d need to add predictors like age or education.
+
+### Exercise 13
+
 
 Ask AI to create $\LaTeX$ code for this model, including our variable names and estimates for all the coefficients. Because this is a fitted model, the dependent variable will have a "hat" and the formula will not include an error term.
 
@@ -1118,7 +1136,9 @@ Make sure the resulting display looks good. For example, you don't want an absur
 
 Once the $\LaTeX$ code looks good, paste it below.
 
-```{r courage-12}
+
+```{r courage-13}
+
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1133,25 +1153,27 @@ question_text(NULL,
 
 Our formula looks like:
 
-$$\widehat{\text{att_end}} = 8.45 + 1.55 \cdot \text{treatment}_{\text{Treated}}$$
+$$\widehat{\text{biden}} = -0.32$$
 
 It was created with:
 
 ````
-$$\widehat{\text{att_end}} = 8.45 + 1.55 \cdot \text{treatment}_{\text{Treated}}$$
+$$\widehat{\text{biden}} = -0.32$$
 ````
 
-Note the differences. First, we have replaced the parameters with our best estimates. Second, we have dropped the error term because this is a formula for predicting the value for our outcome variable. Third, the left-hand side variable is $\widehat{\text{XX}}$ instead of $\text{XX}$ because this formula generates our estimated `XX`. A hat indicates an estimated value.
+Note the differences. First, we have replaced the parameters with our best estimates. Second, we have dropped the error term because this is a formula for predicting the value of our outcome variable. Third, the left-hand side variable is $\widehat{\text{biden}}$ instead of $\text{biden}$ because this formula generates our estimated `biden.` A hat indicates an estimated value.
 
 **This is our data generating mechanism.**
 
 A data generating mechanism is just a formula, something which we can write down and implement with computer code.
 
-### Exercise 13
 
-Create a new code chunk in your QMD. Add a code chunk option: `#| cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_XX`.
+### Exercise 14
 
-`Command/Ctrl + Shift + K`. It may take some time to render your QMD, depending on how complex your model is. But, by including `#| cache: true` you cause Quarto to cache the results of the chunk. The next time you render your QMD, as long as you have not changed the code, Quarto will just load up the saved fitted object.
+
+Create a new code chunk in your QMD. Add a code chunk option: `#| cache: true.` Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_biden.`
+
+`Command/Ctrl + Shift + K`.By including `#| cache: true` you cause Quarto to cache the results of the chunk. The next time you render your QMD, as long as you have not changed the code, Quarto will just load up the saved fitted object.
 
 At the Console, run:
 
@@ -1161,7 +1183,9 @@ tutorial.helpers::show_file("analysis.qmd", start = -8)
 
 CP/CR.
 
-```{r courage-13}
+
+```{r courage-14}
+
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1174,7 +1198,9 @@ question_text(NULL,
 
 To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
 
-### Exercise 14
+
+### Exercise 15
+
 
 Add `*_cache` to `.gitignore` file. Cached objects are often large. They don't belong on Github.
 
@@ -1186,7 +1212,9 @@ tutorial.helpers::show_file(".gitignore")
 
 CP/CR.
 
-```{r courage-14}
+
+```{r courage-15}
+
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1199,27 +1227,34 @@ question_text(NULL,
 
 Because of the change in your `.gitignore` (assuming that you saved it), the cache directory should not appear in the Source Control panel because Git is ignoring it, as instructed. Commit and push.
 
-### Exercise 15
 
-In the Console, run `tidy()` on `fit_bern` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
+### Exercise 16
 
-```{r courage-15, exercise = TRUE}
+
+In the Console, run `tidy()` on `fit_biden` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
+
+
+```{r courage-16, exercise = TRUE}
 
 ```
 
-```{r courage-15-hint-1, eval = FALSE}
+```{r courage-16-hint-1, eval = FALSE}
 tidy(..., conf.int = ...)
 ```
 
-```{r courage-15-test, include = FALSE}
-# tidy(fit_bern, conf.int = TRUE)
+```{r courage-16-test, include = FALSE}
+tidy(fit_biden, conf.int = TRUE)
+
+
 ```
 
 ###
 
 `tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
 
-### Exercise 16
+
+### Exercise 17
+
 
 Create a new code chunk in your QMD. Ask AI to help you make a nice looking table from the tibble which is returned by `tidy()`. You don't have to include all the variables which `tidy()` produces. We often just show the estimate and the confidence intervals.
 
@@ -1237,7 +1272,8 @@ tutorial.helpers::show_file("analysis.qmd", end = -10)
 
 CP/CR.
 
-```{r courage-16}
+```{r courage-17}
+
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1248,11 +1284,10 @@ question_text(NULL,
 
 ###
 
-<!-- XX: Consider showing your table, and the code which you used to create it. -->
-
 At the very least, your table should include a title and a caption with the data source. The more you use AI, the better you will get at doing so.
 
-### Exercise 17
+
+### Exercise 18
 
 Add a sentence to your project summary.
 
@@ -1262,9 +1297,10 @@ Recall the beginning of our version of the summary:
 
 Public opinion polls provide crucial but imperfect snapshots of voter sentiment during campaigns. Using March 2024 YouGov survey data from 1,559 U.S. adults, we estimate the proportion of votes Joe Biden will receive in the November election. Our estimates may be biased if late-deciding voters break differently for Biden than survey respondents who expressed firm preferences in March.
 
-```{r courage-17}
+```{r courage-18}
+
 question_text(NULL,
-	message = "We model voting preference [the probability of supporting Biden in the election], where responses are coded as 1 (voted for Biden) or 0 (did not vote for Biden), as a logistic function of age, income level, and party identification. The model accounts for both continuous (age) and categorical (income, party ID) predictors, with the logistic transformation ensuring predicted probabilities remain between 0 and 1",
+	message = "We model voter preference—the probability that a respondent supports Biden—as a logistic function with no predictors, capturing the overall proportion of support in the population. The outcome variable is coded as 1 (Yes) for Biden supporters and 0 (No) for non-supporters.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1383,8 +1419,8 @@ Data science projects almost always begin with a broad topic of interest. Yet, i
 Run this code:
 
 ```
-plot_predictions(fit_bern,
-                 condition = c("age", "sex"))
+avg_predictions(fit_biden)
+
 ```
 
 ```{r temperance-4, exercise = TRUE}
@@ -1397,21 +1433,26 @@ plot_predictions(fit_bern,
 
 ###
 
-<!-- XX: The knowledge drop MUST discuss the estimate (and its uncertainty) that you go on to include in your summary paragraph. You MUST discuss how you are reading, roughly, the values for the estimate and the confidence interval by looking at this plot. -->
-
-<!-- XX: There are a lot of interesting options in plot_predictions. Check them out. You may want to use some of them in your plot. I think `points` is quite interesting. Add a couple more questions which use different argument values and/or add other options.  -->
-
-<!-- XX: You can use the draw = FALSE option to return a tibble which can then be piped directly into ggplot.  -->
+This result shows the overall predicted probability of supporting Biden across the full sample. The estimate is the model’s best guess for average support, and the confidence interval gives the range of plausible values. Since the model has no predictors, the estimate is the same for everyone — there’s no variation by age, sex, or any other factor..
 
 ### Exercise 5
 
-<!-- XX: After you have run several marginaleffects functions, it is time to finish up, to create your final plot. In this question, have them run the final marginaleffects function, the one that will form the basis of the final plot. -->
+Due to the simplicity of our model, `plot_predictions()` will not work. This is because it doesn't include any predictors like age or sex. Instead, we can use `avg_predictions()` which is also from the marginaleffects package. 
 
 Run this code:
 
 ```
-plot_predictions(fit_bern,
-                 condition = c("age", "sex")))
+library(ggplot2)
+
+avg_predictions(fit_biden) |>
+  ggplot(aes(x = "Yes", y = estimate)) +
+  geom_col(width = 0.4, fill = "#1f77b4") +
+  labs(title = "Probability of Supporting Biden",
+       y = "Probability",
+       x = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
 ```
 
 ```{r temperance-5, exercise = TRUE}
@@ -1426,7 +1467,7 @@ plot_predictions(fit_bern,
 
 ### Exercise 6
 
-Work interactively with your QMD to make a beautiful version of this plot. Your title should highlight the key variables. Your subtitle should describe the key takeaway, the sentence/conclusion which readers will, you hope, remember. Your caption should mention the data source. Your axis labels should look nice.
+Work interactively with your QMD to make a beautiful version of this plot. Your title should be concise yet descriptive. Your subtitle should describe the key takeaway, the sentence/conclusion which readers will, you hope, remember. Your caption should mention the data source. Your axis labels should look nice.
 
 This plot is not directly connected to your question. It answers lots of questions! It might be used by lots of different people.
 
@@ -1480,7 +1521,7 @@ Write the last sentence of your summary paragraph. It describes at least one qua
 
 ```{r temperance-8}
 question_text(NULL,
-	message = "One quantity of interest is the overall probability that a respondent supports Biden, which our model estimates using only an intercept. This gives a single predicted value for all observations, reflecting the average level of support in the dataset.",
+	message = "We estimate that approximately 42% of Americans support Joe Biden, with a 95% confidence interval ranging from 39% to 45%.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1497,7 +1538,7 @@ Write a few sentences which explain why the estimates for the quantities of inte
 
 ```{r temperance-9}
 question_text(NULL,
-	message = "The model uses only an intercept and assumes a representative sample, but real-world data often involves unmeasured factors and sampling bias. Because of this, the estimate may be off, and the confidence interval should be wider to reflect greater uncertainty.",
+	message = "The estimates might be wrong because the model assumes every respondent has the same probability of supporting Biden — it doesn’t account for meaningful differences by age, race, education, or party affiliation. If these factors are unevenly represented in the survey, the estimated average support could be biased. Also, people might not respond honestly or might change their minds before the election.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1570,6 +1611,8 @@ question_text(NULL,
 We can never know all the entries in the Preceptor Table. That knowledge is reserved for God. If all our assumptions are correct, then our DGM is true, it accurately describes the way in which the world works. There is no better way to predict the future, or to model the past, than to use it. Sadly, this will only be the case with toy examples involving things like coins and dice. We hope that our DGM is close to the true DGM but, since our assumptions are never perfectly correct, our DGM will always be different. The estimated magnitude and importance of that difference is a matter of judgment.
 
 The world confronts us. Make decisions we must.
+
+<!-- DK: Delete these if you are done. -->
 
 <!-- XX: Make some comments about what this plot is telling us, especially with regard to the questions with which we began. What are the most important takeaways from this plot? (Obviously, this will -->
 
