@@ -683,7 +683,7 @@ Read our answer. It will not be the same as yours. You can, if you want, change 
 
 Note that in this step, we are converting the strings to titles, so that they remain capitalized throughout our graph. This is important as later, we will have to capitalize `"Black"` to match what we did in this step.
 
-### Exercise 21
+### Exercise 18
 
 We have saved this pipeline to the following object:
 
@@ -696,7 +696,7 @@ x <- stops |>
 
 Create a new code chunk in `stops.qmd`. Add `#| label: eda`. Copy/Paste the code for the `x` object. Render and run `tutorial.helpers::show_file("stops.qmd", chunk = "last")`. CP/CR.
 
-```{r wisdom-21}
+```{r wisdom-18}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1012,13 +1012,7 @@ The *[tidymodels](https://www.tidymodels.org/)* framework is the most popular on
  <!--SU: based on teh template tutorial we dont need this formula anymore correct?-->
 ### Exercise 7
 
-We will be using the following formula:
-
-```
-arrested ~ sex + race*zone
-```
-
-Continue the pipe to `fit()`, pasting in the formula, and then adding the argument `data = x`.
+Continue the pipe to `fit(arrested ~ sex, data = x)`.
 
 ```{r courage-7, exercise = TRUE}
 
@@ -1028,74 +1022,325 @@ Continue the pipe to `fit()`, pasting in the formula, and then adding the argume
 
 ```{r courage-7-hint-1, eval = FALSE}
 ... |> 
-  fit(arrested ~ ... + race*..., data = ...)
+  fit(arrested ~ ..., data = ...)
 ```
 
 ```{r courage-7-test, include = FALSE}
 linear_reg() |>
   set_engine("lm") |>
-  fit(arrested ~ sex + race*zone, data = x)
+  fit(arrested ~ sex, data = x)
 ```
 
 ### 
 
-We can translate the fitted model into mathematics, including the best estimates of all the unknown parameters:
-
-```
-extract_eq(fit_stops$fit,
-           intercept = "beta",
-           wrap = TRUE,
-           use_coefs = TRUE,
-           terms_per_line = 2)
-```
-
-```{r}
-extract_eq(fit_stops$fit,
-           intercept = "beta",
-           wrap = TRUE,
-           use_coefs = TRUE,
-           terms_per_line = 2)
-```
+Recall that a categorical variable (whether character or factor) like `sex` is turned into a $0/1$ "dummy" variable which is then re-named something like $sex{Male}$. After all, we can't have words --- like "Male" or "Female" --- in a mathematical formula, hence the need for dummy variables.
 
 ### Exercise 8
 
-Behind the scenes of this tutorial, an object called `fit_stops` has been created which is the result of the code above. Type `fit_stops` and hit "Run Code." This generates the same results as using `print(fit_stops)`.
-
+Continue the pipe with `tidy(conf.int = TRUE)`.
 
 ```{r courage-8, exercise = TRUE}
 
 ```
 
 ```{r courage-8-hint-1, eval = FALSE}
-fit_stops
+linear_reg() |>
+  set_engine("lm") |>
+  fit(arrested ~ sex, data = x) |>
+  tidy(... = TRUE)
 ```
 
 ```{r courage-8-test, include = FALSE}
-fit_stops
+linear_reg() |>
+  set_engine("lm") |>
+  fit(arrested ~ sex, data = x) |>
+  tidy(conf.int = TRUE)
 ```
 
 ### 
 
-The Intercept parameter indicates when `sexmale = 0`, i.e. it indicates females on average. 
-
+The meaning of the magnitude of the coefficient values is much harder to interpret in logistic models than in linear models. But the fact that the coefficient of sexMale is positive means that men are more likely to be arrested than women, and the fact that the confidence interval excludes zero means that we can be fairly certain of that claim.
 
 ### Exercise 9
 
-Create a new code chunk in `stops.qmd`. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_stops`. 
+Change the call to `fit()` to `fit(arrested ~ race, data = XX)`.
 
-`Command/Ctrl + Shift + K`. It may take some time to render `stops.qmd`, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render `stops.qmd`, as long as you have not changed the code, Quarto will just load up the saved fitted object.
+```{r courage-9, exercise = TRUE}
 
-To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-9-hint-1, eval = FALSE}
+linear_reg() |>
+  set_engine("lm") |>
+  fit(arrested ~ ..., data = x) 
+```
+
+```{r courage-9-test, include = FALSE}
+linear_reg() |>
+  set_engine("lm") |>
+  fit(arrested ~ race, data = x) 
+```
+
+###
+
+The same dummy variable approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has three values --- "black", "hispanic", and "white" --- the model creates two 0/1 dummy variables, giving them names like $race_{hispanic}$ and $race_{white}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
+
+### Exercise 10
+
+Add back the call to `tidy(conf.int = TRUE)`.
+
+```{r courage-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-10-hint-1, eval = FALSE}
+linear_reg() |>
+  set_engine("lm") |>
+  fit(arrested ~ race, data = x) |>
+   tidy(conf.int = TRUE)
+
+```
+
+```{r courage-10-test, include = FALSE}
+linear_reg() |>
+  set_engine("lm") |>
+  fit(arrested ~ race, data = x) |>
+  tidy(conf.int = TRUE)
+```
+
+### 
+
+White respondents, the group for which a dummy variable is created here (raceWhite), are less likely to be arrested than respondents of other races. The coefficient is −0.0438, and the 95% confidence interval ranges from −0.0469 to −0.0408, which does not include 0. That means this difference is statistically significant — we can be fairly confident it's not due to random chance.
+
+The exact size of the coefficient is harder to interpret since we’re working with a logistic model, but the direction is clear: identifying as white is associated with a lower probability of getting arrested. 
+
+### Exercise 11
+
+Change the call to `fit()` to `fit(arrested ~ sex + race, data = x)`.
+
+```{r courage-11, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-11-hint-1, eval = FALSE}
+... |> 
+  fit(... ~ sex + ..., ... = x) |>
+  ...
+```
+
+```{r courage-11-test, include = FALSE}
+linear_reg(engine = "lm") |> 
+  fit(arrested ~ sex + race, data = x) |> 
+  tidy(conf.int = TRUE)
+```
+
+### 
+
+````
+  term        estimate std.error statistic   p.value conf.low conf.high
+  <chr>          <dbl>     <dbl>     <dbl>     <dbl>    <dbl>     <dbl>
+1 (Intercept)   0.204    0.00130     157.  0           0.201     0.206 
+2 sexMale       0.0631   0.00149      42.4 0           0.0601    0.0660
+3 raceWhite    -0.0450   0.00154     -29.1 2.40e-186  -0.0480   -0.0419
+````
+
+The more variables we add, the more difficult it is to interpret the meaning of any particular coefficient. But interpretation also becomes less important. We don't really care about coefficients. We care about using our model to estimate quantities of interest.
+
+In this case, the coefficient for `raceWhite` is slightly more negative than before, presumably because we’ve now included `sex`, and men are somewhat more likely to be arrested. By adjusting for `sex`, we’re isolating the effect of race more precisely — and the effect of being white remains statistically significant and negative.
+
+### Exercise 12
+
+Change the formula in the call to `fit()` to `arrested ~ sex + race*zone`.
+
+```{r courage-12, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r courage-12-hint-1, eval = FALSE}
+... |> 
+  fit(arrested ~ sex + race*zone, data = x) |>
+  ...
+```
+
+```{r courage-12-test, include = FALSE}
+linear_reg(engine = "lm") |> 
+  fit(arrested ~ sex + race*zone, data = x) |> 
+  tidy(conf.int = TRUE)
+```
+
+### 
+
+````
+ term        estimate std.error statistic  p.value conf.low conf.high
+   <chr>          <dbl>     <dbl>     <dbl>    <dbl>    <dbl>     <dbl>
+ 1 (Intercept)  0.177     0.00346    51.3   0         0.171     0.184  
+ 2 sexMale      0.0614    0.00149    41.4   0         0.0585    0.0644 
+ 3 raceWhite   -0.0445    0.00634    -7.02  2.25e-12 -0.0570   -0.0321 
+ 4 zoneB        0.0146    0.00513     2.85  4.42e- 3  0.00455   0.0247 
+ 5 zoneC        0.00610   0.00426     1.43  1.52e- 1 -0.00225   0.0145 
+ 6 zoneD        0.0781    0.00418    18.7   6.20e-78  0.0699    0.0862 
+ 7 zoneE        0.00190   0.00465     0.409 6.82e- 1 -0.00721   0.0110 
+ 8 zoneF       -0.00271   0.00483    -0.561 5.75e- 1 -0.0122    0.00675
+ 9 zoneG        0.0309    0.00500     6.18  6.46e-10  0.0211    0.0407 
+10 zoneH        0.0757    0.00479    15.8   3.42e-56  0.0663    0.0851 
+````
+
+We included the interaction between race and zone because the effect of race on the likelihood of being arrested may differ depending on the zone. For example, the coefficient for raceWhite:zoneD is negative and its confidence interval excludes zero, suggesting that white individuals may be treated differently in that zone compared to others. And because we’ve included interaction terms, we keep the main effects for both race and zone as well, even if not all of them are individually significant.
+
+
+### Exercise 13
+
+Behind the scenes of this tutorial, an object called `fit_stops` has been created which is the result of the code above. Type `fit_years` and hit "Run Code." This generates the same results as using `print(fit_years)`.
+
+
+```{r courage-13, exercise = TRUE}
+
+```
+
+```{r courage-13-hint-1, eval = FALSE}
+fit_stops
+```
+
+```{r courage-13-test, include = FALSE}
+# fit_stops
+```
+
+### 
+
+In data science, **we deal with words, math, and code, but the most important of these is code.** We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
+
+### Exercise 14
+
+### Exercise 15
+
+Load the **[easystats](https://easystats.github.io/easystats/)** package.
+
+```{r courage-15, exercise = TRUE}
+
+```
+
+```{r courage-15-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r courage-15-test, include = FALSE}
+library(easystats)
+```
+
+###
+
+We don't add **easystats** to the QMD because we are only using it for an interactive check of our fitted model. However, the [easystats ecosystem](https://easystats.github.io/easystats/) has a variety of interesting functions and packages which you might want to explore.
+
+### Exercise 16
+
+### Exercise 17
+
+In the Console, run `check_predictions(extract_fit_engine(fit_stops))`. CP/CR.
+
+```{r courage-17, exercise = TRUE}
+
+```
+
+```{r courage-17-hint-1, eval = FALSE}
+check_predictions(extract_fit_engine(...))
+```
+
+```{r courage-17-test, include = FALSE}
+check_predictions(extract_fit_engine(fit_stops))
+```
+
+###
+
+```{r}
+check_predictions(extract_fit_engine(fit_XX))
+```
+
+The purpose of `check_predictions()` is to compare your actual data (in green) with data that has been simulated from your fitted model, i.e., from your data generating mechanism. If your DGM is reasonable, then data simulated from it should not look too dissimilar from your actual data. Of course, it won't look exactly the same because of randomness, both in the world and in your simulation. But the actual data should be within the range of outcomes that your DGM simulates with `check_predictions()`.
+
+### Exercise 18
+
+Ask AI to create $\LaTeX$ code for this model, including our variable names and estimates for all the coefficients. Because this is a fitted model, the dependent variable will have a "hat" and the formula will not include an error term. 
+
+Add the code to your QMD. `Cmd/Ctrl + Shift + K`.
+
+Make sure the resulting display looks good. For example, you don't want an absurd number of figures to the right of the decimal. If the model is too long, you will need to spread it across several lines. You may need to go back-and-forth with the AI a few times.
+
+Once the $\LaTeX$ code looks good, paste it below.
+
+```{r courage-18}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+###
+
+Our formula looks like:
+
+$$
+\widehat{\text{arrested}} = 0.177 
++ 0.0614 \cdot \text{sex}_{\text{Male}} 
+- 0.0445 \cdot \text{race}_{\text{White}} 
++ 0.0146 \cdot \text{zone}_{\text{B}} 
++ 0.00610 \cdot \text{zone}_{\text{C}} 
++ 0.0781 \cdot \text{zone}_{\text{D}} 
++ 0.00190 \cdot \text{zone}_{\text{E}} 
+- 0.00271 \cdot \text{zone}_{\text{F}} 
++ 0.0309 \cdot \text{zone}_{\text{G}} 
++ 0.0757 \cdot \text{zone}_{\text{H}} 
++ \text{(interaction terms for race and zone)}
+$$
+
+It was created with:
+
+````
+$$
+\widehat{\text{arrested}} = 0.177 
++ 0.0614 \cdot \text{sex}_{\text{Male}} 
+- 0.0445 \cdot \text{race}_{\text{White}} 
++ 0.0146 \cdot \text{zone}_{\text{B}} 
++ 0.00610 \cdot \text{zone}_{\text{C}} 
++ 0.0781 \cdot \text{zone}_{\text{D}} 
++ 0.00190 \cdot \text{zone}_{\text{E}} 
+- 0.00271 \cdot \text{zone}_{\text{F}} 
++ 0.0309 \cdot \text{zone}_{\text{G}} 
++ 0.0757 \cdot \text{zone}_{\text{H}} 
++ \text{(interaction terms for race and zone)}
+$$
+````
+
+Note the differences. First, we have replaced the parameters with our best estimates. Second, we have dropped the error term because this is a formula for predicting the value of our outcome variable. Third, the left-hand side variable is $\widehat{\text{arrested}}$ instead of $\text{arrested}$ because this formula generates our estimated arrested. A hat indicates an estimated value.
+
+**This is our data generating mechanism.**
+
+A data generating mechanism is just a formula, something which we can write down and implement with computer code.
+
+### Exercise 19
+
+Create a new code chunk in your QMD. Add a code chunk option: `#| cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_XX`. 
+
+`Command/Ctrl + Shift + K`. It may take some time to render your QMD, depending on how complex your model is. But, by including `#| cache: true` you cause Quarto to cache the results of the chunk. The next time you render your QMD, as long as you have not changed the code, Quarto will just load up the saved fitted object.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("stops.qmd", start = -8)
+tutorial.helpers::show_file("XX.qmd", start = -8)
 ```
 
 CP/CR.
 
-```{r courage-9}
+```{r courage-19}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1104,156 +1349,100 @@ question_text(NULL,
 	rows = 8)
 ```
 
-### Exercise 10
+### 
 
-Create another code chunk in `stops.qmd`. Add the chunk option: `label: math`. In that code chunk, add something like the following:
+To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
 
-```
-extract_eq(fit_stops$fit,
-           intercept = "beta",
-           wrap = TRUE,
-           use_coefs = TRUE,
-           terms_per_line = 2)
-```
+### Exercise 20
 
-`Command/Ctrl + Shift + K`. 
+Add `*_cache` to `.gitignore` file. Cached objects are often large. They don't belong on Github.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("stops.qmd", pattern = "extract")
+tutorial.helpers::show_file(".gitignore")
 ```
 
 CP/CR.
 
-```{r courage-10}
+```{r courage-20}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 3)
+	rows = 6)
 ```
 
-### 
+###
 
-When you render your document, this formula will appear.
+Because of the change in your `.gitignore` (assuming that you saved it), the cache directory should not appear in the Source Control panel because Git is ignoring it, as instructed. Commit and push. 
 
-```{r}
-extract_eq(fit_stops$fit,
-           intercept = "beta",
-           wrap = TRUE,
-           use_coefs = TRUE,
-           terms_per_line = 2)
-```
+### Exercise 21
 
-This is our data generating mechanism.
+In the Console, run `tidy()` on `fit_stops` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
 
-The formula shows us how each parameter compares to our `intercept`, which is the first parameter. In this case, the intercept is `0.18`, inddicating that for females (the first parameter, so it becomes the intercept) the arrest rate is 18%. If we want to find the arrest rate for the white race (in general) it would subtract `0.4`, giving us an answer of `0.14`, or 14%.
-
-
-### Exercise 11
-
-Run `tidy()` on `fit_stops` with the argument `conf.int` set equal to `TRUE`. This returns the 95% intervals for all parameters in our model.
-
-```{r courage-11, exercise = TRUE}
+```{r courage-21, exercise = TRUE}
 
 ```
 
-```{r courage-11-hint-1, eval = FALSE}
+```{r courage-21-hint-1, eval = FALSE}
 tidy(..., conf.int = ...)
 ```
 
-```{r courage-11-test, include = FALSE}
-tidy(fit_stops, conf.int = TRUE)
-```
-
-### Exercise 12
-
-Write a sentence interpreting the ~0.06 estimate for `sexMale`.
-
-```{r courage-12}
-question_text(NULL,
-	message = "When comparing men with women, men have a 0.06 higher value for `arrested`, meaning that they are more likely to get arrested during a traffic stop relative to women, conditional on the other variables in the model.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
+```{r courage-21-test, include = FALSE}
+# tidy(fit_stops, conf.int = TRUE)
 ```
 
 ### 
 
-The phrase "conditional on the other variables in the model" is important. It could be shortened to "conditional on the model." This phrase acknowledges that there are many, many possible models, just considering all the different combinations of independent variables we might include. Each one would produce a different coefficient for sexmale. None of these is the *true* coefficient.
+`tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
 
+### Exercise 22
 
-### Exercise 13
+Create a new code chunk in your QMD. Ask AI to help you make a nice looking table from the tibble which is returned by `tidy()`. You don't have to include all the variables which `tidy()` produces. We often just show the estimate and the confidence intervals.
 
-Between Zone D and Zone F, in which zone would the average person be more likely to get arrested during a traffic stop? In which zone would the expected average arrest rate be lower than the average of all females in New Orleans?
-
-```{r courage-13}
-question_text(NULL,
-	message = "We expect that the average person be more likely to get arrested at Zone D because of its higher probability than Zone F. Given that our Intercept represents the average arrest rate of all females in New Orleans, we expect that the person would be less likely to get arrested in Zone F than our Intercept because of Zone F's negative estimate.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-Because we are Bayesians, we believe that there is a true value and that the confidence or credible or uncertainty interval includes it at the stated level. This is different from the Frequenist interpretation, for which you should see [here](https://ppbds.github.io/primer/cardinal-virtues.html#confidencecredibleuncertainty-intervals).
-
-
-### Exercise 14
-
-Write a sentence interpreting the -0.04 estimate for `raceWhite`.
-
-```{r courage-14}
-question_text(NULL,
-	message = "if we compare people who are White (figuratively the treated) with people who are Black (figuratively the control), the treated people have, on average, a 0.04 lower chance of getting arrested, adjusting for other individual characteristics.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-The key point is that there is no such thing as a causal (versus preditive) data set nor a causal (versus predictive) R code formula. You can use the same data set (and the same R code!) for both causal and predictive models. The difference lies in the assumptions you make.
-
-
-### Exercise 15
-
-Create a new code chunk in `stops.qmd`. Add a code chunk option: `label: table`. Add this code to the code chunk.
-
-```
-tidy(fit_stops, conf.int = TRUE)
-```
+Insert that code into the QMD. 
 
 `Command/Ctrl + Shift + K`. 
+
+Make sure it works. You might need to add some new libraries, e.g., **[tinytable](https://vincentarelbundock.github.io/tinytable/)**, **[knitr](https://yihui.org/knitr/)**, **[gt](https://gt.rstudio.com/)**, **[kableExtra](https://haozhu233.github.io/kableExtra/)**, **[flextable](https://davidgohel.github.io/flextable/)**, **[modelsummary](https://modelsummary.com/)**, et cetera, to the `setup` code chunk, if you use any functions from these packages, all of which have strengths and weaknesses for making tables.
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("stops.qmd", pattern = "tidy")
+tutorial.helpers::show_file("XX.qmd", end = -10)
 ```
 
 CP/CR.
 
-```{r courage-15}
+```{r courage-22}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 3)
+	rows = 12)
 ```
 
-### Exercise 16
+###
 
-Write a few sentence which summarize your work so far. The first few sentences are the same as what you had at the end of the Justice Section. Add one sentence which describes the modelling approach which you are using, specifying the functional form and the dependent variable. Add one sentence which describes the *direction* (not the magnitude) of the relationship between one of your independent variables and your dependent variable.
 
-```{r courage-16}
+At the very least, your table should include a title and a caption with the data source. The more you use AI, the better you will get at doing so.
+
+### Exercise 23
+
+Add a sentence to your project summary. 
+
+Explain the structure of the model. Something like: "I/we model XX [the concept of the outcome, not the variable name], [insert description of values of XX], as a [linear/logistic/multinomial/ordinal] function of XX [and maybe other covariates]." 
+
+<!-- DK: Add discussion of easystats::report()? -->
+
+Recall the beginning of our version of the summary:
+
+> [XX: Include what we suggested at the end of Justice.]
+
+```{r courage-23}
 question_text(NULL,
 	message = "Using data from a study of New Orleans drivers, we seek to understand the relationship between driver race and the probabilty of getting arrested during a traffic stop. However, our data from both our Preceptor Table and our dataset may not fully represent the population as both may not be from the same time frame and some of our data may come from biased officers, who may target certain groups of individuals. However, these concerns don't appear to be valid in a substantial manner in either dataset, allowing us to continue in our process. We modeled `arrested` as a linear function of both `sex` and the product of `race` and `zone`. From this, we examined that Males are less likely of getting arrested than Females.",
 	answer(NULL, correct = TRUE),
@@ -1261,6 +1450,10 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+### 
+
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to the summary paragraph portion of your QMD. `Command/Ctrl + Shift + K`, and then commit/push.
 
 ## Temperance
 ### 
