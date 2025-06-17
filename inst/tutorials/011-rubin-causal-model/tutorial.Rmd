@@ -16,6 +16,7 @@ library(learnr)
 library(tutorial.helpers)
 library(tidyverse)
 library(gt)
+library(dplyr)
 library(knitr)
 
 knitr::opts_chunk$set(echo = FALSE)
@@ -80,16 +81,38 @@ precep_1 <- tibble(ID = c("Student 1", "Student 2", "...", "Student 47", "Studen
             locations = cells_column_labels())
 
 
-precep_table <- tibble(id = c("Robert", "Andy", "Beau", "Ishan", "Nicholas"),
-       height_cm = c("178", "?", "172", "173", "165")) |>
+x_1 <- tibble(
+  ID = c("Student 1", "Student 2", "Student 47", "Student 48",
+         "Student 325", "Student 326", "Student 670"),
+  Heights = c(190, 160, 172, 176, 180, 162, 185)
+)
+
+x_2 <- tibble(
+  ID = c("Student 11", "Student 32", "Student 47", "Student 68",
+         "Student 425", "Student 436", "Student 570"),
+  Heights = c(160, 189, 172, 170, 175, 162, 188)
+)
+
+pop_table1 <- bind_rows(
+  x_2 |> mutate(Source = "Data"),
+  x_1 |> mutate(Source = "Preceptor Table")
+) |> 
+  select(Source, ID, Heights) |> 
+  rename(`Height (cm)` = Heights) |> 
   gt() |>
-  cols_label(id = md("ID"),
-                height_cm = md("Height (cm)")) |>
-  tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
-            locations = cells_column_labels(columns = c(id))) |>
+  cols_label(
+    Source = md("**Source**"),
+    ID = md("**ID**"),
+    `Height (cm)` = md("**Height (cm)**")
+  ) |>
+  tab_style(
+    style = cell_text(align = "left", v_align = "middle", size = "large"), 
+    locations = cells_column_labels(columns = c(ID))
+  ) |>
   cols_align(align = "center", columns = everything()) |>
-  cols_align(align = "left", columns = c(id)) |>
+  cols_align(align = "left", columns = c(ID)) |>
   fmt_markdown(columns = everything())
+
 
 
 precep_table_2 <- tibble(id = c("Robert", "Andy", "Beau", "Ishan", "Nicholas"),
@@ -176,9 +199,9 @@ This tutorial will review key concepts including the Preceptor Table, the Popula
 
 We would not need data science if we (and our bosses, colleagues, and clients) did not have questions. Every data science project starts with a question.
 
-What is the average height of a student at New College of Florida? We have this data:
+What is the average height of a student at New College of Florida? We have this data from 2015:
 
-<!-- DK: When is this data from? -->
+<!-- DK: When is this data from? Fixed. -->
 
 ```{r}
 data_table
@@ -206,30 +229,43 @@ Preceptor Tables vary in the number of their rows and columns. We use question m
 
 ### Exercise 2
 
-<!-- DK: Split into two separate questions. -->
+<!-- DK: Split into two separate questions. Done.-->
 
-Describe the *units* and *outcomes* in the Preceptor Table which would allow us to answer our question.
+Describe the *units* in the Preceptor Table which would allow us to answer our question.
 
 ```{r preceptor-table-1-2}
 question_text(NULL,
-	message = "The 'units' refer to the rows, which are the individual students at New College. The 'outcome' refers to height, which is a column.",
+	message = "The 'units' refer to the rows, which are the individual students at New College.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
 
-### 
+### Exercise 3
+
+Describe the *outcomes* in the Preceptor Table which would allow us to answer our question.
+
+```{r preceptor-table-1-3}
+question_text(NULL,
+	message = "The 'outcomes' refers to height, which is a column.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
 
 <!-- DK: Check the book! -->
 
 The best way to construct a Preceptor Table is to begin by answering questions about *units*, *outcomes* and *treatments*. In this case, there are no treatments, so we only need to specify the units and the outcome.
 
-### Exercise 3
+### Exercise 4
 
 Describe what the Preceptor Table should look like for this example.
 
-```{r preceptor-table-1-3}
+```{r preceptor-table-1-4}
 question_text(NULL,
 	message = "The Preceptor Table will have a row for each individual student at New College. In addition to an ID column, it will have one other column: height, which is the outcome.",
 	answer(NULL, correct = TRUE),
@@ -238,13 +274,13 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### Exercise 4
+### Exercise 5
 
 If we had different questions, however, then we would need a different Preceptor Table. What if we wanted to calculate the average height of  for male and female students at New College of Florida? We would need a different variable.
 
 Describe what a covariate is in your own words. Then, describe the covariate needed for the new question.
 
-```{r preceptor-table-1-4}
+```{r preceptor-table-1-5}
 question_text(NULL,
 	message = "Covariates are the variables, other than the outcome, which we need to answer our question(s). For this question, we will need an additional column: Sex.",
 	answer(NULL, correct = TRUE),
@@ -262,11 +298,11 @@ precep_1
 ```
 
 
-### Exercise 5
+### Exercise 6
 
 In your own words, define "validity" as we use the term.
 
-```{r preceptor-table-1-5}
+```{r preceptor-table-1-6}
 question_text(NULL,
 	message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
 	answer(NULL, correct = TRUE),
@@ -278,23 +314,6 @@ question_text(NULL,
 ### 
 
 We hope that all this new terminology is not overwhelming. The "[Cardinal Virtues](https://ppbds.github.io/primer/cardinal-virtues.html)" chapter in the [*Primer*](https://ppbds.github.io/primer/) provides an overview of the most important terms and their definitions.
-
-### Exercise 6
-
-Come up with a scenario for this problem in which the assumption of validity might not hold.
-
-```{r preceptor-table-1-6}
-question_text(NULL,
-	message = "What if the data were collected while the students had their shoes on but the question about average height refers to height without shoes? In that case, the meaning of 'height' would be different between the data and the Preceptor Table.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-Much of what a good data scientist does is to try to think of reasons why questions can **not** be answered. Assumptions are rarely fully true. We need to test them. The best way to start testing is to come up with (plausible) objections. We will practice this skill over and over again.
 
 ### Exercise 7
 
@@ -311,65 +330,35 @@ question_text(NULL,
 
 ### 
 
+Much of what a good data scientist does is to try to think of reasons why questions can **not** be answered. Assumptions are rarely fully true. We need to test them. The best way to start testing is to come up with (plausible) objections. We will practice this skill over and over again.
+
+### 
+
 ```{r}
-x_1 <- tibble(ID = c("Student 1", "Student 2", "...", "Student 47", "Student 48",
-              "...", "Student 325", "Student 326", "...", "Student 670"),
-       Heights = c("190", "160", "...", "172", "176", "...", "180", "162", "...", "185"))
-
-x_2 <- tibble(ID = c("Student 11", "Student 32", "Student 47", "Student 68",
-              "Student 425", "Student 436", "Student 570"),
-       Heights = c("160", "189",  "172", "170",  "175", "162",  "188"))
-
-# DK: Fix.
-
-# rbind(x_1, x_2) |> 
-#   mutate(source = c(rep("Data", 4), rep("Preceptor Table", 5))) |> 
-#   select(source, ID, Heights) |> 
-#   gt() |>
-#   cols_label(source = md("Source"),
-#              ID = md("ID"),
-#               Heights = md("Height (cm)")) |>
-#   tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
-#             locations = cells_column_labels(columns = c(id))) |>
-#   cols_align(align = "center", columns = everything()) |>
-#   cols_align(align = "left", columns = c(id)) |>
-#   fmt_markdown(columns = everything())
-  
+pop_table1
 ```
 
 ### 
 
 This object is not (yet) a Population Table. It is the step between having two tables (the data and the Preceptor Table) and then, given the assumption of validity, creating the full Population Table. 
 
-### 
-
-<!-- IS: Unsure of how to relate this section + exercise 8 to New College dataset. -->
-
-The key addition we still need is more rows. For example, there is no row for Andy in 2020 because we did not collect data for Andy in that year. But Andy did exist! We could, in theory, have measured his height and recorded it, along with the height of his brothers. The Population Table, because it includes a row for every unit/time in the population, will include a row for Andy in 2020, even though the data will be missing.
-
 ### Exercise 8
 
-In your own words, describe the process by which we can go from the combined table in the previous Exercise to the "informal" Preceptor Table with which we began:
-
-```{r}
-precep_table
-```
-
-In particular, what do we need to assume to use, for example, Robert's measured height in 2020 to fill in Robert's height in the Preceptor Table in 2025?
-
+Come up with a scenario for this problem in which the assumption of validity might not hold.
 
 ```{r preceptor-table-1-8}
 question_text(NULL,
-	message = "The key assumption is that height is constant, at least for the 4 years we care about and for these men. That is, although we have not measured Robert's height in 2025, we assume that it is the same as the height we measured in 2020: 178 centimeters.",
+	message = "What if the data were collected while the students had their shoes on but the question about average height refers to height without shoes? In that case, the meaning of 'height' would be different between the data and the Preceptor Table.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
 
-### 
+###
 
-The informal Preceptor Table does not include either the Source or the Time column. (Even the ID column is not really necessary. Knowing that the missing measurement is for someone named "Andy" does not help us to estimate the overall average. The only thing we really need is the vector of 4 heights which we do know.)
+For this problem, we are going to assume the assumption of validity holds, allowing us to stack the data from the Preceptor Table and the data together.
+
 
 ## Population Table 1
 ### 
@@ -395,40 +384,42 @@ The Population Table can be constructed if the validity assumption is (mostly) t
 
 Rows in our Population Table often contain no data. These are subjects that fall within our population, but for which we have no data. As such, all values are missing.
 
-### Exercise 2
-
-<!-- Include Population Table somewhere here so that the students don't have to cycle back to the previous page to see it -->
-
 ```{r}
-precep_table
-```
-
-Our Preceptor Table had two columns: `ID` and `height`. Our data table has the same two columns. What other columns are usually added to create a Population Table? 
-
-<!-- DK: Remove this question. We never really make Population Tables. We just use them as a framework. -->
-
-```{r population-table-1-2}
-question_text(NULL,
-	message = "Population Tables also include a `Source` and `Time` columns.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
+#| echo: false
+tibble(source = c("...", "...",  "Data", "Data", 
+                  "...", "...", "...", 
+                  "Preceptor Table", "Preceptor Table", "...", "...", "..."),
+       year = c("2010", "...", "2015", "2015", 
+                "...","2018", "...", "2025", "2025", "...", "2030", "2030"),
+       height = c("...", "...", "180", "163", "...", "...", "...","?", "?", "...", "...", "...")) |> 
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() |>
+  tab_header(title = "Population Table") |> 
+  cols_label(source = md("Source"),
+             year = md("Year"),
+             height = md("Height")) |>
+  tab_style(style = cell_text(align = "left", v_align = "middle", size = "large"), 
+            locations = cells_column_labels(columns = c(source))) |>
+  cols_align(align = "center", columns = everything()) |>
+  cols_align(align = "left", columns = c(source)) |>
+  fmt_markdown(columns = everything())  
 ```
 
 ### 
 
 The `Source` column indicates the source of the row. The `Time` column, which is often named with the relevant unit of time (like `year` or `date` or whatever), indicates the moment in time to which the data in the row refers.
 
-### Exercise 3
+### Exercise 2
 
-What are the three sources for the rows in the Population Table? 
+How are these rows usually indicated in the 'Source' column?
 
-<!-- DK: Remove: How are these rows usually indicated in the `Source` column? -->
+<!-- DK: Remove: How are these rows usually indicated in the `Source` column? Done. -->
 
-```{r population-table-1-3}
+```{r population-table-1-2}
 question_text(NULL,
-	message = "The three sources for the rows in the Population Table are the data, the Preceptor Table, and the other units in the population from which the data and the Preceptor Table were drawn. These rows are usually indicated with 'Data', 'Preceptor Table', and '...', respectively.",
+	message = "There are typically three sources for the rows in the Population Table are the data, the Preceptor Table, and the other units in the population from which the data and the Preceptor Table were drawn. These rows are usually indicated with 'Data', 'Preceptor Table', and '...', respectively.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -439,11 +430,11 @@ question_text(NULL,
 
 In causal usage, we will often leave out the `ID`, `Source` and `Time` columns from the Population Table, but they are always there, at least implicitly.
 
-### Exercise 4
+### Exercise 3
 
 What combination of variables *uniquely* defines each row in the Population Table? 
 
-```{r population-table-1-4}
+```{r population-table-1-3}
 question_text(NULL,
 	message = "Each row in the Population Table is uniquely defined by a ID/Time combination.",
 	answer(NULL, correct = TRUE),
@@ -456,12 +447,12 @@ question_text(NULL,
 
 Some students will appear multiple times in the Population Table. The `Time` 2025 will appear multiple times, but there will only be one row for the student in 2025.
 
-### Exercise 5
+### Exercise 4
 
 In your own words, explain why "time is always a lie" in a Population Table.
 
 
-```{r population-table-1-5}
+```{r population-table-1-4}
 question_text(NULL,
 	message = "Time variables in data science, particularly in Population Tables, can be misleading due to inaccurate measurements, hidden variations, and lack of specificity. The value for the time variable in rows corresponding to the Preceptor Table is often ambiguous, as it may refer to the present, future, or whenever the analysis is completed.",
 	answer(NULL, correct = TRUE),
@@ -474,11 +465,11 @@ question_text(NULL,
 
 The purpose of the Population Table is to force us to think clearly about the questions we are trying to answer. The `time` variable, and the problems therein, are a major part of that task.
 
-### Exercise 6
+### Exercise 5
 
 For simplicity, let's drop the `ID` column. Describe in words what the Population Table for this problem should look like. 
 
-```{r population-table-1-6}
+```{r population-table-1-5}
 question_text(NULL,
 	message = "There will be 3 columns: `Source`, `Year`, and `Height`. There will be rows for every row from the data table and for every row in the Preceptor Table. In addition, there will be rows from the broader population, perhaps going back in time to 2010 and forward in time to 2040.",
 	answer(NULL, correct = TRUE),
@@ -551,9 +542,9 @@ Each of our two sources for rows --- the Preceptor Table and the actual data ---
 
 ### Exercise 3
 
-<!-- DK: Ensure two or one sentence is what we do for all these questions. -->
+<!-- DK: Ensure two or one sentence is what we do for all these questions. Done.-->
 
-Write two sentences about *stability*, as used as an assumption in the *Primer*.
+In your own words, define the assumption of "stability" when employed in the context of data science.
 
 ```{r predictive-model-3}
 question_text(NULL,
@@ -571,7 +562,7 @@ question_text(NULL,
 
 ### Exercise 4
 
-Come up with a scenario for this problem in which the assumption of stability might not hold.
+Provide one reason why the assumption of stability might not be true in this case.
 
 ```{r predictive-model-4}
 question_text(NULL,
@@ -588,7 +579,7 @@ The longer the time period covered by the Preceptor Table (and the data), the mo
 
 ### Exercise 5
 
-Write two sentences about *representativeness*, as used as an assumption in the *Primer*.
+In your own words, define the assumption of "representativeness" when employed in the context of data science.
 
 ```{r predictive-model-5}
 question_text(NULL,
@@ -601,13 +592,13 @@ question_text(NULL,
 
 ### 
 
-<!-- DK: Use the knowledge drops from template_tutorial. -->
+<!-- DK: Use the knowledge drops from template_tutorial. Done.-->
 
-Why do we have the data that we have? The easiest way to draw inferences about other rows, especially the rows in the Preceptor Table subpart of the Population Table, is if our data is a random draw from the entire population. This is almost never true. How untrue it is determines how much we need to worry about the representativeness of our data.
+Ideally, we would like both the Preceptor Table *and* our data to be random samples from the population. Sadly, this is almost never the case.
 
 ### Exercise 6
 
-Come up with a scenario for this problem in which the assumption of representativeness might not hold.
+We do not use the data, directly, to estimate missing values in the Preceptor Table. Instead, we use the data to learn about the overall population. Provide one reason, involving the relationship between the data and the population, for why the assumption of representativeness might not be true in this case. 
 
 ```{r predictive-model-6}
 question_text(NULL,
@@ -621,13 +612,13 @@ question_text(NULL,
 
 ### Exercise 7
 
-<!-- DK: Messed up! -->
+<!-- DK: Messed up! Fixed.-->
 
-Write two sentences about *unconfoundedness*, as used as an assumption in the *Primer*.
+In your own words, define the assumption of "unconfoundedness" when employed in the context of data science.
 
 ```{r predictive-model-7}
 question_text(NULL,
-	message = "Unconfoundedness means that the treatment assignment is independent of the potential outcomes, when we condition on pre-treatment covariates. This assumption is only relevant for causal models. We describe a model as “confounded” if this is not true.",
+	message = "Unconfoundedness means that the treatment assignment is independent of the potential outcomes, when we condition on pre-treatment covariates.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -636,19 +627,17 @@ question_text(NULL,
 
 ### 
 
-"Unconfoundedness" as an assumption only applies in the case of causal, not predictive, models. The best way to ensure unconfoundedness is to randomize the treatment across units so that we can estimate the average treatment effect by subtracting the average outcome for control units from the average outcome for treated units, as we do above.
+This assumption is only relevant for causal models. We describe a model as "confounded" if this is not true. The easiest way to ensure unconfoundedness is to assign treatment randomly.
 
 Thus, it is not something we have to be concerned with in the New College problem.
 
-## Causal Tables
+## Causal Model
 
-Consider two questions:
+Consider this question:
 
 What is the average attitude toward immigration of Boston commuters?
 
-What is the average attitude toward immigration of Boston commuters exposed to Spanish speakers on the train platform?
-
-To answer these questions, we have made this Preceptor Table:
+To answer this, we have made this Preceptor Table:
 
 ```{r}
 
@@ -677,11 +666,37 @@ tibble(ID = c("Commuter 1", "Commuter 2", "...", "Commuter 47", "Commuter 48",
 
 ### Exercise 1
 
-Describe what the Preceptor Table should look like for this example.
+Describe the *units* in this Preceptor Table which would allow us to answer our question.
 
-```{r causal-tables-1}
+```{r causal-model-1}
 question_text(NULL,
-	message = "The Preceptor Table will have a row for each individual Boston commuter. In addition to an ID column, it has 2 other columns: The outcome, which is attitude towards immigration, and the covariate, which is the treatment.",
+	message = "The 'units' refer to the rows, which is each individual Boston commuter.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 2
+
+Describe the *outcomes* in the Preceptor Table which would allow us to answer our question.
+
+```{r causal-model-2}
+question_text(NULL,
+	message = "The 'outcomes' refers to the attitude towards immigration.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 3
+
+Describe the *covariates* in the Preceptor Table which would allow us to answer our question.
+
+```{r causal-model-3}
+question_text(NULL,
+	message = "The 'covariate' is the treatment column.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -696,7 +711,7 @@ This is a predictive model, like the height one, because we assume that attitude
 
 In your own words, give a one-sentence definition of a potential outcome.
 
-```{r causal-tables-2}
+```{r causal-model-2}
 question_text(NULL,
     message = "A potential outcome is the result that would happen for a person or unit under a specific condition or treatment, whether or not we actually observe it.",
     answer(NULL, correct = TRUE),
@@ -742,9 +757,9 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
 
 ### Exercise 3
 
-Describe what the Preceptor Table should look like for this example.
+Describe what the Preceptor Table should look like for this example. Include information about the *units* and *outcomes*, as previously discussed.
 
-```{r causal-tables-3}
+```{r causal-model-3}
 question_text(NULL,
 	message = "The Preceptor Table will have a row for each individual Boston commuter. In addition to an ID column, it has 3 other columns: The potential outcomes and the causal effect.",
 	answer(NULL, correct = TRUE),
@@ -758,7 +773,7 @@ question_text(NULL,
 
 Come up with a scenario for this problem in which the assumption of validity might not hold.
 
-```{r causal-tables-4}
+```{r causal-model-4}
 question_text(NULL,
 	message = "If different questions or wording of the questions were used, it could result to different outcomes across time.",
 	answer(NULL, correct = TRUE),
@@ -808,7 +823,7 @@ All of the variables calculated in the Preceptor and Population Tables are examp
 
 Come up with a scenario for this problem in which the assumption of stability might not hold.
 
-```{r causal-tables-5}
+```{r causal-model-5}
 question_text(NULL,
 	message = "If the treatment started to have greater effects on women than men over time, it would hinder the stability.",
 	answer(NULL, correct = TRUE),
@@ -816,7 +831,6 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 6)
 ```
-
 
 ###
 
@@ -826,7 +840,7 @@ Through claiming this model has stability, we claim that the world has not chang
 
 Come up with a scenario for this problem in which the assumption of representativeness might not hold.
 
-```{r causal-tables-6}
+```{r causal-model-6}
 question_text(NULL,
 	message = "Since we are only taking observations on the train, we cannot calculate an accurate causal effect for those that commute by cars.",
 	answer(NULL, correct = TRUE),
@@ -835,6 +849,22 @@ question_text(NULL,
 	rows = 6)
 ```
 
+### Exercise 7
+
+Come up with a scenario for this problem in which the assumption of unconfoundedness might not hold.
+
+```{r causal-model-7}
+question_text(NULL,
+	message = "If the doctor prescribing the medication only did it being mindful of the potential outcome, it would confound the data.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+The great advantage of randomized assignment of treatment is that it guarantees unconfoundedness, *if the randomization is done correctly*. There is no way for treatment assignment to be correlated with anything, including potential outcomes, if treatment assignment is random, and *if the experimental set up worked as designed.* Sadly, in the real world, there are sometimes problems.
 
 ## Causal Effects
 
@@ -882,8 +912,6 @@ According to the RCM, the causal effect of being on the platform with treatment 
 
 ### Exercise 3
 
-<!-- TJ: We should add the table again after every question so that the students don't need to go back up. -->
-
 ```{r causal-effects-3}
 quiz(question("For how many of the five people is the causal effect of the treatment positive?",
     answer("1"),
@@ -921,10 +949,6 @@ The **Rubin Causal Model (RCM)** is based on the idea of **potential outcomes**.
 
 ### Exercise 5
 
-<!-- Students need a pointer? -->
-
-<!-- DK: Include this table in the tutorial, with a full set of five questions leading to its creation, just like in the template. -->
-
 In one sentence, explain which type of model the immigration-attitudes example is and why.
 
 ```{r causal-effects-5}
@@ -944,8 +968,6 @@ In a causal model, there are two (or more) potential outcomes. Determining wheth
 
 In your own words, explain the meaning of the phrase "No causation without manipulation." 
 
-<!-- Could make it a paragraph and ask for personal example . . . -->
-
 ```{r causal-effects-6}
 question_text(NULL,
 	message = "The motto 'No causation without manipulation' suggests that for a causal effect to be well-defined, both potential outcomes must be possible, at least conceptually. However, this raises complex questions about whether characteristics like race, sex, and genetic conditions can be considered causal, as they may not be easily manipulated.",
@@ -964,7 +986,7 @@ This motto is most likely to come up in initial discussions with your colleague/
 
 ### Exercise 1
 
-You want to predict the final college GPA of students at a specific University. You have data involving college GPA from another university. Describe what the Preceptor Table should look like for this example.
+You want to predict the final college GPA of students at a specific University. You have data involving college GPA from another university. Describe what the Preceptor Table should look like for this example, describing the 'units' and 'outcomes'.
 
 ```{r review-1}
 question_text(NULL,
@@ -977,11 +999,11 @@ question_text(NULL,
 
 ### Exercise 2
 
-Using the example in Exercise 10, come up with a scenario for this problem in which the assumption of validity might not hold.
+Come up with a scenario for the college GPA problem in which the assumption of stability might not hold.
 
 ```{r review-2}
 question_text(NULL,
-	message = "What if the data were collected with colleges using a 5.0 scale but the question about final college GPA refers to a 4.0 scale? In that case, the meaning of GPA would be different between the data and the Preceptor Table.",
+	message = "What if the college we got our data from had a stricter grading policy, causing more students to have a lower GPA? In that case, the standards of GPA may not be stable across the data and the Preceptor Table.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1003,7 +1025,7 @@ question_text(NULL,
 
 ### Exercise 4
 
-Using the example in Exercise 12, come up with a scenario for this problem in which the assumption of validity might not hold.
+Come up with a scenario for the wealth problem in which the assumption of validity might not hold.
 
 ```{r review-4}
 question_text(NULL,
@@ -1016,11 +1038,11 @@ question_text(NULL,
 
 ### Exercise 5
 
-You want to predict how likely customers are to buy a new product after receiving a marketing email. You have some data from a marketing campaign conducted 3 years ago. Describe what the Preceptor Table should look like for this example.
+A school district wants to determine if a new teaching method improves student test scores compared to the traditional method. In one sentence, explain which type of model the teaching example involves and why.
 
 ```{r review-5}
 question_text(NULL,
-	message = "The Preceptor Table will have a row for each individual customer, which are the units.  In addition to an ID column, it will have one other column: whether or not they made a purchase, which is the outcome.",
+	message = "The teaching problem involves the creation of a causal model because there are two outcomes: their test score if taught by the new method, and their test score if taught by the traditional method.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1029,11 +1051,11 @@ question_text(NULL,
 
 ### Exercise 6
 
-Using the example in Exercise 14, come up with a scenario for this problem in which the assumption of validity might not hold.
+Come up with a scenario for the school district problem in which the assumption of unconfoundedness might not hold.
 
 ```{r review-6}
 question_text(NULL,
-	message = "What if the marketing campaign 3 years ago offered customers a 20% discount code in the email, and the current campaign is just a product announcement? Validity would not hold in this case.",
+	message = "If the teachers knew what type of teaching would work best on their students, and changed their teaching ways to fit the individual students to improve their test scores, it would make the data confounded.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1042,11 +1064,11 @@ question_text(NULL,
 
 ### Exercise 7
 
-You want to predict the final college GPA of students at a specific University. You have data involving college GPA from another university. In one sentence, explain which type of model the college-GPA example involves and why.
+You want to predict how likely customers are to buy a new product after receiving a marketing email. You have some data from a marketing campaign conducted 3 years ago. Describe what the Preceptor Table should look like for this example.
 
 ```{r review-7}
 question_text(NULL,
-	message = "The college-GPA problem involves the creation of a predictive model because there is only one outcome: final college GPA.",
+	message = "The Preceptor Table will have a row for each individual customer, which are the units.  In addition to an ID column, it will have one other column: whether or not they made a purchase, which is the outcome.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1055,13 +1077,11 @@ question_text(NULL,
 
 ### Exercise 8
 
-<!-- DK: Mix up the assumptions you exam. Use unconfoundedness at least twice. -->
-
- A company wants to find out whether offering a free trial causes more users to become paying customers. In one sentence, explain which type of model the free-trial example involves and why.
+Come up with a scenario for the marketing problem in which the assumption of representativeness might not hold.
 
 ```{r review-8}
 question_text(NULL,
-	message = "The free-trial problem involves the creation of a causal model because there are two outcomes: whether they become paying customers if offered a free trial, and whether they become paying customers if not offered the free trial.",
+	message = "What if the marketing campaign from 3 years ago only involved mail fliers? In that case, the sample of people in this study would only be representative of those who open their mail, which may not be applicable to the entire clientbase.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1070,16 +1090,32 @@ question_text(NULL,
 
 ### Exercise 9
 
-A school district wants to determine if a new teaching method improves student test scores compared to the traditional method. In one sentence, explain which type of model the teaching example involves and why.
+<!-- DK: Mix up the assumptions you exam. Use unconfoundedness at least twice. Done.-->
+
+ A company wants to find out whether offering a free trial causes more users to become paying customers. In one sentence, explain which type of model the free-trial example involves and why.
 
 ```{r review-9}
 question_text(NULL,
-	message = "The teaching problem involves the creation of a causal model because there are two outcomes: their test score if taught by the new method, and their test score if taught by the traditional method.",
+	message = "The free-trial problem involves the creation of a causal model because there are two outcomes: whether they become paying customers if offered a free trial, and whether they become paying customers if not offered the free trial.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
 	rows = 6)
 ```
+
+### Exercise 10
+
+Come up with a scenario for the free trial problem in which the assumption of unconfoundedness might not hold.
+
+```{r review-10}
+question_text(NULL,
+	message = "if the company only offered the free trial to the users who had more engagement on the site, knowing that it would be more likely to have them become paying customers, it would make the data confounded.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
 
 ## Simple models
 ### 
