@@ -28,6 +28,8 @@ knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
         tutorial.storage = "local") 
 
+# DK: Clean up. Own everything.		
+
 # Creates a model used for a plot in Wisdom-6
 
 fit_arrested <- linear_reg() |>
@@ -47,6 +49,10 @@ fit_stops <- linear_reg() |>
     set_engine("lm") |>
     fit(arrested ~ sex + race*zone, data = x)
 
+fit_stops_logistic <- logistic_reg() |>
+    set_engine("glm") |>
+    fit(as.factor(arrested) ~ sex + race*zone, data = x)
+
 ```
 
 ```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
@@ -56,7 +62,14 @@ fit_stops <- linear_reg() |>
 ```
 
 
+<!-- DK: Change to a logistic regression. Which means you should change the code which creates x so that arrested becomes a factor variable with Yes/No values. -->
 
+<!-- DK Have students run these:
+
+> plot_predictions(fit_stops, by = "sex")
+> plot_predictions(fit_stops, condition = "sex")
+
+And explain what they mean! -->
 
 ## Introduction
 ### 
@@ -918,6 +931,7 @@ $$ arrested_i  \sim Bernoulli(\rho) $$
 
 Note that "binomial" is another, more common, word for Bernoulli.
 
+<!-- DK: Make this, and later questions, match the template. -->
 
 ### Exercise 3
 
@@ -1009,7 +1023,7 @@ linear_reg(engine = "lm")
 
 The *[tidymodels](https://www.tidymodels.org/)* framework is the most popular one in the R world for estimating models. *[Tidy Modeling with R](https://www.tmwr.org/)* by Max Kuhn and Julia Silge is a great introduction.
 
- <!--SU: based on teh template tutorial we dont need this formula anymore correct?-->
+
 ### Exercise 7
 
 Continue the pipe to `fit(arrested ~ sex, data = x)`.
@@ -1142,13 +1156,12 @@ linear_reg(engine = "lm") |>
 
 ### 
 
-````
-  term        estimate std.error statistic   p.value conf.low conf.high
-  <chr>          <dbl>     <dbl>     <dbl>     <dbl>    <dbl>     <dbl>
-1 (Intercept)   0.204    0.00130     157.  0           0.201     0.206 
-2 sexMale       0.0631   0.00149      42.4 0           0.0601    0.0660
-3 raceWhite    -0.0450   0.00154     -29.1 2.40e-186  -0.0480   -0.0419
-````
+```{r}
+linear_reg(engine = "lm") |> 
+  fit(arrested ~ sex + race, data = x) |> 
+  tidy(conf.int = TRUE) |> 
+  select(term, estimate, conf.low, conf.high)
+```
 
 The more variables we add, the more difficult it is to interpret the meaning of any particular coefficient. But interpretation also becomes less important. We don't really care about coefficients. We care about using our model to estimate quantities of interest.
 
@@ -1177,6 +1190,8 @@ linear_reg(engine = "lm") |>
 ```
 
 ### 
+
+<!-- DK: Do not copy/paste. Calculate on the fly. -->
 
 ````
  term        estimate std.error statistic  p.value conf.low conf.high
@@ -1436,8 +1451,6 @@ Add a sentence to your project summary.
 
 Explain the structure of the model. Something like: "I/we model XX [the concept of the outcome, not the variable name], [insert description of values of XX], as a [linear/logistic/multinomial/ordinal] function of XX [and maybe other covariates]." 
 
-<!-- DK: Add discussion of easystats::report()? -->
-
 Recall the beginning of our version of the summary:
 
 > [XX: Include what we suggested at the end of Justice.]
@@ -1481,15 +1494,17 @@ Courage gave us the data generating mechanism. Temperance guides us in the use o
 
 Before using the DGM, we should make sure that we can interpret it.
 
-Recall the values for the parameters in our data generating mechanism:
-
-Write a sentence interpreting the 0.06 estimate for sexMale
+Recall some of the values for the parameters in our data generating mechanism:
 
 ```{r}
-# fit_stops |> 
-# 	tidy(conf.int = TRUE) |> 
-#	select(term, estimate, conf.low, conf.high)
+fit_stops |> 
+	tidy(conf.int = TRUE) |> 
+	select(term, estimate, conf.low, conf.high)
 ```
+
+<!-- DK: Print out all the rows. Probably not. Print out the top 5 rows and then note you have cut it off. -->
+
+Write a sentence interpreting the 0.06 estimate for sexMale
 
 ```{r temperance-2}
 question_text(NULL,
@@ -1502,9 +1517,11 @@ question_text(NULL,
 
 ###
 
+<!-- DK? -->
+
 ### Exercise 3
 
-Write a sentence interpreting the -0.04 estimate for raceWhite
+Write a sentence interpreting the -0.04 estimate for `raceWhite`.
 
 ```{r}
 # fit_stops |> 
