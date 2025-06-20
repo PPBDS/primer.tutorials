@@ -22,6 +22,7 @@ library(broom)
 library(marginaleffects)
 
 library(easystats)
+library(scales)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
@@ -35,7 +36,6 @@ urn <- tibble(
   sample_frac() |> 
   mutate(bead_ID = 1:1000) |> 
   mutate(color = factor(color))
-
 
 virtual_samples <- tibble(trial_ID = 1:1000) |> 
   mutate(shovel = map(trial_ID, ~ sample_n(urn, size = 50))) |> 
@@ -55,6 +55,7 @@ shovel <- tibble(color = as.factor(
 	sample(c(rep("red", 17), 
 	         rep("white", 33)))))
 
+shovel <- shovel |> mutate(color = relevel(color, ref = "white"))
 
 fit_color <- logistic_reg(engine = "glm") |>
   fit(color ~ 1, data = shovel)
@@ -1911,7 +1912,7 @@ Behind the scenes of this tutorial, an object called `fit_color` has been create
 
 ```
 
-<!-- DK: Deal with all the XX. -->
+<!-- DK: Deal with all the XX. Done -->
 
 ```{r courage-9-hint-1, eval = FALSE}
 fit_color
@@ -1954,7 +1955,7 @@ In the Console, run `check_predictions(extract_fit_engine(fit_color))`. CP/CR.
 ```
 
 ```{r courage-11-hint-1, eval = FALSE}
-check_predictions(extract_fit_engine(...))
+check_predictions(extract_fit_engine(fit_color))
 ```
 
 ```{r courage-11-test, include = FALSE}
@@ -1969,9 +1970,26 @@ check_predictions(extract_fit_engine(fit_color))
 
 The purpose of `check_predictions()` is to compare your actual data (in green) with data that has been simulated from your fitted model, i.e., from your data generating mechanism. If your DGM is reasonable, then data simulated from it should not look too dissimilar from your actual data. Of course, it won't look exactly the same because of randomness, both in the world and in your simulation. But the actual data should be within the range of outcomes that your DGM simulates with `check_predictions()`.
 
-<!-- DK: Add a new question which shows the plot and then asks for a two sentence interpretation. -->
+<!-- DK: Add a new question which shows the plot and then asks for a two sentence interpretation. Done-->
 
 ### Exercise 12
+
+After running `check_predictions(extract_fit_engine(fit_color))`, look at the plot. In two sentences, interpret what you see. What does this plot tell you about how well your model fits the observed data?
+
+```{r courage-12}
+question_text(NULL,
+	message = "The actual data points (in green) fall within the range of values simulated by the model. This suggests that the fitted model is a reasonable representation of the process that generated the data, as it can reproduce similar patterns to what was observed.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+When your observed data falls within the simulated range in the plot, it suggests your model is capturing the main patterns in reality. If not, you may need to revisit your assumptions or model structure.
+
+### Exercise 13
 
 Ask AI to create $\LaTeX$ code for this model, including our variable names and estimates for all the coefficients. Because this is a fitted model, the dependent variable will have a "hat" and the formula will not include an error term. 
 
@@ -1981,7 +1999,7 @@ Make sure the resulting display looks good. For example, you don't want an absur
 
 Once the $\LaTeX$ code looks good, paste it below.
 
-```{r courage-12}
+```{r courage-13}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1994,12 +2012,12 @@ question_text(NULL,
 
 Our formula looks like:
 
-$$\widehat{\text{logit}(P(\text{color} = \text{red}))} = 0.66$$
+$$\widehat{\text{logit}(P(\text{color} = \text{red}))} = -0.66$$
 
 It was created with:
 
 ````
-$$\widehat{\text{logit}(P(\text{color} = \text{red}))} = 0.66$$
+$$\widehat{\text{logit}(P(\text{color} = \text{red}))} = -0.66$$
 ````
 
 Note the differences. First, we have replaced the parameters with our best estimates. Second, we have dropped the error term because this is a formula for predicting the value for our outcome variable. Third, the left-hand side variable is $\widehat{\text{logit}(P(\text{color} = \text{red}))}$ instead of $\text{logit}(P(\text{color} = \text{red}))$ because this formula generates our estimated probability. A hat indicates an estimated value.
@@ -2008,7 +2026,7 @@ Note the differences. First, we have replaced the parameters with our best estim
 
 A data generating mechanism is just a formula, something which we can write down and implement with computer code.
 
-### Exercise 13
+### Exercise 14
 
 Create a new code chunk in your QMD. Add a code chunk option: `#| cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_color`. 
 
@@ -2022,7 +2040,7 @@ tutorial.helpers::show_file("urn_simulation.qmd", start = -8)
 
 CP/CR.
 
-```{r courage-13}
+```{r courage-14}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -2035,7 +2053,7 @@ question_text(NULL,
 
 To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
 
-### Exercise 14
+### Exercise 15
 
 Add `*_cache` to `.gitignore` file. Cached objects are often large. They don't belong on Github.
 
@@ -2047,7 +2065,7 @@ tutorial.helpers::show_file(".gitignore")
 
 CP/CR.
 
-```{r courage-14}
+```{r courage-15}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -2060,19 +2078,19 @@ question_text(NULL,
 
 Because of the change in your `.gitignore` (assuming that you saved it), the cache directory should not appear in the Source Control panel because Git is ignoring it, as instructed. Commit and push. 
 
-### Exercise 15
+### Exercise 16
 
 In the Console, run `tidy()` on `fit_color` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
 
-```{r courage-15, exercise = TRUE}
+```{r courage-16, exercise = TRUE}
 
 ```
 
-```{r courage-15-hint-1, eval = FALSE}
-tidy(..., conf.int = ...)
+```{r courage-16-hint-1, eval = FALSE}
+tidy(fit_color, conf.int = TRUE)
 ```
 
-```{r courage-15-test, include = FALSE}
+```{r courage-16-test, include = FALSE}
 tidy(fit_color, conf.int = TRUE)
 ```
 
@@ -2080,7 +2098,7 @@ tidy(fit_color, conf.int = TRUE)
 
 `tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
 
-### Exercise 16
+### Exercise 17
 
 Create a new code chunk in your QMD. Ask AI to help you make a nice looking table from the tibble which is returned by `tidy()`. You don't have to include all the variables which `tidy()` produces. We often just show the estimate and the confidence intervals.
 
@@ -2098,7 +2116,7 @@ tutorial.helpers::show_file("urn_simulation.qmd", end = -10)
 
 CP/CR.
 
-```{r courage-16}
+```{r courage-17}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -2109,9 +2127,7 @@ question_text(NULL,
 
 ###
 
-<!-- DK: Show a simple table. Show the code for the simple. -->
-
-<!-- DK: Need to tell students that you are using gt and that, in your QMD, you would need to add library(gt) to the setup code chunk. -->
+This chart uses the `gt` package to create a nicely formatted table displaying the estimated log-odds and confidence intervals for red beads in the shovel sample. It adds a clear title, a data source note, and rounds the numbers for readability.
 
 ```{r}
 tidy(fit_color, conf.int = TRUE) |>
@@ -2136,8 +2152,12 @@ tidy(fit_color, conf.int = TRUE) |>
 
 ```
 
+###
+
+It was made using this code:
+
 ```
-tidy_shovel |>
+tidy(fit_color, conf.int = TRUE) |>
   select(term, estimate, conf.low, conf.high) |>
   gt() |>
   tab_header(
@@ -2161,7 +2181,7 @@ tidy_shovel |>
 
 At the very least, your table should include a title and a caption with the data source. The more you use AI, the better you will get at doing so.
 
-### Exercise 17
+### Exercise 18
 
 Add a sentence to your project summary. 
 
@@ -2171,7 +2191,7 @@ Recall the beginning of our version of the summary:
 
 Estimating proportions is a common goal in statistics, especially when dealing with categorical outcomes. Using a simulated urn of 1,000 beads, we investigate what proportion of beads are red. A potential weakness is that our sample of beads might not be perfectly representative of the entire urn, especially if some beads are more likely to be scooped than others.
 
-```{r courage-17}
+```{r courage-18}
 question_text(NULL,
 	message = "I model the probability of a bead being red, which is a binary outcome, as a logistic function based on the observed distribution of red and white beads in the urn or in shovel samples.",
 	answer(NULL, correct = TRUE),
@@ -2210,7 +2230,7 @@ Courage gave us the data generating mechanism. Temperance guides us in the use o
 
 Before using the DGM, we should make sure that we can interpret it.
 
-<!-- DK: Where is the question? -->
+Interpret the parameter estimate for the intercept in the model below, including its confidence interval. What does this value represent in the context of our bead and shovel example?
 
 Recall the values for the parameters in our data generating mechanism:
 
@@ -2222,7 +2242,7 @@ fit_color |>
 
 ```{r temperance-2}
 question_text(NULL,
-	message = "The parameter estimate for the intercept is 0.66, with a 95% confidence interval from 0.09 to 1.27. This represents the log-odds of scooping a red bead with the shovel sample.",
+	message = "The parameter estimate for the intercept is -0.66, with a 95% confidence interval from -1.27 to -0.09. This represents the log-odds of scooping a red bead with the shovel sample.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -2235,6 +2255,8 @@ Most of the time, parameters in a model have no direct relationship with any pop
 
 ### Exercise 3
 
+What does the 95% confidence interval for the intercept tell us about our estimate for scooping red beads?
+
 ```{r}
 fit_color |> 
   tidy(conf.int = TRUE) |> 
@@ -2243,7 +2265,7 @@ fit_color |>
 
 ```{r temperance-3}
 question_text(NULL,
-	message = "The 95% confidence interval for the intercept ranges from 0.09 to 1.27. This means we are fairly confident that the true log-odds of scooping a red bead with the shovel falls within this range.",
+	message = "The 95% confidence interval for the intercept ranges from -1.27 to -0.09. This means we are fairly confident that the true log-odds of scooping a red bead with the shovel falls within this range.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -2256,6 +2278,8 @@ We look for two things in the confidence interval. First, does it exclude zero? 
 
 ### Exercise 4
 
+What does the confidence interval for the intercept tell us about the precision of our estimate for the log-odds of drawing a red bead?
+
 ```{r}
 fit_color |> 
   tidy(conf.int = TRUE) |> 
@@ -2264,7 +2288,7 @@ fit_color |>
 
 ```{r temperance-4}
 question_text(NULL,
-	message = "The estimated log-odds of drawing a red bead with the shovel is 0.66. The confidence interval from 0.09 to 1.27 reflects the uncertainty in this estimate due to sampling variability.",
+	message = "The confidence interval shows the range of likely values for the log-odds of drawing a red bead; the relatively wide range reflects the uncertainty from using a small sample.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -2314,15 +2338,12 @@ question_text(NULL,
 
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic more broadly.
 
-<!-- predictions() -->
-
-
 ### Exercise 7
 
 Run this code:
 
 ```
-plot_predictions(fit_color, type = "prob", condition = "group")
+predictions(fit_color, type = "prob")
 ```       
 
 ```{r temperance-7, exercise = TRUE}
@@ -2335,32 +2356,16 @@ plot_predictions(fit_color, type = "prob", condition = "group")
 
 ### 
 
-This plot shows the model’s estimate for the probability that a scooped bead is red, along with a visual display of its uncertainty (the confidence interval). By reading the height of the point and the range of the error bars, we can quickly see both the predicted proportion and how precise our estimate is.
+`predictions()` returns a data frame with one row for each combination of observation and outcome class in the data used to fit the model. In this case, because there are 50 beads in the sample and two possible outcomes (`red` and `white`), the result has 100 rows—two for each bead. For an intercept-only logistic regression, these probabilities are the same for every observation, but split across the two outcome groups.
+
+<!-- AT: Should I add another predictions() question here? -->
 
 ### Exercise 8
-
-<!-- DK: This is garbage. -->
-
-<!-- plot_predictions(fit_color, type = "prob",  -->
-<!-- condition = "group", draw = FALSE) -->
 
 Run this code:
 
 ```
-preds <- plot_predictions(fit_color, type = "prob", condition = "color", draw = FALSE)
-library(ggplot2)
-preds |> 
-  filter(color == "red", group == "red") |>
-  ggplot(aes(x = color, y = estimate, ymin = conf.low, ymax = conf.high)) +
-  geom_pointrange(size = 0.9, color = "firebrick") +
-  labs(
-    title = "Proportion of Red Beads Scooped by the Shovel",
-    y = "Estimated Proportion of Red Beads",
-    x = "Bead Color"
-  ) +
-  coord_cartesian(ylim = c(0, 1)) +
-  theme_minimal()
-  
+plot_predictions(fit_color, type = "prob", condition = "group")
 ```       
 
 ```{r temperance-8, exercise = TRUE}
@@ -2373,10 +2378,29 @@ preds |>
 
 ### 
 
-This plot gives our best estimate for the proportion of red beads scooped, with the line showing the uncertainty around that estimate. The true value could be anywhere in that range.
-
+This plot shows the model’s estimate for the probability that a scooped bead is red, along with a visual display of its uncertainty (the confidence interval). By reading the height of the point and the range of the error bars, we can quickly see both the predicted proportion and how precise our estimate is.
 
 ### Exercise 9
+
+Run this code to get the underlying predicted probabilities as a tibble instead of a plot. The argument `draw = FALSE` tells R not to make a graph, but to return the raw prediction values you can use or inspect.
+
+```
+plot_predictions(fit_color, type = "prob", condition = "group", draw = FALSE)
+```       
+
+```{r temperance-9, exercise = TRUE}
+
+```
+
+```{r temperance-9-test, include = FALSE}
+
+```
+
+### 
+
+The output shows that we expect about 34% of the beads in a shovel sample to be red, with a 95% confidence interval from 0.21% to 0.47%, and about 66% to be white, with a 95% confidence interval from 0.53% to 0.79%. These intervals reflect the uncertainty in our estimated proportions.
+
+### Exercise 10
 
 Work interactively with your QMD to make a beautiful version of this plot. Your title should highlight the key variables. Your subtitle should describe the key takeaway, the sentence/conclusion which readers will, you hope, remember. Your caption should mention the data source. Your axis labels should look nice.
 
@@ -2384,7 +2408,7 @@ This plot is not directly connected to your question. It answers lots of questio
 
 Copy the code for your plot here:
 
-```{r temperance-9}
+```{r temperance-10}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -2397,7 +2421,28 @@ question_text(NULL,
 
 Data science often involves this-back-and-forth style of work. First, we need to make a single chunk of code, in this case, a new plot, work well. This requires interactive work between the QMD and the Console. Second, we need to ensure that the entire QMD runs correctly on its own.
 
-### Exercise 10
+###
+
+Here is the plot I created, for reference.
+
+```{r}
+preds <- plot_predictions(fit_color, type = "prob", condition = "color", draw = FALSE)
+library(ggplot2)
+preds |>
+  filter(color == "red", group == "red") |>
+  ggplot(aes(x = color, y = estimate, ymin = conf.low, ymax = conf.high)) +
+  geom_pointrange(size = 0.9) +
+  labs(
+    title = "Estimated Percentage of Red Beads in the Urn",
+    subtitle = "Based on predictions from a logistic regression using shovel samples",
+    y = "Estimated Percentage of Red Beads",
+    x = NULL
+  ) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  theme_minimal()
+```
+
+### Exercise 11
 
 Finalize the new graphics code chunk in your QMD.
 
@@ -2411,7 +2456,7 @@ tutorial.helpers::show_file("urn_simulation.qmd", start = -8)
 
 CP/CR.
 
-```{r temperance-10}
+```{r temperance-11}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -2425,13 +2470,13 @@ question_text(NULL,
 
 Always [remember](https://en.wikipedia.org/wiki/Map%E2%80%93territory_relation): *The map is not the territory.* A beautiful graphic tells a story, but that story is always an imperfect representation of reality. Our models depend on assumptions, assumptions which are never completely true.
 
-### Exercise 11
+### Exercise 12
 
 Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
-```{r temperance-11}
+```{r temperance-12}
 question_text(NULL,
-	message = "Our main quantity of interest is the proportion of red beads that we scoop, which we estimate to be about 0.66.",
+	message = "Based on our analysis, we estimate that about 34% of beads scooped with the shovel will be red, with a 95% confidence interval ranging from 21% to 47%.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -2442,11 +2487,11 @@ question_text(NULL,
 
 Add a final sentence to your summary paragraph in your QMD as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
-### Exercise 12
+### Exercise 13
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-12}
+```{r temperance-13}
 question_text(NULL,
 	message = "The estimate and confidence interval for the probability of scooping a red bead could be off if our sample isn’t truly representative of the urn. Real-world sampling often adds more uncertainty than our model accounts for, so it’s safer to use a wider confidence interval.",
 	answer(NULL, correct = TRUE),
@@ -2459,7 +2504,7 @@ question_text(NULL,
 
 Always go back to your Preceptor Table, the information which, if you had it, would make answering your question easy. In almost all real world cases, the Preceptor Table and the data are fairly different, not least because validity never holds perfectly. So, even a perfectly estimated statistical model is rarely as useful as we might like.
 
-### Exercise 13
+### Exercise 14
 
 Rearrange the material in your QMD so that the order is graphic, followed by the paragraph. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. You can keep or discard the math and any other material at your own discretion.
 
@@ -2473,7 +2518,7 @@ tutorial.helpers::show_file("urn_simulation.qmd")
 
 CP/CR.
 
-```{r temperance-13}
+```{r temperance-14}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -2486,11 +2531,11 @@ question_text(NULL,
 
 This is the version of your QMD file which your teacher is most likely to take a close look at.
 
-### Exercise 14
+### Exercise 15
 
 Publish your rendered QMD to GitHub Pages. Copy/paste the resulting url below.
 
-```{r temperance-14}
+```{r temperance-15}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -2503,11 +2548,11 @@ question_text(NULL,
 
 Commit/push everything.
 
-### Exercise 15
+### Exercise 16
 
 Copy/paste the url to your Github repo.
 
-```{r temperance-15}
+```{r temperance-16}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
