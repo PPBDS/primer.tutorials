@@ -14,8 +14,14 @@ description: 'Chapter 3 Tutorial: Sampling'
 ```{r setup, include = FALSE}
 library(learnr)
 library(tutorial.helpers)
-library(tidyverse)
 library(gt)
+
+library(tidyverse)
+library(tidymodels)
+library(broom)
+library(marginaleffects)
+
+library(easystats)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
@@ -30,9 +36,6 @@ urn <- tibble(
   mutate(bead_ID = 1:1000) |> 
   mutate(color = factor(color))
 
-fit_color <- logistic_reg(engine = "glm") |>
-  fit(color ~ 1, data = shovel)
-
 virtual_samples <- tibble(trial_ID = 1:1000) |> 
   mutate(shovel = map(trial_ID, ~ sample_n(urn, size = 50))) |> 
   mutate(numb_red = map_int(shovel, ~ sum(.$color == "red"))) |> 
@@ -46,12 +49,16 @@ shovels_100 <- expand_grid(trial_ID = 1:100, shovel_size = 1:100) |>
   summarize(st_dev_p_hat = sd(prop_red),
             .by = shovel_size)
 
-
-# DK: Your question is: Type `shovel` to see the tibble which we have 
-# created which includes the data from the shovel.			
-
 set.seed(9)
-shovel <- tibble(color = as.factor(sample(c(rep("red", 17), rep("white", 33)))))
+shovel <- tibble(color = as.factor(
+	sample(c(rep("red", 17), 
+	         rep("white", 33)))))
+
+
+fit_color <- logistic_reg(engine = "glm") |>
+  fit(color ~ 1, data = shovel)
+
+
 
 ```
 
@@ -63,8 +70,6 @@ shovel <- tibble(color = as.factor(sample(c(rep("red", 17), rep("white", 33)))))
 
 
 <!-- DK: Not sure what to do with the Sampling Distribution and Standard error sections. Leave them alone for now. -->
-
-<!-- Then add in a full copy of the template tutorial. Imagine that you are betting your friend about how many beads of which color will come out of the urn when you use a shovel of a certain size.  trying to estimate . . . And so on. -->
 
 <!-- DK: There is a conflict in that the chapter does 1,000 replications when examining the results for 100 shovel sizes while we only do 100 replications here, because otherwise the code takes too long to run. Revisit this. -->
 
@@ -590,10 +595,6 @@ To finish, use `labs()` to give your graph the appropriate title and axis labels
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 Reminder: This is what your plot should look like. 
-
-<!-- DK: The x-axis label does not have the proper $\hat{p}$, or so it seems -->
-
-<!-- AC: The best I can get is "\U0070\U0302" or "\U03C1\U0302", please take a look and see if it works -->
 
 ```{r}
 plot_vs
@@ -1909,8 +1910,10 @@ Behind the scenes of this tutorial, an object called `fit_color` has been create
 
 ```
 
+<!-- DK: Deal with all the XX. -->
+
 ```{r courage-9-hint-1, eval = FALSE}
-fit_XX
+fit_color
 ```
 
 ```{r courage-9-test, include = FALSE}
@@ -1964,6 +1967,8 @@ check_predictions(extract_fit_engine(fit_color))
 ```
 
 The purpose of `check_predictions()` is to compare your actual data (in green) with data that has been simulated from your fitted model, i.e., from your data generating mechanism. If your DGM is reasonable, then data simulated from it should not look too dissimilar from your actual data. Of course, it won't look exactly the same because of randomness, both in the world and in your simulation. But the actual data should be within the range of outcomes that your DGM simulates with `check_predictions()`.
+
+<!-- DK: Add a new question which shows the plot and then asks for a two sentence interpretation. -->
 
 ### Exercise 12
 
@@ -2103,8 +2108,34 @@ question_text(NULL,
 
 ###
 
+<!-- DK: Show a simple table. Show the code for the simple. -->
+
+<!-- DK: Need to tell students that you are using gt and that, in your QMD, you would need to add library(gt) to the setup code chunk. -->
+
+```{r}
+tidy(fit_color, conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high) |>
+  gt() |>
+  tab_header(
+    title = "Estimated Log-Odds of Red Beads in the Shovel Sample"
+  ) |>
+  tab_source_note(
+    source_note = "Data source: Beads sampled from the urn using a shovel"
+  ) |>
+  fmt_number(
+    columns = c(estimate, conf.low, conf.high),
+    decimals = 2
+  ) |>
+  cols_label(
+    term = "Term",
+    estimate = "Estimate",
+    conf.low = "Lower 95% CI",
+    conf.high = "Upper 95% CI"
+  )
+
 ```
 
+```
 tidy_shovel |>
   select(term, estimate, conf.low, conf.high) |>
   gt() |>
@@ -2177,6 +2208,8 @@ Courage gave us the data generating mechanism. Temperance guides us in the use o
 ### Exercise 2
 
 Before using the DGM, we should make sure that we can interpret it.
+
+<!-- DK: Where is the question? -->
 
 Recall the values for the parameters in our data generating mechanism:
 
@@ -2280,6 +2313,9 @@ question_text(NULL,
 
 Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic more broadly.
 
+<!-- predictions() -->
+
+
 ### Exercise 7
 
 Run this code:
@@ -2301,6 +2337,11 @@ plot_predictions(fit_color, type = "prob", condition = "group")
 This plot shows the model’s estimate for the probability that a scooped bead is red, along with a visual display of its uncertainty (the confidence interval). By reading the height of the point and the range of the error bars, we can quickly see both the predicted proportion and how precise our estimate is.
 
 ### Exercise 8
+
+<!-- DK: This is garbage. -->
+
+<!-- plot_predictions(fit_color, type = "prob",  -->
+<!-- condition = "group", draw = FALSE) -->
 
 Run this code:
 
