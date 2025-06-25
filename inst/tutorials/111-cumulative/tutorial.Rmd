@@ -1,6 +1,6 @@
 ---
 title: Cumulative
-author: David Kane and Mihir Kaushal
+author: David Kane and Aashna Patel
 tutorial:
   id: cumulative
 output:
@@ -8,8 +8,8 @@ output:
     progressive: yes
     allow_skip: yes
 runtime: shiny_prerendered
-description: 'Tutorial: Cumulative'
----
+description: "Tutorial #11 for Preceptor's Primer"
+--- 
 
 ```{r setup, include = FALSE}
 library(learnr)
@@ -17,10 +17,11 @@ library(tutorial.helpers)
 library(gt)
 
 library(tidyverse)
+library(broom)
 library(primer.data)
-library(equatiomatic)
-library(gtsummary)
 library(marginaleffects)
+
+library(easystats)
 
 knitr::opts_chunk$set(echo = FALSE)
 options(tutorial.exercise.timelimit = 600, 
@@ -87,20 +88,41 @@ in profectum.
 ## Introduction
 ### 
 
-WARNING: This tutorial is currently being edited. It is a mess.
-
 This tutorial supports [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
 
 The world confronts us. Make decisions we must.
+
+<!-- DK: A little too loosey goosey. -->
+
+Imagine you’re a pollster preparing for the upcoming election, determined to understand what influences voter behavior. You start digging into the approval ratings from 2020, analyzing where Trump’s support declined and identifying which demographics shifted away from him. The patterns begin to emerge, but they only raise more questions. There are many decisions to make.
+
+### Exercise 1
+
+What are the four [Cardinal Virtues](https://en.wikipedia.org/wiki/Cardinal_virtues), in order, which we use to guide our data science work?
+
+```{r introduction-1}
+question_text(NULL,
+	message = "Wisdom, Justice, Courage, and Temperance.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 2)
+```
+
+###
+
+Why do we ask this, and a score more other questions, in each tutorial? Because the best way to (try to) ensure that students remember these concepts more than a few months after the course ends is [spaced repetition](https://en.wikipedia.org/wiki/Spaced_repetition), although we focus more on the repetition than on the spacing.
 
 ## The Question
 ### 
 
 *The power to question is the basis of all human progress.* - Indira Gandhi
 
+To make better decisions about how to reach voters, we need to ask: how do ideology and education level shape voter approval? Are voters with more education and moderate views more likely to disapprove of certain candidates? And if so, what might that suggest about how opinions shift across demographics? These answers won’t solve every campaign challenge, but they can help us make smarter choices about where to focus messaging and outreach.
+
 ### Exercise 1
 
-Load **tidyverse**.
+Load [**tidyverse**](https://www.tidyverse.org/) package.
 
 ```{r the-question-1, exercise = TRUE}
 
@@ -116,13 +138,11 @@ library(tidyverse)
 
 ### 
 
-The data we will be looking at for this tutorial comes form a study where people rate how much they approve the current president.
-
-The [Cooperative Election Study](https://cces.gov.harvard.edu/) (CES) is one of the largest political surveys in the United States.
+The data we’ll be using in this tutorial comes from the [Cooperative Election Study](https://cces.gov.harvard.edu/) (CES), one of the largest political surveys in the United States, where respondents rate how much they approve of the current president.
 
 ### Exercise 2
 
-Load the **primer.data** package.
+Load the [**primer.data**](https://ppbds.github.io/primer.data/) package.
 
 ```{r the-question-2, exercise = TRUE}
 
@@ -138,7 +158,7 @@ library(primer.data)
 
 ### 
 
-A version of the data from the Cooperative Congressional Election Study is available in the `ces` tibble in the **primer.data** package.
+A version of the data from XX is available in the `ces` tibble.
 
 ### Exercise 3
 
@@ -155,11 +175,11 @@ question_text(NULL,
 
 ### 
 
-The data has `r scales::comma(nrow(ces))` observations and `r scales::comma(ncol(ces))` variables.
+The [Cooperative Election Study](https://cces.gov.harvard.edu/) is a large national survey of over 50,000 Americans conducted every election year. It includes questions about political views, voting behavior, ideology, education, and approval of elected officials.
 
 ### Exercise 4
 
-Approval of the president is the broad topic of this tutorial. Given that topic, which variable in `ces` should we use as our outcome variable?
+Approval is the broad topic of this tutorial. Given that topic, which variable in `ces` should we use as our outcome variable? 
 
 ```{r the-question-4}
 question_text(NULL,
@@ -172,7 +192,7 @@ question_text(NULL,
 
 ### 
 
-`approval` is an ordered factor variable.
+We will use `approval` as our outcome variable.
 
 ```{r}
 x |> 
@@ -189,13 +209,13 @@ x |>
 
 ### Exercise 5
 
-Let's imagine a brand new variable which **does not exists** in the data. This variable should be binary, meaning that it only takes on one of two values. It should also, at least in theory, by manipulable. In other words, if the value of the variable is "X," or whatever, then it generates one potential outcome and if it is "Y," or whatever, it generates another potential outcome.
+Let's imagine a brand new variable which **does not exist** in the data. This variable should be binary, meaning that it only takes on one of two values. It should also, at least in theory, be manipulable. In other words, if the value of the variable is "3," or whatever, then it generates one potential outcome and if it is "9," or whatever, it generates another potential outcome.
 
 Describe this imaginary variable and how might we manipulate its value.
 
 ```{r the-question-5}
 question_text(NULL,
-	message = "Consider positive Facebook ads, `ads`, as a treatment. We might expose some people to those ads and not others. Then, we could measure the causal effect of `ads` on presidential approval.",
+	message = "Imagine a variable called ads which has a value of 1 if a person was exposed to positive Facebook ads and 0 if they were not. The organization running the campaign can control this variable by deciding, either randomly or otherwise, whether or not to show these ads to a specific individual. This allows us to measure the causal effect of ads on presidential approval.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -204,7 +224,7 @@ question_text(NULL,
 
 ### 
 
-Any data set can be used to construct a causal model as long as there is at least one covariate that we can, at least in theory, manipulate. It does not matter whether or not anyone did, in fact, manipulate it.
+Any data set can be used to construct a causal model as long as there is at least one covariate that we can, at least in theory, manipulate. It does not matter whether or not anyone did, in fact, manipulate it. 
 
 ### Exercise 6
 
@@ -221,27 +241,15 @@ question_text(NULL,
 
 ### 
 
-The same data set can be used to create, separately, lots and lots of different models, both causal and predictive. We can just use different outcome variables and/or specify different treatment variables. All of this stuff is a *conceptual* framework we apply to the data. It is never inherent in the data itself.
+The same data set can be used to create, separately, lots and lots of different models, both causal and predictive. We can just use different outcome variables and/or specify different treatment variables. This is a *conceptual* framework we apply to the data. It is never inherent in the data itself.
 
 ### Exercise 7
 
-In a few sentences, specify two different values for the treatment variable, for a single unit, and then guess at the potential outcomes which would result, and then calculate the causal effect for that unit given those guesses.
+In a few sentences, specify the two different values for the imaginary treatment variable `ads`, for a single unit, guess at the potential outcomes which would result, and then determine the causal effect for that unit given those guesses.
 
 ```{r the-question-7}
-
-# XX: Replace [XX: unit] with a better word below given the actual data set we
-# are using. Replace all the XX terms as appropriate.
-
-# For a given individual, assume that the value of the treatment variables might
-# be 'exposure to Spanish-speakers' or 'no exposure'. If the individual gets
-# 'exposure to Spanish-speakers', then her attitude toward immigration would be
-# 10. If the individual gets 'no exposure', then her attitude would be 8. The
-# causal effect on the outcome of a treatment of exposure to Spanish-speakers
-# versus no exposure is 10 - 8 --- i.e., the difference between two potential
-# outcomes --- which equals 2, which is the causal effect.
-
 question_text(NULL,
-	message = 'For a given person, assume that the value of the treatment variable might be 1 or 0. If the person gets 1 (meaning they see the Facebook ads), then `approval` would be "Strongly Approve". If the same person gets 0, then `approval` would be "Neither Approve nor Disapprove". The causal effect on the outcome of a treatment of 1 versus 0 is "Strongly Approve" minus "Neither Approve nor Disapprove" --- i.e., the difference between two potential outcomes. However, unlike with numeric outcomes, there is no default metric on which to measure this causal effect, at least without further assumptions.',
+	message = 'For a given person, assume that the value of the treatment variable might be 1 (treatment) or 0 (control). If the person gets 1, then `approval` would be "Strongly Approve." If the person gets 0, then `approval` would be "Neither Approve nor Disapprove." The causal effect on the outcome of a treatment of 1 versus 0 is "Strongly Approve" minus "Neither Approve nor Disapprove" — i.e., the difference between two potential outcomes — which equals the individual causal effect for this person.',
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -250,9 +258,9 @@ question_text(NULL,
 
 ### 
 
-The the definition of a causal effect as the difference between two potential outcomes. Of course, you can't just say that the causal effect is 10. The exact value depends on which potential outcome comes first in the subtraction and which second. There is, perhaps, a default sense in which the causal effect is defined as treatment minus control.
+A causal effect is defined as the difference between two potential outcomes. However, you can’t simply say the effect is 10 without specifying the order of subtraction. There is, perhaps, a default sense in which the causal effect is defined as treatment minus control.
 
-Any causal connection means exploring the *within row* different between two potential outcomes. We don't need to look at any other rows to have that conversation.
+Any causal connection means exploring the *within row* difference between two potential outcomes. There's no need to consider other rows.
 
 ### Exercise 8
 
@@ -269,15 +277,17 @@ question_text(NULL,
 
 ### 
 
-The key point is that, with a predictive model, there is only one outcome for each individual unit. There are not two potential outcomes because we are not considering any of the covariates to be treatment variables. We assuming that all covariates are "fixed."
+With a predictive model, each individual unit has only one observed outcome. There are no two potential outcomes because none of the covariates are treated as treatment variables. Instead, all covariates are assumed to be "fixed."
+
+Predictive models have no "treatments"—only covariates.
 
 ### Exercise 9
 
-Write a few sentences which specify two different groups of people with different values for `ideology`. Explain that the outcome variable might differ between these two groups.
+Specify two different groups of people that have different values for `ideology` and which might have different average values for the outcome variable `approval`.
 
 ```{r the-question-9}
 question_text(NULL,
-	message = "Some people might have a value for ideology of Very Liberal. Others might have a value of Very Conservative. Those two groups might, on average, have different values for presidential approval, our outcome variable.",
+	message = "Consider two groups, the first with a value for `ideology` of Very Liberal and the second with a value of Very Conservative. Those two groups might have different average values for the outcome variable, presidential approval.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -286,15 +296,15 @@ question_text(NULL,
 
 ### 
 
-In predictive models, do not use words like "cause," "influence," "impact," or anything else which suggests causation. The best phrasing is in terms of "differences" between groups of units with different values for the covariate of interest.
+In predictive models, do not use words like "cause," "influence," "impact," or anything else which suggests causation. The best phrasing is in terms of "differences" between groups of units with different values for a covariate of interest.
 
 ### Exercise 10
 
-Write a predictive question which connects the outcome variable `approval` to covariates of interest.
+Write a predictive question which connects the outcome variable `approval` to `ideology`, the covariate of interest.
 
 ```{r the-question-10}
 question_text(NULL,
-	message = "What is the average difference in presidential approval between Very Liberal and Very Conservative people?",
+	message = "What is the average difference in presidential approval between people who are Very Liberal and those who are Very Conservative?",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -303,22 +313,9 @@ question_text(NULL,
 
 ### 
 
-### Exercise 11
+The answer to this question is your "Quantity of Interest." 
 
-What is a Quantity of Interest which might help us to explore the answer to our question?
-
-```{r the-question-11}
-question_text(NULL,
-	message = "One quantity of interest might be the difference in Strong Approval for the President between Very Conservative and Very Liberal people.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-Our Quantity of Interest might appear too specific, too narrow to capture the full complexity of the topic. There are many, many numbers which we are interested in, many numbers that we want to know. But we don't need to list them all here! We just need to choose one of them since our goal is just to have a specific number which helps to guide us in the creation of the Preceptor Table and, then, the model.
+Our Quantity of Interest might appear too specific, too narrow to capture the full complexity of the topic. There are many, many numbers in which we are interested, many numbers that we want to know. But we don't need to list them all here! We just need to choose one of them since our goal is just to have a specific number which helps to guide us in the creation of the Preceptor Table and, then, the model.
 
 ## Wisdom
 ### 
@@ -327,7 +324,7 @@ Our Quantity of Interest might appear too specific, too narrow to capture the fu
 
 Our question:
 
-> *What is the relationship between the approval of the president and an individual's ideology?*
+> *What is the average difference in presidential approval between people who are Very Liberal and those who are Very Conservative?*
 
 ### Exercise 1
 
@@ -363,6 +360,12 @@ question_text(NULL,
 
 The Preceptor Table does not include all the covariates which you will eventually include in your model. It only includes covariates which you need to answer your question.
 
+> How does average presidential approval vary across ideology groups?
+Ideology strongly influences political opinions.
+
+> Within each ideology group, how does education relate to approval?
+Education can affect how people view the president.
+
 ### Exercise 3
 
 Describe the key components of Preceptor Tables in general, without worrying about this specific problem. Use words like "units," "outcomes," and "covariates."
@@ -378,17 +381,17 @@ question_text(NULL,
 
 ### 
 
-This problem is predictive so we will want to compare the outcome, which is presidential approval, between two different groups units, presumably groups which differ in terms of ideology.
+This problem is predictive, so we will compare the outcome, presidential approval, between two groups that differ in ideology.
 
 ### Exercise 4
 
 Create a Github repo called `cumulative`. Make sure to click the "Add a README file" check box.
 
-Connect the `cumulative` Github repo to an R project on your computer. Name the R project `cumulative` also.
+Connect the Github repo to a project on your computer. Use a folder name which matches your repo name.
 
-Select `File -> New File -> Quarto Document ...`. Provide a title (`"Cumulative"`) and an author (you). Render the document and save it as `analysis.qmd`.
+Select `File -> New File -> Quarto Document ...`. Provide a title -- `"Cumulative"` -- and an author (you). Render the document and save it as `analysis.qmd`.
 
-Edit the `.gitignore` by adding `*Rproj`. Save and commit this in the Git tab. Push the commit.
+Edit the `.gitignore` by adding `*_files` and a blank line. Save and push.
 
 In the Console, run:
 
@@ -409,7 +412,7 @@ question_text(NULL,
 
 ### 
 
-Remove everything below the YAML header from `analysis.qmd` and render the file. `Command/Ctrl + Shift + K` renders the file, this automatically saves the file as well.
+We model units, but we only really care about aggregates.
 
 ### Exercise 5
 
@@ -430,11 +433,11 @@ Specifying the Preceptor Table forces us to think clearly about the units and ou
 
 ### Exercise 6
 
-What is/are the outcome/outcomes for this problem?
+What is the outcome variable for this problem?
 
 ```{r wisdom-6}
 question_text(NULL,
-	message = "approval has the approval rating of the president.",
+	message = "Keep track of the outcome variable related to presidential approval. In this case, approval represents respondents’ approval rating of the president.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -443,13 +446,11 @@ question_text(NULL,
 
 ### 
 
-Again, `approval` has five values: "Strongly Approve", "Approve / Somewhat Approve", "Neither Approve Nor Disapprove", "Strongly Disapprove". These five values give us five numbers. If there were only two values, approve or not approve, then there would only be two numbers we would care about.
-
-Regardless, the central lesson is always the same: *You can never look at your data too much.*
+`approval` has five ordered values, ranging from strong approval to strong disapproval. If it had only two values, we’d focus on just those two.
 
 ### Exercise 7
 
-What are some covariates which you think might be useful for this problem, regardless of whether or not they might be included in the data?
+What is a covariate which you think might be useful for this problem, regardless of whether or not it might be included in the data?
 
 ```{r wisdom-7}
 question_text(NULL,
@@ -462,8 +463,7 @@ question_text(NULL,
 
 ### 
 
-There are variables outside the data we have that could have a meaningful relationship with `approval`. Whether or not the individual comes from an immigrant family could have a relationship with their approval of the president.
-
+The term "covariates" is used in at least three ways in data science. First, it is all the variables which might be useful, regardless of whether or not we have the data. Second, it is all the variables for which we have data. Third, it is the set of variables in the data which we end up using in the model.
 
 ### Exercise 8
 
@@ -497,7 +497,22 @@ question_text(NULL,
 
 ### 
 
-Each president will have different approval rates. We will be focusing on only the year 2020.
+<!-- DK: The below plot is not working because plot_predictions() uses different variable names for its output than what the previous code did, so there is no "predicted" variable.  -->
+
+```{r}
+# ggplot(results, aes(x = ideology, y = predicted, fill = response)) +
+#   geom_col(position = "stack") +
+#   labs(
+#     title = "Presidential Approval by Ideology",
+#     subtitle = "Approval ratings differ across ideological groups",
+#     x = "Ideology",
+#     y = "Predicted Probability",
+#     fill = "Approval Level"
+#   ) +
+#   theme_minimal()
+```
+
+> *You can never look at the data too much. -- Mark Engerman*
 
 ### Exercise 10
 
@@ -514,7 +529,7 @@ question_text(NULL,
 
 ### 
 
-This is a predictive model, not because of anything intrinsic in the data. We make a predictive model because we are asking a predictive question. We want to *compare* approval between groups of people who differ in their ideology. We don't want to estimate the causal effect on approval of changes, within a single individual, in ideology.
+According to the Rubin Causal Model, there must be two (or more) potential outcomes for any discussion of causation to make sense. This is simplest to discuss when the treatment only has two different values, thereby generating only two potential outcomes. 
 
 ### Exercise 11
 
@@ -531,11 +546,11 @@ question_text(NULL,
 
 ### 
 
-If the treatment variable is continuous (like income), then there are lots and lots of potential outcomes, one for each possible value of the treatment variable.
+If the treatment variable is continuous (like income), then there are lots and lots of potential outcomes, one for each possible value of the treatment variable. 
 
 ### Exercise 12
 
-How does the motto "No causal inference without manipulation." apply in this problem?
+How does the motto "No causation without manipulation" apply in this problem?
 
 ```{r wisdom-12}
 question_text(NULL,
@@ -591,9 +606,9 @@ tibble(ID = c("1", "2", "...", "10", "11", "...", "N"),
 
 ### Exercise 14
 
-In `analysis.qmd`, delete everything past the YAML heading and load the **tidyverse** and the **primer.data** packages in a new code chunk. Label it the set up by adding `#| label: setup`. Render the file.
+In your QMD, load the **tidyverse** and the **primer.data** packages in a new code chunk. Render the file.
 
-Notice that the file does not look good because it is has code that is showing and it also has messages. To take care of this, add `#| message: false` to remove all the messages in the setup chunk. Also add the following to the YAML header to remove all echo from the whole file:
+Notice that the file does not look good because the code is visible and there are annoying messages. To take care of this, add `#| message: false` to remove all the messages in the `setup` chunk. Also add the following to the YAML header to remove all code echos from the whole file:
 
 ```         
 execute: 
@@ -620,23 +635,6 @@ question_text(NULL,
 ### 
 
 Render again. Everything looks nice because we have added code to make the file look better and more professional.
-
-### Exercise 15
-
-Write one sentence describing the data you have to answer your question.
-
-```{r wisdom-15}
-question_text(NULL,
-	message = "The Cooperative Congressional Election Study is one of the largest political surveys in the United States and was started in 2006. The data has how much people approve of the president as well as other useful variables such as ideology.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-Of course, when doing the analysis, you don’t know when you start what you will be using at the end. Data analysis is a circular process. We mess with the data. We do some modeling. We mess with the data on the basis of what we learned from the models. With this new data, we do some more modeling. And so on.
 
 ### Exercise 16
 
@@ -916,7 +914,7 @@ Validity is always about the *columns* in the Preceptor Table and the data. Just
 
 ### Exercise 27
 
-Provide one reason why the assumption of validity might not hold for the outcome variable: `approval`.
+Provide one reason why the assumption of validity might not hold for the outcome variable `approval` or for one of the covariates. Use the words "column" or "columns" in your answer.
 
 ```{r wisdom-27}
 question_text(NULL,
@@ -929,15 +927,25 @@ question_text(NULL,
 
 ### 
 
-These two columns have the same name but they might not be similar enough because the self reported approval of the president might be different from their true approval of the president.
+In order to consider the Preceptor Table and the data to be drawn from the same population, the columns from one must have a *valid correspondence* with the columns in the other. Validity, if true (or at least reasonable), allows us to construct the Population Table, which is the first step in Justice.
+
+Because we control the Preceptor Table and, to a lesser extent, the original question, we can adjust those variables to be “closer” to the data that we actually have. This is another example of the iterative nature of data science. If the data is not close enough to the question, then we check with our boss/colleague/customer to see if we can modify the question in order to make the match between the data and the Preceptor Table close enough for validity to hold.
+
+Despite these potential problems, we will assume that validity holds since it, mostly (?), does.
 
 ### Exercise 28
 
-Provide one reason why the assumption of validity might not hold for the covariate: `ideology`.
+Over the course of this tutorial, we will be creating a summary paragraph. The purpose of this exercise is to write the first two sentences of that paragraph.
+
+The first sentence is a general statement about the overall topic, mentioning both the general class of the outcome variable and of at least one of the covariates. It is **not** connected to the initial "Imagine that you are XX" which set the stage for this project. That sentence can be rhetorical. It can be trite, or even a platitude. The purpose of the sentence is to let the reader know, gently, about our topic.
+
+The second sentence does two things. First, it introduces the data source. Second, it introduces the specific question. The sentence can't be that long. Important aspects of the data include when/where it was gathered, how many observations it includes and the organization (if famous) which collected it.
+
+Type your two sentences below.
 
 ```{r wisdom-28}
 question_text(NULL,
-	message = "There is a column in the Preceptor Table for ideology, and a column in our data for idology. People might misidentify themselves if they do not know the difference between the ideologies or they have a different definition for the ideologies. This might create a difference between their true identity and their self claimed identity.",
+	message = "Public opinion about political leaders often depends on where people fall on the ideological spectrum. Using data from the 2020 Cooperative Election Study, one of the largest political surveys in the U.S., we explore how presidential approval varies across different ideological groups.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -946,24 +954,7 @@ question_text(NULL,
 
 ### 
 
-Again, validity is all about columns. We have to make sure that the columns in our data fully match the columns in the Preceptor Table. Both of the columns talk about ideologies, but key difference is the true political identity vs their self claimed political identity.
-
-### Exercise 29
-
-Summarize the state of your work so far in one sentence. Make reference to the data you have and to the specific question you are trying to answer.
-
-```{r wisdom-29}
-question_text(NULL,
-	message = "Using the CES, which is one of the largest political surveys in the United States, we seek to make a predictive model which could help us see a relationship between approval of the president and an individual's political ideology.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-Edit you answer as you see fit, but do not copy/paste our answer exactly. Add this summary to `analysis.qmd`, `Command/Ctrl + Shift + K`, and then commit/push.
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to your QMD, `Command/Ctrl + Shift + K`, and then commit/push.
 
 ## Justice
 ### 
@@ -1003,6 +994,23 @@ question_text(NULL,
 ### 
 
 The Population Table is almost always much bigger than the combination of the Preceptor Table and the data because, if we can really assume that both the Preceptor Table and the data are part of the same population, than that population must cover a broad universe of time and units since the Preceptor Table and the data are, themselves, often far apart from each other.
+ 
+ <!--AP: i need to test this -->
+
+ ```{r}
+ population_table <- tibble::tibble(
+  unit = c("Person A", "Person B", "Person C", "Person D", "Person E"),
+  ideology = c("Very Liberal", "Moderate", "Conservative", "Liberal", "Very Conservative"),
+  education = c("College Graduate", "Some College", "High School", "Graduate Degree", "High School"),
+  approval = c("Strongly Approve", "Neither Approve nor Disapprove", 
+               "Disapprove / Somewhat Disapprove", "Approve / Somewhat Approve", "Strongly Disapprove")
+)
+
+population_table |>
+  gt::gt() |>
+  gt::tab_header(title = "Example Population Table")
+
+ ```
 
 ### Exercise 3
 
@@ -1036,7 +1044,7 @@ question_text(NULL,
 
 ### 
 
-If we wanted to make a predictive model for this year, then we might have a major stability problem because the relationship between presidential approval and ideology depends a great deal on the ideology of the president whose approval we are measuring.
+A change in time or the distribution of the data does not, in and of itself, demonstrate a violation of stability. Stability is about the parameters: $\beta_0$, $\beta_1$ and so on. Stability means these parameters are the same in the data as they are in the population as they are in the Preceptor Table.
 
 ### Exercise 5
 
@@ -1087,7 +1095,7 @@ question_text(NULL,
 
 ### 
 
-Since the units in the Preceptor Table and the units in the population are both adults in the United States of America, they are representative.
+Stability looks across time periods. Representativeness looks within time periods, for the most part. 
 
 ### Exercise 8
 
@@ -1104,15 +1112,19 @@ question_text(NULL,
 
 ### 
 
-This assumption is only relevant for causal models. We describe a model as "confounded" if this is not true.
+This assumption is only relevant for causal models. We describe a model as "confounded" if this is not true. The easiest way to ensure unconfoundedness is to assign treatment randomly.
 
 ### Exercise 9
 
-Summarize the state of your work so far in two or three sentences. Make reference to the data you have and to the question you are trying to answer. Feel free to copy from your answer at the end of the Wisdom Section. Mention one specific problem which casts doubt on your approach.
+Write one sentence which highlights a potential weakness in your model. This will almost always be derived from possible problems with the assumptions discussed above. We will add this sentence to our summary paragraph. So far, our version of the summary paragraph looks like this:
+
+> Public opinion about political leaders often depends on where people fall on the ideological spectrum. Using data from the 2020 Cooperative Election Study, one of the largest political surveys in the U.S., we explore how presidential approval varies across different ideological groups.
+
+Of course, your version will be somewhat different.
 
 ```{r justice-9}
 question_text(NULL,
-	message = "Using the CES, which is one of the largest political surveys in the United States, we seek to understand the relationship between presidential approval and political ideology in 2020. One concern is that survey respondents might be systematically different from other Americans.",
+	message = "Public opinion about political leaders often depends on where people fall on the ideological spectrum. Using data from the 2020 Cooperative Election Study, one of the largest political surveys in the U.S., we explore how presidential approval varies across different ideological groups. One concern is that survey respondents might be systematically different from other Americans.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1121,14 +1133,12 @@ question_text(NULL,
 
 ### 
 
-Edit the summary paragraph in `analysis.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`, and then commit/push.
+Add a weakness sentence to the summary paragraph in your QMD. You can modify your paragraph as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`, and then commit/push.
 
 ## Courage
 ### 
 
 *Courage is going from failure to failure without losing enthusiasm.* - Winston Churchill
-
-Our outcome variable is `approval`, an ordered factor with 5 levels. We seek to understand the relationship between it and `ideology`, a categorical variable with 6 levels, along with some other variables.
 
 ### Exercise 1
 
@@ -1145,33 +1155,33 @@ question_text(NULL,
 
 ### 
 
-A statistical model consists of two parts: the *probability family* and the *link function*. The probability family is the probability distribution which generates the randomness in our data. The link function is the mathematical formula which links our data to the unknown parameters in the probability distribution.
-
-### Exercise 2
-
-Load the [**tidymodels**](https://www.tidymodels.org/) package.
-
-```{r courage-2, exercise = TRUE}
-
-```
-
-```{r courage-2-hint-1, eval = FALSE}
-library(...)
-```
-
-```{r courage-2-test, include = FALSE}
-library(tidymodels)
-```
+A statistical model consists of two parts: the *probability family* and the *link function*. The probability family is the probability distribution which generates the randomness in our data. The link function is the mathematical formula which links our data to the unknown parameters in the probability distribution. 
 
 ### 
 
+<!--AP: is this needed? Make it like the template. -->
+
 Because `approval` is an ordinal variable, we assume that an individual's approval is produced from a Cumulative distribution.
 
-$$ approval_i  \sim Cumulative(\rho_{strongly\_positive}, \rho_{positive}, \rho_{neutral}, \rho_{negative}, \rho_{strongly\_negative}) $$ \### Exercise 3
+$$ approval_i  \sim Cumulative(\rho_{strongly\_positive}, \rho_{positive}, \rho_{neutral}, \rho_{negative}, \rho_{strongly\_negative}) $$ 
+
+###
+
+<!-- DK: Add to template when you figure out these, so that future tutorial writers benefit. -->
+
+The probability family is determined by the outcome variable $Y$. 
+
+Since \$Y\$ is an ordinal variable (with 2+ ordered values), the probability family is Cumulative Logistic.
+
+$$
+\text{approval} \sim \text{CumulativeLogit}(\theta_1, \theta_2, \ldots, \theta_{K-1})
+$$
+
+where each \$\theta\_k\$ defines a threshold between approval levels, and the model estimates the probability of being at or below each category using a series of cumulative log-odds.
 
 ### Exercise 3
 
-Load the [**gtsummary**](https://www.danieldsjoberg.com/gtsummary/) package.
+Load the [**broom**](https://broom.tidymodels.org/) package.
 
 ```{r courage-3, exercise = TRUE}
 
@@ -1182,60 +1192,60 @@ library(...)
 ```
 
 ```{r courage-3-test, include = FALSE}
-library(gtsummary)
+library(broom)
 ```
 
 ### 
+The link function, the basic mathematical structure of the model, is (mostly) determined by the type of outcome variable.
 
-Because the outcome variable has a Cumulative distribution, the link function is logit. That is:
+Since `approval` is an **ordinal** variable, we use a **cumulative logit model** (also called the proportional odds model):
 
-$$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 x_1 + \dots)}}$$ \### Exercise 4
+$$
+\log\left[ \frac{P(Y \leq k)}{P(Y > k)} \right] = \theta_k - (\beta_1 \cdot \text{ideology} + \beta_2 \cdot \text{education})
+$$
+
+The link functions for categorical and cumulative variables are also built out of a log-odds link functions.
 
 ### Exercise 4
 
-Load the [**equatiomatic**](https://datalorax.github.io/equatiomatic/) package.
+Use AI to come up with a $\LaTeX$ representation of the mathematical structure of the model, with $Y$ as the dependent variable and $X_1$, $X_2$ and so on as the independent variables. This version will not have the values of any parameters since we have not, yet, estimated them. Confirm that the $\LaTeX$ code works by placing it in your QMD and then rendering. Paste that $\LaTeX$ code below.
 
-```{r courage-4, exercise = TRUE}
-
+```{r courage-4}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 5)
 ```
 
-```{r courage-4-hint-1, eval = FALSE}
-library(...)
-```
+###
 
-```{r courage-4-test, include = FALSE}
-library(equatiomatic)
-```
+Our answer:
 
-### 
+$$P(Y \leq k) = \frac{1}{1 + e^{-(\alpha_k - \beta_1 \cdot \text{ideology} - \beta_2 \cdot \text{education})}}$$
 
-This is the basic mathematical structure of our model:
+with $Y \sim \text{Ordinal}(\boldsymbol{\rho})$ where $\boldsymbol{\rho} = (\rho_1, \rho_2, \ldots, \rho_K)$ are derived from the cumulative probabilities above.
 
-$$
-\begin{aligned}
-\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Strongly\ Disapprove} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Strongly\ Disapprove} ) } \right] &= \alpha_{1} + \beta_{1}(\operatorname{ideology}_{\operatorname{Liberal}}) + \beta_{2}(\operatorname{ideology}_{\operatorname{Moderate}}) + \beta_{3}(\operatorname{ideology}_{\operatorname{Conservative}})\ + \\
-&\quad \beta_{4}(\operatorname{ideology}_{\operatorname{Very\ Conservative}}) + \beta_{5}(\operatorname{education}_{\operatorname{High\ School\ Graduate}}) + \beta_{6}(\operatorname{education}_{\operatorname{Some\ College}}) + \beta_{7}(\operatorname{education}_{\operatorname{2-Year}})\ + \\
-&\quad \beta_{8}(\operatorname{education}_{\operatorname{4-Year}}) + \beta_{9}(\operatorname{education}_{\operatorname{Post-Grad}}) \\
-\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Disapprove\ /\ Somewhat\ Disapprove} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Disapprove\ /\ Somewhat\ Disapprove} ) } \right] &= \alpha_{2} + \beta_{1}(\operatorname{ideology}_{\operatorname{Liberal}}) + \beta_{2}(\operatorname{ideology}_{\operatorname{Moderate}}) + \beta_{3}(\operatorname{ideology}_{\operatorname{Conservative}})\ + \\
-&\quad \beta_{4}(\operatorname{ideology}_{\operatorname{Very\ Conservative}}) + \beta_{5}(\operatorname{education}_{\operatorname{High\ School\ Graduate}}) + \beta_{6}(\operatorname{education}_{\operatorname{Some\ College}}) + \beta_{7}(\operatorname{education}_{\operatorname{2-Year}})\ + \\
-&\quad \beta_{8}(\operatorname{education}_{\operatorname{4-Year}}) + \beta_{9}(\operatorname{education}_{\operatorname{Post-Grad}}) \\
-\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Neither\ Approve\ nor\ Disapprove} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Neither\ Approve\ nor\ Disapprove} ) } \right] &= \alpha_{3} + \beta_{1}(\operatorname{ideology}_{\operatorname{Liberal}}) + \beta_{2}(\operatorname{ideology}_{\operatorname{Moderate}}) + \beta_{3}(\operatorname{ideology}_{\operatorname{Conservative}})\ + \\
-&\quad \beta_{4}(\operatorname{ideology}_{\operatorname{Very\ Conservative}}) + \beta_{5}(\operatorname{education}_{\operatorname{High\ School\ Graduate}}) + \beta_{6}(\operatorname{education}_{\operatorname{Some\ College}}) + \beta_{7}(\operatorname{education}_{\operatorname{2-Year}})\ + \\
-&\quad \beta_{8}(\operatorname{education}_{\operatorname{4-Year}}) + \beta_{9}(\operatorname{education}_{\operatorname{Post-Grad}}) \\
-\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Approve\ /\ Somewhat\ Approve} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Approve\ /\ Somewhat\ Approve} ) } \right] &= \alpha_{4} + \beta_{1}(\operatorname{ideology}_{\operatorname{Liberal}}) + \beta_{2}(\operatorname{ideology}_{\operatorname{Moderate}}) + \beta_{3}(\operatorname{ideology}_{\operatorname{Conservative}})\ + \\
-&\quad \beta_{4}(\operatorname{ideology}_{\operatorname{Very\ Conservative}}) + \beta_{5}(\operatorname{education}_{\operatorname{High\ School\ Graduate}}) + \beta_{6}(\operatorname{education}_{\operatorname{Some\ College}}) + \beta_{7}(\operatorname{education}_{\operatorname{2-Year}})\ + \\
-&\quad \beta_{8}(\operatorname{education}_{\operatorname{4-Year}}) + \beta_{9}(\operatorname{education}_{\operatorname{Post-Grad}})
-\end{aligned}
-$$ Of course, in a normal data science project, we would explore a variety of different combinations of independent variables before selecting a final set. Just pretend that we already did that.
+Which we created with $\LaTeX$ code that looks like this:
+
+````
+$$P(Y \leq k) = \frac{1}{1 + e^{-(\alpha_k - \beta_1 \cdot \text{ideology} - \beta_2 \cdot \text{education})}}$$
+
+with $Y \sim \text{Ordinal}(\boldsymbol{\rho})$ where $\boldsymbol{\rho} = (\rho_1, \rho_2, \ldots, \rho_K)$ are derived from the cumulative probabilities above.
+````
+This follows the proportional odds model used for ordinal outcome variables. The thresholds $\alpha_k$ define the cutpoints between categories of approval, and the coefficients $\beta_1$ and $\beta_2$ represent how ideology and education affect the log-odds of being in category $k$ or below.
+
+We use generic variables --- $Y$, $X_1$ and so on --- because our purpose is to describe the general mathematical structure of the model, independent of the specific variables we will eventually choose to use.
 
 ### Exercise 5
 
-Add `library(tidymodels)`, `library(gtsummary)`, and `library(equatiomatic)` to the `setup` code chunk in your QMD. `Command/Ctrl + Shift + K`.
+Add `library(broom)` to the `setup` code chunk in your QMD. `Command/Ctrl + Shift + K`.
 
 At the Console, run:
 
 ```         
-tutorial.helpers::show_file("analysis.qmd", pattern = "tidymodels|gtsummary|equatiomatic")
+tutorial.helpers::show_file("analysis.qmd", pattern = "library")
 ```
 
 CP/CR.
@@ -1251,13 +1261,11 @@ question_text(NULL,
 
 ### 
 
-Of course, our model must make use of the variables we actually have. Consider:
-
-$$\rho = \frac{1}{1 + e^{-(\beta_0 +\beta_1 ideologyLiberal+\beta_2 ideologyModerate + \dots)}}$$ Recall that a categorical variable (whether character or factor) like `sex` is turned into a $0/1$ "dummy" variable which is then re-named something like $sex_{Male}$. After all, we can't have words --- like "Male" or "Female" --- in a mathematical formula, hence the need for dummy variables.
+Having decided on the basic mathematical structure of the model, a choice mostly driven by the distribution of our outcome variable, we now turn toward estimating the model.
 
 ### Exercise 6
 
-Create a model using `polr()` from the **MASS** package. We recommend that you do *not* load the **MASS** package, either here or ever. The reason is that **MASS** contains functions `filter()` and `select()` which are not the same as the two functions, with the same names, from the **dplyr** package, which is a part of the *Tidyverse*. This can cause all sorts of difficult-to-diagnose errors. Instead, we use the double colon notation: `MASS::polr()`. This allows us to access the `polr()` function without loading the **MASS** library, although the library must be installed on your computer.
+Because our outcome variable is **cumulative**, start to create the model by entering `multinom_reg(engine = "glmnet")`.
 
 Your arguments to `MASS::polr()` should be `formula = approval ~ ideology + faminc + education` and `data = x`.
 
@@ -1272,9 +1280,10 @@ MASS::polr(formula = approval ~ ... + faminc + education,
 
 ### 
 
-The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has seven values --- "White", "Black", "Hispanic", "Asian", "Native American", "Mixed", and "Middle Eastern" --- then the model creates six 0/1 dummy variables, giving them names like $race_{Black}$ and $race_{Hispanic}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
+The *[tidymodels](https://www.tidymodels.org/)* framework is the most popular one in the R world for estimating models. *[Tidy Modeling with R](https://www.tmwr.org/)* by Max Kuhn and Julia Silge is a great introduction.
 
 ### Exercise 7
+<!--AP: a little confused on how to model this without tidymodels. You can't, sadly. -->
 
 Behind the scenes, we have used `polr()` to create an object named `fit_approval`. This version was created using `x` so it has more rows than the one you created in the previous exercise.
 
@@ -1370,7 +1379,9 @@ $$
 
 This is our data generating mechanism.
 
-<!-- DK: Explain in words what the mathematical function means. That is, say in English what the formula means. 
+<!--AP: should I delete this section as it uses equatiomatic? Yes. Follow the template_tutorial. -->
+
+<!-- 
 
 This statistical model illustrates how a person's political ideology influences their likelihood of approving or disapproving of something. The equations break down different levels of response - from strong disapproval to approval - and show how these responses correlate with liberal and conservative ideological leanings. The model uses baseline values (ranging from 2.26 to 3.93) which are then modified by two ideological factors: a liberal factor of 0.61 and a conservative factor of 2.4. Notably, the conservative ideology appears to have a stronger influence on approval ratings, as its multiplier (2.4) is nearly four times larger than the liberal multiplier (0.61). The model uses logarithmic equations to calculate the probability of someone falling into each approval category, suggesting a sophisticated statistical analysis likely used in political science or social research to study how political beliefs predict attitudes toward a specific policy, person, or issue.
 -->
