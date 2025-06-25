@@ -45,28 +45,31 @@ log_rv_p <- x |>
 
 # Create and save all the models we use.
 
+# DK: Do we need all the variables in trains? Probably not. In one step, create new 
+# x (you can even just give them the code to execute, and then, 
+# Behind the scenes.)
+
 # DK: Do we need a fit_1 (and other) objects? Not if they are just used in one pipe.
 
 fit_1 <- linear_reg() |>
   fit(income ~ age, data = trains)
 
-trains_2 <- trains |> 
-  mutate(c_age = age - mean(age))
-
-fit_1_c <- linear_reg() |>
-  fit(income ~ c_age, data = trains_2)
-
-trains_3 <- trains |> 
-  mutate(s_age = age / sd(age))
-
-fit_1_s <- linear_reg() |>
-  fit(income ~ s_age, data = trains_3)
-
-trains_4 <- trains |> 
+x <- trains |> 
+  select(income, age) |> 
+  mutate(c_age = age - mean(age)) |> 
+  mutate(s_age = age / sd(age)) |> 
   mutate(z_age = scale(age))
 
+# DK: I don't think we need to create these objects.
+
+fit_1_c <- linear_reg() |>
+  fit(income ~ c_age, data = x)
+
+fit_1_s <- linear_reg() |>
+  fit(income ~ s_age, data = x)
+
 fit_1_z <- linear_reg() |>
-  fit(income ~ z_age, data = trains_4)
+  fit(income ~ z_age, data = x)
 
 no_na_nhanes <- nhanes |> 
   select(height, age) |> 
@@ -95,6 +98,8 @@ ovrftng <- tibble(
   y = c(1.9, 1.9, 4.9, 2.7, 2.6, 5.2, 6.8, 8.9, 9.0, 9.9)
 )
 
+# DK: Delete nonsense.
+
 performance_liberal <- performance(fit_liberal)
 
 fit_att_start <- linear_reg() |>
@@ -103,6 +108,8 @@ fit_att_start <- linear_reg() |>
 performance_att_start <- performance(fit_att_start)
 
 compare <- compare_performance(fit_liberal, fit_att_start) 
+
+# DK: Discuss code testing.
 
 ```
 
@@ -115,9 +122,11 @@ compare <- compare_performance(fit_liberal, fit_att_start)
 
 <!-- DK: Add test code chunks for anything not too slow. -->
 
-<!-- Change the sections (topics). One should be "Log Transformations". Do this first, Next is "Scaling". -->
+<!-- DK: Change the sections (topics). One should be "Log Transformations". Do this first, Next is "Scaling". -->
 
 <!-- AT: Currently just a handful of excercises use 'scale()' should I add more before making a seperate section for it? -->
+
+DK: Cool approach. Delete the fit_ objects from scaling section.
 
 
 ## Introduction
@@ -281,7 +290,7 @@ linear_reg() |>
 
 ```{r transforming-variables-7-test, include = FALSE}
 linear_reg() |>
-  fit(income ~ age, data = trains)
+  fit(income ~ age, data = x)
 ```
 
 ### 
@@ -328,9 +337,11 @@ tidy(fit_1)
 
 The value of $\beta_0$, the intercept in the regression, is `r scales::comma(round(tidy(fit_1) |> filter(term == "(Intercept)") |> pull(estimate), 0))`. This represents the estimated average income for a person with an age of zero, which is awkward and useless since there are no people of zero age in our data.
 
+<!-- DK: Missing a lot of copy code buttons. -->
+
 ### Exercise 10
 
-One way to make the intercept more meaningful is to transform `age`. Pipe `trains` to `mutate()` to create a new column `c_age = age - mean(age)`. Assign the result to `trains_2`.
+One way to make the intercept more meaningful is to transform `age`. Pipe `trains` to `mutate()` to create a new column `c_age = age - mean(age)`. Assign the result to `x`.
 
 ```{r transforming-variables-10, exercise = TRUE}
 
@@ -352,7 +363,7 @@ By doing this, we are subtracting the mean of a variable `age` in the data set f
 
 ### Exercise 11
 
-Copy your previous code, but set `formula` equal `income ~ c_age`, and `data` equal `trains_2`. 
+Copy your previous code, but set `formula` equal `income ~ c_age`, and `data` equal `x`. 
 
 ```{r transforming-variables-11, exercise = TRUE}
 
@@ -365,7 +376,7 @@ linear_reg() |>
 
 ```{r transforming-variables-11-test, include = FALSE}
 linear_reg() |>
-  fit(income ~ c_age, data = trains_2)
+  fit(income ~ c_age, data = x)
 ```
 
 ### 
@@ -409,6 +420,8 @@ tidy(fit_1_c)
 ```
 
 ### 
+
+<!-- DK: Or maybe we keep them to be able to do this? -->
 
 The intercept, `r scales::comma(round(tidy(fit_1_c) |> filter(term == "(Intercept)") |> pull(estimate), 0))`, is the expected income for someone with `c_age = 0`, i.e. someone of an average age in the data, which is around `r round(mean(trains$age), 0)`.
 
@@ -2160,7 +2173,9 @@ Run compare_models on fit_liberal and ft_att_start
 Discuss results. Done
 Again with other arguments, like ci = 0.99. Done -->
 
-To decide which model is best, we compare their performance using statistical measures like R², AIC, BIC, and RMSE. The easystats package provides functions for comparing, testing, and selecting models based on these metrics. This helps us choose the most accurate and reliable model for our data.
+<!-- DK: List specific functions. `performance()`, `compare_models()`.  -->
+
+To decide which model is best, we compare their performance using statistical measures like R², AIC, BIC, and RMSE. The **easystats** package provides functions for comparing, testing, and selecting models based on these metrics. This helps us choose the most accurate and reliable model for our data.
 
 <!-- AT: Is the paragraph above good as an introduction? -->
 
@@ -2184,7 +2199,7 @@ performance(fit_liberal)
 
 ### 
 
-`The `performance()` function from ***easystats** summarizes how well your model fits the data. It reports key measures like AIC (Akaike Information Criterion), BIC (Bayesian Information Criterion), R² (explained variance), and RMSE (root mean squared error). These metrics help you compare models and decide which one provides the best fit or most accurate predictions.
+`The `performance()` function from ***easystats** summarizes how well your model fits the data. It reports key measures like AIC (Akaike Information Criterion), BIC (Bayesian Information Criterion), R² (explained variance), and RMSE (root mean squared error). These metrics help you compare models and decide which one provides the best fit or the most accurate predictions.
 
 ### Exercise 2
 
@@ -2239,6 +2254,8 @@ The `compare_performance()` output shows that the `fit_att_start` model (AIC = 4
 You can also add a confidence interval for the performance metrics by setting the `ci` argument in `compare_performance()`. By default, the confidence interval is set to 0.95 (95%).
 
 Run `compare_performance()` again with `ci = 0.99` to get 99% confidence intervals for the model metrics.
+
+<!-- DK: Discuss confidence intervals aid in model choice. -->
 
 ```{r comparing-models-in-practice-4, exercise = TRUE}
 
