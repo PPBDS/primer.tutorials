@@ -92,9 +92,9 @@ This tutorial supports [*Preceptor’s Primer for Bayesian Data Science: Using t
 
 The world confronts us. Make decisions we must.
 
-<!-- DK: A little too loosey goosey. -->
+<!-- DK: A little too loosey goosey. AP: fixed i think-->
 
-Imagine you’re a pollster preparing for the upcoming election, determined to understand what influences voter behavior. You start digging into the approval ratings from 2020, analyzing where Trump’s support declined and identifying which demographics shifted away from him. The patterns begin to emerge, but they only raise more questions. There are many decisions to make.
+Imagine you’re a pollster preparing for the upcoming election. You dig into 2020 approval ratings, noticing that support for Trump declined most among certain education levels. As correlations between education and approval emerge, you begin to rethink your polling strategy—how to target messages, where to focus outreach. The data offers clues, but it also raises new questions. There are many decisions to make.
 
 ### Exercise 1
 
@@ -497,19 +497,19 @@ question_text(NULL,
 
 ### 
 
-<!-- DK: The below plot is not working because plot_predictions() uses different variable names for its output than what the previous code did, so there is no "predicted" variable.  -->
+<!-- DK: The below plot is not working because plot_predictions() uses different variable names for its output than what the previous code did, so there is no "predicted" variable. AP: should be fixed -->
 
 ```{r}
-# ggplot(results, aes(x = ideology, y = predicted, fill = response)) +
-#   geom_col(position = "stack") +
-#   labs(
-#     title = "Presidential Approval by Ideology",
-#     subtitle = "Approval ratings differ across ideological groups",
-#     x = "Ideology",
-#     y = "Predicted Probability",
-#     fill = "Approval Level"
-#   ) +
-#   theme_minimal()
+ggplot(results, aes(x = ideology, y = estimate, fill = group)) +
+  geom_col(position = "stack") +
+  labs(
+    title = "Presidential Approval by Ideology",
+    subtitle = "Different ideology groups show different approval levels",
+    x = "Ideology",
+    y = "Probability",
+    fill = "Approval"
+  ) +
+  theme_minimal()
 ```
 
 > *You can never look at the data too much. -- Mark Engerman*
@@ -1153,18 +1153,6 @@ question_text(NULL,
 	rows = 6)
 ```
 
-### 
-
-A statistical model consists of two parts: the *probability family* and the *link function*. The probability family is the probability distribution which generates the randomness in our data. The link function is the mathematical formula which links our data to the unknown parameters in the probability distribution. 
-
-### 
-
-<!--AP: is this needed? Make it like the template. -->
-
-Because `approval` is an ordinal variable, we assume that an individual's approval is produced from a Cumulative distribution.
-
-$$ approval_i  \sim Cumulative(\rho_{strongly\_positive}, \rho_{positive}, \rho_{neutral}, \rho_{negative}, \rho_{strongly\_negative}) $$ 
-
 ###
 
 <!-- DK: Add to template when you figure out these, so that future tutorial writers benefit. -->
@@ -1196,6 +1184,7 @@ library(broom)
 ```
 
 ### 
+
 The link function, the basic mathematical structure of the model, is (mostly) determined by the type of outcome variable.
 
 Since `approval` is an **ordinal** variable, we use a **cumulative logit model** (also called the proportional odds model):
@@ -1305,103 +1294,24 @@ fit_approval
 
 In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters.
 
-### Exercise 8
-
-Create a new code chunk in your QMD. Add two code chunk options: `label: model` and `cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_approval`.
-
-`Command/Ctrl + Shift + K`. It may take some time to render your QMD, depending on how complex your model is. But, by including `cache: true` you cause Quarto to cache the results of the chunk. The next time you render your QMD, as long as you have not changed the code, Quarto will just load up the saved fitted object.
-
-To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
-
-At the Console, run:
-
-```         
-tutorial.helpers::show_file("analysis.qmd", start = -8)
-```
-
-CP/CR.
-
-```{r courage-8}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 8)
-```
-
-### 
-
-Add `*_cache` to `.gitignore` file. Commit and push. Cached objects are often large. They don't belong on Github.
-
-### Exercise 9
-
-Create another code chunk in your QMD. Add the chunk option: `label: math`. In that code chunk, add something like the below. You may find it useful to add the `coef_digits` argument to show fewer significant digits after the decimal.
-
-
-```         
-extract_eq(fit_approval, 
-           intercept = "beta", 
-           use_coefs = TRUE)
-```
-
-`Command/Ctrl + Shift + K`.
-
-At the Console, run:
-
-```         
-tutorial.helpers::show_file("analysis.qmd", pattern = "extract")
-```
-
-CP/CR.
-
-```{r courage-9}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 3)
-```
-
-### 
-
-When you render your document, this formula will appear.
-
-$$
-\begin{aligned}
-\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Strongly\ Disapprove} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Strongly\ Disapprove} ) } \right] &= 2.26 + 0.61(\operatorname{ideology}_{\operatorname{Liberal}}) + 2.4(\operatorname{ideology}_{\operatorname{Moderate}}) + 4.46(\operatorname{ideology}_{\operatorname{Conservative}}) + 5.45(\operatorname{ideology}_{\operatorname{Very\ Conservative}}) - 0.1(\operatorname{education}_{\operatorname{High\ School\ Graduate}}) - 0.31(\operatorname{education}_{\operatorname{Some\ College}}) - 0.32(\operatorname{education}_{\operatorname{2-Year}}) - 0.52(\operatorname{education}_{\operatorname{4-Year}}) - 0.73(\operatorname{education}_{\operatorname{Post-Grad}}) \\
-\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Disapprove\ /\ Somewhat\ Disapprove} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Disapprove\ /\ Somewhat\ Disapprove} ) } \right] &= 2.73 + 0.61(\operatorname{ideology}_{\operatorname{Liberal}}) + 2.4(\operatorname{ideology}_{\operatorname{Moderate}}) + 4.46(\operatorname{ideology}_{\operatorname{Conservative}}) + 5.45(\operatorname{ideology}_{\operatorname{Very\ Conservative}}) - 0.1(\operatorname{education}_{\operatorname{High\ School\ Graduate}}) - 0.31(\operatorname{education}_{\operatorname{Some\ College}}) - 0.32(\operatorname{education}_{\operatorname{2-Year}}) - 0.52(\operatorname{education}_{\operatorname{4-Year}}) - 0.73(\operatorname{education}_{\operatorname{Post-Grad}}) \\
-\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Neither\ Approve\ nor\ Disapprove} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Neither\ Approve\ nor\ Disapprove} ) } \right] &= 2.82 + 0.61(\operatorname{ideology}_{\operatorname{Liberal}}) + 2.4(\operatorname{ideology}_{\operatorname{Moderate}}) + 4.46(\operatorname{ideology}_{\operatorname{Conservative}}) + 5.45(\operatorname{ideology}_{\operatorname{Very\ Conservative}}) - 0.1(\operatorname{education}_{\operatorname{High\ School\ Graduate}}) - 0.31(\operatorname{education}_{\operatorname{Some\ College}}) - 0.32(\operatorname{education}_{\operatorname{2-Year}}) - 0.52(\operatorname{education}_{\operatorname{4-Year}}) - 0.73(\operatorname{education}_{\operatorname{Post-Grad}}) \\
-\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Approve\ /\ Somewhat\ Approve} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Approve\ /\ Somewhat\ Approve} ) } \right] &= 3.93 + 0.61(\operatorname{ideology}_{\operatorname{Liberal}}) + 2.4(\operatorname{ideology}_{\operatorname{Moderate}}) + 4.46(\operatorname{ideology}_{\operatorname{Conservative}}) + 5.45(\operatorname{ideology}_{\operatorname{Very\ Conservative}}) - 0.1(\operatorname{education}_{\operatorname{High\ School\ Graduate}}) - 0.31(\operatorname{education}_{\operatorname{Some\ College}}) - 0.32(\operatorname{education}_{\operatorname{2-Year}}) - 0.52(\operatorname{education}_{\operatorname{4-Year}}) - 0.73(\operatorname{education}_{\operatorname{Post-Grad}})
-\end{aligned}
-$$
-
-This is our data generating mechanism.
-
-<!--AP: should I delete this section as it uses equatiomatic? Yes. Follow the template_tutorial. -->
-
-<!-- 
-
-This statistical model illustrates how a person's political ideology influences their likelihood of approving or disapproving of something. The equations break down different levels of response - from strong disapproval to approval - and show how these responses correlate with liberal and conservative ideological leanings. The model uses baseline values (ranging from 2.26 to 3.93) which are then modified by two ideological factors: a liberal factor of 0.61 and a conservative factor of 2.4. Notably, the conservative ideology appears to have a stronger influence on approval ratings, as its multiplier (2.4) is nearly four times larger than the liberal multiplier (0.61). The model uses logarithmic equations to calculate the probability of someone falling into each approval category, suggesting a sophisticated statistical analysis likely used in political science or social research to study how political beliefs predict attitudes toward a specific policy, person, or issue.
--->
-
 ### Exercise 10
 
-Run `tidy()` on `fit_approval` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model. (This might take 30 seconds or so.)
+Continue the pipe with `tidy(conf.int = TRUE)`.
 
 ```{r courage-10, exercise = TRUE}
 
 ```
 
 ```{r courage-10-hint-1, eval = FALSE}
-tidy(..., conf.int = ...)
+...
+tidy(conf.int = ...)
 ```
 
 ### 
 
 `tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
 
+<!-- AP: move interpretation questions to Temperance -->
 ### Exercise 11
 
 ```{r}
