@@ -1,17 +1,15 @@
 ---
-title: Five Parameters
-author: David Kane and Satvika Upperla
+title: Cumulative
+author: David Kane and Aashna Patel
 tutorial:
-  id: 091-five-parameters
+  id: 111-cumulative
 output:
   learnr::tutorial:
     progressive: yes
     allow_skip: yes
 runtime: shiny_prerendered
-description: "Tutorial #091 for Preceptor's Primer"
+description: "Tutorial #11 for Preceptor's Primer"
 ---
-
-<!-- DK: Change the above. -->
 
 ```{r setup, include = FALSE}
 library(learnr)
@@ -74,6 +72,10 @@ results <- plot_predictions(fit_approval,
 ```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
 ```
 
+<!-- DK: FYI: We don't use tidymodels on purpose. Make sure students understand why. AP: added in courage-->
+
+<!-- DK: Check the template_tutorial and add "Imagine that . . ." section. AP: fixed
+
 
 
 ## Introduction
@@ -83,9 +85,9 @@ This tutorial supports [*Preceptor’s Primer for Bayesian Data Science: Using t
 
 The world confronts us. Make decisions we must.
 
-<!-- DK: A little too loosey goosey. AP: fixed i think. Fix again. -->
+<!-- DK: A little too loosey goosey. AP: fixed i think-->
 
-Imagine you’re a pollster preparing for the upcoming election. You dig into 2020 approval ratings, noticing that support for Trump declined most among certain education levels. As correlations between education and approval emerge, you begin to rethink your polling strategy—how to target messages, where to focus outreach. The data offers clues, but it also raises new questions. There are many decisions to make.
+Imagine you’re a pollster preparing for the upcoming election. You turn to 2020 approval ratings to explore possible patterns in how different education levels relate to support for Trump. You’re curious whether any groups tend to approve or disapprove more than others. As you look for correlations, you start thinking about how this might inform your polling strategy—how to design your questions, which groups to focus on. The data might offer useful insights, but there’s still a lot to uncover. There are many decisions to make.
 
 ### Exercise 1
 
@@ -488,9 +490,17 @@ question_text(NULL,
 
 ### 
 
-<!-- DK: Approval should be on top. -->
+<!-- DK: The below plot is not working because plot_predictions() uses different variable names for its output than what the previous code did, so there is no "predicted" variable. AP: should be fixed -->
 
 ```{r}
+results$group <- factor(results$group, levels = c(
+  "Strongly Approve",
+  "Approve / Somewhat Approve",
+  "Neither Approve nor Disapprove",
+  "Disapprove / Somewhat Disapprove",
+  "Strongly Disapprove"
+))
+
 ggplot(results, aes(x = ideology, y = estimate, fill = group)) +
   geom_col(position = "stack") +
   labs(
@@ -1146,7 +1156,7 @@ question_text(NULL,
 
 ###
 
-<!-- DK: Add to template when you figure out these, so that future tutorial writers benefit. -->
+<!-- DK: Add to template when you figure out these, so that future tutorial writers benefit. AP: will do soon once figured out completely-->
 
 The probability family is determined by the outcome variable $Y$. 
 
@@ -1260,10 +1270,10 @@ MASS::polr(formula = approval ~ ... + faminc + education,
 
 ### 
 
-The *[tidymodels](https://www.tidymodels.org/)* framework is the most popular one in the R world for estimating models. *[Tidy Modeling with R](https://www.tmwr.org/)* by Max Kuhn and Julia Silge is a great introduction.
+We can’t use `tidymodels` here because it doesn’t currently support **ordinal regression models**, which we need since our outcome variable, `approval`, is ordinal (ordered categories). Instead, we use the `polr()` function from the **MASS** package, which is specifically designed for this type of model.
 
 ### Exercise 6
-<!--AP: a little confused on how to model this without tidymodels. You can't, sadly. -->
+<!--AP: need to reorder some things-->
 
 Behind the scenes, we have used `polr()` to create an object named `fit_approval`. This version was created using `x` so it has more rows than the one you created in the previous exercise.
 
@@ -1283,7 +1293,7 @@ fit_approval
 
 ### 
 
-In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters.
+In data science, **we deal with words, math, and code, but the most important of these is code.** We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
 
 ### Exercise 7
 
@@ -1294,7 +1304,7 @@ Continue the pipe with `tidy(conf.int = TRUE)`.
 ```
 
 ```{r courage-7-hint-1, eval = FALSE}
-...
+... |>
 tidy(conf.int = ...)
 ```
 
@@ -1302,120 +1312,134 @@ tidy(conf.int = ...)
 
 `tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
 
-<!-- AP: move interpretation questions to Temperance -->
 ### Exercise 8
 
-```{r}
-tidy_approval |> 
-  select(term, estimate, conf.low, conf.high) |> 
-  filter(str_detect(term, "^education"))
+Load the **[easystats](https://easystats.github.io/easystats/)** package.
+
+```{r courage-8, exercise = TRUE}
+
 ```
 
-Write a sentence interpreting the `-0.1` estimate for `educationHigh School Graduate`.
-
-```{r courage-8}
-question_text(NULL,
-	message = "When comparing (only) high school graduates with people who didn't go to high school, high school graduates have lower value, meaning that they are less likely to approve of the president.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
+```{r courage-8-hint-1, eval = FALSE}
+library(...)
 ```
 
-### 
+```{r courage-8-test, include = FALSE}
+library(easystats)
+```
 
-Positive coefficients suggest that higher values of the predictor increase the likelihood of higher approval categories.
+###
 
-Negative coefficients suggest that higher values of the predictor decrease the likelihood of higher approval categories.
-
-Larger coefficients (either positive or negative) indicate a stronger relationship between the predictor and the latent approval score.
+We don't add **easystats** to the QMD because we are only using it for an interactive check of our fitted model. However, the [easystats ecosystem](https://easystats.github.io/easystats/) has a variety of interesting functions and packages which you might want to explore.
 
 ### Exercise 9
 
+In the Console, run `check_predictions(fit_approval)`. CP/CR.
+
+```{r courage-9, exercise = TRUE}
+
+```
+
+```{r courage-9-hint-1, eval = FALSE}
+check_predictions(...)
+```
+
+```{r courage-9-test, include = FALSE}
+check_predictions(fit_approval)
+```
+
+###
+
 ```{r}
-tidy_approval |> 
-  select(term, estimate, conf.low, conf.high) |> 
-  filter(str_detect(term, "^education"))
+check_predictions(fit_approval)
 ```
 
-Write a sentence interpreting the `-0.43` to `-0.19` confidence interval for `educationSome Collegee`.
-
-```{r courage-9}
-question_text(NULL,
-	message = "We do not know the true value for the coefficient for educationSome College, but we can be 95% confident that it lies somewhere between -0.43 and -0.19.",
-	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
-	incorrect = NULL,
-	rows = 6)
-```
-
-### 
-
-If the credible interval includes zero, the effect is less likely to be significant.
-
-The intercept is always the first value for any variable. For example, the intercept for `education` is `No HS`, and intercept for `ideology` is `Very Liberal`. This is why these values do not show up with `tidy(fit_approval)`.
+The purpose of `check_predictions()` is to compare your actual data (in green) with data simulated from your fitted model — your data generating mechanism. If your DGM is reasonable, then simulated data shouldn't look too different from your observed data. It's okay for it not to match exactly, but it should fall within a plausible range. If it doesn’t, you may need to revisit your assumptions.
 
 ### Exercise 10
 
-```{r}
-tidy_approval |> 
-  select(term, estimate, conf.low, conf.high) |> 
-  filter(str_detect(term, "^ideology"))
-```
+Ask AI to create $\LaTeX$ code for this model, including our variable names and estimates for all the coefficients. Because this is a fitted model, the dependent variable will have a "hat" and the formula will not include an error term. 
 
-Write a sentence interpreting the `5.45` estimate for `ideologyVeryConservative`.
+Add the code to your QMD. `Cmd/Ctrl + Shift + K`.
+
+Make sure the resulting display looks good. For example, you don't want an absurd number of figures to the right of the decimal. If the model is too long, you will need to spread it across several lines. You may need to go back-and-forth with the AI a few times.
+
+Once the $\LaTeX$ code looks good, paste it below.
 
 ```{r courage-10}
 question_text(NULL,
-	message = "If we compare people who are very conservative with people who are very liberal (the base category which is included in the intercept), the very conservative people approve of the president more. Because of the complexity of the mathematics of the model, 5.45 does not have a natural interpretation in terms of its magnitude.",
 	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 6)
+	rows = 3)
 ```
 
-### 
+###
 
-`Strongly Disapprove|Disapprove / Somewhat Disapprove`, `Disapprove / Somewhat Disapprove|Neither Approve nor Disapprove`, and so on are intercepts that are used as cut points or thresholds that separate the different levels of the ordinal outcome variable (`approval`).
+Our formula looks like:
 
-In ordinal regression, these intercepts define the points on the latent variable scale at which the response variable transitions from one category to the next.The probability of falling into a specific category is determined by the relationship between these intercepts and the predictors.
+$$
+\begin{aligned}
+\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Strongly\ Disapprove} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Strongly\ Disapprove} ) } \right] &= 2.26 + 0.61(\operatorname{ideology}{\operatorname{Liberal}}) + 2.4(\operatorname{ideology}{\operatorname{Moderate}}) + 4.46(\operatorname{ideology}{\operatorname{Conservative}}) + 5.45(\operatorname{ideology}{\operatorname{Very\ Conservative}}) - 0.1(\operatorname{education}{\operatorname{High\ School\ Graduate}}) - 0.31(\operatorname{education}{\operatorname{Some\ College}}) - 0.32(\operatorname{education}{\operatorname{2-Year}}) - 0.52(\operatorname{education}{\operatorname{4-Year}}) - 0.73(\operatorname{education}{\operatorname{Post-Grad}}) \
+\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Disapprove\ /\ Somewhat\ Disapprove} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Disapprove\ /\ Somewhat\ Disapprove} ) } \right] &= 2.73 + 0.61(\operatorname{ideology}{\operatorname{Liberal}}) + 2.4(\operatorname{ideology}{\operatorname{Moderate}}) + 4.46(\operatorname{ideology}{\operatorname{Conservative}}) + 5.45(\operatorname{ideology}{\operatorname{Very\ Conservative}}) - 0.1(\operatorname{education}{\operatorname{High\ School\ Graduate}}) - 0.31(\operatorname{education}{\operatorname{Some\ College}}) - 0.32(\operatorname{education}{\operatorname{2-Year}}) - 0.52(\operatorname{education}{\operatorname{4-Year}}) - 0.73(\operatorname{education}{\operatorname{Post-Grad}}) \
+\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Neither\ Approve\ nor\ Disapprove} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Neither\ Approve\ nor\ Disapprove} ) } \right] &= 2.82 + 0.61(\operatorname{ideology}{\operatorname{Liberal}}) + 2.4(\operatorname{ideology}{\operatorname{Moderate}}) + 4.46(\operatorname{ideology}{\operatorname{Conservative}}) + 5.45(\operatorname{ideology}{\operatorname{Very\ Conservative}}) - 0.1(\operatorname{education}{\operatorname{High\ School\ Graduate}}) - 0.31(\operatorname{education}{\operatorname{Some\ College}}) - 0.32(\operatorname{education}{\operatorname{2-Year}}) - 0.52(\operatorname{education}{\operatorname{4-Year}}) - 0.73(\operatorname{education}{\operatorname{Post-Grad}}) \
+\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Approve\ /\ Somewhat\ Approve} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Approve\ /\ Somewhat\ Approve} ) } \right] &= 3.93 + 0.61(\operatorname{ideology}{\operatorname{Liberal}}) + 2.4(\operatorname{ideology}{\operatorname{Moderate}}) + 4.46(\operatorname{ideology}{\operatorname{Conservative}}) + 5.45(\operatorname{ideology}{\operatorname{Very\ Conservative}}) - 0.1(\operatorname{education}{\operatorname{High\ School\ Graduate}}) - 0.31(\operatorname{education}{\operatorname{Some\ College}}) - 0.32(\operatorname{education}{\operatorname{2-Year}}) - 0.52(\operatorname{education}{\operatorname{4-Year}}) - 0.73(\operatorname{education}{\operatorname{Post-Grad}})
+\end{aligned}
+$$
+
+It was created with:
+
+````
+$$\begin{aligned}
+\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Strongly\ Disapprove} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Strongly\ Disapprove} ) } \right] &= 2.26 + 0.61(\operatorname{ideology}_{\operatorname{Liberal}}) + 2.4(\operatorname{ideology}_{\operatorname{Moderate}}) + 4.46(\operatorname{ideology}_{\operatorname{Conservative}}) + 5.45(\operatorname{ideology}_{\operatorname{Very\ Conservative}}) - 0.1(\operatorname{education}_{\operatorname{High\ School\ Graduate}}) - 0.31(\operatorname{education}_{\operatorname{Some\ College}}) - 0.32(\operatorname{education}_{\operatorname{2-Year}}) - 0.52(\operatorname{education}_{\operatorname{4-Year}}) - 0.73(\operatorname{education}_{\operatorname{Post-Grad}}) \\
+\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Disapprove\ /\ Somewhat\ Disapprove} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Disapprove\ /\ Somewhat\ Disapprove} ) } \right] &= 2.73 + 0.61(\operatorname{ideology}_{\operatorname{Liberal}}) + 2.4(\operatorname{ideology}_{\operatorname{Moderate}}) + 4.46(\operatorname{ideology}_{\operatorname{Conservative}}) + 5.45(\operatorname{ideology}_{\operatorname{Very\ Conservative}}) - 0.1(\operatorname{education}_{\operatorname{High\ School\ Graduate}}) - 0.31(\operatorname{education}_{\operatorname{Some\ College}}) - 0.32(\operatorname{education}_{\operatorname{2-Year}}) - 0.52(\operatorname{education}_{\operatorname{4-Year}}) - 0.73(\operatorname{education}_{\operatorname{Post-Grad}}) \\
+\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Neither\ Approve\ nor\ Disapprove} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Neither\ Approve\ nor\ Disapprove} ) } \right] &= 2.82 + 0.61(\operatorname{ideology}_{\operatorname{Liberal}}) + 2.4(\operatorname{ideology}_{\operatorname{Moderate}}) + 4.46(\operatorname{ideology}_{\operatorname{Conservative}}) + 5.45(\operatorname{ideology}_{\operatorname{Very\ Conservative}}) - 0.1(\operatorname{education}_{\operatorname{High\ School\ Graduate}}) - 0.31(\operatorname{education}_{\operatorname{Some\ College}}) - 0.32(\operatorname{education}_{\operatorname{2-Year}}) - 0.52(\operatorname{education}_{\operatorname{4-Year}}) - 0.73(\operatorname{education}_{\operatorname{Post-Grad}}) \\
+\log\left[ \frac { P( \operatorname{approval}  \leq  \operatorname{Approve\ /\ Somewhat\ Approve} ) }{ 1 - P( \operatorname{approval}  \leq  \operatorname{Approve\ /\ Somewhat\ Approve} ) } \right] &= 3.93 + 0.61(\operatorname{ideology}_{\operatorname{Liberal}}) + 2.4(\operatorname{ideology}_{\operatorname{Moderate}}) + 4.46(\operatorname{ideology}_{\operatorname{Conservative}}) + 5.45(\operatorname{ideology}_{\operatorname{Very\ Conservative}}) - 0.1(\operatorname{education}_{\operatorname{High\ School\ Graduate}}) - 0.31(\operatorname{education}_{\operatorname{Some\ College}}) - 0.32(\operatorname{education}_{\operatorname{2-Year}}) - 0.52(\operatorname{education}_{\operatorname{4-Year}}) - 0.73(\operatorname{education}_{\operatorname{Post-Grad}})
+\end{aligned}$$
+````
+
+Note the differences. First, we have replaced the parameters with our best estimates. Second, we have dropped the error term because this is a formula for predicting the value for our outcome variable. Third, the left-hand side variable is $\widehat{\text{XX}}$ instead of $\text{XX}$ because this formula generates our estimated XX. A hat indicates an estimated value.
+
+**This is our data generating mechanism.**
+
+A data generating mechanism is just a formula, something which we can write down and implement with computer code.
 
 ### Exercise 11
 
-For interactive use, `tidy()` is very handy. But, for presenting our results, we should use a presentation package like **gtsummary**, which includes handy functions like `tbl_regression()`.
+Create a new code chunk in your QMD. Add a code chunk option: `#| cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_approval`. 
 
-Run `tbl_regression(fit_approval)`.
+`Command/Ctrl + Shift + K`. It may take some time to render your QMD, depending on how complex your model is. But, by including `#| cache: true` you cause Quarto to cache the results of the chunk. The next time you render your QMD, as long as you have not changed the code, Quarto will just load up the saved fitted object.
 
-```{r courage-11, exercise = TRUE}
+At the Console, run:
 
 ```
-
-```{r courage-11-hint-1, eval = FALSE}
-tbl_regression(..)
+tutorial.helpers::show_file("analysis.qmd", start = -8)
 ```
 
-```{r courage-11-test, include = FALSE}
-# tbl_regression(fit_approval)
+CP/CR.
+
+```{r courage-11}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 8)
 ```
 
 ### 
 
-See this [tutorial](https://www.danieldsjoberg.com/gtsummary/articles/tbl_regression.html) for a variety of options for customizing your table.
+To confirm, `Command/Ctrl + Shift + K` again. It should be quick.
 
 ### Exercise 12
 
-Create a new code chunk in your QMD. Add a code chunk option: `label: table`. Add this code to the code chunk. Make sure to include cache = TRUE, and then use the object printed for the following code chunk. Remember that the object has already been created behind the scenes.
-
-```         
-tbl_regression(fit_approval)
-```
-
-`Command/Ctrl + Shift + K`.
+Add `*_cache` to `.gitignore` file. Cached objects are often large. They don't belong on Github.
 
 At the Console, run:
 
-```         
-tutorial.helpers::show_file("analysis.qmd", pattern = "tbl_regression")
+```
+tutorial.helpers::show_file(".gitignore")
 ```
 
 CP/CR.
@@ -1426,10 +1450,93 @@ question_text(NULL,
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 3)
+	rows = 6)
 ```
 
+###
+
+Because of the change in your `.gitignore` (assuming that you saved it), the cache directory should not appear in the Source Control panel because Git is ignoring it, as instructed. Commit and push. 
+
 ### Exercise 13
+
+In the Console, run `tidy()` on `fit_approval` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
+
+```{r courage-13, exercise = TRUE}
+
+```
+
+```{r courage-13-hint-1, eval = FALSE}
+tidy(..., conf.int = ...)
+```
+
+```{r courage-13-test, include = FALSE}
+# tidy(fit_approval, conf.int = TRUE)
+```
+
+### 
+
+`tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
+
+### Exercise 14
+
+Create a new code chunk in your QMD. Ask AI to help you make a nice looking table from the tibble which is returned by `tidy()`. You don't have to include all the variables which `tidy()` produces. We often just show the estimate and the confidence intervals.
+
+Insert that code into the QMD. 
+
+`Command/Ctrl + Shift + K`. 
+
+Make sure it works. You might need to add some new libraries, e.g., **[tinytable](https://vincentarelbundock.github.io/tinytable/)**, **[knitr](https://yihui.org/knitr/)**, **[gt](https://gt.rstudio.com/)**, **[kableExtra](https://haozhu233.github.io/kableExtra/)**, **[flextable](https://davidgohel.github.io/flextable/)**, **[modelsummary](https://modelsummary.com/)**, et cetera, to the `setup` code chunk, if you use any functions from these packages, all of which have strengths and weaknesses for making tables.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", end = -10)
+```
+
+CP/CR.
+
+```{r courage-14}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 12)
+```
+
+###
+
+This is ours:
+
+```{r}
+tidy_approval %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  gt() %>%
+  cols_label(
+    term = "Variable",
+    estimate = "Estimate",
+    conf.low = "Lower CI",
+    conf.high = "Upper CI"
+  )
+```
+
+The code we used:
+
+```
+tidy_approval %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  gt() %>%
+  cols_label(
+    term = "Variable",
+    estimate = "Estimate",
+    conf.low = "Lower CI",
+    conf.high = "Upper CI"
+  )
+```
+
+At the very least, your table should include a title and a caption with the data source. The more you use AI, the better you will get at doing so.
+
+### Exercise 15
 
 Add a sentence to your project summary.
 
@@ -1437,11 +1544,11 @@ Explain the structure of the model. Something like: "I/we model Y [the concept o
 
 Recall the beginning of our version of the summary:
 
-> Using the CES, which is one of the largest political surveys in the United States, we seek to understand the relationship between presidential approval and political ideology in 2020. One concern is that survey respondents might be systematically different from other Americans.
+> Public opinion about political leaders often depends on where people fall on the ideological spectrum. Using data from the 2020 Cooperative Election Study, one of the largest political surveys in the U.S., we explore how presidential approval varies across different ideological groups. One concern is that survey respondents might be systematically different from other Americans.
 
-```{r courage-13}
+```{r courage-15}
 question_text(NULL,
-	message = "Using the CES, which is one of the largest political surveys in the United States, we seek to understand the relationship between presidential approval and political ideology in 2020. One concern is that survey respondents might be systematically different from other Americans. We are using a cumulative model for ordinal regression.",
+	message = "Public opinion about political leaders often depends on where people fall on the ideological spectrum. Using data from the 2020 Cooperative Election Study, one of the largest political surveys in the U.S., we explore how presidential approval varies across different ideological groups. One concern is that survey respondents might be systematically different from other Americans. We are using a cumulative model for ordinal regression.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1450,7 +1557,7 @@ question_text(NULL,
 
 ### 
 
-Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to summary paragrah portion of your QMD. `Command/Ctrl + Shift + K`, and then commit/push.
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to the summary paragraph portion of your QMD. `Command/Ctrl + Shift + K`, and then commit/push.
 
 ## Temperance
 ### 
@@ -1476,17 +1583,68 @@ Courage gave us the data generating mechanism. Temperance guides us in the use o
 
 ### Exercise 2
 
+Before using the DGM, we should make sure that we can interpret it.
+
+Recall the values for the parameters in our data generating mechanism:
+
+```{r}
+fit_approval |> 
+  tidy(conf.int = TRUE) |> 
+  select(term, estimate, conf.low, conf.high)
+```
+
+What does the "Very Conservative" coefficient tell us?
+
+```{r temperance-2}
+question_text(NULL,
+	message = "The coefficient for 'ideologyVery Conservative' is negative, indicating that, when comparing Very Conservative respondents to the baseline (Moderates), the predicted approval rating is lower, adjusting for education.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+What does the "College Graduate" coefficient tell us?
+
+```{r temperance-2-1}
+question_text(NULL,
+	message = "The estimate for 'educationCollege Graduate' is negative, showing that College Graduates tend to have lower presidential approval compared to High School graduates (the baseline), adjusting for ideology.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Does the "Liberal" confidence interval include zero? What does that mean?
+
+```{r temperance-2-2}
+question_text(NULL,
+	message = "The confidence interval for 'ideologyLiberal' does not include zero, so we can be confident that Liberals differ in approval compared to Moderates, after adjusting for education.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### Exercise 3
+
+In the end, we don't really care about parameters, much less how to interpret them. Parameters are *imaginary*, like unicorns. We care about answers to our questions. Parameters are tools for answering questions. They aren't interesting in-and-of themselves. *In the modern world, all parameters are nuisance parameters.* 
+
 Load the [**marginaleffects**](https://marginaleffects.com/) package.
 
-```{r temperance-2, exercise = TRUE}
+```{r temperance-3, exercise = TRUE}
 
 ```
 
-```{r temperance-2-hint-1, eval = FALSE}
+```{r temperance-3-hint-1, eval = FALSE}
 library(...)
 ```
 
-```{r temperance-2-test, include = FALSE}
+```{r temperance-3-test, include = FALSE}
 library(marginaleffects)
 ```
 
@@ -1494,11 +1652,11 @@ library(marginaleffects)
 
 We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
 
-### Exercise 3
+### Exercise 4
 
-What is the general topic we are investigating? What is the specific question we are trying to answer?
+What is the specific question we are trying to answer? 
 
-```{r temperance-3}
+```{r temperance-4}
 question_text(NULL,
 	message = "The general question: What is the relationship between the approval of the president and an individual's ideology? The specific question: What is the average difference in presidential approval between Very Liberal and Very Conservative people?",
 	answer(NULL, correct = TRUE),
@@ -1509,434 +1667,165 @@ question_text(NULL,
 
 ### 
 
-Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic broadly.
-
-### Exercise 4
-
-<!-- DK: Start with all 125. Have 4 questions which pull out various rows. -->
-
-<!-- Confirm why High School and Moderate are chosen. Most common? -->
-
-<!-- 1. plot_predictions(fit_approval,  -->
-<!--  condition = c("ideology"),  -->
-<!--     draw = FALSE) -->
-
-<!-- 2. Adds select(group, education, ideology, estimate) -->
-
-<!-- 3. Adds slice(1) -->
-
-<!-- 4. Replace slice(1), with slice(10?) -->
-
-<!-- 5. Replace slice(10) with slice(21:25). Explain the decrease in approval probability as ideology gets more liberal.  -->
-
-<!-- 6. Replace slice(21:25) with slice(seq(1, 25, by = 5)). All adds up to 100%. Because a person in a given category must offer one of the five allowed answers. -->
-
-<!-- Do all these steps again, but with condition = c("education"). -->
-
-<!-- DK: Run this first: -->
-
-<!-- plot_predictions(fit_approval,  -->
-<!--   condition = c("education")) -->
-
-<!-- And explain: "The point in the graph fourth over on the top indicates that, for political moderates with two years of college, there is a 55% chance that they approve/somewhat approve of the president's performance." -->
-
-The `plot_predictions()` function in the **marginaleffects** package is like drawing a picture of what your model thinks might happen under different scenarios. Imagine you are working for the Trump Administration and would like to determine what are the odds that Trump beats Kamala in swing-states. We would want to predict the marginal approval rating effect, due to a certain factor. Let's say that i'm a conservative individual with a education level of PhD. This is the use case of `plot_predictions()`. 
-
-Run the code that uses `plot_predictions()` with condition = c("ideology"), selects the group, education, ideology, and estimate columns, and then takes the first row.
-
-```
-plot_predictions(fit_approval, 
-  condition = c("education"),
-  draw = FALSE)
-```
-
-```{r temperance-4, exercise = TRUE}
-
-```
-
-```{r temperance-4-hint-1, eval = FALSE}
-plot_predictions(fit_approval, 
-  condition = c("education"),
-  draw = FALSE)
-```
-
-```{r temperance-4-test, include = FALSE}
-plot_predictions(fit_approval, 
-  condition = c("education"),
-  draw = FALSE)
-```
-
-Think of this table like a "prediction guide" that uses a model to guess how likely different types of people are to choose certain approval categories. Each row shows:
-
-Who they are: Like a “Moderate” person with a certain education level (e.g., "High School Graduate").
-
-What they pick: A category like “Strongly Disapprove” or “Strongly Approve.”
-
-How likely it is (estimate): The probability that a person with that background would pick that category.
-
-If the estimate is 0.20, that’s like saying: “Out of 100 people with these traits, about 20 might pick this category.” The table just shows a bunch of these predictions for different combinations of background traits. It’s a way to see how changing someone’s education or ideology might change the chances they end up in each approval group.
-
-
+Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic more broadly.
 
 ### Exercise 5
 
-Let's select for 
+Hit "Run Code."
 
-Enter this code into the exercise code block and hit "Run Code."
-
-```
-plot_predictions(fit_approval, 
-  condition = c("education"),
-  draw = FALSE) |>
-    select(group, education, ideology, estimate)
-
-```
 ```{r temperance-5, exercise = TRUE}
-
+predictions(fit_approval, condition = "ideology")
 ```
 
 ```{r temperance-5-hint-1, eval = FALSE}
-plot_predictions(..., 
-  condition = c("..."),
-  draw = ...) |>
-    select(..., ..., ..., ...)
-
-
+predictions(fit_approval, condition = "ideology")
 ```
 
 ```{r temperance-5-test, include = FALSE}
-plot_predictions(fit_approval, 
-  condition = c("education"),
-  draw = FALSE) |>
-    select(group, education, ideology, estimate)
-
+predictions(fit_approval, condition = "ideology")
 ```
 
-The model predicts how individuals with a Moderate political ideology respond to approval categories based on their education level. Key features include five approval groups: Strongly Disapprove, Disapprove/Somewhat Disapprove, Neither Approve nor Disapprove, Approve/Somewhat Approve, and Strongly Approve. Estimates indicate high probabilities of Strongly Disapproving, especially among those with Post-Grad education (64.3%) and lower disapproval among those with No HS (46.5%). Approval rates are consistently low across all education levels, highlighting education's significant impact on approval tendencies.
+### 
+
+`predictions()` returns predicted probabilities for each observation, showing how the model expects the outcome (approval) to vary by ideology. This helps visualize model fit across groups.
+
+###
+
+Hit "Run Code."
+
+```{r temperance-51, exercise = TRUE}
+comparisons(fit_approval, variable = "ideology")
+```
+
+```{r temperance-51-hint-2, eval = FALSE}
+comparisons(fit_approval, variable = "ideology")
+```
+
+```{r temperance-51-test, include = FALSE}
+comparisons(fit_approval, variable = "ideology")
+```
+
+### 
+
+`comparisons()` calculates the differences in predicted approval between ideology groups. It quantifies how much approval varies when moving from one ideology to another.
+
+###
+
+Hit "Run Code."
+
+```{r temperance-52, exercise = TRUE}
+avg_comparisons(fit_approval, variable = "ideology")
+```
+
+```{r temperance-52-hint-3, eval = FALSE}
+avg_comparisons(fit_approval, variable = "ideology")
+```
+
+```{r temperance-52-test, include = FALSE}
+avg_comparisons(fit_approval, variable = "ideology")
+```
+
+### 
+
+`avg_comparisons()` summarizes average differences across all observations, giving an overall estimate of the typical change in approval between ideologies, adjusting for other variables.
+
+###
+
+Hit "Run Code."
+
+```{r temperance-53, exercise = TRUE}
+plot_predictions(fit_approval, condition = "ideology")
+```
+
+```{r temperance-53-hint-4, eval = FALSE}
+plot_predictions(fit_approval, condition = "ideology")
+```
+
+```{r temperance-53-test, include = FALSE}
+plot_predictions(fit_approval, condition = "ideology")
+```
+
+### 
+
+`plot_predictions()` creates a visual representation of predicted approval probabilities by ideology, allowing quick comparison of group-level differences and uncertainty.
 
 ### Exercise 6
-
-<!-- DK: Build the pipe explicitly. Add back in the copy button. "Add to the pipe `slice(1` in order to focus on the first row of the data." -->
-
-Let's take a look at a single row, and interpret it. Utilize the `slice()` function to slice the first row.
-
-
-```{r temperance-6, exercise = TRUE}
-
-```
-
-```{r temperance-6-hint-1, eval = FALSE}
-plot_predictions(..., 
-  condition = c(),"..."
-  draw = ...) |>
-    select(...,...,...,...) |> 
-      slice(...)
-```
-
-```{r temperance-6-test, include = FALSE}
-plot_predictions(fit_approval, 
-  condition = c("education"),
-  draw = FALSE) |>
-    select(group, education, ideology, estimate) |> 
-      slice(1)
-```
-
-This row represents the combination of someone that is a moderate w/ a 2-Year education level. Their estimated probability of strongly disapproving is 0.546.
-
-### Exercise 7
-
-<!--MP: this needs to have a comment box instead of asking user to show code -->
-
-Let's try the same thing but with a different row. Let's `slice()` for the 5th row in the dataset.
-
-```{r temperance-7, exercise = TRUE}
-
-```
-
-```{r temperance-7-hint-1, eval = FALSE}
-... |> 
-  slice(...) 
-```
-
-```{r temperance-7-test, include = FALSE}
-plot_predictions(fit_approval, 
-  condition = c("education"),
-  draw = FALSE) |>
-    select(group, education, ideology, estimate) |> 
-      slice(5)
-```
-
-If you are a post-grad, and you are a moderate the probability you would strongly disapprove is 0.642. Are you noticing any trends? As we saw for our last row/column pair, the more education level increases, the probability of strongly disapproving increases proportionally. 
-
-### Exercise 8
-
-<!-- DK: Change all instructions to be very explicit. -->
-
-Let's look at more rows. `Slice()` for rows 21:25.
-
-```{r temperance-8, exercise = TRUE}
-
-```
-
-```{r temperance-8-hint-1, eval = FALSE}
-plot_predictions(..., 
-  condition = c("..."),
-  draw = ... |>
-    select(...,...,...,...) |> 
-      slice(...)
-```
-
-```{r temperance-8-test, include = FALSE}
-plot_predictions(fit_approval, 
-  condition = c("education"),
-  draw = FALSE) |>
-    select(group, education, ideology, estimate) |> 
-      slice(21:25)
-```
-
-Notice how the probability for a individual to be in the "Approve / Somewhat Approve" group proportionally increases  as education level decreases. Independently take a look at how the 'group' column is influencing the probability. Recall that the probability for a moderate, with 2-years to disapprove is significantly larger.
-
-### Exercise 9
-
-```{r temperance-9, exercise = TRUE}
-
-```
-
-```{r temperance-9-hint-1, eval = FALSE}
-plot_predictions(..., 
-  condition = c("..."),
-  draw = ... |>
-    select(...,...,...,...) |> 
-      slice(...)
-```
-
-```{r temperance-9-test, include = FALSE}
-plot_predictions(fit_approval, 
-  condition = c("education"),
-  draw = FALSE) |>
-    select(group, education, ideology, estimate) |> 
-      slice(seq(1, 25, by = 5))
-```
-
-<!-- DK: Don't use group_by(). Maybe we have to . . . -->
-
-### Exercise 10
 
 Run this code:
 
 ```
 plot_predictions(fit_approval, 
-                condition = c("education"), 
-                draw = FALSE) |>
-select(group, education, ideology, estimate) |>
-group_by(education) |>
-slice_head(n = 5)
-```
+                 condition = c("ideology", "education"))
+```       
 
-```{r temperance-10, exercise = TRUE}
+```{r temperance-6, exercise = TRUE}
 
 ```
 
-```{r temperance-10-hint-1, eval = FALSE}
-plot_predictions(fit_approval, 
-                condition = c("education"), 
-                draw = FALSE) |>
-  select(group, education, ideology, estimate) |>
-  group_by(education) |>
-  slice_head(n = 5)
-```
-
-Notice how the probability for each education type, has a probability that adds up to 1. The reason it all adds up to 100% is because a person in a given category must offer one of the five allowed answers. -
-
-### Exercise 11
-
-<!-- DK: This is a mess. -->
-
-Now that the `dataset` is ready, begin constructing a plot. Set x to `ideology`, y to `estimate`, and `fill to group` in the aes() function. This will lay the foundation for the visualization.
-
-```{r temperance-11, exercise = TRUE}
+```{r temperance-6-test, include = FALSE}
 
 ```
 
-<button onclick="transfer_code(this)">Copy previous code</button>
+### 
 
-```{r temperance-11-hint-1, eval = FALSE}
-ggplot(temp, aes(x = ..., y = ..., fill = ...))
-```
+This plot shows predicted presidential approval probabilities broken down by political ideology and education level. It reveals that approval is generally higher among more conservative groups and tends to increase with higher education levels. The variation across education within each ideology group highlights the nuanced differences in approval ratings, helping us understand how these two factors jointly influence voter attitudes.
 
-### Exercise 12
+### Exercise 7
 
-Now, add a bar plot to the graph using `geom_bar()`. Set `stat` to identity so the bars represent the actual values in our dataset.
+Work interactively with your QMD to make a beautiful version of this plot. Your title should highlight the key variables. Your subtitle should describe the key takeaway, the sentence/conclusion which readers will, you hope, remember. Your caption should mention the data source. Your axis labels should look nice.
 
-```{r temperance-12, exercise = TRUE}
+This plot is not directly connected to your question. It answers lots of questions! It might be used by lots of different people. 
 
-```
+Copy the code for your plot here:
 
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-12-hint-1, eval = FALSE}
-ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
-  geom_bar(stat = "...")
-```
-
-### Exercise 13
-
-Continue the model, to make the graph more visually appealing, use `scale_fill_brewer(`) to apply a color palette. Choose a palette, such as `"RdBu"`, to represent different approval levels. This helps the user differentiate the `plot_prediction()` for different groups.
-
-```{r temperance-13, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-
-```{r temperance-13-hint-1, eval = FALSE}
-ggplot(temp, aes(x = ..., y = ..., fill = ...)) +
-  geom_bar(stat = "...") +
-  scale_fill_brewer(... = "...")
-
-```
-
-### Exercise 14
-
-Add the estimated approval ratings to the bars. Use `geom_text()` and set label to display the estimate values with two decimal places.
-
-```{r temperance-14, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-```{r temperance-14-hint-1, eval = FALSE}
-ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(label = sprintf("%.2f", estimate)), position = position_stack(vjust = 0.5), size = 3)
-```
-
-### Exercise 15
-
-For better readability of the x-axis labels, flip the coordinates of the plot using `coord_flip()`.
-```{r temperance-15, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-15-hint-1, eval = FALSE}
-ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(label = sprintf("%.2f", estimate)), position = position_stack(vjust = 0.5), size = 3) +
-  coord_flip()
-```
-
-### Exercise 16
-
-Next, add a `title`, x-axis `label`, y-axis `label`, and a legend `title`. Use the `labs()` function to label your plot appropriately.
-
-
-```{r temperance-16, exercise = TRUE}
-
-```
-
-<button onclick="transfer_code(this)">Copy previous code</button>
-
-```{r temperance-16-hint-1, eval = FALSE}
-ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(label = sprintf("%.2f", estimate)), position = position_stack(vjust = 0.5), size = 3) +
-  coord_flip() +
-  labs(title = "...",
-       x = "...",
-       y = "...",
-       fill = "Approval Level")
-```
-
-### Exercise 17
-
-Improve the readability of the axis text by rotating the x-axis labels using element_text() inside the theme() function. Set the angle to 45 degrees. clean up the visual by applying a minimal theme. Use theme_minimal() to reduce clutter and give the graph a sleek look.
-
-```{r temperance-17, exercise = TRUE}
-
-```
-
-
-
-You are done! we now have a ggplot model that shows the proportion of conservative vs liberals and their associated approval ratings as predicted by plot_predictions.
-
-your model should look like this:
-
-```{r}
-temp <- plot_predictions(fit_approval,
-                 condition = c("education"),
-                 draw = FALSE) 
-
-temp$group<- factor(temp$group, levels = c(
-  "Strongly Disapprove",
-  "Disapprove / Somewhat Disapprove",
-  "Neither Approve nor Disapprove",
-  "Approve / Somewhat Approve",
-  "Strongly Approve"
-))
-
-ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
-  geom_bar(stat = "identity") +
-  scale_fill_brewer(palette = "RdBu") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = "Distribution of Approval Levels by Ideology",
-       x = "Ideology",
-       y = "Proportion",
-       fill = "Approval Level") +
-  coord_flip()  
-
-ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(label = sprintf("%.2f", estimate)),
-            position = position_stack(vjust = 0.5),
-            size = 3) +
-  scale_fill_brewer(palette = "RdBu") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = "Distribution of Approval Levels by Ideology",
-       x = "Ideology",
-       y = "Proportion",
-       fill = "Approval Level") +
-  coord_flip()
-```
-
-### Exercise 18
-
-Create a new code chunk in `analysis.qmd`. Label it with `label: plot`. Copy/paste the code which creates your graphic. Don't forget that, at the top of this chunk, you must include code which creates the `ndata` object.
-
-`Command/Ctrl + Shift + K` to ensure that it all works as intended.
-
-At the Console, run:
-
-```         
-tutorial.helpers::show_file("analysis.qmd", start = -8)
-```
-
-CP/CR.
-
-```{r temperance-18}
+```{r temperance-7}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 3)
+	rows = 20)
 ```
+
+###
+
+Data science often involves this-back-and-forth style of work. First, we need to make a single chunk of code, in this case, a new plot, work well. This requires interactive work between the QMD and the Console. Second, we need to ensure that the entire QMD runs correctly on its own.
+
+### Exercise 8
+
+Finalize the new graphics code chunk in your QMD.
+
+`Command/Ctrl + Shift + K` to ensure that it all works as intended. Don't forget to add `library(marginaleffects)` to your `setup` code chunk.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", start = -8)
+```
+
+CP/CR.
+
+```{r temperance-8}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 10)
+```
+
 
 ### 
 
-We could have made many graphs with this data to highlight different things. It is important to only keep information in that is useful and has relationships with the outcome variable.
+Always [remember](https://en.wikipedia.org/wiki/Map%E2%80%93territory_relation): *The map is not the territory.* A beautiful graphic tells a story, but that story is always an imperfect representation of reality. Our models depend on assumptions, assumptions which are never completely true.
 
-### Exercise 19
+### Exercise 9
 
-Write a paragraph which summarizes the project in your own words. The first few sentences are the same as what you had at the end of the Courage section. But, since your question may have evolved, you should feel free to change those sentences. Add at least one sentence which describes at least one quantity of interest (QoI) --- presumably one that answers your question -- and which provides a measure of uncertainty about that QoI.
+Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
-```{r temperance-19}
+```{r temperance-9}
 question_text(NULL,
-	message = "Using the CES, which is one of the largest political surveys in the United States, we seek to understand the relationship between presidential approval and political ideology in 2020. One concern is that survey respondents might be systematically different from other Americans. We are using a cumulative model for ordinal regression. People who are very conservative are more likely to approve the president higher by about 5.6 compared to people who are very liberal. We are 95% confident that the true value is between 4.9 and 6.2.",
+	message = "Public opinion about political leaders often depends on where people fall on the ideological spectrum. Using data from the 2020 Cooperative Election Study, one of the largest political surveys in the U.S., we explore how presidential approval varies across different ideological groups. One concern is that survey respondents might be systematically different from other Americans. We are using a cumulative model for ordinal regression. People who are very conservative are more likely to approve the president higher by about 5.6 compared to people who are very liberal. We are 95% confident that the true value is between 4.9 and 6.2.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1945,13 +1834,13 @@ question_text(NULL,
 
 ### 
 
-Edit the summary paragraph in `analysis.qmd` as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
+Add a final sentence to your summary paragraph in your QMD as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
-### Exercise 20
+### Exercise 10
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-20}
+```{r temperance-10}
 question_text(NULL,
 	message = "Our estimates and confidence intervals might not be wrong because the data is not perfect. We have noticed some potential problems such as in validity; people could be lying about thier approval of the president or misidentifying their ideology. These concerns can cause our findings to be inaccurate. The true estimate and confidence interval might be different. The interval would be bigger because we have uncertainties about the data.",
 	answer(NULL, correct = TRUE),
@@ -1962,21 +1851,40 @@ question_text(NULL,
 
 ### 
 
-There is almost always uncertainty associated with our conclusions. It is important to notice and acknowledge the potential problems with the data.
+Always go back to your Preceptor Table, the information which, if you had it, would make answering your question easy. In almost all real world cases, the Preceptor Table and the data are fairly different, not least because validity never holds perfectly. So, even a perfectly estimated statistical model is rarely as useful as we might like.
 
-### Exercise 21
+### Exercise 11
 
-Rearrange the material in `analysis.qmd` so that the order is graphic, paragraph, math and table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Command/Ctrl + Shift + K` to ensure that everything works.
+Rearrange the material in your QMD so that the order is graphic, followed by the paragraph. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. You can keep or discard the math and any other material at your own discretion.
+
+`Command/Ctrl + Shift + K` to ensure that everything works.
 
 At the Console, run:
 
-```         
+```
 tutorial.helpers::show_file("analysis.qmd")
 ```
 
 CP/CR.
 
-```{r temperance-21}
+```{r temperance-11}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 30)
+```
+
+### 
+
+This is the version of your QMD file which your teacher is most likely to take a close look at.
+
+### Exercise 12
+
+Publish your rendered QMD to GitHub Pages. Copy/paste the resulting url below.
+
+```{r temperance-12}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1987,13 +1895,13 @@ question_text(NULL,
 
 ### 
 
-Add `rsconnect` to the `.gitignore` file. You don't want your personal Rpubs details stored in the clear on Github. Commit/push everything.
+Commit/push everything.
 
-### Exercise 22
+### Exercise 13
 
-Publish `analysis.qmd` to Rpubs. Choose a sensible slug. Copy/paste the url below.
+Copy/paste the url to your Github repo.
 
-```{r temperance-22}
+```{r temperance-13}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -2003,11 +1911,31 @@ question_text(NULL,
 ```
 
 ### 
+
+We can never know all the entries in the Preceptor Table. That knowledge is reserved for God. If all our assumptions are correct, then our DGM is true, it accurately describes the way in which the world works. There is no better way to predict the future, or to model the past, than to use it. Sadly, this will only be the case with toy examples involving things like coins and dice. We hope that our DGM is close to the true DGM but, since our assumptions are never perfectly correct, our DGM will always be different. The estimated magnitude and importance of that difference is a matter of judgment.
+
+The world confronts us. Make decisions we must.
 
 ## Summary
 ### 
 
 This tutorial covered topics related to [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
+
+```{r}
+plot_predictions(fit_approval, 
+                 condition = c("ideology", "education")) +
+  labs(
+    title = "Presidential Approval by Ideology and Education",
+    subtitle = "Approval decreases with conservative ideology; education slightly moderates this pattern",
+    x = "Ideology",
+    y = "Predicted Probability of Approval",
+    color = "Education",
+    shape = "Education"
+  ) +
+  theme_minimal()
+```
+
+This tutorial explored patterns in presidential approval using an ordinal outcome variable and categorical predictors like ideology and education. Using data from the 2020 Cooperative Election Study, we found that approval levels decrease as individuals become more conservative, and that education slightly shifts these approval levels. This insight could help our pollster better target voter outreach or refine survey sampling strategies by accounting for both political ideology and educational background.
 
 ```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
 ```
