@@ -36,8 +36,6 @@ rv_p <- x |>
     labs(x = "Registered Voters",
          y = NULL) 
 
-#  DK: Move? Probably not. Get rid of?      
-
 log_rv_p <- x |> 
   ggplot(aes(log(rv13))) + 
     geom_histogram(bins = 100) +
@@ -47,28 +45,31 @@ log_rv_p <- x |>
 
 # Create and save all the models we use.
 
+# DK: Do we need all the variables in trains? Probably not. In one step, create new 
+# x (you can even just give them the code to execute, and then, 
+# Behind the scenes.)
+
 # DK: Do we need a fit_1 (and other) objects? Not if they are just used in one pipe.
 
 fit_1 <- linear_reg() |>
   fit(income ~ age, data = trains)
 
-trains_2 <- trains |> 
-  mutate(c_age = age - mean(age))
-
-fit_1_c <- linear_reg() |>
-  fit(income ~ c_age, data = trains_2)
-
-trains_3 <- trains |> 
-  mutate(s_age = age / sd(age))
-
-fit_1_s <- linear_reg() |>
-  fit(income ~ s_age, data = trains_3)
-
-trains_4 <- trains |> 
+x <- trains |> 
+  select(income, age) |> 
+  mutate(c_age = age - mean(age)) |> 
+  mutate(s_age = age / sd(age)) |> 
   mutate(z_age = scale(age))
 
+# DK: I don't think we need to create these objects.
+
+fit_1_c <- linear_reg() |>
+  fit(income ~ c_age, data = x)
+
+fit_1_s <- linear_reg() |>
+  fit(income ~ s_age, data = x)
+
 fit_1_z <- linear_reg() |>
-  fit(income ~ z_age, data = trains_4)
+  fit(income ~ z_age, data = x)
 
 no_na_nhanes <- nhanes |> 
   select(height, age) |> 
@@ -92,8 +93,12 @@ fit_2_model <- linear_reg() |>
 fit_liberal <- linear_reg() |> 
   fit(att_end ~ liberal, data = trains)
 
-# DK: use compare_performance() from easystats to compare
-# models. 
+ovrftng <- tibble(
+  x = 1:10,
+  y = c(1.9, 1.9, 4.9, 2.7, 2.6, 5.2, 6.8, 8.9, 9.0, 9.9)
+)
+
+# DK: Delete nonsense.
 
 performance_liberal <- performance(fit_liberal)
 
@@ -103,6 +108,8 @@ fit_att_start <- linear_reg() |>
 performance_att_start <- performance(fit_att_start)
 
 compare <- compare_performance(fit_liberal, fit_att_start) 
+
+# DK: Discuss code testing.
 
 ```
 
@@ -115,7 +122,11 @@ compare <- compare_performance(fit_liberal, fit_att_start)
 
 <!-- DK: Add test code chunks for anything not too slow. -->
 
-<!-- Change the sections (topics). One should be "Log Transformations". Do this first, Next is "Scaling". -->
+<!-- DK: Change the sections (topics). One should be "Log Transformations". Do this first, Next is "Scaling". -->
+
+<!-- AT: Currently just a handful of excercises use 'scale()' should I add more before making a seperate section for it? -->
+
+DK: Cool approach. Delete the fit_ objects from scaling section.
 
 
 ## Introduction
@@ -279,7 +290,7 @@ linear_reg() |>
 
 ```{r transforming-variables-7-test, include = FALSE}
 linear_reg() |>
-  fit(income ~ age, data = trains)
+  fit(income ~ age, data = x)
 ```
 
 ### 
@@ -326,9 +337,11 @@ tidy(fit_1)
 
 The value of $\beta_0$, the intercept in the regression, is `r scales::comma(round(tidy(fit_1) |> filter(term == "(Intercept)") |> pull(estimate), 0))`. This represents the estimated average income for a person with an age of zero, which is awkward and useless since there are no people of zero age in our data.
 
+<!-- DK: Missing a lot of copy code buttons. -->
+
 ### Exercise 10
 
-One way to make the intercept more meaningful is to transform `age`. Pipe `trains` to `mutate()` to create a new column `c_age = age - mean(age)`. Assign the result to `trains_2`.
+One way to make the intercept more meaningful is to transform `age`. Pipe `trains` to `mutate()` to create a new column `c_age = age - mean(age)`. Assign the result to `x`.
 
 ```{r transforming-variables-10, exercise = TRUE}
 
@@ -350,20 +363,20 @@ By doing this, we are subtracting the mean of a variable `age` in the data set f
 
 ### Exercise 11
 
-Copy your previous code, but set `formula` equal `income ~ c_age`, and `data` equal `trains_2`. Assign the result to an object called `fit_1_c`.
+Copy your previous code, but set `formula` equal `income ~ c_age`, and `data` equal `x`. 
 
 ```{r transforming-variables-11, exercise = TRUE}
 
 ```
 
 ```{r transforming-variables-11-hint-1, eval = FALSE}
-fit_1_c <- linear_reg() |>
+linear_reg() |>
   fit(... ~ ..., data = ...)
 ```
 
 ```{r transforming-variables-11-test, include = FALSE}
-fit_1_c <- linear_reg() |>
-  fit(income ~ c_age, data = trains_2)
+linear_reg() |>
+  fit(income ~ c_age, data = x)
 ```
 
 ### 
@@ -372,7 +385,7 @@ Using this centered version of age does not change the predictions or residuals 
 
 ### Exercise 12
 
-Type `fit_1_c` and hit "Run Code." This will print a summary of the fitted model. 
+Behind the scenes, we have assigned the result of the pipe to an object named `fit_1_c`. Type `fit_1_c` and hit "Run Code." This will print a summary of the fitted model.
 
 ```{r transforming-variables-12, exercise = TRUE}
 
@@ -408,6 +421,8 @@ tidy(fit_1_c)
 
 ### 
 
+<!-- DK: Or maybe we keep them to be able to do this? -->
+
 The intercept, `r scales::comma(round(tidy(fit_1_c) |> filter(term == "(Intercept)") |> pull(estimate), 0))`, is the expected income for someone with `c_age = 0`, i.e. someone of an average age in the data, which is around `r round(mean(trains$age), 0)`.
 
 ### 
@@ -440,19 +455,19 @@ By doing this, we are scaling the variable `age` so that its values are measured
 
 <!-- DK: Fix, here and elsewhere. Intructions, not questions. -->
 
-Create a model using the **tidymodels** framework. Use the formula `income ~ s_age` with the `trains_3` data. Assign the result to an object called `fit_1_s`.
+Pipe `linear_reg()` to `fit()`, with the formula `income ~ s_age` and `data = trains_3` as arguments.
 
 ```{r transforming-variables-15, exercise = TRUE}
 
 ```
 
 ```{r transforming-variables-15-hint-1, eval = FALSE}
-... <- linear_reg() |>
+linear_reg() |>
   fit(... ~ ..., data = ...)
 ```
 
 ```{r transforming-variables-15-hint-2, eval = FALSE}
-fit_1_s <- linear_reg() |>
+linear_reg() |>
   fit(income ~ s_age, data = trains_3)
 ```
 
@@ -462,7 +477,7 @@ fit_1_s <- linear_reg() |>
 
 ### Exercise 16
 
-Type `fit_1_s` and hit "Run Code." This will return a table of regression.
+Behind the scenes, we have assigned the result of the previous code to an object named `fit_1_s`. Type `fit_1_s` and hit "Run Code." This will print a summary of the fitted model.
 
 ```{r transforming-variables-16, exercise = TRUE}
 
@@ -526,19 +541,19 @@ The base R function `scale()` subtracts the mean and divides by the standard dev
 
 ### Exercise 19
 
-Create a model using the **tidymodels** framework. Use the formula `income ~ z_age` with the `trains_4` data. Assign the result to an object called `fit_1_z`.
+Pipe `linear_reg()` to `fit()`, with the formula `income ~ z_age` and `data = trains_4` as arguments.
 
 ```{r transforming-variables-19, exercise = TRUE}
 
 ```
 
 ```{r transforming-variables-19-hint-1, eval = FALSE}
-... <- linear_reg() |>
+linear_reg() |>
   fit(... ~ ..., data = ...)
 ```
 
 ```{r transforming-variables-19-hint-2, eval = FALSE}
-fit_1_z <- linear_reg() |>
+linear_reg() |>
   fit(income ~ z_age, data = trains_4)
 ```
 
@@ -548,7 +563,7 @@ Using *z*-scores makes interpretation easier, especially when we seek to compare
 
 ### Exercise 20
 
-Type `fit_1_z` and hit "Run Code." This will return a table of regression.
+Behind the scenes, we have assigned the result of the previous code to an object named `fit_1_z`. Type `fit_1_z` and hit "Run Code." This will print a summary of the fitted model.
 
 ```{r transforming-variables-20, exercise = TRUE}
 
@@ -821,7 +836,7 @@ When building models, we rely on assumptions to construct the mathematical formu
 
 ### Exercise 32
 
-Let's create a model to study the relationship between `height` and `age`. Create a linear regression model using the **tidymodels** framework. Use the formula `height ~ age` with the `no_na_nhanes` data. Assign the result to an object called `nhanes_1`.
+Let's create a model to study the relationship between `height` and `age`. Pipe `linear_reg()` to `fit()`, with the formula `height ~ age` and `data = no_na_nhanes` as arguments.
 
 ```{r transforming-variables-32, exercise = TRUE}
 
@@ -830,12 +845,12 @@ Let's create a model to study the relationship between `height` and `age`. Creat
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
 ```{r transforming-variables-32-hint-1, eval = FALSE}
-nhanes_1 <- linear_reg() |>
+linear_reg() |>
   fit(... ~ ..., data = ...)
 ```
 
 ```{r transforming-variables-32-test, include = FALSE}
-nhanes_1 <- linear_reg() |>
+linear_reg() |>
   fit(height ~ age, data = no_na_nhanes)
 ```
 
@@ -884,7 +899,7 @@ From the graph, we see that before the age of 20, the data points gather and for
 
 ### Exercise 34
 `
-Run a linear regression using the **tidymodels** framework with a quadratic term. Use the formula `height ~ age + I(age^2)` and the `no_na_nhanes` dataset. Assign the result to an object called `nhanes_2`.
+Pipe `linear_reg()` to `fit()`, with the formula `height ~ age + I(age^2)` and `data = no_na_nhanes` as arguments.
 
 ```{r transforming-variables-34, exercise = TRUE}
 
@@ -946,7 +961,7 @@ This line looks better, but not the best we could do. We have not used our backg
 
 ### Exercise 36
 
-Let's create variables that capture the break at age 18. Create a linear regression model using the **tidymodels** framework. Use the formula `height ~ I(ifelse(age > 18, 18, age))` with the `no_na_nhanes` data. Assign the result to an object called `nhanes_3`.
+Let's create variables that capture the break at age 18. Pipe `linear_reg()` to `fit()`, with the formula `height ~ I(ifelse(age > 18, 18, age))` and `data = no_na_nhanes as arguments.
 
 ```{r transforming-variables-36, exercise = TRUE}
 
@@ -2033,12 +2048,119 @@ trains |>
 
 ###
 
-The better model is the one with a smaller square root of the residual. The `as_sigma` has a lower value compared to `lib_sigma` and thus it is a better model. 
+The better model is the one with a smaller square root of the residual. The `as_sigma` has a lower value compared to `lib_sigma` and thus it is a better model.
+
 
 ## Beware overfitting
 ### 
 
-<!-- Use from the primer. -->
+One of the biggest dangers in data science is *overfitting*, using a model with too many parameters which fits the data we have too well and, therefore, works poorly on data we have yet to see. 
+
+### Exercise 1
+
+Consider a simple example with 10 data points. Run this code to see the plot it creates
+
+```{r beware-overfitting-1, exercise = TRUE}
+#| echo: false
+ovrftng <- tibble(x = 1:10,
+                  y = c(1.9, 1.9, 4.9, 2.7, 2.6, 
+                        5.2, 6.8, 8.9, 9.0, 9.9))
+
+ovrftng |> 
+  ggplot(aes(x, y)) +
+    geom_point() +
+    labs(title = "Create a Model which Predicts `y` Given `x`") +
+    scale_x_continuous(breaks = seq(2, 10, 2)) +
+    scale_y_continuous(breaks = seq(2, 10, 2)) 
+
+```
+
+###
+
+This plot is a starting point for discussing overfitting --- when a model fits the data too closely and fails to generalize to new data. The goal is to find a balance, capturing the main pattern without chasing every data point.
+
+### Exercise 2
+
+What happens when we fit a model with one predictor? Run the code below and take a look at the resulting plot.
+
+```{r beware-overfitting-2, exercise = TRUE}
+#| echo: false
+one_pred <- lm(y ~ x,
+               data = ovrftng)
+  
+newdata <- tibble(x = seq(1, 10, by = 0.01),
+                  y = predict(one_pred, 
+                              newdata = tibble(x = x)))
+
+ovrftng |> 
+  ggplot(aes(x, y)) +
+    geom_point() +
+    geom_line(data = newdata, 
+              aes(x, y)) +
+    labs(title = "`y` as a Linear Function of `x`") +
+    scale_x_continuous(breaks = seq(2, 10, 2)) +
+    scale_y_continuous(breaks = seq(2, 10, 2)) 
+
+```
+
+###
+
+This is a simple linear model. It doesn’t fit every point exactly, but it captures the overall trend: higher values of `x` usually mean higher values of `y`. Sometimes, a simple line is all you need.
+
+### Exercise 3
+
+You can also try fitting a quadratic model by including $x^2$ as a predictor. This allows for a curved fit, which might better capture the relationship between x and y if it's not strictly linear. Run the code and study the resulting graph to see the fit.
+
+```{r beware-overfitting-3, exercise = TRUE}
+#| echo: false
+two_pred <- lm(y ~ poly(x, 2),
+               data = ovrftng)
+
+newdata <- tibble(x = seq(1, 10, by = 0.01),
+                  y = predict(two_pred, 
+                              newdata = tibble(x = x)))
+
+ovrftng |> 
+  ggplot(aes(x, y)) +
+    geom_point() +
+    geom_line(data = newdata, 
+              aes(x, y)) +
+    labs(title = "`y` as a Quadratic Function of `x`") +
+    scale_x_continuous(breaks = seq(2, 10, 2)) +
+    scale_y_continuous(breaks = seq(2, 10, 2)) 
+```
+
+###
+
+A quadratic fit lets the model capture bends or curves in the data, not just straight-line trends. If the relationship between x and y isn’t perfectly linear, adding a squared term can improve how well the model describes the data. This can often reduce prediction error, but you should be careful. More complex models can also lead to overfitting if the data is limited.
+
+### Exercise 4
+
+The previous model with a quadratic term was a better fit than a simple line. But why stop at $x^2$? Why not add $x^3$, $x^4$, and even up to $x^9$ as predictors? When we do this, the fit looks much better —-- at least on the surface. Right? 
+
+Run the code below and scan the resulting plot.
+
+```{r beware-overfitting-4, exercise = TRUE}
+nine_pred <- lm(y ~ poly(x, 9),
+                       data = ovrftng)
+
+newdata <- tibble(x = seq(1, 10, by = 0.01),
+                  y = predict(nine_pred, 
+                              newdata = tibble(x = x)))
+
+ovrftng |> 
+  ggplot(aes(x, y)) +
+    geom_point() +
+    geom_line(data = newdata, 
+              aes(x, y)) +
+    labs(title = "`y` as a 9-Degree Polynomial Function of `x`") +
+    scale_x_continuous(breaks = seq(2, 10, 2)) +
+    scale_y_continuous(breaks = seq(2, 10, 2)) 
+```
+
+###
+
+Clearly, adding higher-degree terms (like $x^3$ to $x^9$) will make the model fit the current data almost perfectly. But just fitting the original data isn't the goal—--what matters is how well the model predicts new data. Too many terms can actually hurt future predictions, a problem called overfitting.
 
 ## Comparing models in practice
 ### 
@@ -2048,9 +2170,125 @@ The better model is the one with a smaller square root of the residual. The `as_
 <!-- library(easystats)
 paste the Description compare_models
 Run compare_models on fit_liberal and ft_att_start
-Discuss results
-Again with other arguments, like ci = 0.99. -->
+Discuss results. Done
+Again with other arguments, like ci = 0.99. Done -->
 
+<!-- DK: List specific functions. `performance()`, `compare_models()`.  -->
+
+To decide which model is best, we compare their performance using statistical measures like R², AIC, BIC, and RMSE. The **easystats** package provides functions for comparing, testing, and selecting models based on these metrics. This helps us choose the most accurate and reliable model for our data.
+
+<!-- AT: Is the paragraph above good as an introduction? -->
+
+### Exercise 1
+
+Now, we will assess the performance of our model. Run the `performance()` function on `fit_liberal` and review the results.
+
+Type `performance(fit_liberal)` and hit "Run Code". 
+
+```{r comparing-models-in-practice-1, exercise = TRUE}
+
+```
+
+```{r comparing-models-in-practice-1-hint-1, eval = FALSE}
+performance(fit_liberal)
+```
+
+```{r comparing-models-in-practice-1-test, include = FALSE}
+performance(fit_liberal)
+```
+
+### 
+
+`The `performance()` function from ***easystats** summarizes how well your model fits the data. It reports key measures like AIC (Akaike Information Criterion), BIC (Bayesian Information Criterion), R² (explained variance), and RMSE (root mean squared error). These metrics help you compare models and decide which one provides the best fit or the most accurate predictions.
+
+### Exercise 2
+
+Now, let’s assess the performance of our second model. Run the `performance()` function on `fit_att_start` to see how well it fits the data.
+
+Type `performance(fit_att_start)` and hit "Run Code". 
+
+```{r comparing-models-in-practice-2, exercise = TRUE}
+
+```
+
+```{r comparing-models-in-practice-2-hint-1, eval = FALSE}
+
+performance(fit_att_start)
+
+```
+
+```{r comparing-models-in-practice-2-test, include = FALSE}
+
+performance(fit_att_start)
+
+```
+
+### 
+
+The `performance()` function summarizes model quality using statistics like R² (how much variance is explained), AIC and BIC (for model comparison), and RMSE (average prediction error). Models with higher R² and lower AIC/BIC/RMSE are generally better at explaining or predicting the outcome.
+
+### Exercise 3
+
+To directly compare our two models, use the `compare_performance()` function with `fit_att_start` and `fit_liberal` as arguments. This will show a table of model quality statistics for both models side by side.
+
+Type `compare_performance(fit_att_start, fit_liberal)` and hit "Run Code".
+
+```{r comparing-models-in-practice-3, exercise = TRUE}
+
+```
+
+```{r comparing-models-in-practice-3-hint-1, eval = FALSE}
+compare_performance(fit_att_start, fit_liberal)
+```
+
+```{r comparing-models-in-practice-3-test, include = FALSE}
+compare_performance(fit_att_start, fit_liberal)
+```
+
+### 
+
+The `compare_performance()` output shows that the `fit_att_start` model (AIC = 401.7, R² = 0.776, RMSE = 1.352) outperforms the `fit_liberal` model (AIC = 558.9, R² = 0.122, RMSE = 2.678) in every metric. The model with higher R² and lower AIC, BIC, and RMSE is usually preferred. In this case, `fit_att_start` is the more effective model.
+
+### Exercise 4
+
+You can also add a confidence interval for the performance metrics by setting the `ci` argument in `compare_performance()`. By default, the confidence interval is set to 0.95 (95%).
+
+Run `compare_performance()` again with `ci = 0.99` to get 99% confidence intervals for the model metrics.
+
+<!-- DK: Discuss confidence intervals aid in model choice. -->
+
+```{r comparing-models-in-practice-4, exercise = TRUE}
+
+```
+
+```{r comparing-models-in-practice-4-hint-1, eval = FALSE}
+compare_performance(fit_att_start, fit_liberal, ci = ...)
+```
+
+```{r comparing-models-in-practice-4-test, include = FALSE}
+compare_performance(fit_att_start, fit_liberal, ci = 0.99)
+```
+
+### 
+
+With `ci = 0.99`, `compare_performance()` shows 99% confidence intervals for model metrics, making the intervals wider and more conservative than the default 95%. If the intervals overlap, it means the models may not be meaningfully different in performance. Always prefer models with higher R² and lower AIC/BIC/RMSE.
+
+### Exercise 5
+
+In one or two sentences, summarize our work so far, stating which model is better and conclude the better variable between `att_start` and `liberal` in terms of predicting the attitude towards immigration at the end of the experiment (`att_end`).
+
+```{r comparing-models-in-practice-5}
+question_text(NULL,
+	message = "`fit_att_start` is the stronger model. This means that a commuter's initial attitude (`att_start`) is a much better predictor of their final attitude (`att_end`) than their political ideology (`liberal`).",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+When comparing models, always check metrics like R² and RMSE. The model with higher R² and lower RMSE fits and predicts better. Here, `att_start` is a much more useful predictor than `liberal`. 
 
 
 ## Summary
