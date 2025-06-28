@@ -14,7 +14,8 @@ description: 'Chapter 4 Tutorial: Models'
 ```{r setup, include = FALSE}
 library(learnr)
 library(tutorial.helpers)
-library(gt)  
+library(gt) 
+library(knitr) 
 
 library(tidyverse)
 library(tidymodels)
@@ -1417,6 +1418,8 @@ We should be modest in the claims we make. The posteriors we create are never th
 
 ### Exercise 6
 
+<!-- DK: Keep this question? -->
+
 What is the general topic we are investigating? What is the specific question we are trying to answer?
 
 ```{r temperance-6}
@@ -1434,7 +1437,9 @@ Data science projects almost always begin with a broad topic of interest. Yet, i
 
 ### Exercise 7
 
-In the Console, run `predictions(fit_biden, type = "prob")`.
+In the Console, run `predictions()` on `fit_biden` with `type = "prob"`.
+
+`type = "prob"` is required because `fit_biden` is a logistic model so the outputs are **prob**abilities.
 
 CP/CR.
 
@@ -1447,13 +1452,19 @@ question_text(NULL,
 	rows = 3)
 ```
 
+```{r temperance-7-test, include = FALSE}
+predictions(fit_biden, type = "prob")
+```
+
 ### 
 
-`predictions()` returns a data frame with one row for each observation in the data set used to fit the model. In this case, because there are about 1560 responses in the sample and two possible outcomes (`yes` and `no`), the result has about 3120 rows—two for each bead. For an intercept-only logistic regression, these probabilities are the same for every observation, but split across the two outcome groups.
+`predictions()` returns a data frame with one row for each observation in the data set used to fit the model. In this case, because there are about 1560 responses in the sample and two possible outcomes (`yes` and `no`), the result has about 3120 rows -- two for each voter. For an intercept-only logistic regression, these probabilities are the same for every observation, but split across the two outcome groups.
 
 ### Exercise 8
 
-n the Console, run `plot_predictions(fit_biden, type = "prob", condition = "group")`.
+In the Console, run `plot_predictions()` on `fit_biden` with `type = "prob"` and `condition = "group"`.
+
+`condition = "group"` shows us the Yes's and the No's separately.
 
 CP/CR.
 
@@ -1466,26 +1477,17 @@ question_text(NULL,
 	rows = 3)
 ```
 
+```{r temperance-8-test, include = FALSE}
+plot_predictions(fit_biden, type = "prob", condition = "group")
+```
+
 ### 
 
 This plot shows predicted support for Biden by group, but it's not very informative. Since the model only includes group, the bars just reflect the average support within each group. Showing both is redundant because one is just 1 minus the other. 
 
 ### Exercise 9
 
-Although our model does not include any predictors like age or sex, `plot_predictions()` from the **marginaleffects** package still works. It produces a simple plot showing the overall predicted probability of supporting Biden, which is the same for everyone in the sample.
-
-In the Console, run this code:
-
-```
-predictions(fit_biden, type = "prob") |>
-  filter(group == "Yes") |>
-  ggplot(aes(x = group, y = estimate, ymin = conf.low, ymax = conf.high)) +
-  geom_pointrange() +
-  labs(title = "Predicted Probability of Supporting Biden",
-       y = "Probability",
-       x = "Poll Respondants") +
-  theme_minimal()
-```
+In the Console, run `avg_predictions()` on `fit_biden` with `type = "prob"`.
 
 CP/CR.
 
@@ -1495,18 +1497,33 @@ question_text(NULL,
 	allow_retry = TRUE,
 	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 8)
+	rows = 20)
+```
+
+```{r temperance-9-test, include = FALSE}
+avg_predictions(fit_biden, type = "prob")
 ```
 
 ###
 
-This plot looks odd because `plot_predictions()` is designed to show how predicted probabilities change across predictor variables, but your model only includes the outcome `biden` — so the plot ends up splitting probabilities by outcome level without any meaningful comparison.
+<!-- DK: How does avg_prediction really work? How does it know to average across different values of the outcome variable? -->
+
+`avg_predictions()` does what you might expect, taking the average of each prediction within the two different groups. In this case, that calculation is trivial since the predictions within each group are identical. In more complex models, they won't be.
+
 
 ### Exercise 10
 
-<!-- DK: Error -->
+Work interactively within your QMD to create a plot which looks something like this:
 
-Run the following line of code in your console, then copy and paste the full output below.
+```{r}
+knitr::include_graphics("images/biden-support.png")
+```
+
+Use AI to help. Your plot does not have to look exactly like ours. 
+
+Note that this plot takes the output of `avg_predictions(fit_biden, type = "prob")`, filters out just the row for `group == "Yes"` and then pipes to `ggplot()`
+
+Copy the code for your plot here:
 
 ```{r temperance-10}
 question_text(NULL,
@@ -1516,79 +1533,51 @@ question_text(NULL,
 	incorrect = NULL,
 	rows = 20)
 ```
-###
-
-This output shows the predicted probabilities from a logistic regression model `fit_biden` for one respondent `rowid = 1`. The model estimates there's a 58% chance they do not support Biden `group = "No"` and a 42% chance they do `group = "Yes"`. The `biden` column confirms their actual response was `"No"`. The `conf.low` and `conf.high` values give a 95% confidence range for each predicted probability.
-
-### Exercise 11
-
-Work interactively with your QMD to make a beautiful version of this plot. Your title should be concise yet descriptive. Your subtitle should describe the key takeaway, the sentence/conclusion which readers will, you hope, remember. Your caption should mention the data source. Your axis labels should look nice.
-
-This plot is not directly connected to your question. It answers lots of questions! It might be used by lots of different people.
-
-Copy the code for your plot here:
-
-```{r temperance-11}
-question_text(NULL,
-	answer(NULL, correct = TRUE),
-	allow_retry = TRUE,
-	try_again_button = "Edit Answer",
-	incorrect = NULL,
-	rows = 20)
-```
 
 ###
 
-<!-- DK: Error -->
-
-Here is the plot I created: 
+Our code:
 
 ```
-
-preds |>
+avg_predictions(fit_biden, type = "prob") |>
   filter(group == "Yes") |>
-  ggplot(aes(x = group, y = estimate, ymin = conf.low, ymax = conf.high)) +
+  ggplot(aes(x = group, 
+  			 y = estimate, 
+			 ymin = conf.low, 
+			 ymax = conf.high)) +
   geom_pointrange(color = "#2C3E50", size = 1.0,) +
   labs(
-    title = "Support for President Biden Among Respondents",
-    subtitle = "Estimated percentage of voters who support Biden",
+    title = "Support for President Biden in March 2024",
+    subtitle = "42% is not a good sign for an incumbent seeking reelection",
     caption = "Source: YouGov poll, March 2024.",
-    y = "Predicted percentage of support",
+    y = NULL,
     x = NULL
   ) +
+  scale_x_discrete(labels = NULL, breaks = NULL) +
   scale_y_continuous(
     labels = scales::percent_format(accuracy = 1),
     breaks = seq(0.3, 0.5, 0.02),
-    limits = c(0.3, 0.5)
-  ) +
-  theme_minimal(base_size = 14) +
-  theme(
-    plot.title = element_text(face = "bold"),
-    plot.subtitle = element_text(margin = margin(b = 10)),
-    plot.caption = element_text(size = 10, hjust = 0),
-    axis.text.x = element_blank(),
-    axis.ticks.x = element_blank()
-  )
-  
+    limits = c(0.38, 0.46)
+  ) 
 ```
 
 Data science often involves this-back-and-forth style of work. First, we need to make a single chunk of code, in this case, a new plot, work well. This requires interactive work between the QMD and the Console. Second, we need to ensure that the entire QMD runs correctly on its own.
 
-### Exercise 12
+### Exercise 11
 
 Finalize the new graphics code chunk in your QMD.
 
-`Command/Ctrl + Shift + K` to ensure that it all works as intended. Don't forget to add `library(marginaleffects)` to your `setup` code chunk.
+`Command/Ctrl + Shift + K` to ensure that it all works as intended. 
 
 At the Console, run:
 
 ```
-tutorial.helpers::show_file("analysis.qmd", start = -8)
+tutorial.helpers::show_file("analysis.qmd", chunk = "Last")
 ```
 
 CP/CR.
 
-```{r temperance-12}
+```{r temperance-11}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1597,16 +1586,15 @@ question_text(NULL,
 	rows = 10)
 ```
 
-
 ###
 
 The model assumes everyone has the same probability of supporting Biden, ignoring key differences. It’s overly simple, so we must be humble about its limits.
 
-### Exercise 13
+### Exercise 12
 
 Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
 
-```{r temperance-13}
+```{r temperance-12}
 question_text(NULL,
 	message = "We estimate that approximately 42% of Americans support Joe Biden, with a 95% confidence interval ranging from 39% to 45%.",
 	answer(NULL, correct = TRUE),
@@ -1619,11 +1607,11 @@ question_text(NULL,
 
 Add a final sentence to your summary paragraph in your QMD as you see fit, but do not copy/paste our answer exactly. `Command/Ctrl + Shift + K`.
 
-### Exercise 14
+### Exercise 13
 
 Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
 
-```{r temperance-14}
+```{r temperance-13}
 question_text(NULL,
 	message = "The estimates might be wrong because the model assumes every respondent has the same probability of supporting Biden — it doesn’t account for meaningful differences by age, race, education, or party affiliation. If these factors are unevenly represented in the survey, the estimated average support could be biased. Also, people might not respond honestly or might change their minds before the election.",
 	answer(NULL, correct = TRUE),
@@ -1636,7 +1624,7 @@ question_text(NULL,
 
 Always go back to your Preceptor Table, the information which, if you had it, would make answering your question easy. In almost all real world cases, the Preceptor Table and the data are fairly different, not least because validity never holds perfectly. So, even a perfectly estimated statistical model is rarely as useful as we might like.
 
-### Exercise 15
+### Exercise 14
 
 Rearrange the material in your QMD so that the order is graphic, followed by the paragraph. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. You can keep or discard the math and any other material at your own discretion.
 
@@ -1650,7 +1638,7 @@ tutorial.helpers::show_file("analysis.qmd")
 
 CP/CR.
 
-```{r temperance-15}
+```{r temperance-14}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1663,11 +1651,11 @@ question_text(NULL,
 
 This is the version of your QMD file which your teacher is most likely to take a close look at.
 
-### Exercise 16
+### Exercise 15
 
 Publish your rendered QMD to GitHub Pages. Copy/paste the resulting url below.
 
-```{r temperance-16}
+```{r temperance-15}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1680,11 +1668,11 @@ question_text(NULL,
 
 Commit/push everything.
 
-### Exercise 17
+### Exercise 16
 
 Copy/paste the url to your Github repo.
 
-```{r temperance-17}
+```{r temperance-16}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
