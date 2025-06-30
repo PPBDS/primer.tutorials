@@ -1,0 +1,2116 @@
+---
+title: Two Parameters
+author: David Kane and Aashna Patel
+tutorial:
+  id: two-parameters
+output:
+  learnr::tutorial:
+    progressive: yes
+    allow_skip: yes
+runtime: shiny_prerendered
+description: "Tutorial #5 for Preceptor's Primer"
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(tutorial.helpers)
+library(gt)
+
+library(tidyverse)
+library(tidymodels)
+library(primer.data)
+library(broom)
+library(marginaleffects)
+
+library(easystats)
+
+knitr::opts_chunk$set(echo = FALSE)
+options(tutorial.exercise.timelimit = 600, tutorial.storage = "local")
+
+# Because we want the uncertainty about the true mean of men and women to be
+# large enough to show up in out plot in an interesting way, we pretend that we
+# only have 100 observations in the data, 50 men and 50 women.
+
+set.seed(10)
+x <- nhanes |>
+  filter(age >= 18) |>
+  select(height, sex) |>
+  drop_na() |>
+  slice_sample(n = 100) 
+
+fit_height <- linear_reg() |>
+  set_engine("lm") |>
+  fit(height ~ sex, data = x)
+```
+
+```{r copy-code-chunk, child = system.file("child_documents/copy_button.Rmd", package = "tutorial.helpers")}
+```
+
+```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
+```
+
+## Introduction
+### 
+
+This tutorial supports [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/). 
+
+The world confronts us. Make decisions we must.
+
+Imagine you're in charge of ordering uniforms for next year's Marine Corps bootcamp recruits. There are many factors to consider: the cost of different designs, the number of male and female recruits, the distributions of heights and weights, and so on. There are many decisions to make. 
+
+### Exercise 1
+
+What are the four [Cardinal Virtues](https://en.wikipedia.org/wiki/Cardinal_virtues), in order, which we use to guide our data science work?
+
+```{r introduction-1}
+question_text(NULL,
+	message = "Wisdom, Justice, Courage, and Temperance.",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 2)
+```
+
+###
+
+Why do we ask this, and a score more other questions, in each tutorial? Because the best way to (try to) ensure that students remember these concepts more than a few months after the course ends is [spaced repetition](https://en.wikipedia.org/wiki/Spaced_repetition), although we focus more on the repetition than on the spacing.
+
+## The Question
+### 
+
+*A prudent question is one half of wisdom.* - Francis Bacon
+
+To order uniforms efficiently, we need to understand how recruits differ—especially by sex. One key factor is height. If men and women differ significantly, sizing decisions should reflect that. This project uses data to explore that difference. While it won’t solve every logistics challenge, it brings us closer to smarter, evidence-based planning.
+
+### Exercise 1
+
+Load [**tidyverse**](https://www.tidyverse.org/) package.
+
+```{r the-question-1, exercise = TRUE}
+
+```
+
+```{r the-question-1-hint-1, eval = FALSE}
+library(tidyverse)
+```
+
+```{r the-question-1-test, include = FALSE}
+library(tidyverse)
+```
+
+### 
+
+We will use a dataset from the U.S. National Health and Nutrition Examination Survey (NHANES), which includes information on body shape and related measurements from the 2009–2010 and 2011–2012 cycles. See this [link](https://www.cdc.gov/nchs/nhanes/about/index.html) for further details about NHANES.
+
+### Exercise 2
+
+Load the [**primer.data**](https://ppbds.github.io/primer.data/) package.
+
+```{r the-question-2, exercise = TRUE}
+
+```
+
+```{r the-question-2-hint-1, eval = FALSE}
+library(primer.data)
+```
+
+```{r the-question-2-test, include = FALSE}
+library(primer.data)
+```
+
+### 
+
+A version of the data from the National Health and Nutrition Examination Survey is available in the `nhanes` tibble.
+
+### Exercise 3
+
+After loading **primer.data** in your Console, type `?nhanes` in the Console. Then, paste the Description below.
+
+```{r the-question-3}
+question_text(
+  NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 3
+)
+```
+
+### 
+
+NHANES is a voluntary survey that oversamples groups like older adults and minorities. This can make the raw data unbalanced and inaccurate for the whole population, so sampling weights are used to correct it.
+
+### Exercise 4
+
+Height is the broad topic of this tutorial. Given that topic, which variable in `nhanes` should we use as our outcome variable?
+
+```{r the-question-4}
+question_text(
+  NULL,
+  message = "We will be using `height` as an outcome variable.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 2
+)
+```
+
+### 
+
+We will use `height` as our outcome variable which is measured in centimeters. (1 in = 2.5 cm).
+
+```{r}
+nhanes |>
+  select(height) |>
+  drop_na() |>
+  ggplot(aes(height)) +
+  geom_histogram(bins = 120) +
+  labs(
+    title = "Height from NHANES",
+    subtitle = "NHANES includes children and adults",
+    x = "Height (cm)",
+    y = "Number"
+  )
+```
+
+### Exercise 5
+
+Let's imagine a brand new variable which **does not exist** in the data. This variable should be binary, meaning that it only takes on one of two values. It should also, at least in theory, be manipulable. In other words, if the value of the variable is "3," or whatever, then it generates one potential outcome and if it is "9," or whatever, it generates another potential outcome.
+
+Describe this imaginary variable and how might we manipulate its value.
+
+```{r the-question-5}
+question_text(
+  NULL,
+  message = "Imagine a variable called `vitamin`. We can manipulate the value of `vitamin`, at least in theory, by providing children in the treatment group with vitamins throughout their childhood while not giving vitamins to children in the control group.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Any data set can be used to construct a causal model as long as there is at least one covariate that we can, in theory, manipulate. It does not matter whether or not anyone did, in fact, manipulate it.
+
+### Exercise 6
+
+Given our (imaginary) treatment variable `vitamin`, how many potential outcomes are there for each individual? Explain why.
+
+```{r the-question-6}
+question_text(
+  NULL,
+  message = "There were two potential outcomes because the treatment variable, 'vitamin,' had two possible values: 'took vitamins' and 'no vitamins'.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+The same data set can be used to create, separately, lots and lots of different models, both causal and predictive. We can just use different outcome variables and/or specify different treatment variables. This is a *conceptual* framework we apply to the data. It is never inherent in the data itself.
+
+### Exercise 7
+
+In a few sentences, specify the two different values for the imaginary treatment variable `vitamin`, for a single unit, guess at the potential outcomes which would result, and then determine the causal effect for that unit given those guesses.
+
+```{r the-question-7}
+question_text(
+  NULL,
+  message = "For a given individual, assume that the value of the treatment variables might be `take vitamin` or `no vitamin`. If the individual gets `take vitamin`, then `height` would be 175. If the individual gets `no vitamin`, then `height` would be 173. The causal effect on the outcome of a treatment of `vitamin` versus `no vitamin` is 175 - 173 --- i.e., the difference between two potential outcomes --- which equals 2, which is the causal effect.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+A causal effect is defined as the difference between two potential outcomes. However, you can’t simply say the effect is 2 without specifying the order of subtraction. There is, perhaps, a default sense in which the causal effect is defined as treatment minus control.
+
+Any causal connection means exploring the *within row* difference between two potential outcomes. There's no need to consider other rows.
+
+### Exercise 8
+
+Let's consider a *predictive* model. Which variable in `nhanes` do you think might have an important connection to `height`?
+
+```{r the-question-8}
+question_text(
+  NULL,
+  message = "`sex` is a potential variable that may relate to `height`.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 2
+)
+```
+
+### 
+
+With a predictive model, each individual unit has only one observed outcome. There are no two potential outcomes because none of the covariates are treated as treatment variables. Instead, all covariates are assumed to be "fixed."
+
+Predictive models have no "treatments"—only covariates.
+
+### Exercise 9
+
+Specify two different groups of individuals which have specific values for `sex` and which might have different average values for `height`.
+
+```{r the-question-9}
+question_text(
+  NULL,
+  message = "Some individuals might have a value for `sex` of `Male`. Others might have a value of `Female`. Those two groups will, on average, have different values for the outcome variable.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+In predictive models, do not use words like "cause," "influence," "impact," or anything else which suggests causation. The best phrasing is in terms of "differences" between groups of units with different values for a covariate of interest.
+
+### Exercise 10
+
+Write a predictive question which connects the outcome variable `height` to `sex`, the covariate of interest.
+
+```{r the-question-10}
+question_text(
+  NULL,
+  message = "What is the average height of men and women?",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+The answer to this question is your "Quantity of Interest." 
+
+Our Quantity of Interest might appear too specific, too narrow to capture the full complexity of the topic. There are many, many numbers in which we are interested, many numbers that we want to know. But we don't need to list them all here! We just need to choose one of them since our goal is just to have a specific number which helps to guide us in the creation of the Preceptor Table and, then, the model.
+
+## Wisdom
+### 
+
+*The only true wisdom is in knowing you know nothing.* - Socrates
+
+Our question:
+
+> *What is the average height of men and women?*
+
+### Exercise 1
+
+In your own words, describe the key components of Wisdom for working on a data science problem.
+
+```{r wisdom-1}
+question_text(
+  NULL,
+  message = "Wisdom requires the creation of a Preceptor Table, an examination of our data, and a determination, using the concept of validity, as to whether or not we can (reasonably!) assume that the two come from the same population.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+The central problem for Wisdom is: Can we use data from `nhanes` to predict the average height of all men and women in the world now? When was the data collected? What does each row in the data represent? Is it for the height of each male and female in the world now?
+
+### Exercise 2
+
+Define a Preceptor Table.
+
+```{r wisdom-2}
+question_text(
+  NULL,
+  message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, it is easy to calculate the quantities of interest.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+The Preceptor Table does not include all the covariates which you will eventually include in your model. It only includes covariates which you need to answer your question.
+
+### Exercise 3
+
+Describe the key components of Preceptor Tables in general, without worrying about this specific problem. Use words like "units," "outcomes," and "covariates."
+
+```{r wisdom-3}
+question_text(
+  NULL,
+  message = "The rows of the Preceptor Table are the units. The outcome is at least one of the columns. If the problem is causal, there will be at least two (potential) outcome columns. The other columns are covariates. If the problem is causal, at least one of the covariates will be a treatment.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+This problem is predictive so there are only covariates. In our problem, the covariate is each individual's sex.
+
+### Exercise 4
+
+Create a Github repo called `two-parameters`. Make sure to click the "Add a README file" check box.
+
+Connect the Github repo to a project on your computer. Use a folder name which matches your repo name.
+
+Select `File -> New File -> Quarto Document ...`. Provide a title (`"Two-Parameters"`) and an author (you). Render the document and save it as `analysis.qmd`.
+
+Edit the `.gitignore` by adding `*_files` and a blank line. Save and push.
+
+In the Console, run:
+
+```         
+show_file(".gitignore")
+```
+
+CP/CR.
+
+```{r wisdom-4}
+question_text(
+  NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 7
+)
+```
+
+### 
+
+We model units, but we only really care about aggregates.
+
+### Exercise 5
+
+What are the units for this problem?
+
+```{r wisdom-5}
+question_text(
+  NULL,
+  message = "Every individual in the world, one row per person. The rows of the Preceptor Table are the units, the objects on which the outcome is measured. ",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Specifying the Preceptor Table forces us to think clearly about the units and outcomes implied by the question. The resulting discussion sometimes leads us to modify the question with which we started. No data science project follows a single direction. We always backtrack. There is always dialogue.
+
+### Exercise 6
+
+What is the outcome variable for this problem?
+
+```{r wisdom-6}
+question_text(
+  NULL,
+  message = "Height is the outcome variable. This is not the same thing as the answer to the question we have been asked. But, if we can build a model which explains/understands/predicts height for an individual, we can use that model to answer our questions.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### Exercise 7
+
+What is a covariate which you think might be useful for this problem, regardless of whether or not it might be included in the data?
+
+```{r wisdom-7}
+question_text(
+  NULL,
+  message = "Potential covariates are age, sex, race, etc. But you need to include `sex` as a covariate since the question we are asking includes that variable.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+The term "covariates" is used in at least three ways in data science. First, it is all the variables which might be useful, regardless of whether or not we have the data. Second, it is all the variables for which we have data. Third, it is the set of covariates in the data which we end up using in the model.
+
+### Exercise 8
+
+What are the treatments, if any, for this problem?
+
+```{r wisdom-8}
+question_text(
+  NULL,
+  message = "There are not treatment variables.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Remember that a treatment is just another covariate which, for the purposes of this specific problem, we are assuming can be manipulated, thereby, creating two or more different potential outcomes for each unit.
+
+### Exercise 9
+
+What moment in time does the Preceptor Table refer to?
+
+```{r wisdom-9}
+question_text(
+  NULL,
+  message = "Now.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+```{r}
+nhanes |>
+  filter(age >= 18) |>
+  drop_na() |>
+  ggplot(aes(x = height)) +
+  geom_histogram(bins = 50) +
+  labs(
+    title = "Adult Heights in the US in 2010",
+    x = "Height (cm)",
+    y = "Count",
+    caption = "Source: National Health and Nutrition Examination Survey",
+    subtitle = "The Average Height of Adults in the US in 2010 was around 162 cm (64 in)"
+  )
+```
+
+> *You can never look at the data too much. -- Mark Engerman*
+
+### Exercise 10
+
+Define causal effect.
+
+```{r wisdom-10}
+question_text(
+  NULL,
+  message = "A causal effect is the difference between two potential outcomes.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+According to the Rubin Causal Model, there must be two (or more) potential outcomes for any discussion of causation to make sense. This is simplest to discuss when the treatment only has two different values, thereby generating only two potential outcomes. 
+
+### Exercise 11
+
+What is the fundamental problem of causal inference?
+
+```{r wisdom-11}
+question_text(
+  NULL,
+  message = "The fundamental problem of causal inference is that we can only observe one potential outcome.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+A person cannot experience both treatments at the same time. For instance, if you give a person vitamins and record their growth throughout the experiment, you cannot then rewind time, withhold the vitamins, and record their growth again under identical conditions.
+
+### Exercise 12
+
+How does the motto "No causation without manipulation." apply to this problem?
+
+```{r wisdom-12}
+question_text(
+  NULL,
+  message = "The motto does not apply because this is a predictive, not causal, model.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+We have to choose a variable we can change to be the treatment. If we don’t have a variable we can manipulate, we’d need to create a predictive model instead. For example, if we focused on height, we might conclude that the average height of men is higher than that of women. But correlation does not mean causation—we can’t assume sex directly makes people taller. To find a causal relationship, we must manipulate the treatment and measure its effect on the outcome.
+
+### Exercise 13
+
+Describe in words the Preceptor Table for this problem.
+
+```{r wisdom-13}
+question_text(
+  NULL,
+  message = "The Preceptor has two columns. There is a column for the ID, one for Height. Each row represents one individual.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+The Preceptor Table for this problem looks something like this:
+
+```{r}
+#| echo: false
+
+tibble(
+  ID = c(
+    "Person 1",
+    "Person 2",
+    "...",
+    "Person 45,000",
+    "Person 45,001",
+    "..."
+  ),
+  height = c("150", "172", "...", "160", "142", "...")) |>
+  gt() |>
+  cols_label(ID = md("ID"), height = "Height (cm)")
+```
+
+Like all aspects of a data science problem, the Preceptor Table evolves as we continue our work. 
+
+### Exercise 14
+
+In your QMD, load the **tidyverse** and the **primer.data** packages in a new code chunk. Render the file.
+
+Notice that the file does not look good because the code is visible and there are annoying messages. To take care of this, add `#| message: false` to remove all the messages in the `setup` chunk. Also add the following to the YAML header to remove all code echos from the whole file:
+
+```         
+execute: 
+  echo: false
+```
+
+In the Console, run:
+
+```         
+show_file("analysis.qmd", start = -5)
+```
+
+CP/CR.
+
+```{r wisdom-14}
+question_text(
+  NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Render again. Everything looks nice because we have added code to make the file look better and more professional.
+
+### Exercise 15
+
+Run `glimpse()` on `nhanes`.
+
+```{r wisdom-15, exercise = TRUE}
+
+```
+
+```{r wisdom-15-hint-1, eval = FALSE}
+glimpse(nhanes)
+```
+
+```{r wisdom-15-test, include = FALSE}
+glimpse(nhanes)
+```
+
+### 
+
+The `nhanes` dataset includes 15 variables, including physical attributes like weight and height. We do not care about most of these variables for our question.
+
+We think of both age and height as numbers. And they are numbers! But R distinguishes between “integers” and “doubles,” only the second of which allow for decimal values. In the `nhanes` data, `age` is an integer and `height` is a double.
+
+### Exercise 16
+
+Pipe `nhanes` to `select()` with `age`, `sex`, and `height` as parameters.
+
+```{r wisdom-16, exercise = TRUE}
+
+```
+
+```{r wisdom-16-hint-1, eval = FALSE}
+nhanes |>
+  select(...)
+```
+
+```{r wisdom-16-test, include = FALSE}
+nhanes |>
+  select(age, sex, height)
+```
+
+### 
+
+This is the distribution of height between male and female.
+
+```{r}
+nhanes |>
+  filter(age >= 18) |>
+  select(age, sex, height) |>
+  drop_na() |>
+  ggplot(aes(height, fill = sex)) +
+  geom_histogram(position = "Identity", alpha = 0.5, bins = 30) +
+  labs(
+    title = "Distribution of Height by Sex",
+    subtitle = "On average, Men are taller than Women",
+    x = "Height (cm)",
+    y = "Number"
+  )
+```
+
+### Exercise 17
+
+Most data sets have some NA values, we have to get rid of these so that we can use the data. Pipe `nhanes` to `filter()`. Setting `age` greater than or equal to `18`. Then, continue the pipe to `select()`, putting `height` and `sex` as arguments. Finally, drop the NA's using `drop_na()`.
+
+```{r wisdom-17, exercise = TRUE}
+
+```
+
+<button onclick="transfer_code(this)">
+
+Copy previous code
+
+</button>
+
+```{r wisdom-17-hint-1, eval = FALSE}
+nhanes |>
+  filter(age >= ...) |>
+  select(..., ...) |>
+  drop_na()
+```
+
+```{r wisdom-17-test, include = FALSE}
+nhanes |>
+  filter(age >= 18) |>
+  select(height, sex) |>
+  drop_na()
+```
+
+### 
+
+We have to clean the data so we can focus on the specific numbers to answer our question. Our question focuses on men and women so we have to narrow down our data to only ones that meet the requirements.
+
+### Exercise 18
+
+Copy the previous code, continue the pipe with `slice_sample()`, set `n` equal `50`, and `by` equal `sex` as arguments. Add `set.seed(10)` in a separate line before creating the object.
+
+```{r wisdom-18, exercise = TRUE}
+
+```
+
+<button onclick="transfer_code(this)">
+
+Copy previous code
+
+</button>
+
+```{r wisdom-18-hint-1, eval = FALSE}
+set.seed(10)
+... |>
+  slice_sample(n = ..., by = ...)
+```
+
+```{r wisdom-18-test, include = FALSE}
+set.seed(10)
+nhanes |>
+  filter(age >= 18) |>
+  select(height, sex) |>
+  drop_na() |>
+  slice_sample(n = 50, by = sex)
+```
+
+### 
+
+Because we want the uncertainty about the true mean of men and women to be large enough to show up in our plot in an interesting way, we pretend that we only have 100 observations in the data, 50 men and 50 women.
+
+### Exercise 19
+
+In `analysis.qmd`, add a new code chunk to the QMD, copy/paste the pipeline above and assign the result to the new object `x`:
+
+```         
+set.seed(10)
+
+x <- nhanes |> 
+  filter(age >= 18) |> 
+  select(height, sex) |> 
+  drop_na() |> 
+  slice_sample(n = 50, by = sex)
+```
+
+`Cmd/Ctrl + Shift + K` follows. In the Console, run:
+
+```         
+show_file("analysis.qmd", chunk = "Last")
+```
+
+```{r wisdom-19}
+question_text(
+  NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 3
+)
+```
+
+### 
+
+Now that you have an object `x`, a subset of `nhanes` that has been cleaned and narrowed down to meet the requirement of our question.
+
+### Exercise 20
+
+In your own words, define "validity" as we use the term.
+
+```{r wisdom-20}
+question_text(
+  NULL,
+  message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Validity is always about the *columns* in the Preceptor Table and the data. Just because columns from these two different tables have the same *name* does not mean that they are the same *thing*.
+
+### Exercise 21
+
+Provide one reason why the assumption of validity might not hold for the outcome variable `height` or for one of the covariates. Use the words "column" or "columns" in your answer.
+
+```{r wisdom-21}
+question_text(
+  NULL,
+  message = "Is the way people measure height in the survey similar to the way it is being measured now -- e.g. Are measurements taken with shoes on or shoes off --. Such issues can cause the `height` column in NHANES in 2010 and the column `height` in the Preceptor Table not refer to the same thing.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+In order to consider the Preceptor Table and the data to be drawn from the same population, the columns from one must have a *valid correspondence* with the columns in the other. Validity, if true (or at least reasonable), allows us to construct the Population Table, which is the first step in Justice.
+
+Because we control the Preceptor Table and, to a lesser extent, the original question, we can adjust those variables to be “closer” to the data that we actually have. This is another example of the iterative nature of data science. If the data is not close enough to the question, then we check with our boss/colleague/customer to see if we can modify the question in order to make the match between the data and the Preceptor Table close enough for validity to hold.
+
+Despite these potential problems, we will assume that validity holds since it, mostly (?), does.
+
+### Exercise 22
+
+Over the course of this tutorial, we will be creating a summary paragraph. The purpose of this exercise is to write the first two sentences of that paragraph.
+
+The first sentence is a general statement about the overall topic, mentioning both the general class of the outcome variable and of at least one of the covariates. It is **not** connected to the initial "Imagine that you are XX" which set the stage for this project. That sentence can be rhetorical. It can be trite, or even a platitude. The purpose of the sentence is to let the reader know, gently, about our topic.
+
+The second sentence does two things. First, it introduces the data source. Second, it introduces the specific question. The sentence can't be that long. Important aspects of the data include when/where it was gathered, how many observations it includes and the organization (if famous) which collected it.
+
+Type your two sentences below.
+
+```{r wisdom-22}
+question_text(
+  NULL,
+  message = "Men and women vary in height. Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to your QMD, `Cmd/Ctrl + Shift + K`, and then commit/push.
+
+## Justice
+### 
+
+*The arc of the moral universe is long, but it bends toward justice.* - Theodore Parker
+
+### Exercise 1
+
+In your own words, name the four key components of Justice for working on a data science problem.
+
+```{r justice-1}
+question_text(
+  NULL,
+  message = "Justice concerns four topics: the Population Table, stability, representativeness, and unconfoundedness.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Justice is about concerns that you (or your critics) might have, reasons why the model you create might not work as well as you hope.
+
+### Exercise 2
+
+In your own words, define a Population Table.
+
+```{r justice-2}
+question_text(
+  NULL,
+  message = "The Population Table includes a row for each unit/time combination in the underlying population from which both the Preceptor Table and the data are drawn.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+The Population Table is almost always much bigger than the combination of the Preceptor Table and the data because, if we can really assume that both the Preceptor Table and the data are part of the same population, than that population must cover a broad universe of time and units since the Preceptor Table and the data are, themselves, often far apart from each other.
+
+### Exercise 3
+
+In your own words, define the assumption of "stability" when employed in the context of data science.
+
+```{r justice-3}
+question_text(
+  NULL,
+  message = "Stability means that the relationship between the columns in the Population Table is the same for three categories of rows: the data, the Preceptor Table, and the larger population from which both are drawn.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+*The longer the time period covered by the Preceptor Table (and the data), the more suspect the assumption of stability becomes.*
+
+### Exercise 4
+
+Provide one reason why the assumption of stability might not be true in this case.
+
+```{r justice-4}
+question_text(
+  NULL,
+  message = "One possible reason for the failure of the assumption of stability would be if immigrants since 2011 have a different average adult male height. This will change the overall average adult male height in America.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+A change in time or the distribution of the data does not, in and of itself, demonstrate a violation of stability. Stability is about the parameters: $\beta_1$, $\beta_1$ and so on. Stability means these parameters are the same in the data as they are in the population as they are in the Preceptor Table.
+
+### Exercise 5
+
+We use our data to make inferences about the overall population. We use information about the population to make inferences about the Preceptor Table: `Data -> Population -> Preceptor Table`. In your own words, define the assumption of "representativeness" when employed in the context of data science.
+
+```{r justice-5}
+question_text(
+  NULL,
+  message = "Representativeness, or the lack thereof, concerns two relationships, among the rows in the Population Table. The first is between the Preceptor Table and the other rows. The second is between our data and the other rows.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Ideally, we would like both the Preceptor Table *and* our data to be random samples from the population. Sadly, this is almost never the case.
+
+### Exercise 6
+
+We do not use the data, directly, to estimate missing values in the Preceptor Table. Instead, we use the data to learn about the overall population. Provide one reason, involving the relationship between the data and the population, for why the assumption of representativeness might not be true in this case.
+
+```{r justice-6}
+question_text(
+  NULL,
+  message = "Since participation is voluntary, some people may choose not to respond, which can cause small biases in the data. For example, it’s possible that taller men might be more likely to answer questions about their height.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+The reason that representativeness is important is because, when it is violated, the estimates for the model parameters might be biased.
+
+### Exercise 7
+
+We use information about the population to make inferences about the Preceptor Table. Provide one reason, involving the relationship between the population and the Preceptor Table, for why the assumption of representativeness might not be true in this case.
+
+```{r justice-7}
+question_text(
+  NULL,
+  message = "The population covers the last 20 years or more. The rows from the Preceptor Table are just for today. If the height of men today is systematically different from the height of men over the 20 year period of the Population Table, then representativeness would not be true.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Stability looks across time periods. Representativeness looks within time periods.
+
+Of course, it is sometimes the case that the Preceptor Table includes every row from the Population Table for that moment in time. In that case, the assumption of representativeness is met, by definition, if we only consider that moment. So, in that case, the only possible violation of representativeness must involve a claim that this moment in time is not representative of the rest of the Population Table.
+
+### Exercise 8
+
+In your own words, define the assumption of "unconfoundedness" when employed in the context of data science.
+
+```{r justice-8}
+question_text(
+  NULL,
+  message = "Unconfoundedness means that the treatment assignment is independent of the potential outcomes, when we condition on pre-treatment covariates.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+This assumption is only relevant for causal models. We describe a model as "confounded" if this is not true. The easiest way to ensure unconfoundedness is to assign treatment randomly.
+
+### Exercise 9
+
+Write one sentence which highlights a potential weakness in your model. This will almost always be derived from possible problems with the assumptions discussed above. We will add this sentence to our summary paragraph. So far, our version of the summary paragraph looks like this:
+
+> Men and women vary in height. Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women.
+
+Of course, your version will be somewhat different.
+
+```{r justice-9}
+question_text(
+  NULL,
+  message = "Men and women vary in height. Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women. Since the participation for the survey is voluntary, it could mean that, for example, taller people are more likely to answer this question, thus reduces representativeness of the data.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Add a weakness sentence to the summary paragraph in your QMD. You can modify your paragraph as you see fit, but do not copy/paste our answer exactly. `Cmd/Ctrl + Shift + K`, and then commit/push.
+
+## Courage
+### 
+
+*Courage is the commitment to begin without any guarantee of success.* - Johann Wolfgang von Goethe
+
+### Exercise 1
+
+In your own words, describe the components of the virtue of Courage for analyzing data.
+
+```{r courage-1}
+question_text(
+  NULL,
+  message = "Courage starts with math, explores models, and then creates the data generating mechanism.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+A statistical model consists of two parts: the *probability family* and the *link function*. The probability family is the probability distribution which generates the randomness in our data. The link function is the mathematical formula which links our data to the unknown parameters in the probability distribution.
+
+### Exercise 2
+
+Load the [**tidymodels**](https://www.tidymodels.org/) package.
+
+```{r courage-2, exercise = TRUE}
+```
+
+```{r courage-2-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r courage-2-test, include = FALSE}
+library(tidymodels)
+```
+
+### 
+
+The probability family is determined by the outcome variable $Y$. 
+
+Since $Y$ is a continuous variable, the probability family is Normal, also known as Gaussian.
+
+$$Y \sim N(\mu, \sigma^2)$$
+
+### Exercise 3
+
+Load the [**broom**](https://broom.tidymodels.org/) package.
+
+```{r courage-3, exercise = TRUE}
+
+```
+
+```{r courage-3-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r courage-3-test, include = FALSE}
+library(broom)
+```
+
+### 
+
+The link function, the basic mathematical structure of the model, is (mostly) determined by the type of outcome variable. 
+
+For a continuous outcome variable, we use a linear model for the link function:
+
+$$\mu = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \ldots$$
+
+
+### Exercise 4
+
+Use AI to come up with a $\LaTeX$ representation of the mathematical structure of the model, with $Y$ as the dependent variable and $X_1$, $X_2$ and so on as the independent variables. This version will not have the values of any parameters since we have not, yet, estimated them. Confirm that the $\LaTeX$ code works by placing it in your QMD and then rendering. Paste that $\LaTeX$ code below.
+
+```{r courage-4}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 5)
+```
+
+###
+
+Our answer:
+
+$$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_n X_n + \epsilon$$
+
+with $\epsilon \sim \mathcal{N}(0, \sigma^2)$.
+
+Which we created with $\LaTeX$ code that looks like this:
+
+````
+$$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_n X_n + \epsilon$$
+
+with $\epsilon \sim \mathcal{N}(0, \sigma^2)$.
+````
+
+This follows the linear regression form for continuous data, where the $\beta$ coefficients represent the effect of predictors on the mean of the outcome.
+
+### Exercise 5
+
+Add `library(tidymodels)` and `library(broom)` to the `setup` code chunk in your QMD. `Cmd/Ctrl + Shift + K`.
+
+At the Console, run:
+
+```         
+tutorial.helpers::show_file("analysis.qmd", pattern = "library")
+```
+
+CP/CR.
+
+```{r courage-5}
+question_text(
+  NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 3
+)
+```
+
+### 
+
+Having decided on the basic mathematical structure of the model, a choice mostly driven by the distribution of our outcome variable, we now turn toward estimating the model.
+
+### Exercise 6
+
+Because our outcome variable is continuous, start to create the model by using `linear_reg(engine = "lm")`.
+
+```{r courage-6, exercise = TRUE}
+
+```
+
+```{r courage-6-hint-1, eval = FALSE}
+linear_reg(...)
+```
+
+```{r courage-6-test, include = FALSE}
+linear_reg(engine = "lm")
+```
+
+### 
+
+The *[tidymodels](https://www.tidymodels.org/)* framework is the most popular one in the R world for estimating models. *[Tidy Modeling with R](https://www.tmwr.org/)* by Max Kuhn and Julia Silge is a great introduction.
+
+### Exercise 7
+
+Continue the pipe to `fit(height ~ sex, data = x)`.
+
+```{r courage-7, exercise = TRUE}
+
+```
+
+<button onclick="transfer_code(this)">Copy previous code</button>
+
+```{r courage-7-hint-1, eval = FALSE}
+... |>
+  fit(... ~ sex, ... = x)
+```
+
+```{r courage-7-test, include = FALSE}
+linear_reg(engine = "lm") |>
+  fit(height ~ sex, data = x)
+```
+
+### 
+
+Recall that a categorical variable (whether character or factor) like `sex` is turned into a $0/1$ "dummy" variable which is then re-named something like $sex{Male}$. After all, we can't have words --- like "Male" or "Female" --- in a mathematical formula, hence the need for dummy variables.
+
+### Exercise 8
+
+Behind the scenes of this tutorial, an object called `fit_height` has been created which has the result of the code above. Type `fit_height` and hit "Run Code". This generates the same results as using `print(fit_height)`.
+
+```{r courage-8, exercise = TRUE}
+
+```
+
+```{r courage-8-hint-1, eval = FALSE}
+fit_height
+```
+
+```{r courage-8-test, include = FALSE}
+fit_height
+```
+
+### 
+
+The *code formula* includes `sex`, a character variable with two possible values: `"Male"` and `"Female"`.
+
+The *math formula* includes `sexMale`, a 0/1 dummy variable.
+
+In data science, we deal with words, math, and code, but the most important of these is code. We created the mathematical structure of the model and then wrote a model formula in order to estimate the unknown parameters. 
+
+### Exercise 9
+
+Load the **[easystats](https://easystats.github.io/easystats/)** package.
+
+```{r courage-9, exercise = TRUE}
+
+```
+
+```{r courage-9-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r courage-9-test, include = FALSE}
+library(easystats)
+```
+
+###
+
+We don't add **easystats** to the QMD because we are only using it for an interactive check of our fitted model. However, the [easystats ecosystem](https://easystats.github.io/easystats/) has a variety of interesting functions and packages which you might want to explore.
+
+### Exercise 10
+
+Run `check_predictions(extract_fit_engine(fit_height))`.
+
+```{r courage-10, exercise = TRUE}
+
+```
+
+```{r courage-10-hint-1, eval = FALSE}
+check_predictions(extract_fit_engine(...))
+```
+
+```{r courage-10-test, include = FALSE}
+check_predictions(extract_fit_engine(fit_height))
+```
+
+###
+
+The purpose of `check_predictions()` is to compare your actual data (in green) with data that has been simulated from your fitted model, i.e., from your data generating mechanism. If your DGM is reasonable, then data simulated from it should not look too dissimilar from your actual data. Of course, it won't look exactly the same because of randomness, both in the world and in your simulation. But the actual data should be within the range of outcomes that your DGM simulates with `check_predictions()`.
+
+### Exercise 11
+
+Ask AI to create $\LaTeX$ code for this model, including our variable names and estimates for all the coefficients. Because this is a fitted model, the dependent variable will have a "hat" and the formula will not include an error term. 
+
+Add the code to your QMD. `Cmd/Ctrl + Shift + K`.
+
+Make sure the resulting display looks good. For example, you don't want an absurd number of figures to the right of the decimal. If the model is too long, you will need to spread it across several lines. You may need to go back-and-forth with the AI a few times.
+
+Once the $\LaTeX$ code looks good, paste it below.
+
+```{r courage-11}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 3)
+```
+
+###
+
+Our formula looks like:
+
+$$\widehat{\text{height}} = 161.3 + 14.2 \cdot \text{sex}_{\text{Male}}$$
+
+It was created with:
+
+````
+$$\widehat{\text{height}} = 161.3 + 14.2 \cdot \text{sex}_{\text{Male}}$$
+````
+
+Note the differences. First, we have replaced the parameters with our best estimates. Second, we have dropped the error term because this is a formula for predicting the value for our outcome variable. Third, the left-hand side variable is $\widehat{\text{height}}$ instead of $\text{height}$ because this formula generates our estimated `height`. A hat indicates an estimated value.
+
+**This is our data generating mechanism.**
+
+A data generating mechanism is just a formula, something which we can write down and implement with computer code.
+
+### Exercise 12
+
+Create a new code chunk in your QMD. Add a code chunk option: `#| cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_height`. 
+
+`Cmd/Ctrl + Shift + K`. It may take some time to render your QMD, depending on how complex your model is. But, by including `#| cache: true` you cause Quarto to cache the results of the chunk. The next time you render your QMD, as long as you have not changed the code, Quarto will just load up the saved fitted object.
+
+At the Console, run:
+
+```         
+tutorial.helpers::show_file("analysis.qmd", start = -8)
+```
+
+CP/CR.
+
+```{r courage-12}
+question_text(
+  NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 3
+)
+```
+
+### 
+
+We use the *code formula* to communicate behind the scene with the computer to construct the model. We then use the *math formula* to communicate with the readers about the result of the model.
+
+### Exercise 13
+
+Create a new code chunk in your QMD. Add a code chunk option: `#| cache: true`. Copy/paste the code from above for estimating the model into the code chunk, assigning the result to `fit_height`. 
+
+`Cmd/Ctrl + Shift + K`. It may take some time to render your QMD, depending on how complex your model is. But, by including `#| cache: true` you cause Quarto to cache the results of the chunk. The next time you render your QMD, as long as you have not changed the code, Quarto will just load up the saved fitted object.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", start = -8)
+```
+
+CP/CR.
+
+```{r courage-13}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 8)
+```
+
+### 
+
+To confirm, `Cmd/Ctrl + Shift + K` again. It should be quick.
+
+### Exercise 14
+
+Add `*_cache` to `.gitignore` file. Cached objects are often large. They don't belong on Github.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file(".gitignore")
+```
+
+CP/CR.
+
+```{r courage-14}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 6)
+```
+
+###
+
+Because of the change in your `.gitignore` (assuming that you saved it), the cache directory should not appear in the Source Control panel because Git is ignoring it, as instructed. Commit and push. 
+
+### Exercise 15
+
+In the Console, run `tidy()` on `fit_height` with the argument `conf.int` set equal to `TRUE`. The returns 95% intervals for all the parameters in our model.
+
+```{r courage-15, exercise = TRUE}
+
+```
+
+```{r courage-15-hint-1, eval = FALSE}
+tidy(..., conf.int = ...)
+```
+
+```{r courage-15-test, include = FALSE}
+tidy(fit_height, conf.int = TRUE)
+```
+
+### 
+
+`tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
+
+### Exercise 16
+
+Run this code.
+
+```{r courage-16, exercise = TRUE}
+tidy(fit_height, conf.int = TRUE) |>
+  select("term", "estimate", "conf.low", "conf.high")
+```
+
+```{r courage-16-hint-1, eval = FALSE}
+tidy(fit_height, conf.int = TRUE) |>
+  select("term", "estimate", "conf.low", "conf.high")
+```
+
+```{r courage-16-test, include = FALSE}
+tidy(fit_height, conf.int = TRUE) |>
+  select("term", "estimate", "conf.low", "conf.high")
+```
+
+This shows the model’s estimates along with 95% confidence intervals. The `(Intercept)` term represents the average height for the baseline group—in this case, females. The `conf.low` and `conf.high` columns give the lower and upper bounds of the confidence interval for each estimate.
+
+The `sexMale` row shows how much taller males are than females, on average. The estimate column shows the average difference, and the confidence interval gives a range of plausible values for that difference.
+
+###
+
+Note how, whenever we consider non-treatment variables, we must never use terms like "cause," "impact" and so on. We can't make any statement which implies the existence of more than one potential outcome based on changes in non-treatment variables. We can't make any claims about within row effects. Instead, we can only compare across rows. Always use the phrase "when comparing X and Y" or something very similar.
+
+### Exercise 17
+
+Run this code.
+
+```{r courage-17, exercise = TRUE}
+tidy(fit_height, conf.int = TRUE) |>
+  filter(term == "(Intercept)") |>
+  select(conf.low, conf.high) |>
+  round()
+```
+
+```{r courage-17-hint-1, eval = FALSE}
+tidy(fit_height, conf.int = TRUE) |>
+  filter(term == "(Intercept)") |>
+  select(conf.low, conf.high) |>
+  round()
+```
+
+```{r courage-17-test, include = FALSE}
+tidy(fit_height, conf.int = TRUE) |>
+  filter(term == "(Intercept)") |>
+  select(conf.low, conf.high) |>
+  round()
+```
+
+This filters the output to just the confidence interval for the intercept—the average height for females. The numbers are rounded for easier reading.
+
+###
+
+When looking at the confidence interval, we examine whether it excludes zero. If not, then we can't be sure if the relationship is positive or negative.
+
+### Exercise 18
+
+Run this code.
+
+```{r courage-18, exercise = TRUE}
+tidy(fit_height, conf.int = TRUE) |>
+  filter(term == "sexMale") |>
+  select(conf.low, conf.high) |>
+  round()
+```
+
+```{r courage-18-hint-1, eval = FALSE}
+tidy(fit_height, conf.int = TRUE) |>
+  filter(term == "sexMale") |>
+  select(conf.low, conf.high) |>
+  round()
+```
+
+```{r courage-18-test, include = FALSE}
+tidy(fit_height, conf.int = TRUE) |>
+  filter(term == "sexMale") |>
+  select(conf.low, conf.high) |>
+  round()
+```
+
+This filters to show the confidence interval for the `sexMale` coefficient. It tells us the model’s range of uncertainty when estimating how much taller men are than women.
+
+### 
+
+Dummy variables must always be interpreted in the context of the base value for that variable, which is always included in the intercept. For example, the base value here is "Female/Male." (The base value is the first alphabetically by default for character variables. However, if it is a factor variable, you can change that by setting the order of the levels by hand.)
+
+### Exercise 19
+
+Create a new code chunk in your QMD. Ask AI to help you make a nice looking table from the tibble which is returned by `tidy()`. You don't have to include all the variables which `tidy()` produces. We often just show the estimate and the confidence intervals.
+
+Insert that code into the QMD. 
+
+`Cmd/Ctrl + Shift + K`. 
+
+Make sure it works. You might need to add some new libraries, e.g., **[tinytable](https://vincentarelbundock.github.io/tinytable/)**, **[knitr](https://yihui.org/knitr/)**, **[gt](https://gt.rstudio.com/)**, **[kableExtra](https://haozhu233.github.io/kableExtra/)**, **[flextable](https://davidgohel.github.io/flextable/)**, **[modelsummary](https://modelsummary.com/)**, et cetera, to the `setup` code chunk, if you use any functions from these packages, all of which have strengths and weaknesses for making tables.
+
+At the Console, run:
+
+```
+tutorial.helpers::show_file("analysis.qmd", chunk = "Last")
+```
+
+CP/CR.
+
+```{r courage-19}
+question_text(NULL,
+	answer(NULL, correct = TRUE),
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
+	incorrect = NULL,
+	rows = 12)
+```
+ 
+### 
+
+Here is ours along with the code:
+
+```{r}
+library(knitr)
+
+tidy(fit_height, conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high) |>
+  kable(
+    caption = "Estimates and 95% Confidence Intervals for Predictors of Height\nSource: NHANES 2009–2011"
+  )
+```
+
+```
+library(knitr)
+
+tidy(fit_height, conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high) |>
+  kable(
+    caption = "Estimates and 95% Confidence Intervals for Predictors of Height\nSource: NHANES 2009–2011"
+  )
+```
+
+At minimum, your table should include a clear title and a caption with the data source. Focus on key values like estimates and confidence intervals, and aim for simple, readable formatting. Use AI to streamline this—practice makes better.
+
+### Exercise 20
+
+Add a sentence to your project summary.
+
+Explain the structure of the model. Something like: "I/we model Y [the concept of the outcome, not the variable name] as a [linear/logistic/multinomial/ordinal] function of X [and maybe other covariates]."
+
+Recall the beginning of our version of the summary:
+
+> Men and women vary in height. Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women. Since the participation for the survey is voluntary, it could mean that, for example, taller people are more likely to answer this question, thus reducing representativeness of the data.
+
+```{r courage-20}
+question_text(
+  NULL,
+  message = "Men and women vary in height. Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women. Since the participation for the survey is voluntary, it could mean that, for example, taller people are more likely to answer this question, thus reducing representativeness of the data. We model height as a linear function of sex.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Read our answer. It will not be the same as yours. You can, if you want, change your answer to incorporate some of our ideas. Do not copy/paste our answer exactly. Add your two sentences, edited or otherwise, to the summary paragraph portion of your QMD. `Cmd/Ctrl + Shift + K`, and then commit/push.
+
+## Temperance
+### 
+
+*Temperance is a tree which as for its root very little contentment, and for its fruit calm and peace.* - Buddha
+
+### Exercise 1
+
+In your own words, describe the use of Temperance in data science.
+
+```{r temperance-1}
+question_text(
+  NULL,
+  message = 'Temperance uses the data generating mechanism to answer the questions with which we began. Humility reminds us that this answer is always a lie. We can also use the DGM to calculate many similar quantities of interest, displaying the results graphically.',
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Courage gave us the data generating mechanism. Temperance guides us in the use of the DGM — or the “model” — we have created to answer the question(s) with which we began. We create posteriors for the quantities of interest. 
+
+
+### Exercise 2
+
+Load the [**marginaleffects**](https://marginaleffects.com/) package.
+
+```{r temperance-2, exercise = TRUE}
+
+```
+
+```{r temperance-2-hint-1, eval = FALSE}
+library(...)
+```
+
+```{r temperance-2-test, include = FALSE}
+library(marginaleffects)
+```
+
+### 
+
+We should be modest in the claims we make. The posteriors we create are never the “truth.” The assumptions we made to create the model are never perfect. Yet decisions made with flawed posteriors are almost always better than decisions made without them.
+
+### Exercise 3
+
+What is the general topic we are investigating? What is the specific question we are trying to answer?
+
+```{r temperance-3}
+question_text(
+  NULL,
+  message = "We are investigating the topic of height. We then drill to a more specific question: What is the average height of all adult males?",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Data science projects almost always begin with a broad topic of interest. Yet, in order to make progress, we need to drill down to a specific question. This leads to the creation of a data generating mechanism, which can now be used to answer lots of questions, thus allowing us to explore the original topic broadly.
+
+
+### Exercise 4
+
+Hit "Run Code."
+
+```{r temperance-4, exercise = TRUE}
+predictions(fit_height)
+```
+
+```{r temperance-4-hint-1, eval = FALSE}
+predictions(fit_height)
+```
+
+```{r temperance-4-test, include = FALSE}
+predictions(fit_height)
+```
+
+The predictions() output shows two distinct predicted values—one for men and one for women—because the model includes sex as a variable. Each row represents an individual, but since all men and all women are assigned the same predicted average height (based on group), the predictions repeat within each group.
+
+###
+
+Write a sentence interpreting the 174 prediction for a male in `predictions(fit_height)`
+
+```{r temperance-4-question}
+question_text(
+  NULL,
+  message = "The model estimates that a typical male in the data is about 174 cm tall.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+
+### Exercise 5
+
+Hit "Run Code."
+
+```{r temperance-5, exercise = TRUE}
+comparisons(fit_height)
+```
+
+```{r temperance-5-hint-1, eval = FALSE}
+comparisons(fit_height)
+```
+
+```{r temperance-5-test, include = FALSE}
+comparisons(fit_height)
+```
+
+
+###
+
+`comparisons(fit_height)` calculates the height difference between males and females for each individual in the data, rather than just the overall average. This is why the output shows many repeated values with the same estimate and statistics. It helps you see the difference for every case based on the model.
+
+### Exercise 6
+
+Hit "Run Code."
+
+```{r temperance-6, exercise = TRUE}
+avg_comparisons(fit_height)
+```
+
+```{r temperance-6-hint-1, eval = FALSE}
+avg_comparisons(fit_height)
+```
+
+```{r temperance-6-test, include = FALSE}
+avg_comparisons(fit_height)
+```
+
+###
+
+`avg_comparisons(fit_height)` estimates the average height difference between males and females from the model. It shows the size of this difference, its uncertainty, whether it’s statistically significant, and a confidence interval indicating where the true difference likely lies.
+
+###
+
+Write a sentence interpreting the 10.8 estimate for sexMale in `avg_comparisons(fit_height)`.
+
+```{r temperance-6-question}
+question_text(
+  NULL,
+  message = "On average, men are estimated to be 10.8 cm taller than women, based on the model.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+###
+
+Write a sentence interpreting the 8.6 to 13.1 confidence interval for `sexMale` in `avg_comparisons(fit_height)`.
+
+```{r temperance-6-question-2}
+question_text(
+  NULL,
+  message = "The model estimates that a typical male in the data is about 174 cm tall.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### Exercise 7
+
+Hit "Run Code."
+
+```{r temperance-7, exercise = TRUE}
+avg_comparisons(fit_height, comparison = "ratio")
+```
+
+```{r temperance-7-hint-1, eval = FALSE}
+avg_comparisons(fit_height, comparison = "ratio")
+```
+
+```{r temperance-7-test, include = FALSE}
+avg_comparisons(fit_height, comparison = "ratio")
+```
+
+###
+
+Adding `comparison = "ratio"` changes the output to show the height difference as a ratio (male height divided by female height) instead of a simple difference. The estimate of 1.07 means men are about 7% taller than women on average.
+
+###
+
+Write a sentence interpreting the 1.07 estimate in the ratio output from `avg_comparisons(fit_height, comparison = "ratio")`.
+
+```{r temperance-7-question}
+question_text(
+  NULL,
+  message = "The model predicts that men are about 7% taller than women on average, using the ratio of their predicted heights.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### Exercise 8
+
+Enter this code into the exercise code block and hit "Run Code."
+
+```         
+plot_predictions(fit_height, condition = "sex")
+```
+
+```{r temperance-8, exercise = TRUE}
+
+```
+
+```{r temperance-8-hint-1, eval = FALSE}
+plot_predictions(fit_height, condition = "sex")
+```
+
+```{r temperance-8-test, include = FALSE}
+plot_predictions(fit_height, condition = "sex")
+```
+
+###
+
+The plot_predictions() function from the marginaleffects package visualizes model predictions for each group. In this plot, it shows the predicted average height by sex, with dots for the predictions and lines for the confidence intervals to reflect uncertainty.
+
+### Exercise 9
+
+Let's make the plot look more professional. Copy the previous code, add necessary title, subtitle, caption and label for the plot.
+
+This is what your graph should look like:
+
+```{r}
+plot_predictions(fit_height, condition = "sex") +
+  labs(
+    title = "Average Height in Men and Women",
+    subtitle = "On average, men are taller than women by around 14 cm.",
+    x = NULL,
+    y = "Height in cm",
+    caption = "Data from a sample of 100 individuals from NHANES"
+  )
+```
+
+```{r temperance-9, exercise = TRUE}
+
+```
+
+<button onclick="transfer_code(this)">
+
+Copy previous code
+
+</button>
+
+```{r temperance-9-hint-1, eval = FALSE}
+... |>
+  labs(title = ..., subtitle = ..., x = ..., y = ..., caption = ...)
+```
+
+```{r temperance-9-test, include = FALSE}
+plot_predictions(fit_height, condition = "sex") |>
+  labs(
+    title = "Average Height in Men and Women",
+    subtitle = "On average, men are taller than women by around 14 cm (6 in).",
+    x = NULL,
+    y = "Height (cm)",
+    caption = "Data from a sample of 100 individuals from NHANES"
+  )
+```
+
+### 
+
+However, there is always uncertainty in our estimate, and with this graph, we cannot communicate our uncertainty level about the difference in average height between men and women.
+
+### Exercise 10
+
+Let's use `plot_comparisons()` to get a good estimate of the height difference between men and women, and the confidence interval thereof. Enter this code into the exercise code block and hit "Run Code."
+
+```         
+plot_comparisons(fit_height,
+                variables = "sex",
+                type = "numeric", 
+				condition = list(sex = "male"))
+```
+
+```{r temperance-10, exercise = TRUE}
+
+```
+
+```{r temperance-10-hint-1, eval = FALSE}
+plot_comparisons(
+  fit_height,
+  variables = "sex",
+  type = "numeric",
+  condition = list(sex = "male")
+)
+```
+
+```{r temperance-10-test, include = FALSE}
+plot_comparisons(
+  fit_height,
+  variables = "sex",
+  type = "numeric",
+  condition = list(sex = "male")
+)
+```
+
+### 
+
+This prints out our estimate of the difference between men and women's height along with the range in which we are 95% confident that the real value would fall within.
+
+### Exercise 11
+
+Again, make the plot looks more professional by adding a title, subtitle, caption, and labels. Add `theme(axis.text.x = element_blank())` following `labs()` to remove the default "male" label. This is what your graph should look like:
+
+```{r}
+plot_comparisons(
+  fit_height,
+  variables = "sex",
+  type = "numeric",
+  condition = list(sex = "male")
+) +
+  labs(
+    title = "Height Difference Between Men and Women",
+    subtitle = "We are 95% confident that the real value of the difference in average height \nlies between 10.7 and 16.8 cm",
+    caption = "Data from a sample of 100 individuals from NHANES",
+    x = "Male vs Female",
+    y = "Expected height difference (cm)"
+  ) +
+  theme(axis.text.x = element_blank())
+```
+
+```{r temperance-11, exercise = TRUE}
+
+```
+
+<button onclick="transfer_code(this)">
+
+Copy previous code
+
+</button>
+
+```{r temperance-11-hint-1, eval = FALSE}
+... +
+  labs(title = ..., subtitle = ..., caption = ..., x = ..., y = ...) +
+    theme(...)
+```
+
+```{r temperance-11-test, include = FALSE}
+plot_comparisons(
+  fit_height,
+  variables = "sex",
+  type = "numeric",
+  condition = list(sex = "male")
+) +
+  labs(
+    title = "Height Difference Between Men and Women",
+    subtitle = "We are 95% confident that the real value of the difference in average height \nlies between 10.7 and 16.8 cm",
+    caption = "Data from a sample of 100 individuals from NHANES",
+    x = "Male vs Female",
+    y = "Expected height difference (cm)"
+  ) +
+  theme(axis.text.x = element_blank())
+```
+
+<!-- avg_comparisons(fit_height, variables = "sex") -->
+
+<!--  Estimate Std. Error    z Pr(>|z|)    S 2.5 % 97.5 % -->
+
+<!--      13.8       1.52 9.02   <0.001 62.2  10.8   16.7 -->
+
+<!-- Term: sex -->
+
+<!-- Type:  numeric  -->
+
+<!-- Comparison: mean(Male) - mean(Female) -->
+
+<!-- Columns: term, contrast, estimate, std.error, statistic, p.value, s.value, conf.low, conf.high, predicted_lo, predicted_hi, predicted  -->
+
+<!-- avg_predictions(fit_height, variables = "sex") -->
+
+<!--     sex Estimate Std. Error   z Pr(>|z|)   S 2.5 % 97.5 % -->
+
+<!--  Male        175       1.08 162   <0.001 Inf   173    177 -->
+
+<!--  Female      161       1.08 149   <0.001 Inf   159    163 -->
+
+<!-- Type:  numeric  -->
+
+<!-- Columns: sex, estimate, std.error, statistic, p.value, s.value, conf.low, conf.high  -->
+
+### Exercise 12
+
+Add `library(marginaleffects)` to the `analysis.qmd` setup code chunk.
+
+Create a new code chunk. Copy/paste the code which creates your graphic.
+
+`Cmd/Ctrl + Shift + K` to ensure that it all works as intended.
+
+At the Console, run:
+
+```         
+tutorial.helpers::show_file("analysis.qmd", start = -8)
+```
+
+CP/CR.
+
+```{r temperance-12}
+question_text(
+  NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 3
+)
+```
+
+### Exercise 13
+
+Write the last sentence of your summary paragraph. It describes at least one quantity of interest (QoI) and provides a measure of uncertainty about that QoI. (It is OK if this QoI is not the one that you began with. The focus of a data science project often changes over time.)
+
+```{r temperance-13}
+question_text(
+  NULL,
+  message = "Men and women vary in height. Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women. Since the participation for the survey is voluntary, it could mean that, for example, taller people are more likely to answer this question, thus reducing representativeness of the data. We model height as a linear function of sex. Our best guest for the average height of women is 161 cm, we are 95% confident that its true value is between 158 and 164 while men, on average, are expected to be taller in women by 14 cm, and we are also 95% confident that the real value of differences in average height lies between 10.7 and 16.8.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+Add a final sentence to your summary paragraph in your QMD as you see fit, but do not copy/paste our answer exactly. `Cmd/Ctrl + Shift + K`.
+
+As always, note that your estimate depends on all the assumptions in your model being true. But that is a lie! All your assumptions are not true. So, your mean estimate might be wrong, and your confidence intervals are certainly too narrow.
+
+### Exercise 14
+
+Write a few sentences which explain why the estimates for the quantities of interest, and the uncertainty thereof, might be wrong. Suggest an alternative estimate and confidence interval, if you think either might be warranted.
+
+```{r temperance-14}
+question_text(
+  NULL,
+  message = "As we would tell our boss, it would not be shocking to find out that the actual average height was less or more than our estimate. This is because a lot of the assumptions we make during the process of building a model, the processes in Wisdom, are subject to error. Perhaps our data did not match the future as well as we had hoped. In such cases, increase the confidence interval since the assumptions of your model are always false.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6
+)
+```
+
+### 
+
+### Exercise 15
+
+Rearrange the material in `analysis.qmd` so that the order is graphic, paragraph, math, then table. Doing so, of course, requires sensible judgment. For example, the code chunk which creates the fitted model must occur before the chunk which creates the graphic. `Cmd/Ctrl + Shift + K` to make sure that everything works.
+
+At the Console, run:
+
+```         
+tutorial.helpers::show_file("analysis.qmd")
+```
+
+CP/CR.
+
+```{r temperance-15}
+question_text(
+  NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 3
+)
+```
+
+### 
+
+This is the version of your QMD file which your teacher is most likely to take a close look at.
+
+### Exercise 16
+
+Publish your rendered QMD to GitHub Pages. Copy/paste the resulting url below.
+
+```{r temperance-16}
+question_text(
+  NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 3
+)
+```
+
+### 
+
+## Summary
+### 
+
+This tutorial covered [Chapter 5: Two Parameters](https://ppbds.github.io/primer/two-parameters.html) of [*Preceptor’s Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
+
+We started the Tutorial with a question:
+
+> *What is the average height of men and women?*
+
+Using data from the National Health and Nutrition Examination Survey conducted from 2009 to 2011 by the Centers for Disease Control and Prevention, we seek to estimate the average height of men and women. Since the participation for the survey is voluntary, it could mean that, for example, taller people are more likely to answer this question, thus reducing representativeness of the data. We model height as a linear function of sex. Our best guest for the average height of women is 161 cm, we are 95% confident that its true value is between 158 and 164 while men, on average, are expected to be taller in women by 14 cm, and we are also 95% confident that the real value of differences in average height lies between 10.7 and 16.8.
+
+```{r}
+plot_comparisons(
+  fit_height,
+  variables = "sex",
+  type = "numeric",
+  condition = list(sex = "male")
+) +
+  labs(
+    title = "Height Difference Between Men and Women",
+    subtitle = "We are 95% confident that the real value of the difference in average height \nlies between 10.7 and 16.8 cm",
+    caption = "Data from a sample of 100 individuals from NHANES",
+    x = "Male vs Female",
+    y = "Expected height difference (cm)"
+  ) +
+  theme(axis.text.x = element_blank())
+```
+
+```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
+
+```
