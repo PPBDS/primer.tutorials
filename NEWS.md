@@ -1,5 +1,7 @@
 # primer.tutorials (development version)
 
+* Stop using gtsummary and equatiomatic packages.
+
 # primer.tutorials 1.2.2
 
 * Return to primer.tutorials name for repo and package.
