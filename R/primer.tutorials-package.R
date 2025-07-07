@@ -14,10 +14,11 @@ function_for_import  <- function()
 
 }
 
-# Best way to demonstrate that quarto is actually "used", thereby stopping
+# Best way to demonstrate these packages are actually "used", thereby stopping
 # renv::status() from bothering us.
 
 library(quarto)
+library(katex)
 
 ## usethis namespace: start
 ## usethis namespace: end
