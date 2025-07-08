@@ -6,7 +6,7 @@ tutorial:
 output:
   learnr::tutorial:
     progressive: yes
-    allow_skip:: yes
+    allow_skip: yes
 runtime: shiny_prerendered
 description: 'Chapter 7 Tutorial: Mechanics'
 ---
@@ -18,6 +18,7 @@ library(tidyverse)
 library(primer.data)
 library(patchwork)
 library(tidymodels)
+library(glue)
 
 library(marginaleffects)
 library(easystats)
@@ -78,13 +79,13 @@ nhanes_3 <- linear_reg() |>
   fit(height ~ I(ifelse(age > 18, 18, age)), data = no_na_nhanes)
 
 fit_1_model <- linear_reg() |>
-  fit(att_end ~ treatment + att_start, data = trains)
+  fit(att_end ~ treatment + att_start, data = x)
 
 fit_2_model <- linear_reg() |>
-  fit(income ~ age + liberal, data = trains)
+  fit(income ~ age + liberal, data = x)
 
 fit_liberal <- linear_reg() |> 
-  fit(att_end ~ liberal, data = trains)
+  fit(att_end ~ liberal, data = x)
 
 ovrftng <- tibble(
   x = 1:10,
@@ -92,7 +93,7 @@ ovrftng <- tibble(
 )
 
 fit_att_start <- linear_reg() |>
-  fit(att_end ~ att_start, data = trains)
+  fit(att_end ~ att_start, data = x)
 
 ```
 
@@ -250,6 +251,8 @@ The model we are using only takes one variable, `age`, on the right hand side to
 
 ### Exercise 7
 
+The data frame `x` is a modified version of `trains` that we’ll use for modeling going forward. When you see `data = x`, remember it contains the relevant columns from `trains` that we need for our analysis.
+
 Pipe `linear_reg()` to `fit()`, with the formula `income ~ age` and `data = x` as arguments. Run this code
 
 ```{r scaling-7, exercise = TRUE}
@@ -282,13 +285,13 @@ Now, pipe your previous code directly into `tidy()` to view the regression summa
 
 ```{r scaling-8-hint-1, eval = FALSE}
 linear_reg() |>
-  fit(income ~ age, data = trains) |>
+  fit(income ~ age, data = x) |>
     tidy(conf.int = TRUE)
 ```
 
 ```{r scaling-8-test, include = FALSE}
 linear_reg() |>
-  fit(income ~ age, data = trains) |>
+  fit(income ~ age, data = x) |>
     tidy(conf.int = TRUE)
 ```
 
@@ -583,14 +586,16 @@ Interpret the results in your own words. What does the estimate for `z_age` mean
 ```{r scaling-21-test, include=FALSE}
 z_age_coef <- round(broom::tidy(fit_1_z) |> dplyr::filter(term == "z_age") |> dplyr::pull(estimate), 0)
 z_age_coef_comma <- scales::comma(round(z_age_coef, 0))
-z_age_sd   <- round(sd(x$age), 1)  
+z_age_sd   <- round(sd(x$age), 1) 
+
+z_age_msg <- glue::glue(
+  "The coefficient for z_age tells us the expected increase in income for each one-standard-deviation increase in age. For example, if the coefficient is {z_age_coef_comma}, then someone who is one standard deviation (about {z_age_sd} years) older than average is predicted to earn ${z_age_coef_comma} more than someone of average age."
+)
 ```
 
 ```{r scaling-21}
 question_text(NULL,
-  message = glue::glue(
-    "The coefficient for `z_age` tells us the expected increase in income for each one-standard-deviation increase in age. For example, if the coefficient is {z_age_coef_comma}, then someone who is one standard deviation (about {z_age_sd} years) older than average is predicted to earn ${z_age_coef_comma} more than someone of average age."
-  ),
+  message = z_age_msg,
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -1091,7 +1096,7 @@ linear_reg() |>
 ```
 ### 
 
-`att_end`, the variable before the tilde, is our outcome. The explanatory variables are `treatment`, which says whether a commuter relieved treatment or control conditions, and `att_start`, which measures attitude at the start of the study.
+`att_end`, the variable before the tilde, is our outcome. The explanatory variables are `treatment`, which says whether a commuter received treatment or control conditions, and `att_start`, which measures attitude at the start of the study.
 
 ### Exercise 4
 
@@ -1117,17 +1122,26 @@ Deciding if a variable is worth including in our model depends on whether it has
 
 Pipe the previous linear regression model directly into `tidy(conf.int = TRUE)` to view the regression summary with confidence intervals. Type the full pipe below and hit "Run Code." 
 
-```{r selecting-variables-5, include=FALSE}
+```{r selecting-variables-5-test, include=FALSE}
 confint_treatment <- fit_1_model |>
   tidy(conf.int = TRUE) |>
   dplyr::filter(term == "treatmentTreated")
 
 ci_low <- round(confint_treatment$conf.low, 2)
-ci_high <- round(confint_treatment$conf.high, 2)
+ci_high <- round(confint_treatment$conf.high, 2) # Variables used in the knowledge drop below. 
 ```
 
+```{r selecting-variables-5, exercise = TRUE}
 
-```{r selecting-variables-5-test, include = FALSE}
+```
+
+```{r selecting-variables-5-hint-1, eval = FALSE}
+linear_reg() |>
+  fit(att_end ~ ... + ..., data = ...) |>
+  tidy(...)
+```
+
+```{r selecting-variables-5-test2, include = FALSE}
 linear_reg() |>
   fit(att_end ~ treatment + att_start, data = x) |>
   tidy(conf.int = TRUE)
@@ -1180,7 +1194,9 @@ Recall that we keep variables that have a "large" coefficient, which can only be
 
 Referring back to our regression table for `fit_1_model`, what is the 95% Confidence Interval for `treatmentTreated`? Round it up to 2 decimal places.
 
-```{r selecting-variables-8-test, include=FALSE}
+```{r selecting-variables-8-test, include=FALSE} 
+#AT: The label 'vars' is automatically changed to 'test' when running check_current_tutorials(). The tutorial still works normally either way.
+
 ci_low <- round(confint_treatment$conf.low, 2)
 ci_high <- round(confint_treatment$conf.high, 2)
 
@@ -1188,6 +1204,8 @@ ci_msg <- glue::glue(
   "The 95% CI for `treatmentTreated` is [{ci_low}; {ci_high}]."
 )
 ```
+
+<!-- AT: # `ci_msg` should work in the code chunk below, I tested it and had no issues.  -->
 
 ```{r selecting-variables-8}
 question_text(NULL,
@@ -1234,7 +1252,7 @@ Applying the same requirement that the 95% Confidence Interval does NOT include 
 
 ### Exercise 10
 
-Let's us now consider `income` as a function of `age` and `liberal`, a proxy for political party. Pipe `x` to `select()` with `income`, `age`, `liberal` as the arguments. 
+Let's now consider `income` as a function of `age` and `liberal`, a proxy for political party. Pipe `x` to `select()` with `income`, `age`, `liberal` as the arguments. 
 
 ```{r selecting-variables-10, exercise = TRUE}
 
@@ -1333,11 +1351,15 @@ coef_liberal <- fit_2_model |>
   filter(term == "liberalTRUE") |>
   pull(estimate) |>
   round(0)
+
+msg <- glue::glue(
+  "The coefficient for liberalTRUE is {coef_liberal} (negative), indicating that the liberals in our data set make less on average than non-liberals."
+)
 ```
 
 ```{r selecting-variables-14}
 question_text(NULL,
-	message = "The coefficient for `liberalTRUE` is {coef_liberal} (negative), indicating that the liberals in our data set make less on average than non-liberals.",
+	message = msg,
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1367,7 +1389,7 @@ liberal_msg <- glue::glue(
 
 ```{r selecting-variables-15}
 question_text(NULL,
-	message = "liberal_msg",
+	message = liberal_msg,
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1556,11 +1578,122 @@ We would also expect people to provide similar answers in two surveys administer
 
 ### Exercise 7
 
-Ask AI to help you create a plot that looks like the example below. Your plot should have the predicted values for `att_end` from your `fit_liberal` model on the x-axis and the actual values of `att_end` on the y-axis. Use `geom_jitter()` to show overlapping points and highlight perfect predictions (where the predicted and actual values are the same) with large red circles, just as shown in the plot. Insure the graph has proper labels and titles. 
+The `predict()` function in **tidymodels** generates predicted values from a fitted model using new or existing data. The output is always a tibble with a `.pred` column containing the model’s predictions. Let’s learn how to use it and understand its output.
+
+Use the `predict()` function to generate predictions from your `fit_liberal` model using the `x` data.
+Be sure to use the argument `new_data = x` in your code.
+
+```{r comparing-models-in-theory-7, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r comparing-models-in-theory-7-hint-1, eval = FALSE}
+predict(fit_..., new_data = ...)
+
+```
+
+```{r comparing-models-in-theory-7-test, include = FALSE}
+predict(fit_liberal, new_data = x)
+
+```
+
+### 
+
+The `predict()` function uses your fitted model to generate predicted values for every row in the new data you provide. The output is a tibble with a `.pred` column containing the model’s predictions.
+
+### Exercise 8
+
+Run `predict(fit_liberal, new_data = x)`, what is the name of the column in the resulting tibble that contains the predicted values?
+
+```{r comparing-models-in-theory-8}
+question_text(NULL,
+	message = ".pred",
+	answer(NULL, correct = TRUE),
+	allow_retry = FALSE,
+	incorrect = NULL,
+	rows = 6)
+```
+
+### 
+
+By default, the predicted values in **tidymodels** are stored in a column called `.pred.` You’ll use this column when adding predictions to your data or when plotting/model assessment. 
+
+### Exercise 9
+
+Extract just the vector of predicted values from the output of `predict(fit_liberal, new_data = x)` using the `$` operator. Run your code below. 
+
+```{r comparing-models-in-theory-9, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r comparing-models-in-theory-9-hint-1, eval = FALSE}
+predict(fit_..., new_data = ...)$.pred
+
+```
+
+```{r comparing-models-in-theory-9-test, include = FALSE}
+predict(fit_liberal, new_data = x)$.pred
+
+```
+
+### 
+
+Using `$` lets you extract a single column from a tibble. Here, `$.pred` pulls out just the predicted values as a vector, which is useful for calculations or plotting.
+
+### Exercise 10
+
+Use `mutate()` to add a new column called `pred_liberal` to the `x` data frame. The new column should contain the predicted values for `att_end` from your `fit_liberal` model, using the code `predict(fit_liberal, new_data = x)$.pred.`
+
+```{r comparing-models-in-theory-10, exercise = TRUE}
+
+```
+
+<button onclick = "transfer_code(this)">Copy previous code</button>
+
+```{r comparing-models-in-theory-10-hint-1, eval = FALSE}
+x |> 
+  mutate(pred_liberal = ...
+
+```
+
+```{r comparing-models-in-theory-10-test, include = FALSE}
+x |> 
+  mutate(pred_liberal = predict(fit_liberal, new_data = x)$.pred)
+
+```
+
+### 
+
+Adding predictions as a new column with `mutate()` lets you compare the predicted values to the actual values in your data--—this is the foundation for model evaluation and visualization.
+
+### Exercise 11
+
+In your own words, explain what the `predict()` function does and how adding predictions to your data can help you evaluate the performance of a model. Why is this step important in data science?
+
+```{r comparing-models-in-theory-11}
+question_text(NULL,
+  message = "The predict() function generates predicted values from my fitted model for each row of my data. By adding these predictions to my data frame, I can compare them directly to the actual outcomes. This is important because it lets me see how accurate my model’s predictions are, identify where the model performs well or poorly, and measure the overall quality of the model.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 2)
+```
+
+### 
+
+Evaluating your model’s predictions against real outcomes is essential for checking model accuracy and for improving your models over time.
+
+### Exercise 12
+
+Ask AI to help you create a plot using the `x` data. Add a column named `pred_liberal` with predicted values for `att_end` from your `fit_liberal` model. Be sure to use: `predict(fit_liberal, new_data = x)$.pred` inside `mutate()`. Plot `pred_liberal` on the x-axis and the actual `att_end` on the y-axis with `ggplot()`. Use `geom_jitter()` (with width and alpha for overlap), and use `annotate()` to add large red open circles at (8, 8) and (10, 10) to highlight perfect predictions. Make sure your graph includes clear axis labels and a title.
 
 Paste the code you used to make your plot into the answer box below.
 
-```{r comparing-models-in-theory-7}
+```{r comparing-models-in-theory-12}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1586,7 +1719,7 @@ x |>
          y = "True Attitude")
 ```
 
-```{r comparing-models-in-theory-7-test, include = FALSE}
+```{r comparing-models-in-theory-12-test, include = FALSE}
 x |> 
   mutate(pred_liberal = predict(fit_liberal, new_data = x)$.pred) |> 
   ggplot(aes(x = pred_liberal, y = att_end)) +
@@ -1603,13 +1736,17 @@ x |>
 
 The most sensible way to test a model is to use it to make predictions and compare those predictions to new data. After fitting the model using **tidymodels**, we use the `predict()` function to generate predicted values for new or existing cases.
 
-### Exercise 8
+### Exercise 13
 
-Ask AI to help you create a visualization that compares model predictions from your `fit_att_start` model to the actual `att_end` values, using the `x` data. Your plot should display the predicted values for `att_end` from the `fit_att_start` model on the x-axis and the actual `att_end` values on the y-axis. Use `geom_jitter()` to show overlapping points clearly, and add a red reference line to highlight where predictions perfectly match actual values. Be sure your plot includes appropriate axis labels, a descriptive title, and a helpful subtitle.
+Just as you visualized predictions from the `fit_liberal` model, you can do the same for the `fit_att_start` model. Comparing these plots helps you see which model produces predictions that more closely match the actual values of `att_end`. This is an important step in choosing the best model.
+
+###
+
+Ask AI to help you create a plot that compares model predictions from your `fit_att_start` model to the actual `att_end` values, using the `x` data. Add a column named `pred_as` to the data using `mutate()`. The predicted values should come from: `predict(fit_att_start, new_data = x)$.pred` Create a plot with `ggplot()`, using `pred_as` on the x-axis and `att_end` on the y-axis. Use `geom_jitter()` with reasonable `width`, `height`, and `alpha` settings to show overlapping points clearly. Add a red reference line using `geom_abline()` with `slope = 1` and `intercept = 0` to indicate where predictions equal actual values. Make sure your plot includes clear axis labels, a descriptive title, and a helpful subtitle.
 
 Paste the code you used to make your plot into the answer box below.
 
-```{r comparing-models-in-theory-8}
+```{r comparing-models-in-theory-13}
 question_text(NULL,
 	answer(NULL, correct = TRUE),
 	allow_retry = TRUE,
@@ -1634,7 +1771,7 @@ x |>
          y = "True Attitude")
 ```
 
-```{r comparing-models-in-theory-8-test, include = FALSE}
+```{r comparing-models-in-theory-13-test, include = FALSE}
 x |> 
   mutate(pred_as = predict(fit_att_start, new_data = x)$.pred) |> 
   ggplot(aes(x = pred_as, y = att_end)) +
@@ -1650,20 +1787,20 @@ x |>
 
 Rather than looking at individual cases, we need to look at the errors for all the predictions. Fortunately, a prediction error is the same thing as a residual, which is easy enough to calculate.
 
-### Exercise 9
+### Exercise 14
 
 Pipe `x` to `select()` with `att_end`, `att_start`, and `liberal`. 
 
-```{r comparing-models-in-theory-9, exercise = TRUE}
+```{r comparing-models-in-theory-14, exercise = TRUE}
 
 ```
 
-```{r comparing-models-in-theory-9-hint-1, eval = FALSE}
+```{r comparing-models-in-theory-14-hint-1, eval = FALSE}
 ... |> 
   ...(..., ..., ...)
 ```
 
-```{r comparing-models-in-theory-9-test, include = FALSE}
+```{r comparing-models-in-theory-14-test, include = FALSE}
 x |> 
   select(att_end, att_start, liberal)
 ```
@@ -1672,22 +1809,22 @@ x |>
 
 A residual is the difference between the observed value of the dependent variable (actual value) and the predicted value (fitted value) produced by a regression model.
 
-### Exercise 10
+### Exercise 15
 
 Continue the pipe with `mutate()`. Set `pred_lib` equal to the predicted values from `predict(fit_liberal, new_data = x)`.
 
-```{r comparing-models-in-theory-10, exercise = TRUE}
+```{r comparing-models-in-theory-15, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-10-hint-1, eval = FALSE}
+```{r comparing-models-in-theory-15-hint-1, eval = FALSE}
 ... |> 
   mutate(pred_lib = predict(..., new_data = x)$`.pred`)
 ```
 
-```{r comparing-models-in-theory-10-test, include = FALSE}
+```{r comparing-models-in-theory-15-test, include = FALSE}
 x |> 
   select(att_end, att_start, liberal) |> 
   mutate(pred_lib = predict(fit_liberal, new_data = x)$.pred)
@@ -1700,22 +1837,22 @@ In mathematical terms, for each observation $i$:
 $$Residual = y_i - \hat{y_i} $$
 $y_i$ is the actual value of the dependent variable, which is `att_end` and $\hat{y_i}$ is the predicted value of `att_end` generated from the model.
 
-### Exercise 11
+### Exercise 16
 
 Add another column `resid_lib` equal to `pred_lib - att_end` to the current tibble using the `mutate()` command. 
 
-```{r comparing-models-in-theory-11, exercise = TRUE}
+```{r comparing-models-in-theory-16, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-11-hint-1, eval = FALSE}
+```{r comparing-models-in-theory-16-hint-1, eval = FALSE}
 ...|> 
   mutate(resid_lib = pred_lib - att_end)
 ```
 
-```{r comparing-models-in-theory-11-test, include = FALSE}
+```{r comparing-models-in-theory-16-test, include = FALSE}
 x |> 
   select(att_end, att_start, liberal) |> 
   mutate(pred_lib = predict(fit_liberal, new_data = x)$.pred) |> 
@@ -1726,22 +1863,22 @@ x |>
 
 Larger residuals mean larger deviations from the actual values. Smaller residuals indicate a model that fits the data well.
 
-### Exercise 12
+### Exercise 17
 
 Continue the pipe with `mutate()`, create a new column called `pred_as` and set it equal to the predicted values from `fit_att_start` using the `predict()` function.
 
-```{r comparing-models-in-theory-12, exercise = TRUE}
+```{r comparing-models-in-theory-17, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-12-hint-1, eval = FALSE}
+```{r comparing-models-in-theory-17-hint-1, eval = FALSE}
 ... |> 
   mutate(pred_as = predict(fit_att_start, new_data = x)$`.pred`)
 ```
 
-```{r comparing-models-in-theory-12-test, include = FALSE}
+```{r comparing-models-in-theory-17-test, include = FALSE}
 x |> 
   select(att_end, att_start, liberal) |> 
   mutate(pred_lib = predict(fit_liberal, new_data = x)$.pred) |> 
@@ -1753,22 +1890,22 @@ x |>
 
 Sadly, it is not wise to simply select the model which fits the data best because doing so can be misleading. We are using our data to select parameters and then, after using the data once, turning around and “checking” to see how well your model fits the data. It better fit! 
 
-### Exercise 13
+### Exercise 18
 
 Finally, calculate the residual when using `att_start` to forecast `att_end`. Using `mutate()`, add `resid_as` and set it equal to `pred_as - att_end`.
 
-```{r comparing-models-in-theory-13, exercise = TRUE}
+```{r comparing-models-in-theory-18, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-13-hint-1, eval = FALSE}
+```{r comparing-models-in-theory-18-hint-1, eval = FALSE}
 ... |> 
   mutate(resid_as = pred_as - att_end)
 ```
 
-```{r comparing-models-in-theory-13-test, include = FALSE}
+```{r comparing-models-in-theory-18-test, include = FALSE}
 x |> 
   select(att_end, att_start, liberal) |> 
   mutate(pred_lib = predict(fit_liberal, new_data = x)$.pred) |> 
@@ -1781,20 +1918,20 @@ x |>
 
 *If the only criteria we cared about was how well the model predicts using the data on which the parameters were estimated, then a model with more parameters will always be better*. But that is not what truly matters. What matters is how well the model works on data which was not used to create the model.
 
-### Exercise 14
+### Exercise 19
 
 Let's look at the square root of the average squared error. Pipe `x` to `select` to take out `att_end`, `att_start` and `liberal`.
 
-```{r comparing-models-in-theory-14, exercise = TRUE}
+```{r comparing-models-in-theory-19, exercise = TRUE}
 
 ```
 
-```{r comparing-models-in-theory-14-hint-1, eval = FALSE}
+```{r comparing-models-in-theory-19-hint-1, eval = FALSE}
 ... |> 
   ...(..., ..., ...) 
 ```
 
-```{r comparing-models-in-theory-14-test, include = FALSE}
+```{r comparing-models-in-theory-19-test, include = FALSE}
 x |> 
   select(att_end, att_start, liberal) 
 ```
@@ -1803,22 +1940,22 @@ x |>
 
 There are many different measures of the error which we might calculate. The squared difference is most common for historical reasons: it was the mathematically most tractable in the pre-computer age. 
 
-### Exercise 15
+### Exercise 20
 
 Continue the pipe with `mutate()`. Create a column named `lib_err` and set it equal to `(pred_lib - att_end)^2`. First, get the predictions using `predict(fit_liberal, new_data = x)$.pred`.
 
-```{r comparing-models-in-theory-15, exercise = TRUE}
+```{r comparing-models-in-theory-20, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-15-hint-1, eval = FALSE}
+```{r comparing-models-in-theory-20-hint-1, eval = FALSE}
 ... |>
   mutate(lib_err = (pred_lib - att_end)^2)
 ```
 
-```{r comparing-models-in-theory-15-test, include = FALSE}
+```{r comparing-models-in-theory-20-test, include = FALSE}
 x |> 
   select(att_end, att_start, liberal) |> 
   mutate(pred_lib = predict(fit_liberal, new_data = x)$.pred) |>
@@ -1829,22 +1966,22 @@ x |>
 
 Since the residuals can be negative, we could get a zero value when trying to sum them up, or we might be unable to take the square root of the difference if it's negative. Thus, we square them up so that all values are positive.
 
-### Exercise 16
+### Exercise 21
 
 Continue the pipe with `mutate()`. Create a column named `as_err` and set it equal to `(pred_as - att_end)^2`. First, get the predictions using `predict(fit_att_start, new_data = x)$.pred`.
 
-```{r comparing-models-in-theory-16, exercise = TRUE}
+```{r comparing-models-in-theory-21, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-16-hint-1, eval = FALSE}
+```{r comparing-models-in-theory-21-hint-1, eval = FALSE}
 ... |> 
   mutate(as_err = (pred_as - att_end)^2)
 ```
 
-```{r comparing-models-in-theory-16-test, include = FALSE}
+```{r comparing-models-in-theory-21-test, include = FALSE}
 x |> 
   select(att_end, att_start, liberal) |> 
   mutate(pred_lib = predict(fit_liberal, new_data = x)$.pred) |>
@@ -1857,23 +1994,23 @@ x |>
 
 Having calculated a squared difference for each observation, we can sum them or take their average or take the square root of their average. 
 
-### Exercise 17
+### Exercise 22
 
 Continue the pipe with `summarize()`. The first argument is `lib_sigma` and set it equal to `sqrt(mean(lib_err))`, the second argument is `as_sigma` and set it equal to `sqrt(mean(as_err))`.
 
-```{r comparing-models-in-theory-17, exercise = TRUE}
+```{r comparing-models-in-theory-22, exercise = TRUE}
 
 ```
 
 <button onclick = "transfer_code(this)">Copy previous code</button>
 
-```{r comparing-models-in-theory-17-hint-1, eval = FALSE}
+```{r comparing-models-in-theory-22-hint-1, eval = FALSE}
 ... |> 
   summarize(lib_sigma = sqrt(mean(lib_err)),
             as_sigma = sqrt(mean(as_err)))
 ```
 
-```{r comparing-models-in-theory-17-test, include = FALSE}
+```{r comparing-models-in-theory-22-test, include = FALSE}
 x |> 
   select(att_end, att_start, liberal) |> 
   mutate(pred_lib = predict(fit_liberal, new_data = x)$.pred) |>
@@ -2003,8 +2140,6 @@ Clearly, adding higher-degree terms (like $x^3$ to $x^9$) will make the model fi
 
 ## Comparing models in practice
 ### 
-
-<!-- DK: List specific functions. `performance()`, `compare_models()`. Done  -->
 
 To choose the best model for predicting attitudes toward immigration, we need to compare their performance using reliable statistical tools. The **easystats** package, especially `performance()`, `compare_performance()`, and `compare_models()`, helps us evaluate, compare, and test our models. In this section, you’ll use these functions to review model quality metrics, compare models side by side, examine confidence intervals, and run formal statistical tests to decide which predictor is most useful.
 
