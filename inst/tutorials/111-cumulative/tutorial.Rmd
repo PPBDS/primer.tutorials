@@ -52,15 +52,19 @@ fit_approval <- MASS::polr(approval ~ ideology + education,
 
 # tidy_approval <- tidy(fit_approval, conf.int = TRUE) 
 # write_rds(tidy_approval, file = "data/tidy_approval.rds")
-tidy_approval <- read_rds("data/tidy_approval.rds")
+tidy_approval <- read_rds("C:/Users/922485/primer/primer.tutorials/inst/tutorials/111-cumulative/data/tbl_approval.rds")
 
 # tbl_approval <- tbl_regression(fit_approval)
 # write_rds(tbl_approval, file = "data/tbl_approval.rds")
-tbl_approval <- read_rds("data/tbl_approval.rds")
+tbl_approval <- read_rds("C:/Users/922485/primer/primer.tutorials/inst/tutorials/111-cumulative/data/tbl_approval.rds")
 
 results <- plot_predictions(fit_approval,
                             condition = c("ideology"),
                             draw = FALSE)
+
+temp <- plot_predictions(fit_approval,
+                 condition = c("education"),
+                 draw = FALSE) 
 
 ```
 
@@ -74,7 +78,7 @@ results <- plot_predictions(fit_approval,
 
 Introduction:
 
-Imagine that you are a pollster working for this upcoming election. And you want to figure out what sways voters, so you begin to scrape through the approval ratings of the 2020 election to see where Trump went wrong, and which demographic he lost.
+Imagine  that you are a pollster working for this upcoming election. And you want to figure out what sways voters, so you begin to scrape through the approval ratings of the 2020 election to see where Trump went wrong, and which demographic he lost.
 
 Wisdom: Something along the lines of understanding the problem
 Courage: Something along the lines of DGM
@@ -823,7 +827,7 @@ This graphs shows that most liberals strongly disapprove the 2020 president and 
 
 ### Exercise 24
 
-Using the previous code, add `labs()`.
+Update your previous plot by adding `labs()`. Insure that your graph includes a descriptive title, subtitle, x-axis label, y-axis label, fill, and caption. Make sure each label clearly describes what is shown in the plot.
 
 ```{r wisdom-24, exercise = TRUE}
 
@@ -837,7 +841,14 @@ Copy previous code
 
 ```{r wisdom-24-hint-1, eval = FALSE}
 ... +
-  labs(...)
+  labs(
+    title = "...",
+    subtitle = "...",
+    x = "...",
+    y = "...",
+    fill = "...",
+    caption = "..."
+  )
 ```
 
 ```{r wisdom-24-test, include = FALSE}
@@ -1268,6 +1279,12 @@ MASS::polr(formula = approval ~ ... + faminc + education,
     ... = x)
 ```
 
+```{r courage-6-test, include = FALSE}
+# MASS::polr(formula = approval ~ ideology + faminc + education, data = x)
+```
+
+<!-- AT: The object "faminc" isn't found. Its causing an error.  -->
+
 ### 
 
 The same approach applies to a categorical covariate with $N$ values. Such cases produce $N-1$ dummy $0/1$ variables. The presence of an intercept in most models means that we can't have $N$ categories. The "missing" category is incorporated into the intercept. If `race` has seven values --- "White", "Black", "Hispanic", "Asian", "Native American", "Mixed", and "Middle Eastern" --- then the model creates six 0/1 dummy variables, giving them names like $race_{Black}$ and $race_{Hispanic}$. The results for the *first* category are included in the intercept, which becomes the reference case, relative to which the other coefficients are applied.
@@ -1368,10 +1385,9 @@ $$
 
 This is our data generating mechanism.
 
-<!-- DK: Explain in words what the mathematical function means. That is, say in English what the formula means. 
+<!-- DK: Explain in words what the mathematical function means. That is, say in English what the formula means. --> 
 
 This statistical model illustrates how a person's political ideology influences their likelihood of approving or disapproving of something. The equations break down different levels of response - from strong disapproval to approval - and show how these responses correlate with liberal and conservative ideological leanings. The model uses baseline values (ranging from 2.26 to 3.93) which are then modified by two ideological factors: a liberal factor of 0.61 and a conservative factor of 2.4. Notably, the conservative ideology appears to have a stronger influence on approval ratings, as its multiplier (2.4) is nearly four times larger than the liberal multiplier (0.61). The model uses logarithmic equations to calculate the probability of someone falling into each approval category, suggesting a sophisticated statistical analysis likely used in political science or social research to study how political beliefs predict attitudes toward a specific policy, person, or issue.
--->
 
 ### Exercise 10
 
@@ -1385,6 +1401,10 @@ Run `tidy()` on `fit_approval` with the argument `conf.int` set equal to `TRUE`.
 tidy(..., conf.int = ...)
 ```
 
+```{r courage-10-test, include = FALSE}
+tidy(fit_approval, conf.int = TRUE)
+```
+
 ### 
 
 `tidy()` is part of the [**broom**](https://broom.tidymodels.org/) package, used to summarize information from a wide variety of models.
@@ -1392,7 +1412,7 @@ tidy(..., conf.int = ...)
 ### Exercise 11
 
 ```{r}
-tidy_approval |> 
+tidy_approval$table_body |> 
   select(term, estimate, conf.low, conf.high) |> 
   filter(str_detect(term, "^education"))
 ```
@@ -1419,9 +1439,9 @@ Larger coefficients (either positive or negative) indicate a stronger relationsh
 ### Exercise 12
 
 ```{r}
-tidy_approval |> 
-  select(term, estimate, conf.low, conf.high) |> 
-  filter(str_detect(term, "^education"))
+tidy_approval$table_body |>
+   select(variable, estimate, conf.low, conf.high) |>
+    filter(str_detect(variable, "^education"))
 ```
 
 Write a sentence interpreting the `-0.43` to `-0.19` confidence interval for `educationSome Collegee`.
@@ -1444,7 +1464,7 @@ The intercept is always the first value for any variable. For example, the inter
 ### Exercise 13
 
 ```{r}
-tidy_approval |> 
+tidy_approval$table_body |> 
   select(term, estimate, conf.low, conf.high) |> 
   filter(str_detect(term, "^ideology"))
 ```
@@ -1784,6 +1804,8 @@ Notice how the probability for a individual to be in the "Approve / Somewhat App
 
 ### Exercise 9
 
+For this exercise, you will use the `plot_predictions()` function from the marginaleffects package to generate predictions from your model. Start by running `plot_predictions()` with your fitted model as the first argument. Specify `condition = c("education")` so that the function produces predicted values across different education levels, and use `draw = FALSE` to get a data frame instead of a plot. Next, use the pipe operator to send the results to `select()`, keeping only the columns for `group, education, ideology, and estimate`. Finally, use `slice(seq(1, 25, by = 5))` to display every fifth row out of the first 25, so you can examine a representative sample of your model’s predictions. Click on the "hint" button to see an example of this code. 
+
 ```{r temperance-9, exercise = TRUE}
 
 ```
@@ -1793,7 +1815,7 @@ plot_predictions(...,
   condition = c("..."),
   draw = ... |>
     select(...,...,...,...) |> 
-      slice(...)
+      slice(seq(..., by = ...))
 ```
 
 ```{r temperance-9-test, include = FALSE}
@@ -1838,7 +1860,7 @@ Notice how the probability for each education type, has a probability that adds 
 
 <!-- DK: This is a mess. -->
 
-Now that the `dataset` is ready, begin constructing a plot. Set x to `ideology`, y to `estimate`, and `fill to group` in the aes() function. This will lay the foundation for the visualization.
+Now that the `dataset` is ready, begin constructing a plot. Set x to `ideology`, y to `estimate`, and `fill to group` in the aes() function. This will lay the foundation for the visualization. Also, add a `geom_bar(stat = "identity")` layer to your previous plot code. This will tell ggplot to display a bar for each combination of ideology and group, with the height of each bar set by the estimate value from your data.
 
 ```{r temperance-11, exercise = TRUE}
 
@@ -1847,8 +1869,16 @@ Now that the `dataset` is ready, begin constructing a plot. Set x to `ideology`,
 <button onclick="transfer_code(this)">Copy previous code</button>
 
 ```{r temperance-11-hint-1, eval = FALSE}
-ggplot(temp, aes(x = ..., y = ..., fill = ...))
+ggplot(temp, aes(x = ..., y = ..., fill = ...)) +
+  geom_bar(stat = "...")
 ```
+
+```{r temperance-11-test, include = FALSE}
+ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
+  geom_bar(stat = "identity")
+```
+
+<!-- AT: Plots an empty graph. Fixed I think.-->
 
 ### Exercise 12
 
@@ -1944,7 +1974,7 @@ Improve the readability of the axis text by rotating the x-axis labels using ele
 
 ```
 
-```{r temperance-17-hint-1, eval = TRUE}
+```{r temperance-17-hint-1, eval = FALSE}
 ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = sprintf("%.2f", estimate)), position = position_stack(vjust = 0.5), size = 3) +
@@ -1956,6 +1986,19 @@ ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = ... , hjust = ...))
 
+```
+
+```{r temperance-17-test, include = FALSE}
+ggplot(temp, aes(x = ideology, y = estimate, fill = group)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = sprintf("%.2f", estimate)), position = position_stack(vjust = 0.5), size = 3) +
+  coord_flip() +
+  labs(title = "Distribution of Approval Levels by Ideology",
+       x = "Ideology",
+       y = "Proportion",
+       fill = "Approval Level") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 You are done! we now have a ggplot model that shows the proportion of conservative vs liberals and their associated approval ratings as predicted by plot_predictions.
