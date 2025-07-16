@@ -42,25 +42,18 @@ x <- shaming |>
                     "Always Vote"))) |>
   mutate(voted = as.factor(primary_06))		
 
-load("data/objects.RData")
-
- fit_vote_1 <- logistic_reg(engine = "glm") |>
+fit_vote_1 <- logistic_reg(engine = "glm") |>
  	fit(voted ~ sex + age + treatment + voter_class, data = x)
 
- fit_vote_2 <- logistic_reg(engine = "glm") |>
-   fit(voted ~ age + sex + treatment*voter_class,
-      data = x)
+fit_vote_2 <- logistic_reg(engine = "glm") |>
+   fit(voted ~ age + sex + treatment*voter_class, data = x)
 
- fit_vote <- fit_vote_2
+fit_vote <- fit_vote_2
 
- # coefs_vote_1 <- tidy(fit_vote_1, conf.int = TRUE) |> 
- 	# select(term, estimate, conf.low, conf.high)
+# fit_vote_tidy <- tidy(fit_vote, conf.int = TRUE)
+# write_rds(fit_vote_tidy, "data/fit_vote_tidy.rds")
+fit_vote_tidy <- read_rds("data/fit_vote_tidy.rds")
 
- # coefs_vote_2 <- tidy(fit_vote_2, conf.int = TRUE) |>
- 	# select(term, estimate, conf.low, conf.high)
-
- # save(fit_vote_1, fit_vote_2, fit_vote, coefs_vote_1, coefs_vote_2,
- 	 # file = ("data/objects.RData")
  
 preds <- plot_predictions(fit_vote, type = "prob", condition = c("treatment", "voter_class"), draw = FALSE)
 
@@ -1175,12 +1168,6 @@ Continue the pipe with `tidy(conf.int = TRUE)`.
   tidy(... = TRUE)
 ```
 
-```{r courage-4-test, include = FALSE}
-logistic_reg(engine = "glm") |>
-  fit(factor(primary_06) ~ sex, data = shaming) |>
-  tidy(conf.int = TRUE)
-```
-
 ### 
 
 The intercept (-0.801) is the log-odds of voting in the 2006 primary for the baseline group—females in this case.
@@ -1203,12 +1190,6 @@ logistic_reg(engine = "glm") |>
     tidy(conf.int = TRUE)
 ```
 
-```{r courage-5-test, include = FALSE}
-logistic_reg(engine = "glm") |>
-  fit(factor(primary_06) ~ treatment, data = shaming) |>
-  tidy(conf.int = TRUE)
-```
-
 ### 
 
 The same dummy variable approach applies to a categorical covariate with $N$ values. For example, `treatment` in this dataset has four categories, so the model produces three dummy $0/1$ variables. The reference group (such as "No Postcard") is included in the intercept, and the coefficients for the other treatment groups (e.g., "Civic Duty," "Hawthorne," "Neighbors") show their effect compared to the reference.
@@ -1227,12 +1208,6 @@ Change the call to `fit(factor(primary_06) ~ treatment + sex + age, data = shami
 ... |>
   fit(factor(primary_06) ~ treatment + sex + age, data = shaming) |>
   ...
-```
-
-```{r courage-6-test, include = FALSE}
-logistic_reg(engine = "glm") |>
-  fit(factor(primary_06) ~ treatment + sex + age, data = shaming) |>
-  tidy(conf.int = TRUE)
 ```
 
 ### 
@@ -1286,7 +1261,7 @@ Just because something exists in the tutorial (or in the QMD) does not mean that
 
 ### Exercise 9
 
-In the Console, run `tidy()` on `fit_vote` with the argument `conf.int` set equal to `TRUE`. This returns 95% intervals for all the parameters in our model.
+In the Console, run `tidy()` on `fit_vote` with the argument `conf.int` set equal to `TRUE`. This returns 95% intervals for all the parameters in our model. This might take a minute or two.
 
 ```{r courage-9, exercise = TRUE}
 
@@ -1294,10 +1269,6 @@ In the Console, run `tidy()` on `fit_vote` with the argument `conf.int` set equa
 
 ```{r courage-9-hint-1, eval = FALSE}
 tidy(..., conf.int = ...)
-```
-
-```{r courage-9-test, include = FALSE}
-tidy(fit_vote, conf.int = TRUE)
 ```
 
 ### 
@@ -1463,7 +1434,7 @@ question_text(NULL,
 ###
 
 ```{r}
-tidy(fit_vote, conf.int = TRUE) |>
+fit_vote_tidy |>
   select(term, estimate, conf.low, conf.high) |>
   mutate(across(estimate:conf.high, ~round(., 3))) |>
   gt() |>
@@ -1532,8 +1503,7 @@ Before using the DGM, we should make sure that we can interpret it.
 Recall the values for the parameters in our data generating mechanism:
 
 ```{r}
-fit_vote |> 
- 	tidy(conf.int = TRUE) |> 
+fit_vote_tidy |> 
 	select(term, estimate, conf.low, conf.high)
 ```
 
@@ -1557,10 +1527,9 @@ Whenever we consider non-treatment variables, we must never use terms like "caus
 Look at the coefficient and confidence interval for `treatmentNeighbors` in your model table.
 
 ```{r}
-fit_vote |> 
-  tidy(conf.int = TRUE) |> 
-  select(term, estimate, conf.low, conf.high) |> 
-  filter(term == "treatmentNeighbors")
+fit_vote_tidy |> 
+	select(term, estimate, conf.low, conf.high) |> 
+  	filter(term == "treatmentNeighbors")
 ```
 
 ###
@@ -1585,10 +1554,9 @@ Dummy variables must always be interpreted in the context of the base value for 
 Now look at the coefficient and confidence interval for `age` in your model table.
 
 ```{r}
-fit_vote |> 
-  tidy(conf.int = TRUE) |> 
-  select(term, estimate, conf.low, conf.high) |> 
-  filter(term == "age")
+fit_vote_tidy |> 
+	select(term, estimate, conf.low, conf.high) |> 
+  	filter(term == "age")
 ```
 
 ###
@@ -1682,12 +1650,10 @@ Run `avg_predictions()` on `fit_vote` with `type = "prob"`. Recall that you alwa
 
 ```{r temperance-8-hint-1, eval = FALSE}
 avg_predictions(fit_..., type = ...)
-
 ```
 
 ```{r temperance-8-test, include = FALSE}
 avg_predictions(fit_vote, type = "prob")
-
 ```
 
 ###
@@ -1728,7 +1694,6 @@ plot_predictions(fit_..., type = ..., condition = ...)
 
 ```{r temperance-10-test, include = FALSE}
 plot_predictions(fit_vote, type = "prob", condition = "treatment")
-
 ```
 
 ### 
