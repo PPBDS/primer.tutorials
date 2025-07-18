@@ -262,7 +262,7 @@ If the treatment variable is continuous (like a lottery payment), then there are
 
 *The important thing is not to stop questioning.* - Albert Einstein
 
-You have a campaign budget. Your goal is to win the election. Winning the election involves convincing people to vote for you and getting your supporters to vote. Should you send postcards to registered voters? What should those postcards say? Does the effect of the postcards vary for different types of voters?
+You have a campaign budget. Your goal is to win the election in Texas. Winning the election involves convincing people to vote for you and getting your supporters to vote. Should you send postcards to registered voters? What should those postcards say? Does the effect of the postcards vary for different types of voters?
 
 We can’t answer every possible campaign question, but by focusing on the effect of postcards using this dataset, we can make more informed decisions about which outreach strategies are likely to increase voter turnout.
 
@@ -464,52 +464,6 @@ question_text(NULL,
 ### 
 
 The Preceptor Table does not include all the covariates which you will eventually include in your model. It only includes covariates which you need to answer your question.
-
-### Exercise 10
-
-Run `glimpse()` on `shaming`.
-
-CP/CR.
-
-```{r wisdom-10, exercise = TRUE}
-
-```
-
-```{r wisdom-10-hint-1, eval = FALSE}
-glimpse(...)
-```
-
-```{r wisdom-10-test, include = FALSE}
-glimpse(shaming)
-```
-
-###
-
-Our outcome variable, `primary_06`, is just 0/1, indicating whether or not someone voted in the 2006 Michigan primary election. But that is not what we, as a gubernatorial candidate, really care about! We want to know who someone voted for, or at least which party, not whether or not they voted. Annoying! 
-
-### Exercise 11
-
-Pipe `shaming` to `count(treatment)`.
-
-CP/CR.
-
-```{r wisdom-11, exercise = TRUE}
-
-```
-
-```{r wisdom-11-hint-1, eval = FALSE}
-... |> 
-    count(...)
-```
-
-```{r wisdom-11-test, include = FALSE}
-shaming |> 
-    count(treatment)
-```
-
-###
-
-Most people did not receive a postcard at all. They are the control case. Everyone else had a 25% chance of receiving a postcard, each with a different message. Those are the four possible treatments.
 
 ### Exercise 12
 
@@ -1027,15 +981,15 @@ $$
 
 with $Y \sim \text{Bernoulli}(\rho)$ where $\rho$ is the probability above.
 
-What does this formula represent in plain English?
+Use AI to come up with a $\LaTeX$ representation of the mathematical structure of the model, with $Y$ as the dependent variable and $X_1$, $X_2$ and so on as the independent variables. This version will not have the values of any parameters since we have not, yet, estimated them. Confirm that the $\LaTeX$ code works by placing it in your QMD and then rendering. Paste that $\LaTeX$ code below.
 
 ```{r justice-15}
 question_text(NULL,
-	message = "This formula models the probability that an event (like voting) happens, based on predictor variables (like treatment, age, etc.). The coefficients ($\\beta$'s) measure how each predictor changes the log-odds of the outcome.",
 	answer(NULL, correct = TRUE),
-	allow_retry = FALSE,
+	allow_retry = TRUE,
+	try_again_button = "Edit Answer",
 	incorrect = NULL,
-	rows = 6)
+	rows = 5)
 ```
 
 ###
@@ -1239,6 +1193,20 @@ In data science, **we deal with words, math, and code, but the most important of
 We need `fit_vote` to exist in Console World. Copy/paste this code into the Console and execute it.
 
 ````
+x <- shaming |> 
+  mutate(civ_engage = primary_00 + primary_02 + primary_04 + 
+               general_00 + general_02 + general_04) |> 
+  select(primary_06, treatment, sex, age, civ_engage) |> 
+  mutate(voter_class = factor(
+    case_when(
+      civ_engage %in% c(5, 6) ~ "Always Vote",
+      civ_engage %in% c(3, 4) ~ "Sometimes Vote",
+      civ_engage %in% c(1, 2) ~ "Rarely Vote"),
+         levels = c("Rarely Vote", 
+                    "Sometimes Vote", 
+                    "Always Vote"))) |>
+  mutate(voted = as.factor(primary_06))
+
 fit_vote <- logistic_reg(engine = "glm") |>
   fit(voted ~ age + sex + treatment * voter_class, data = x)
 
@@ -1455,11 +1423,7 @@ Explain the structure of the model. Something like: "I/we model XX [the concept 
 
 Recall our summaries from the previous Wisdom and Justice sections. 
 
-Wisdom:
-> *Sending postcards to registered voters is a traditional element of US campaigns. For this analysis, we use data from a 2006 field experiment in Michigan to inform strategies for increasing turnout in the current Texas gubernatorial election. However, we recognize that Michigan may differ from Texas and the broader US.*
-
-Justice:
-> *To estimate likely effects, we fit a logistic regression model predicting voter turnout as a function of postcard treatment, voter engagement (including interaction effects), sex, and age. This structure helps us isolate the impact of different mailings on various types of voters.*
+> *Sending postcards to registered voters is a traditional element of US campaigns. For this analysis, we use data from a 2006 field experiment in Michigan to inform strategies for increasing turnout in the current Texas gubernatorial election. However, we recognize that Michigan may differ from Texas and the broader US. To estimate likely effects, we fit a logistic regression model predicting voter turnout as a function of postcard treatment, voter engagement (including interaction effects), sex, and age. This structure helps us isolate the impact of different mailings on various types of voters.*
 
 ```{r courage-16}
 question_text(NULL,
@@ -1511,7 +1475,7 @@ Interpret the meaning of one coefficient from the table above (for example, age 
 
 ```{r temperance-2}
 question_text(NULL,
-	message = "When comparing two people who are identical except for the variable in question (for example, age or treatment), the difference in their predicted log-odds of voting is given by the relevant coefficient in the model, adjusting for other variables.",
+	message = "When comparing two people who are identical except for the variable in question (for example, `age` or `treatment`), the difference in their predicted log-odds of voting is given by the relevant coefficient in the model, adjusting for other variables.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1538,7 +1502,7 @@ Interpret the meaning of the `treatmentNeighbors` coefficient. When comparing tw
 
 ```{r temperance-3}
 question_text(NULL,
-	message = "The treatmentNeighbors coefficient shows how much more likely someone is to vote if they got the Neighbors postcard versus no postcard, after accounting for other variables. If the confidence interval doesn’t include zero, the effect is likely real.",
+	message = "The `treatmentNeighbors` coefficient shows how much more likely someone is to vote if they got the Neighbors postcard versus no postcard, after accounting for other variables. If the confidence interval doesn’t include zero, the effect is likely real.",
 	answer(NULL, correct = TRUE),
 	allow_retry = FALSE,
 	incorrect = NULL,
@@ -1620,12 +1584,7 @@ Data science projects begin with a decision which we face. To make that decision
 
 ### Exercise 7
 
-Run this code:
-
-```
-predictions(fit_vote, type = "prob")
-
-```       
+Run `predictions()` on `fit_vote` with `type` set to `"prob"`     
 
 ```{r temperance-7, exercise = TRUE}
 
@@ -1724,7 +1683,7 @@ This plot shows the model’s estimated probability of voting for each treatment
 
 ### Exercise 12
 
-In the Console, run `plot_predictions()` on `fit_vote` with `type = "prob"`. This time, set condition equal to `"treatment", "voter_class".`
+In the Console, run `plot_predictions()` on `fit_vote` with `type = "prob"`. This time, set condition equal to `c("treatment", "voter_class")`.
 
 ```{r temperance-12, exercise = TRUE}
 
