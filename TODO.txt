@@ -1,4 +1,96 @@
-Luke Li
+### make_p_table()
+
+* We need our Preceptor and Population Tables to look the same everywhere: Primer, primer.tutorials, and class material.
+
+* We need an R function in primer.tutorials, like tutorial.helpers::make_exercise(), which makes them. Call it make_p_table(table, type). The argument `table` takes two possible values "preceptor" or "population". Any capitalization is allowed. You only need to give the start, so `type = "pr"` would be enough to generate a Preceptor Table. The `type` argument allows for "causal" or "predictive", again allowing for partial matching and any capitalization.
+
+* The functions put in the current file (where your cursor is located) a template of **gt** code, perhaps along with the some tibble creation, use and removal. If then rendered (and assuming library(gt) and library(tibble) has already been loaded), a working table would appear, although much of the contents would be a place holder. Given the use of multiple separate R code, it is probably best if make_p_table(table, type) actually spits out the entire thing, including the ```{r} which starts things and the ``` which ends it.
+
+* The template is designed for ease of use of the author. That is, we make it easy for the author to enter the key data. For example, the top of the code might define a bunch of variables like `units_footnote` which would be equal to "This is where the text for your footnote for Units goes." The author would be expected to replace that text with her text. But the table still "works" even if she doesn't do it. Before, getting into more details, we need to describe the tables.
+
+* Both tables always have a title which includes "Preceptor Table" or "Population Table". (Might we allow the author to add a semi-colon and then more detail, like "Precetor Table: Chicago School Administrator"? Sure. But that does not see a high priority. And, anyway, it is easy for an author to find the "Preceptor Table" string and then edit it herself. No special formatting is required.)
+
+* All the columns in a Preceptor Table show up in its Population Table.
+
+* Both tables always include a set of spanner headers, in this order: 
+
+    + "Units" in a Preceptor Table and "Units/Time" for a Population Table
+    + "Outcome" for a predictive model or "Potential Outcomes" for a causal model.
+    + "treatment", which is only present for a causal model.
+    + "Covariates"
+
+
+The point of the spanners is to indicate the type of variables. The variable names themselves will differ across tables and must be given by the author. This suggests that the function will look more like:
+
+make_p_table(table, 
+             type,
+             unit_label,
+             outcome_label,
+             treatment_label,
+             covariate_label)
+
+Not sure what the default values would be for the label variables . . .
+
+* We use the term "label" rather than "vars" to indicate that there are the labels in the table rather than the variable names from the tibble. As such, they are often human-readable phrases with spaces, like "Math Score if in Small Class". Will long labels be wrapped automagically? We probably want that. Of course, these descriptions can not be long and so must be shortened in some way. In a pinch, the variable names may be used, but this is not preferred.
+
+* If table = "preceptor", then unit_label must be of length one, since there is only one variable which specifies unique rows in the table. If table = "population", then unit_label must be of length two, with the first variable indicating the units and the second variable the time.
+
+* If type = "predictive", then ouctome_label must be of length one, since there is only one outcome --- and the spanner must indicate "Outcome". If type = "causal", then outcome_label must be of length two or more --- and the spanner must indicate "Potential Outcomes".
+
+I think that this is enough for the arguments which must be given when you use the function . . .
+
+* There will be several footnotes, with default "Fix Me!" text, one for each of the spanner terms. They  should all be placed clearly so that the author knows what to edit to fix it after she creates the table. Again, the format of the created table may look ugly or poorly-organized from a code perspective. What matters is that it is easy to edit/modify.
+
+    + There will be a footnote for the title itself. This allows the author to provide background on the question which the table allows us to answer, once we fill in the missing values.
+
+    + There will be a footnote to the Units (if Preceptor) or Units/Time (if Population) spanners.  This is an opportunity for the author to explain the range of units and the time period covered. There is always something to say about these topics and, indeed, sometimes several sentences are necessary. A Preceptor/Population Table is self-contained. It includes all the text you need to understand it. (The language in this and other parts of the overview should be used in the help page.)
+
+    + There will be a footnote to the "Outcome/Potenial Outcomes" spanner which explains how/why we determined that this was a predictive or causal model. It might also report some details about our actual outcome variable and why it might not be exactly what we are looking for, especially given differences between the outcome we have in our data and the outcome we were initially interested in when we started the process.
+
+    + If it is a causal model, there will be a footnote to the "Treatment" spanner. There is almost always something useful to say about the treatment, especially in terms of how the treatment in the data differs from the treatment in the  Preceptor Table.
+
+    + There will be a footnote to the "Covariates" spanner. There is almost always something useful to say about the covariates, especially in terms of how the covariates in the data differs from the covariates in the  Preceptor Table.
+    
+    + Perhaps it should be easy for the author to delete these footnotes altogether. Perhaps the code us such that, at the top, there is a covariates_footnote variable, which has "Fix Me!" text but which, if set to NULL, generates no footnote.
+
+* The trickiest issue is the values that will appear in the table. Keep in mind:
+
+    + We don't take these values from our actual data. They are all entered by hand.
+
+    + Formatting them in the table, so that they are left/center/right aligned, is something we are not going to worry about yet.
+
+    + We want to make it easy for the author to enter those values by hand. One of the biggest annoyance is keeping things "lined up." That is, we want the 5th value of one variable to match the fifth value of another, but if the entries are of different length (in terms of number of characters per entry), then everything may not line up nicely, leaving us counting entries by hand. Very annoying.
+
+    + Probably easiest is to set up some `tribble()` code at the top. Then, also by default, that tribble is deleted at the end. In other words, we are not pasting in just gt() code. We are also pasting in other stuff used by gt().
+
+* Think about the information in these tribbles. The great benefit of tribbles is that it allows us to enter information by rows in the QMD, which makes lining things up much easier.  
+
+    + To make alignment easier, I think that there is just one tribble printed out for authors to fill in the values for. That tribble has length(outcome_label) + length(treatment_label) (which is always one if present?) + length(covariates_label) rows, each with the variable name, in backticks by default because they often include spaces, corresponding to the relevant label.
+
+    + The number of values in these rows, all missing at the start obviously, is by default X or Preceptor Table and Y for Population Tables. But it should be easy for the author to add or subtract. Of course, doing so needs to happen for all the rows.
+
+    + This tibble has a name. The gt code uses this name, and its knowledge of the values of the label variables.
+
+
+* The trickiest issue concerns the rows in the Table with all missing values. These are used to indicate that there are many more rows from the Data or the Preceptor Table then 
+
+
+The number of rows will equal the length of the value of 
+
+    + 
+
+
+ * Some miscellaneous details:
+
+    + The last column under "Covariates", which is the last column in both tables, always has a label of "..." and all values being "..." to indicate that there may be other covariates which we might consider later. Tables in early chapters might omit this. Maybe there is an argument, covariates_label_dots which determines this, and is true bu default. 
+
+
+    + The first column in Population Table is always "Source" and it has no spanner header. (Does that look OK?) It takes the value of "Data" for any rows from the data and "Preceptor Table" for any rows from the Preceptor Table. (Or maybe "Preceptor Table" is too long a string and it should be "PT"?)
+
+    + The first and last rows of the Population Table are all "..." to indicate that the population extends in time before the data and after the Preceptor Table. (Perhaps this is another variable that is turned on by default but could be turned off for a history example? That is, if you are studying voting in the 1992 election, you aren't really making any claims about before or after the election . . . or are you?)
+
+
+
 
 ### Summer Associates
 
