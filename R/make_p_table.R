@@ -44,7 +44,7 @@ tribble(
 ) |>
   gt() |>
   tab_header(title = "{title_base} [Edit Description]") |>  # Edit table title to describe units and time
-  tab_spanner(label = "{units_spanner}", columns = c({unit_cols})) |>  # Don't edit unless unit vars change
+  tab_spanner(label = "{units_spanner}", columns = c({unit_cols})) |>  # Dont edit unless unit vars change
   tab_spanner(label = "{outcome_label}", columns = c({outcome_cols})) |>  # Outcome or potential outcomes
 {treatment_spanner}  tab_spanner(label = "Covariates", columns = c(`Covariate 1`, `Covariate 2`, `...`)) |>  # Edit covariate labels as needed
   cols_align(align = "center", columns = everything()) |>
