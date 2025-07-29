@@ -1,24 +1,34 @@
 ### make_p_table()
 
-* We need our Preceptor and Population Tables to look the same everywhere: Primer, primer.tutorials, and class material.
+make_p_table(table = "po") fails, gives the Preceptor Table
 
-* In working on this, the best approach is to probably design the output, i.e., the code which you want outputted to the file, and then create a function which makes this output. See below for more discussion.
+Add lots of my footnote prose to @description, which can be several paragraphs.
 
 * Note that output must work in both Quarto and Rmarkdown. (I don't think that this matters, but . . .)
 
 * We need an R function in primer.tutorials, like tutorial.helpers::make_exercise(), which makes them. Call it:
 
-make_p_table(table, type, ...). 
+make_p_table(table, 
+             type,
+             unit_label,
+             outcome_label,
+             treatment_label,
+             covariate_label,
+             num_rows)
 
-The argument `table` takes two possible values "preceptor" or "population". Any capitalization is allowed. You only need to give the start, so `type = "pr"` would be enough to generate a Preceptor Table. The `type` argument allows for "causal" or "predictive", again allowing for partial matching and any capitalization.
+ * num_rows might be NULL by default but then take on default values depending on the type of table.            
 
-* The function puts in the current file (where your cursor is located) a template of **gt** code, perhaps along with some tibble creation, use and removal. If then rendered (and assuming library(gt) and library(tibble) has already been loaded), a working table would appear, although much of the contents would be a place holder. Given the use of multiple separate R code, it is probably best if make_p_table(table, type) actually spits out the entire thing, including the ```{r} which starts things and the ``` which ends it.
+* Keep in mind, we need gt, tibble and glue libraries.
 
-* The template is designed for ease of use of the author. That is, we make it easy for the author to enter the key data. For example, the top of the code might define a bunch of variables like `units_footnote` which would be equal to "This is where the text for your footnote for Units goes." The author would be expected to replace that text with her text. But the table still "works" even if she doesn't do it. Before, getting into more details, we need to describe the tables.
+* There are three approaches to the library issue: 1) Do nothing except ensure that the packages are in the DESCRIPTION file. 2) Load the packages in the code which is pasted in. 3) Use :: notation to call functions directly, like gt::tab_spanner().
 
-* Both tables always have a title which includes "Preceptor Table" or "Population Table". (Might we allow the author to add a semi-colon and then more detail, like "Precetor Table: Chicago School Administrator"? Sure. But that does not seem a high priority. And, anyway, it is easy for an author to find the "Preceptor Table" string and then edit it herself. No special formatting is required.)
+* Two approaches: 1) All one pipe, which creates no permanent objects. 2) Temp objects that are created and removed explicitly.
 
-* All the columns in a Preceptor Table show up in its Population Table. 
+* The template is designed for ease of use of the author. That is, we make it easy for the author to enter the key data. For example, the top of the code might define a bunch of variables like `units_footnote` which would be equal to "This is where the text for your footnote for Units goes." The author would be expected to replace that text with her text. But the table still "works" even if she doesn't do it. 
+
+* Both tables always have a title which is either "Preceptor Table" or "Population Table". Of course, the user could add a colon and more detail, like "Precetor Table: Chicago School Administrator". 
+
+* All the columns in a Preceptor Table show up in its Population Table. But the spanner labels are different and the number of column labels differs.
 
 * The above raises an interesting issue: Are we proposing to create a Preceptor Table and a Population Table at the same time? At first pass, we are not. Each table is created with its own call to make_p_table(). But, at second glance, there might be something here. After all, many things --- like some of the footnotes and variable values --- might be very similar ... but not identical. So, ignore this for now.
 
@@ -30,17 +40,7 @@ The argument `table` takes two possible values "preceptor" or "population". Any 
     + "Covariates"
 
 
-The point of the spanners is to indicate the type of variables. The variable names themselves will differ across tables and must be given by the author. This suggests that the function will look more like:
-
-make_p_table(table, 
-             type,
-             unit_label,
-             outcome_label,
-             treatment_label,
-             covariate_label)
-
-Not sure what the default values would be for the label variables . . .
-
+The point of the spanners is to indicate the type of variables. The variable names themselves will differ across tables and must be given by the author. 
 
 
 * We use the term "label" rather than "vars" to indicate that these are the labels in the table rather than the variable names from the data. As such, they are often human-readable phrases with spaces, like "Math Score if in Small Class". Will long labels be wrapped automagically? We probably want that. Of course, these descriptions can not be too long and so must be shortened in some way. In a pinch, the variable names may be used, but this is not preferred.
@@ -49,9 +49,7 @@ Not sure what the default values would be for the label variables . . .
 
 * If type = "predictive", then ouctome_label must be of length one, since there is only one outcome --- and the spanner must indicate "Outcome". If type = "causal", then outcome_label must be of length two or more --- and the spanner must indicate "Potential Outcomes".
 
-I think that this is enough for the arguments which must be given when you use the function . . .
-
-* There will be several footnotes, with default "Fix Me!" text, one for each of the spanner terms. They  should all be placed clearly so that the author knows what to edit to fix it after she creates the table. Again, the format of the created table may look ugly or poorly-organized from a code perspective. What matters is that it is easy to edit/modify.
+* There will be several footnotes, with default "Descrine what goes here" text, one for each of the spanner terms. They  should all be placed clearly so that the author knows what to edit to fix it after she creates the table. Again, the format of the created table may look ugly or poorly-organized from a code perspective. What matters is that it is easy to edit/modify.
 
     + There will be a footnote for the title itself. This allows the author to provide background on the question which the table allows us to answer, once we fill in the missing values.
 
@@ -65,21 +63,9 @@ I think that this is enough for the arguments which must be given when you use t
     
     + Perhaps it should be easy for the author to delete these footnotes altogether. Perhaps the code is such that, at the top, there is a covariates_footnote variable, which has "Fix Me!" text but which, if set to NULL, generates no footnote, and no error.
 
-* The trickiest issue is the values that will appear in the table. Keep in mind:
-
-    + We don't take these values from our actual data. They are all entered by hand.
-
-    + Formatting them in the table, so that they are left/center/right aligned, is something we are not going to worry about yet.
-
-    + We want to make it easy for the author to enter those values by hand. One of the biggest annoyance is keeping things "lined up." That is, we want the 5th value of one variable to match the fifth value of another, but if the entries are of different length (in terms of number of characters per entry), then everything may not line up nicely, leaving us counting entries by hand. Very annoying.
-
-    + Probably easiest is to set up some `tribble()` code at the top. Then, also by default, that tribble is deleted at the end. In other words, we are not pasting in just gt() code. We are also pasting in other stuff used by gt().
-
 * Think about the information in these tribbles. The great benefit of tribbles is that it allows us to enter information by rows in the QMD, which makes lining things up much easier.  
 
     + To make alignment easier, I think that there is just one tribble printed out for authors to fill in the values for. That tribble has length(outcome_label) + length(treatment_label) (which is always one if present?) + length(covariates_label) rows, each with the variable name, in backticks by default because they often include spaces, corresponding to the relevant label.
-
-    + The number of values in these rows, all missing at the start obviously, is by default X or Preceptor Table and Y for Population Tables. But it should be easy for the author to add or subtract. Of course, doing so needs to happen for all the rows. 
 
     + This tibble has a name. The gt code uses this name, and its knowledge of the values of the label variables. 
 

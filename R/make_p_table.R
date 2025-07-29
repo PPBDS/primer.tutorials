@@ -4,6 +4,7 @@
 #' @param type Character. Either "predictive" or "causal" (partial match allowed).
 #'
 #' @export 
+
 make_p_table <- function(table = "preceptor", type = "predictive") {
   table <- tolower(match.arg(table, c("preceptor", "population")))
   type <- tolower(match.arg(type, c("predictive", "causal")))
