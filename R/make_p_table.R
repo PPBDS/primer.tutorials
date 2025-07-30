@@ -25,10 +25,9 @@ make_p_table <- function(table = "preceptor",
                          treatment_label = NULL,
                          covariate_label = NULL,
                          num_rows = NULL) {
-
   # Validate inputs
-  table <- tolower(substr(table, 1, 3))  # "pre", "pop"
-  type <- tolower(substr(type, 1, 3))    # "pre", "cau"
+  table <- tolower(substr(table, 1, 3))
+  type <- tolower(substr(type, 1, 3))
   is_preceptor <- startsWith(table, "pre")
   is_causal <- startsWith(type, "cau")
 
@@ -48,17 +47,24 @@ make_p_table <- function(table = "preceptor",
     stop("Causal tables must include a treatment label.")
 
   if (is.null(covariate_label)) covariate_label <- c("Covariate 1", "Covariate 2")
-  covariate_label <- c(covariate_label, "...")  # Always add "..." column
+  covariate_label <- c(covariate_label, "...")
 
-  # Labels and columns
+  # Column header labels
   unit_cols <- paste0("`", unit_label, "`", collapse = ", ")
   outcome_cols <- paste0("`", outcome_label, "`", collapse = ", ")
   covariate_cols <- paste0("`", covariate_label, "`", collapse = ", ")
   treatment_col <- if (is_causal) paste0("`", treatment_label, "`") else NULL
-  spanner_treatment <- if (is_causal) glue::glue('  gt::tab_spanner(label = "Treatment", columns = c({treatment_col})) |>\n') else ""
+  spanner_treatment <- if (is_causal) glue::glue('  gt::tab_spanner(label = "Treatment", columns = c({treatment_col})) |>') else ""
   treatment_col_def <- if (is_causal) paste0(", ~`", treatment_label, "`") else ""
 
-  # Column headers
+  # Generate treatment footnote line safely
+  treatment_footnote_line <- if (is_causal) {
+    '  gt::tab_footnote(treatment_footnote, locations = gt::cells_column_spanners(spanners = "Treatment")) |>'
+  } else {
+    ""
+  }
+
+  # Column headers for tribble
   col_headers <- c(
     if (!is_preceptor) "~`Source`",
     if (!is_preceptor) paste0("~`", unit_label[1], "`"),
@@ -70,7 +76,7 @@ make_p_table <- function(table = "preceptor",
   )
   col_header_line <- paste(col_headers, collapse = ", ")
 
-  # Data rows
+  # Filler data rows
   filler_row <- rep('"..."', length(col_headers))
   data_rows <- c(paste(filler_row, collapse = ", "))
   for (i in seq_len(num_rows)) {
@@ -78,12 +84,12 @@ make_p_table <- function(table = "preceptor",
   }
   data_rows <- c(data_rows, paste(filler_row, collapse = ", "))
 
-  # Spanners
+  # Spanner labels
   spanner_units <- if (is_preceptor) "Units" else "Units/Time"
   spanner_outcomes <- if (is_causal) "Potential Outcomes" else "Outcome"
   align_left_col <- if (is_preceptor) glue::glue("`{unit_label}`") else "`Source`"
 
-  # Footnote placeholders
+  # Footnote variables
   footnotes <- glue::glue('
 # Edit these footnotes after inserting
 title_footnote <- "Describe the table’s purpose and what it helps answer."
@@ -93,14 +99,7 @@ treatment_footnote <- "Describe the treatment and how it appears in the data."  
 covariates_footnote <- "Describe covariates and how they relate to those in the data."
 ')
 
-  gt_footnotes <- glue::glue(
-'  gt::tab_footnote(title_footnote, locations = gt::cells_title("title")) |>
-  gt::tab_footnote(units_footnote, locations = gt::cells_column_spanners(spanners = "{spanner_units}")) |>
-  gt::tab_footnote(outcome_footnote, locations = gt::cells_column_spanners(spanners = "{spanner_outcomes}")) |>
-  {if (is_causal) "gt::tab_footnote(treatment_footnote, locations = gt::cells_column_spanners(spanners = \"Treatment\")) |>\n" else ""}  gt::tab_footnote(covariates_footnote, locations = gt::cells_column_spanners(spanners = \"Covariates\"))'
-  )
-
-  # Full code block
+  # Final glue template
   code <- glue::glue(
 '```{{r}}
 {footnotes}
@@ -113,14 +112,20 @@ tibble::tribble(
   gt::tab_header(title = "{if (is_preceptor) "Preceptor Table" else "Population Table"}: [Edit Description]") |>
   gt::tab_spanner(label = "{spanner_units}", columns = c({unit_cols})) |>
   gt::tab_spanner(label = "{spanner_outcomes}", columns = c({outcome_cols})) |>
-{spanner_treatment}  gt::tab_spanner(label = "Covariates", columns = c({covariate_cols})) |>
+{spanner_treatment}
+  gt::tab_spanner(label = "Covariates", columns = c({covariate_cols})) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
   gt::cols_align(align = "left", columns = c({align_left_col})) |>
   gt::fmt_markdown(columns = gt::everything()) |>
-{gt_footnotes}
+  gt::tab_footnote(title_footnote, locations = gt::cells_title("title")) |>
+  gt::tab_footnote(units_footnote, locations = gt::cells_column_spanners(spanners = "{spanner_units}")) |>
+  gt::tab_footnote(outcome_footnote, locations = gt::cells_column_spanners(spanners = "{spanner_outcomes}")) |>
+{treatment_footnote_line}
+  gt::tab_footnote(covariates_footnote, locations = gt::cells_column_spanners(spanners = "Covariates"))
 ```'
   )
 
+  # Insert into document
   rstudioapi::insertText(
     location = rstudioapi::getActiveDocumentContext()$selection[[1]]$range,
     text = code
