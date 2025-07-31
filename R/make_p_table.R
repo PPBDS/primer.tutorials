@@ -142,13 +142,13 @@ text = code
 
 ### Example Use
 
-````
-make_p_table(
-  type = "causal",
-  unit_label = c("Candidate", "Year"),
-  outcome_label = c("Years Lived (Lose)", "Years Lived (Win)"),
-  treatment_label = "Election Result",
-  covariate_label = c("Age", "Win Margin", "Win %", "Party", "Sex"),
-  title = "Potential Years Lived After Election"
-)
-````
+# ````
+# make_p_table(
+#   type = "causal",
+#   unit_label = c("Candidate", "Year"),
+#   outcome_label = c("Years Lived (Lose)", "Years Lived (Win)"),
+#   treatment_label = "Election Result",
+#   covariate_label = c("Age", "Win Margin", "Win %", "Party", "Sex"),
+#   title = "Potential Years Lived After Election"
+# )
+# ````
