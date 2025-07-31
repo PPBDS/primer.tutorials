@@ -39,7 +39,7 @@ make_p_table <- function(type = "predictive",
   cov_cols <- paste(q(covariate_label), collapse = ", ")
   unit_cols <- paste(q(unit_label), collapse = ", ")
   treat_col <- if (is_causal) q(treatment_label) else NULL
-
+ 
   pre_headers <- paste(
     q(unit_label[1]),
     if (is_causal) paste(q(outcome_label), collapse = ", ") else q(outcome_label),
