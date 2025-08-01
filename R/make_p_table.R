@@ -1,158 +1,110 @@
-# Insert a standardized Preceptor or Population Table template
-#
-# This function generates five editable code chunks:
-# 1. Data entry for Preceptor and Population (d_tibble, p_tibble)
-# 2. Footnotes to be edited
-# 3. Preceptor Table generation
-# 4. Population Table generation
-# 5. Variable cleanup
-#
-# The generated tables follow standard formatting guidelines and can be used in
-# Quarto or R Markdown documents. Population Tables will automatically include
-# Preceptor rows within them.
-#
-# @param table Character. "preceptor" or "population" (partial match allowed).
-# @param type Character. "predictive" or "causal" (partial match allowed).
-# @param unit_label Length 1 or 2 character vector. If population, must be c(unit, time).
-# @param outcome_label Character vector. One outcome for predictive; 2+ for causal.
-# @param treatment_label Optional character. Required if causal.
-# @param covariate_label Character vector. Will always include a final "...".
-# @param num_rows Integer. Number of main data rows (excluding filler ... rows).
-#
-# @export
-make_p_table <- function(table = "preceptor",
-                         type = "predictive",
-                         unit_label = NULL,
-                         outcome_label = NULL,
-                         treatment_label = NULL,
-                         covariate_label = NULL,
-                         num_rows = NULL) {
+# Updated make_p_table.R
+# This version produces five separate code chunks with proper formatting.
 
-  table <- tolower(substr(table, 1, 3))
-  type <- tolower(substr(type, 1, 3))
-  is_preceptor <- startsWith(table, "pre")
-  is_causal <- startsWith(type, "cau")
+#' Insert a standardized Preceptor or Population Table template
+#'
+#' This function creates a five-chunk Quarto-ready template for Preceptor and Population Tables.
+#' The output is inserted directly into the current document at the cursor.
+#'
+#' @param is_causal Logical. If TRUE, generate template for causal analysis; else predictive.
+#' @param table_title Character. Title to use for the Population Table.
+#' @export
+make_p_table <- function(is_causal = TRUE,
+                         table_title = "Population Table: [Edit Description]") {
 
-  if (is.null(num_rows)) num_rows <- if (is_preceptor) 3 else 4
+  # --- Define 5 separate glue code chunks ---
 
-  if (is_preceptor && length(unit_label) != 1)
-    stop("Preceptor tables require a single unit label.")
-  if (!is_preceptor && length(unit_label) != 2)
-    stop("Population tables require unit and time labels.")
+  code_footnotes <- glue::glue(
+    '```{{r}}
+# Edit these footnotes after inserting
+title_footnote <- "Describe the table’s purpose and what it helps answer."
+units_footnote <- "Describe the units and time span."
+outcome_footnote <- "Explain why this is predictive or causal, and details about the outcome(s)."
+{if (is_causal) "treatment_footnote <- \"Describe the treatment and how it appears in the data.\"" else ""}
+covariates_footnote <- "Describe covariates and how they relate to those in the data."
+```'
+  )
 
-  if (is_causal && length(outcome_label) < 2)
-    stop("Causal tables require multiple potential outcomes.")
-  if (!is_causal && length(outcome_label) != 1)
-    stop("Predictive tables require one outcome.")
-
-  if (is_causal && is.null(treatment_label))
-    stop("Treatment label required for causal tables.")
-
-  if (is.null(covariate_label)) covariate_label <- c("Covariate 1", "Covariate 2")
-  covariate_label <- c(covariate_label, "...")
-
-  # Build headers
-  pre_header <- c(paste0("~`", unit_label, "`"), paste0("~`", outcome_label, "`"))
-  if (is_causal) pre_header <- c(pre_header, paste0("~`", treatment_label, "`"))
-  pre_header <- c(pre_header, paste0("~`", covariate_label, "`"))
-  pre_header <- paste(pre_header, collapse = ", ")
-
-  pop_header <- c("~`Source`", paste0("~`", unit_label, "`"), paste0("~`", outcome_label, "`"))
-  if (is_causal) pop_header <- c(pop_header, paste0("~`", treatment_label, "`"))
-  pop_header <- c(pop_header, paste0("~`", covariate_label, "`"))
-  pop_header <- paste(pop_header, collapse = ", ")
-
-  # Repeated row
-  data_row <- paste(rep('"..."', length(c(unit_label, outcome_label, covariate_label)) + 1 + is_causal + !is_preceptor), collapse = ", ")
-  filler_row <- data_row
-
-  # Footnotes block
-  footnote_chunk <- if (is_causal) {
-    '```{r}
-# Footnotes (edit these)
-title_footnote <- "Describe what this table helps answer."
-units_footnote <- "Describe the units and time variable."
-outcome_footnote <- "What do these outcomes represent?"
-treatment_footnote <- "Describe the treatment."
-covariates_footnote <- "Explain covariates and any key relationships."
-```
-'
-  } else {
-    '```{r}
-# Footnotes (edit these)
-title_footnote <- "Describe what this table helps answer."
-units_footnote <- "Describe the units and time variable."
-outcome_footnote <- "What do these outcomes represent?"
-covariates_footnote <- "Explain covariates and any key relationships."
-```
-'
-  }
-
-  # Create full code block
-  code <- glue::glue('
-```{{r}}
-# Preceptor and Population data (edit these rows)
+  code_p_tibble <- glue::glue(
+    '```{{r}}
 p_tibble <- tibble::tribble(
-  {pre_header},
-  {filler_row},
-  {data_row},
-  {data_row},
-  {filler_row}
+  ~`Candidate`, ~`Years Lived (Lose)`, ~`Years Lived (Win)`, ~`Election Result`, ~`Win Margin`, ~`Age`, ~`Win %`, ~`Party`, ~`Sex`, ~`...`,
+  "Joe Smith", "18*", "23", "Win", "7.2", "56", "100%", "Republican", "Male", "...",
+  "David Jones", "22", "28*", "Lose", "-3.5", "48", "67%", "Democrat", "Male", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
 )
+```'
+  )
 
+  code_d_tibble <- glue::glue(
+    '```{{r}}
 d_tibble <- tibble::tribble(
-  {pop_header},
-  {filler_row},
-  {data_row},
-  {data_row},
-  {data_row},
-  {data_row},
-  {filler_row},
-  {filler_row},
-  {data_row},
-  {data_row},
-  {filler_row}
+  ~`Source`, ~`Candidate`, ~`Year`, ~`Years Lived (Lose)`, ~`Years Lived (Win)`, ~`Election Result`, ~`Win Margin`, ~`Age`, ~`Win %`, ~`Party`, ~`Sex`, ~`...`,
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  "Data", "Earl Warren", "1946", "18*", "23", "Win", "7.2", "56", "100%", "Republican", "Male", "...",
+  "Data", "George Wallace", "1946", "22", "28*", "Lose", "-3.5", "48", "67%", "Democrat", "Male", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  "Preceptor Table", "Joe Smith", "2025", "18*", "23", "Win", "7.2", "56", "100%", "Republican", "Male", "...",
+  "Preceptor Table", "David Jones", "2025", "22", "28*", "Lose", "-3.5", "48", "67%", "Democrat", "Male", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
 )
-```
+```'
+  )
 
-{footnote_chunk}
-
-```{{r}}
-# Preceptor Table
-p_tibble |>
-  gt::gt() |>
+  code_p_table <- glue::glue(
+    '```{{r}}
+# Render Preceptor Table
+gt::gt(data = p_tibble) |>
   gt::tab_header(title = "Preceptor Table") |>
-  gt::tab_spanner(label = "{if (is_preceptor) "Units" else "Units/Time"}", columns = c({paste0("`", unit_label, "`", collapse = ", ")})) |>
-  gt::tab_spanner(label = "{if (is_causal) "Potential Outcomes" else "Outcome"}", columns = c({paste0("`", outcome_label, "`", collapse = ", ")})) |>
-  {if (is_causal) glue::glue("gt::tab_spanner(label = \"Treatment\", columns = c(`{treatment_label}`)) |>") else ""}
-  gt::tab_spanner(label = "Covariates", columns = c({paste0("`", covariate_label, "`", collapse = ", ")})) |>
+  gt::tab_spanner(label = "Potential Outcomes", columns = c(`Years Lived (Lose)`, `Years Lived (Win)`)) |>
+  gt::tab_spanner(label = "Treatment", columns = c(`Election Result`)) |>
+  gt::tab_spanner(label = "Covariates", columns = c(`Win Margin`, `Age`, `Win %`, `Party`, `Sex`, `...`)) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
-  gt::cols_align(align = "left", columns = c(`{unit_label[1]}`)) |>
+  gt::cols_align(align = "left", columns = c(`Candidate`)) |>
   gt::fmt_markdown(columns = gt::everything())
-```
+```'
+  )
 
-```{{r}}
-# Population Table
-d_tibble |>
-  gt::gt() |>
-  gt::tab_header(title = "Population Table") |>
-  gt::tab_spanner(label = "Units/Time", columns = c({paste0("`", unit_label, "`", collapse = ", ")})) |>
-  gt::tab_spanner(label = "{if (is_causal) "Potential Outcomes" else "Outcome"}", columns = c({paste0("`", outcome_label, "`", collapse = ", ")})) |>
-  {if (is_causal) glue::glue("gt::tab_spanner(label = \"Treatment\", columns = c(`{treatment_label}`)) |>") else ""}
-  gt::tab_spanner(label = "Covariates", columns = c({paste0("`", covariate_label, "`", collapse = ", ")})) |>
+  code_pop_table <- glue::glue(
+    '```{{r}}
+# Render Population Table
+gt::gt(data = d_tibble) |>
+  gt::tab_header(title = "{table_title}") |>
+  gt::tab_spanner(label = "Units/Time", columns = c(`Candidate`, `Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", columns = c(`Years Lived (Lose)`, `Years Lived (Win)`)) |>
+  gt::tab_spanner(label = "Treatment", columns = c(`Election Result`)) |>
+  gt::tab_spanner(label = "Covariates", columns = c(`Win Margin`, `Age`, `Win %`, `Party`, `Sex`, `...`)) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
   gt::cols_align(align = "left", columns = c(`Source`)) |>
-  gt::fmt_markdown(columns = gt::everything())
-```
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(title_footnote, locations = gt::cells_title("title")) |>
+  gt::tab_footnote(units_footnote, locations = gt::cells_column_spanners(spanners = "Units/Time")) |>
+  gt::tab_footnote(outcome_footnote, locations = gt::cells_column_spanners(spanners = "Potential Outcomes")) |>
+  {if (is_causal) "gt::tab_footnote(treatment_footnote, locations = gt::cells_column_spanners(spanners = \"Treatment\")) |>
+  " else ""}gt::tab_footnote(covariates_footnote, locations = gt::cells_column_spanners(spanners = "Covariates"))
+```'
+  )
 
-```{{r}}
-# Cleanup
+  code_cleanup <- glue::glue(
+    '```{{r}}
+# Cleanup temporary variables
 rm(p_tibble, d_tibble)
-```
-')
+```'
+  )
+
+  # Combine and insert
+  full_code <- paste(
+    code_footnotes,
+    code_p_tibble,
+    code_d_tibble,
+    code_p_table,
+    code_pop_table,
+    code_cleanup,
+    sep = "\n\n"
+  )
 
   rstudioapi::insertText(
     location = rstudioapi::getActiveDocumentContext()$selection[[1]]$range,
-    text = code
+    text = full_code
   )
 }
