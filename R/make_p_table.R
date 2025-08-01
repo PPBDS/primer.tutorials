@@ -9,18 +9,19 @@
 #' @param is_causal Logical. If TRUE, generate template for causal analysis; else predictive.
 #' @param table_title Character. Title to use for the Population Table.
 #' @export
+
 make_p_table <- function(is_causal = TRUE,
-                         table_title = "Population Table: [Edit Description]") {
+                         table_title = "Population Table") {
 
   # --- Define 5 separate glue code chunks ---
 
   code_footnotes <- glue::glue(
     '```{{r}}
 # Edit these footnotes after inserting
-title_footnote <- "Describe the table’s purpose and what it helps answer."
+title_footnote <- "Describe the purpose and what it helps answer."
 units_footnote <- "Describe the units and time span."
 outcome_footnote <- "Explain why this is predictive or causal, and details about the outcome(s)."
-{if (is_causal) "treatment_footnote <- \"Describe the treatment and how it appears in the data.\"" else ""}
+treatment_footnote <- \"Describe the treatment and how it appears in the data.\"" else ""
 covariates_footnote <- "Describe covariates and how they relate to those in the data."
 ```'
   )
