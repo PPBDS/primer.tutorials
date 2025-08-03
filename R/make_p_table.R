@@ -107,7 +107,7 @@ rm(p_tibble, d_tibble)
     code_cleanup,
     sep = "\n\n"
   )
-
+ 
   rstudioapi::insertText(
     location = rstudioapi::getActiveDocumentContext()$selection[[1]]$range,
     text = full_code
