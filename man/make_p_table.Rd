@@ -4,12 +4,10 @@
 \alias{make_p_table}
 \title{Insert a standardized Preceptor or Population Table template}
 \usage{
-make_p_table(is_causal = TRUE, table_title = "Population Table")
+make_p_table(is_causal = TRUE)
 }
 \arguments{
 \item{is_causal}{Logical. If TRUE, generate template for causal analysis; else predictive.}
-
-\item{table_title}{Character. Title to use for the Population Table.}
 }
 \description{
 This function creates a five-chunk Quarto-ready template for Preceptor and Population Tables.
