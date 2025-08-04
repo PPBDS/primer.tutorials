@@ -39,9 +39,9 @@ covariates_footnote <- "Describe covariates and how they relate to those in the 
   code_p_tibble <- glue::glue(
     '```{{r}}
 p_tibble <- tibble::tribble(
-  ~`Candidate`, ~`Years Lived (Lose)`, ~`Years Lived (Win)`, ~`Election Result`, ~`Win Margin`, ~`Age`, ~`Win %`, ~`Party`, ~`Sex`, ~`...`,
-  "Joe Smith", "18*", "23", "Win", "7.2", "56", "100%", "Republican", "Male", "...",
-  "David Jones", "22", "28*", "Lose", "-3.5", "48", "67%", "Democrat", "Male", "...",
+  ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`,
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
 )
 ```'
@@ -49,14 +49,14 @@ p_tibble <- tibble::tribble(
 
   code_d_tibble <- glue::glue(
     '```{{r}}
-d_tibble <- tibble::tribble(
-  ~`Source`, ~`Candidate`, ~`Year`, ~`Years Lived (Lose)`, ~`Years Lived (Win)`, ~`Election Result`, ~`Win Margin`, ~`Age`, ~`Win %`, ~`Party`, ~`Sex`, ~`...`,
+d_tibble <- tibble::tribble( 
+  ~`Source`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`,
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Data", "Earl Warren", "1946", "18*", "23", "Win", "7.2", "56", "100%", "Republican", "Male", "...",
-  "Data", "George Wallace", "1946", "22", "28*", "Lose", "-3.5", "48", "67%", "Democrat", "Male", "...",
+  "Data", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  "Data", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Preceptor Table", "Joe Smith", "2025", "18*", "23", "Win", "7.2", "56", "100%", "Republican", "Male", "...",
-  "Preceptor Table", "David Jones", "2025", "22", "28*", "Lose", "-3.5", "48", "67%", "Democrat", "Male", "...",
+  "Preceptor Table", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  "Preceptor Table", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
 )
 ```'
@@ -67,12 +67,13 @@ d_tibble <- tibble::tribble(
 # Render Preceptor Table
 gt::gt(data = p_tibble) |>
   gt::tab_header(title = "Preceptor Table") |>
-  gt::tab_spanner(label = "Potential Outcomes", columns = c(`Years Lived (Lose)`, `Years Lived (Win)`)) |>
-  gt::tab_spanner(label = "Treatment", columns = c(`Election Result`)) |>
-  gt::tab_spanner(label = "Covariates", columns = c(`Win Margin`, `Age`, `Win %`, `Party`, `Sex`, `...`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", columns = c(`...`, `...`)) |>
+  gt::tab_spanner(label = "Treatment", columns = c(`...`)) |>
+  gt::tab_spanner(label = "Covariates", columns = c(`...`, `...`, `...`, `...`, `...`, `...`)) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
-  gt::cols_align(align = "left", columns = c(`Candidate`)) |>
-  gt::fmt_markdown(columns = gt::everything())
+  gt::cols_align(align = "left", columns = c(`...`)) |>
+  gt::fmt_markdown(columns = gt::everything()
+  )
 ```'
   )
 
@@ -81,10 +82,10 @@ gt::gt(data = p_tibble) |>
 # Render Population Table
 gt::gt(data = d_tibble) |>
   gt::tab_header(title = "Population Table") |>
-  gt::tab_spanner(label = "Units/Time", columns = c(`Candidate`, `Year`)) |>
-  gt::tab_spanner(label = "Potential Outcomes", columns = c(`Years Lived (Lose)`, `Years Lived (Win)`)) |>
-  gt::tab_spanner(label = "Treatment", columns = c(`Election Result`)) |>
-  gt::tab_spanner(label = "Covariates", columns = c(`Win Margin`, `Age`, `Win %`, `Party`, `Sex`, `...`)) |>
+  gt::tab_spanner(label = "Units/Time", columns = c(`...`, `...`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", columns = c(`...`, `...`)) |>
+  gt::tab_spanner(label = "Treatment", columns = c(`...`)) |>
+  gt::tab_spanner(label = "Covariates", columns = c(`...`, `...`, `...`, `...`, `...`, `...`)) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
   gt::cols_align(align = "left", columns = c(`Source`)) |>
   gt::fmt_markdown(columns = gt::everything()) |>
@@ -92,7 +93,7 @@ gt::gt(data = d_tibble) |>
   gt::tab_footnote(units_footnote, locations = gt::cells_column_spanners(spanners = "Units/Time")) |>
   gt::tab_footnote(outcome_footnote, locations = gt::cells_column_spanners(spanners = "Potential Outcomes")) |>
   {if (is_causal)
-    "gt::tab_footnote(treatment_footnote, locations = gt::cells_column_spanners(spanners = \"Treatment\")) |>\n" else ""}  gt::tab_footnote(covariates_footnote, locations = gt::cells_column_spanners(spanners = "Covariates"))
+    "gt::tab_footnote(treatment_footnote, locations = gt::cells_column_spanners(spanners = \"Treatment\")) |>\n" else ""}gt::tab_footnote(covariates_footnote, locations = gt::cells_column_spanners(spanners = "Covariates"))
 ```'
   )
 
