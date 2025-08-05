@@ -13,12 +13,18 @@ make_p_tables <- function(is_causal = TRUE) {
 
   code_footnotes <- glue::glue(
     '```{{r}}
-# Edit these footnotes after inserting
-title_footnote <- "Describe the purpose and what it helps answer."
-units_footnote <- "Describe the units and time span."
-outcome_footnote <- "Explain why this is predictive or causal, and details about the outcome(s)."
-treatment_footnote <- "Describe the treatment and how it appears in the data."
-covariates_footnote <- "Describe covariates and how they relate to those in the data."
+# Edit the following PRECEPTOR/POPULATION footnotes (look at the help page for more details):
+pre_title_footnote <- "..."
+pre_units_footnote <- "..."
+pre_outcome_footnote <- "..."
+pre_treatment_footnote <- "..."
+pre_covariates_footnote <- "..."
+
+pop_title_footnote <- "..."
+pop_units_footnote <- "..."
+pop_outcome_footnote <- "..."
+pop_treatment_footnote <- "..."
+pop_covariates_footnote <- "..."
 ```'
   )
 
