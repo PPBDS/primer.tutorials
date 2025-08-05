@@ -15,7 +15,13 @@
 #' @param covariate_label Label (character) for the Covariates spanner
 #' @export
 
-make_p_tables <- function(is_causal = TRUE) {
+make_p_tables <- function(
+  is_causal = TRUE,
+  unit_label = "Unit",
+  outcome_label = if (is_causal) "Potential Outcomes" else "Outcome",
+  treatment_label = "Treatment",
+  covariate_label = "Covariates"
+) {
 
   code_footnotes <- glue::glue(
     '```{{r}}
@@ -34,8 +40,9 @@ pop_covariates_footnote <- "..."
 ```'
   )
 
-  code_p_tibble <- glue::glue(
-    '```{{r}}
+# Preceptor tibble (no "Source" column)
+code_p_tibble <- glue::glue(
+  '```{{r}}
 p_tibble <- tibble::tribble(
   ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`,
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
@@ -43,12 +50,13 @@ p_tibble <- tibble::tribble(
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
 )
 ```'
-  )
+)
 
-  code_d_tibble <- glue::glue(
-    '```{{r}}
+# Population tibble (has "Source" column)
+code_d_tibble <- glue::glue(
+  '```{{r}}
 d_tibble <- tibble::tribble(
-  ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`,
+  ~`Source`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`,
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
@@ -57,7 +65,7 @@ d_tibble <- tibble::tribble(
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
 )
 ```'
-  )
+)
 
   code_p_table <- glue::glue(
     '```{{r}}
