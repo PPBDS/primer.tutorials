@@ -5,13 +5,14 @@
 #' This function creates a five-chunk Quarto-ready template for Preceptor and Population Tables.
 #' The output is inserted directly into the current document at the cursor.
 #'
-#' @description Insert editable templates for Preceptor and Population tables.
-#' 
-#' @param is_causal Logical. If TRUE, generates template for causal analysis; else predictive.
-#' @param unit_label Label (character) for the Unit/Time spanner
-#' @param outcome_label Label (character) for the Outcome or Potential Outcomes spanner
-#' @param treatment_label Label (character) for the Treatment spanner (only used if is_causal = TRUE)
-#' @param covariate_label Label (character) for the Covariates spanner
+#' @description Insert editable Quarto-ready templates for Preceptor and Population tables, including example rows, column labels, and spanner headers. The templates differ slightly depending on whether the table is for causal or predictive analysis.
+#'
+#' @param is_causal Logical. If TRUE, generates a template for causal analysis (includes a Treatment column and Potential Outcomes); if FALSE, generates a predictive template.
+#' @param unit_label Character. Label for the Unit spanner (e.g., "Unit", "ID").
+#' @param outcome_label Character. Label for the Outcome or Potential Outcomes spanner.
+#' @param treatment_label Character. Label for the Treatment spanner (used only if \code{is_causal = TRUE}).
+#' @param covariate_label Character. Label for the Covariates spanner.
+#' @param pre_time Character. Default value to populate the "Time/Year" column in the Preceptor Table (e.g., "2020").
 #' @export
 
 make_p_tables <- function(

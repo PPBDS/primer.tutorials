@@ -9,13 +9,14 @@ make_p_tables(
   unit_label = "Unit",
   outcome_label = if (is_causal) "Potential Outcomes" else "Outcome",
   treatment_label = "Treatment",
-  covariate_label = "Covariates"
+  covariate_label = "Covariates",
+  pre_time = "2020"
 )
 }
 \arguments{
 \item{is_causal}{Logical. If TRUE, generates template for causal analysis; else predictive.}
 
-\item{unit_label}{Label (character) for the Unit/Time spanner}
+\item{unit_label}{Label (character) for the Unit spanner}
 
 \item{outcome_label}{Label (character) for the Outcome or Potential Outcomes spanner}
 
