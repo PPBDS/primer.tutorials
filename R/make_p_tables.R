@@ -31,7 +31,7 @@ pre_title_footnote <- "..."
 pre_units_footnote <- "..."
 pre_outcome_footnote <- "..."
 pre_treatment_footnote <- "..."
-pre_covariates_footnote <- "..."
+pre_covariates_footnote <- "..." 
 
 pop_title_footnote <- "..."
 pop_units_footnote <- "..."
