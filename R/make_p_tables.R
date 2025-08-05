@@ -19,8 +19,10 @@ make_p_tables <- function(
   unit_label = "Unit",
   outcome_label = if (is_causal) "Potential Outcomes" else "Outcome",
   treatment_label = "Treatment",
-  covariate_label = "Covariates"
-) {
+  covariate_label = "Covariates",
+  pre_time = "2020"
+)
+ {
 
   code_footnotes <- glue::glue(
     '```{{r}}
@@ -45,9 +47,9 @@ code_p_tibble <- glue::glue(
 # Leave the last row and column as-is to signal more rows exist
 p_tibble <- tibble::tribble(
   ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, ~`{covariate_label}`, ~`...`, ~`...`, ~`...`, ~`...`,
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
+  "...", "{pre_time}", "...", "...", "...", "...", "...", "...", "...", "...",
+  "...", "{pre_time}", "...", "...", "...", "...", "...", "...", "...", "...",
+  "...", "{pre_time}", "...", "...", "...", "...", "...", "...", "...", "..."
 )
 ```'
 )
@@ -56,6 +58,7 @@ code_d_tibble <- glue::glue(
   '```{{r}}
 # Use "---" to indicate unknown values for data-derived Population Table rows.
 # Leave the first, middle, and last rows as well as the last column as-is to signal more rows exist
+# Leave the Preceptor Table rows as-is, it will copy over from above
 d_tibble <- tibble::tribble(
   ~`Source`, ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, ~`{covariate_label}`, ~`...`, ~`...`, ~`...`, ~`...`,
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
