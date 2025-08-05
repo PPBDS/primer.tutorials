@@ -6,7 +6,13 @@
 #' This function creates a five-chunk Quarto-ready template for Preceptor and Population Tables.
 #' The output is inserted directly into the current document at the cursor.
 #'
-#' @param is_causal Logical. If TRUE, generate template for causal analysis; else predictive.
+#' @description blahblahblah
+#' 
+#' @param is_causal Logical. If TRUE, generates template for causal analysis; else predictive.
+#' @param unit_label Label (character) for the Unit/Time spanner
+#' @param outcome_label Label (character) for the Outcome or Potential Outcomes spanner
+#' @param treatment_label Label (character) for the Treatment spanner (only used if is_causal = TRUE)
+#' @param covariate_label Label (character) for the Covariates spanner
 #' @export
 
 make_p_tables <- function(is_causal = TRUE) {
