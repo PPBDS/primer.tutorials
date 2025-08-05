@@ -39,21 +39,21 @@ pop_covariates_footnote <- "..."
 ```'
   )
 
-  code_p_tibble <- glue::glue(
-    '```{{r}}
+code_p_tibble <- glue::glue(
+  '```{{r}}
 # Use "?" for unknowns in Preceptor Table rows, and "---" for unknowns in Population (data) rows.
 # Leave the last row and column as-is to signal more rows exist
 p_tibble <- tibble::tribble(
-  ~`{unit_label}`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, ~`{covariate_label}`, ~`...`, ~`...`, ~`...`, ~`...`,
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", 
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", 
-  "...", "...", "...", "...", "...", "...", "...", "...", "..."
+  ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, ~`{covariate_label}`, ~`...`, ~`...`, ~`...`, ~`...`,
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
 )
 ```'
-  )
+)
 
-  code_d_tibble <- glue::glue(
-    '```{{r}}
+code_d_tibble <- glue::glue(
+  '```{{r}}
 # Use "---" to indicate unknown values for data-derived Population Table rows.
 # Leave the first, middle, and last rows as well as the last column as-is to signal more rows exist
 d_tibble <- tibble::tribble(
@@ -62,14 +62,14 @@ d_tibble <- tibble::tribble(
   "Data", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
   "Data", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
   "Data", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", 
-  "Preceptor Table", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Preceptor Table", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Preceptor Table", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  "Preceptor Table", p_tibble[1, ] |> dplyr::as_tibble() |> dplyr::mutate(Source = "Preceptor Table") |> dplyr::select(Source, dplyr::everything()),
+  "Preceptor Table", p_tibble[2, ] |> dplyr::as_tibble() |> dplyr::mutate(Source = "Preceptor Table") |> dplyr::select(Source, dplyr::everything()),
+  "Preceptor Table", p_tibble[3, ] |> dplyr::as_tibble() |> dplyr::mutate(Source = "Preceptor Table") |> dplyr::select(Source, dplyr::everything()),
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
 )
 ```'
-  )
+)
 
   code_p_table_causal <- glue::glue(
     '```{{r}}
