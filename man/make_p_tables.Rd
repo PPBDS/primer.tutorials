@@ -14,18 +14,20 @@ make_p_tables(
 )
 }
 \arguments{
-\item{is_causal}{Logical. If TRUE, generates template for causal analysis; else predictive.}
+\item{is_causal}{Logical. If TRUE, generates a template for causal analysis (includes a Treatment column and Potential Outcomes); if FALSE, generates a predictive template.}
 
-\item{unit_label}{Label (character) for the Unit spanner}
+\item{unit_label}{Character. Label for the Unit spanner (e.g., "Unit", "ID").}
 
-\item{outcome_label}{Label (character) for the Outcome or Potential Outcomes spanner}
+\item{outcome_label}{Character. Label for the Outcome or Potential Outcomes spanner.}
 
-\item{treatment_label}{Label (character) for the Treatment spanner (only used if is_causal = TRUE)}
+\item{treatment_label}{Character. Label for the Treatment spanner (used only if \code{is_causal = TRUE}).}
 
-\item{covariate_label}{Label (character) for the Covariates spanner}
+\item{covariate_label}{Character. Label for the Covariates spanner.}
+
+\item{pre_time}{Character. Default value to populate the "Time/Year" column in the Preceptor Table (e.g., "2020").}
 }
 \description{
-Insert editable templates for Preceptor and Population tables.
+Insert editable Quarto-ready templates for Preceptor and Population tables, including example rows, column labels, and spanner headers. The templates differ slightly depending on whether the table is for causal or predictive analysis.
 }
 \details{
 This function creates a five-chunk Quarto-ready template for Preceptor and Population Tables.
