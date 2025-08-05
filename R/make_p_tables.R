@@ -41,6 +41,7 @@ pop_covariates_footnote <- "..."
 
   code_p_tibble <- glue::glue(
     '```{{r}}
+# Use "?" for unknowns in Preceptor Table rows, and "---" for unknowns in Population (data) rows.
 p_tibble <- tibble::tribble(
   ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`,
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
@@ -52,6 +53,7 @@ p_tibble <- tibble::tribble(
 
   code_d_tibble <- glue::glue(
     '```{{r}}
+# Use "---" to indicate unknown values for data-derived Population Table rows.
 d_tibble <- tibble::tribble(
   ~`Source`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`,
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
