@@ -1,4 +1,4 @@
-# Updated make_p_table.R
+# Updated make_p_tables.R
 # This version produces five separate code chunks with proper formatting.
 
 #' Insert a standardized Preceptor or Population Table template
@@ -9,7 +9,7 @@
 #' @param is_causal Logical. If TRUE, generate template for causal analysis; else predictive.
 #' @export
 
-make_p_table <- function(is_causal = TRUE) {
+make_p_tables <- function(is_causal = TRUE) {
 
   code_footnotes <- glue::glue(
     '```{{r}}
