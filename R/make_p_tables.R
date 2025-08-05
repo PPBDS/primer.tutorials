@@ -44,7 +44,7 @@ pop_covariates_footnote <- "..."
 # Use "?" for unknowns in Preceptor Table rows, and "---" for unknowns in Population (data) rows.
 # Leave the last row as-is to signal more rows exist
 p_tibble <- tibble::tribble(
-  ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`, ~`...`,
+  ~`{unit_label}`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, ~`{covariate_label}`, ~`...`, ~`...`, ~`...`, ~`...`, ~`Other`,
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
   "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
