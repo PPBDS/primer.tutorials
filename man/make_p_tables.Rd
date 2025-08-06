@@ -48,6 +48,8 @@ The \emph{labels} provided to this function are \strong{not variable names from 
 
 The goal is to visually communicate which variables play which roles in your modeling. Each spanner groups columns of a shared type. Footnotes help document the rationale and context for each set of variables.
 
+NOTE: all table entries must be surrounded by double quotes, even numbers (Ex: "42").
+
 Footnotes will appear under:
 \itemize{
 \item the \strong{table title} (background/motivation)
@@ -76,6 +78,19 @@ The output includes:
 }
 }
 \note{
+Required packages:
+This function depends on the following packages:
+\itemize{
+\item \code{gt}: for rendering the tables
+\item \code{tibble}: for creating the data structure
+\item \code{glue}: for dynamically constructing column names and labels
+}
+
+You can install them if not already installed:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{install.packages(c("gt", "tibble", "glue"))
+}\if{html}{\out{</div>}}
+
 \itemize{
 \item No default values are provided for labels, other than \code{NULL}. If a required argument is not supplied, the function will return an error.
 \item The code chunk environments are self-contained and designed to avoid variable conflicts in the surrounding document.

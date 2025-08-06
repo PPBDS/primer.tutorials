@@ -44,7 +44,20 @@
 #' @param covariate_2_label Character. Label for the second covariate.
 #' @param covariate_3_label Character. Label for the third covariate.
 #' @param pre_time Character. Default value used to populate the `"Time/Year"` column of the Preceptor Table. This helps authors indicate when expectations were formed.
+#' 
+#' @note
 #'
+#' Required packages:
+#' This function depends on the following packages:
+#' - `gt`: for rendering the tables
+#' - `tibble`: for creating the data structure
+#' - `glue`: for dynamically constructing column names and labels
+#'
+#' You can install them if not already installed:
+#' ```r
+#' install.packages(c("gt", "tibble", "glue"))
+#' ```
+
 #' @return This function inserts R code chunks directly into your currently open Quarto document, using `rstudioapi::insertText()`. The chunks include tibbles, `gt` rendering code, editable footnotes, and cleanup.
 #'
 #' @note
@@ -87,6 +100,13 @@ make_p_tables <- function(
     covariate_headers <- glue::glue("~`{covariate_1_label}`, ~`{covariate_2_label}`, ~`{covariate_3_label}`")
   covariate_values <- '"...", "...", "..."'
   covariate_gt_spanner_cols <- glue::glue("`{covariate_1_label}`, `{covariate_2_label}`, `{covariate_3_label}`")
+
+  install <- glue::glue(
+    '```{{r}}
+# Install the following libraries if not already (visit the help page for more details)
+install.packages(c("gt", "tibble", "glue"))
+```'
+  )
 
   code_footnotes <- glue::glue(
     '```{{r}}
@@ -218,6 +238,7 @@ rm(p_tibble, d_tibble)
   )
 
   full_code <- paste(
+    install,
     code_footnotes,
     code_p_tibble,
     code_d_tibble,
