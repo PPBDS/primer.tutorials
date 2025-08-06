@@ -103,7 +103,7 @@ make_p_tables <- function(
 
   install <- glue::glue(
     '```{{r}}
-# Install the following libraries if not already (visit the help page for more details)
+# Install the following packages if not already (visit the help page for more details)
 install.packages(c("gt", "tibble", "glue"))
 ```'
   )
