@@ -25,7 +25,7 @@ make_p_tables <- function(
 )
  {
 
-covariate_gt_spanner_cols <- paste0("`", covariate_label, "`", collapse = ", ")
+covariate_tibble_headers <- paste0("~`", covariate_label, "`", collapse = ", ")
 
 
   code_footnotes <- glue::glue(
@@ -46,22 +46,25 @@ pop_covariates_footnote <- "..."
   )
 
 covariate_headers <- paste0("~`", covariate_label, "`", collapse = ", ")
-covariate_placeholders <- paste(rep('"..."', length(covariate_label)), collapse = ", ")
+covariate_values  <- paste(rep('"..."', length(covariate_label)), collapse = ", ")
 
 code_p_tibble <- glue::glue(
   '```{{r}}
 # Use "?" for unknowns in Preceptor Table rows, and "---" for unknowns in Population (data) rows.
 # Leave the last row and column as-is to signal more rows exist
 p_tibble <- tibble::tribble(
-  ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers}, ~`...`, ~`...`,
-  "...", "{pre_time}", "...", "...", "...", {covariate_placeholders}, "...", "...",
-  "...", "{pre_time}", "...", "...", "...", {covariate_placeholders}, "...", "...",
-  "...", "{pre_time}", "...", "...", "...", {covariate_placeholders}, "...", "...",
-  "...", "...", "...", "...", "...", {covariate_placeholders}, "...", "..."
+  ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers}, ~`...`, ~`...`, ~`...`,
+  "...", "{pre_time}", "...", "...", "...", {covariate_values}, "...", "...", "...",
+  "...", "{pre_time}", "...", "...", "...", {covariate_values}, "...", "...", "...",
+  "...", "{pre_time}", "...", "...", "...", {covariate_values}, "...", "...", "...",
+  "...", "...", "...", "...", "...", {covariate_values}, "...", "...", "..."
 )
 ```'
 )
 
+
+covariate_headers_d <- paste0("~`", covariate_label, "`", collapse = ", ")
+covariate_values_d  <- paste(rep('"..."', length(covariate_label)), collapse = ", ")
 
 code_d_tibble <- glue::glue(
   '```{{r}}
@@ -69,18 +72,17 @@ code_d_tibble <- glue::glue(
 # Leave the first, middle, and last rows as well as the last column as-is to signal more rows exist
 # Leave the Preceptor Table rows as-is, it will copy over from above
 d_tibble <- tibble::tribble(
-  ~`Source`, ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers}, ~`...`, ~`...`,
-  "...", "...", "...", "...", "...", "...", {covariate_placeholders}, "...", "...",
-  "Data", "...", "...", "...", "...", "...", {covariate_placeholders}, "...", "...",
-  "Data", "...", "...", "...", "...", "...", {covariate_placeholders}, "...", "...",
-  "Data", "...", "...", "...", "...", "...", {covariate_placeholders}, "...", "...",
-  "Data", "...", "...", "...", "...", "...", {covariate_placeholders}, "...", "...",
-  "...", "...", "...", "...", "...", "...", {covariate_placeholders}, "...", "...",
+  ~`Source`, ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers_d}, ~`...`, ~`...`, ~`...`, ~`...`,
+  "...", "...", "...", "...", "...", "...", {covariate_values_d}, "...", "...", "...", "...",
+  "Data", "...", "...", "...", "...", "...", {covariate_values_d}, "...", "...", "...", "...",
+  "Data", "...", "...", "...", "...", "...", {covariate_values_d}, "...", "...", "...", "...",
+  "Data", "...", "...", "...", "...", "...", {covariate_values_d}, "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...", {covariate_values_d}, "...", "...", "...", "...",
   "Preceptor Table", p_tibble[1, ] |> dplyr::as_tibble() |> dplyr::mutate(Source = "Preceptor Table") |> dplyr::select(Source, dplyr::everything()),
   "Preceptor Table", p_tibble[2, ] |> dplyr::as_tibble() |> dplyr::mutate(Source = "Preceptor Table") |> dplyr::select(Source, dplyr::everything()),
   "Preceptor Table", p_tibble[3, ] |> dplyr::as_tibble() |> dplyr::mutate(Source = "Preceptor Table") |> dplyr::select(Source, dplyr::everything()),
   "Preceptor Table", p_tibble[4, ] |> dplyr::as_tibble() |> dplyr::mutate(Source = "Preceptor Table") |> dplyr::select(Source, dplyr::everything()),
-  "...", "...", "...", "...", "...", "...", {covariate_placeholders}, "...", "..."
+  "..."
 )
 ```'
 )
