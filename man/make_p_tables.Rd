@@ -9,7 +9,9 @@ make_p_tables(
   unit_label = "Unit",
   outcome_label = if (is_causal) "Potential Outcomes" else "Outcome",
   treatment_label = "Treatment",
-  covariate_label = "Covariates",
+  covariate_1_label = "sex",
+  covariate_2_label = "age",
+  covariate_3_label = "incumbent",
   pre_time = "2020"
 )
 }
@@ -22,7 +24,11 @@ make_p_tables(
 
 \item{treatment_label}{Character. Label for the Treatment spanner (used only if \code{is_causal = TRUE}).}
 
-\item{covariate_label}{Character. Label for the Covariates spanner.}
+\item{covariate_1_label}{Character. First covariate column name.}
+
+\item{covariate_2_label}{Character. Second covariate column name.}
+
+\item{covariate_3_label}{Character. Third covariate column name.}
 
 \item{pre_time}{Character. Default value to populate the "Time/Year" column in the Preceptor Table (e.g., "2020").}
 }
@@ -32,4 +38,6 @@ Insert editable Quarto-ready templates for Preceptor and Population tables, incl
 \details{
 This function creates a five-chunk Quarto-ready template for Preceptor and Population Tables.
 The output is inserted directly into the current document at the cursor.
+
+Footnotes:
 }
