@@ -150,10 +150,11 @@ d_tibble <- tibble::tribble(
   "Data", "...", "...", "...", "...", "...", {covariate_values}, "...",
   "Data", "...", "...", "...", "...", "...", {covariate_values}, "...",
   "...", "...", "...", "...", "...", "...", {covariate_values}, "...",
-  "Preceptor Table", "...", "...", "...", "...", "...", {covariate_values}, "...",
-  "Preceptor Table", "...", "...", "...", "...", "...", {covariate_values}, "...",
-  "Preceptor Table", "...", "...", "...", "...", "...", {covariate_values}, "...",
-  "Preceptor Table", "...", "...", "...", "...", "...", {covariate_values}, "...",
+  # Reuse preceptor rows from p_tibble
+  "Preceptor Table", !!!p_tibble[1, ] |> dplyr::as_tibble() |> dplyr::slice(1) |> unname() |> as.list(),
+  "Preceptor Table", !!!p_tibble[2, ] |> dplyr::as_tibble() |> dplyr::slice(1) |> unname() |> as.list(),
+  "Preceptor Table", !!!p_tibble[3, ] |> dplyr::as_tibble() |> dplyr::slice(1) |> unname() |> as.list(),
+  "Preceptor Table", !!!p_tibble[4, ] |> dplyr::as_tibble() |> dplyr::slice(1) |> unname() |> as.list(),
   "...", "...", "...", "...", "...", "...", {covariate_values}, "..."
 )
 ```'
