@@ -11,18 +11,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-
-And when you render that document, you will see:
-
----insert the results---
-
-here is my fixed.
-
-
-show it when rendered
-
-
-
 ## Overview
 
 This vignette introduces the `make_p_tables()` function in the `primer.tutorials` package, which inserts a five-chunk Quarto-ready template into your open document for creating **Preceptor Tables** and **Population Tables**.
@@ -64,6 +52,8 @@ Each table includes spanners for:
 
 > **Note:** All table entries must be surrounded by **double quotes**, even for numeric values (e.g., `"42"`).
 
+The goal is to visually communicate which variables play which roles in your modeling. Each spanner groups columns of a shared type. Footnotes help document the rationale and context for each set of variables.
+
 ## Package Requirements
 
 This function depends on the following packages:
@@ -81,6 +71,10 @@ library(primer.tutorials)
 ```
 
 ## Running `make_p_tables()`
+
+Preceptor and Population Tables are inserted together. The Population Table includes a `"Source"` column as its first column, which takes values `"Data"` or `"Preceptor Table"` depending on origin. This structure encourages comparison between expected and observed values.
+
+Behind the scenes, these tables are generated using `tibble::tribble()` for easier manual editing by row. This helps authors align values vertically and encourages clear visual structure in the Quarto document
 
 When you run `primer.tutorials::make_p_tables()`, the following code chunks are placed in the active document.
 
@@ -169,6 +163,112 @@ rm(p_tibble, d_tibble)
 ```
 ````
 
+## Understanding the Function Arguments
+
+The `make_p_tables()` function takes a set of user-defined labels and options that control how the **Preceptor** and **Population** tables are built and displayed. Each argument serves a clear conceptual role and is used to populate column headers, spanner labels, and the default content in `tibble::tribble()` calls. Here is a detailed breakdown:
+
+### `is_causal` *(Logical)*
+
+* Set to `TRUE` to generate a causal table structure, which includes:
+
+  * Two columns for **Potential Outcomes** (under treatment and control).
+  * A **Treatment** column representing an intervention or assigned condition.
+* Set to `FALSE` for a predictive model:
+
+  * Includes a single **Outcome** column.
+  * Omits the Treatment column entirely.
+* This flag determines not only what variables appear in the tables, but also how they are **spanned** and **labeled** in the rendered `gt` tables.
+
+---
+
+### `unit_label` *(Character)*
+
+* Human-readable name for the **unit of analysis** — e.g., `"Senator"`, `"Student"`, or `"School"`.
+* This will appear both as a column name in the tibble and as part of the `"Unit"` or `"Unit/Time"` spanner in the `gt` table.
+* The label should be capitalized and concise.
+
+---
+
+### `outcome_label` *(Character)*
+
+* Describes the **key outcome** being predicted or causally modeled.
+* In predictive mode, this creates one column: `Outcome`.
+* In causal mode, this generates two: `{outcome_label} 1` and `{outcome_label} 2`, reflecting potential outcomes under treatment and control, respectively.
+* Should be an interpretable phrase like `"Test Score"` or `"Re-election Status"`.
+
+---
+
+### `treatment_label` *(Character)*
+
+* Only required if `is_causal = TRUE`.
+* Appears as the label of the treatment column, such as `"Phone Call"` or `"Received Tutoring"`.
+* Used to title the corresponding `gt::tab_spanner()`.
+
+---
+
+### `covariate_1_label`, `covariate_2_label`, `covariate_3_label` *(Characters)*
+
+* Labels for three covariates relevant to the analysis.
+* These are grouped under a `"Covariates"` spanner.
+* These labels will be used directly as column headers (e.g., `"Sex"`, `"Age"`, `"School Type"`).
+* All should be simple phrases, and together they describe the pre-treatment information on which comparisons or predictions may be based.
+
+---
+
+### `pre_time` *(Character)*
+
+* Default value for the `"Time/Year"` column in the Preceptor Table.
+* Typically a 4-digit year (e.g., `"2022"`) or full date if desired.
+* Meant to communicate **when the expectations were formed**, not when the outcome occurred.
+
+---
+
+Each of these labels should be understood as **descriptive display names**, not as variable names from an existing dataset. The goal is clarity and interpretability for readers of the resulting Quarto document.
+
+---
+
+## Understanding the Footnotes
+
+Footnotes in these tables are not decorative — they are an essential part of **documenting analytical intent**. When you use `make_p_tables()`, it generates editable placeholders for ten footnotes, five for each table. These can be filled in or deleted (by setting to `NULL`), and they appear in the rendered table using `gt::tab_footnote()`.
+
+Below is a guide to what each footnote is for:
+
+---
+
+### Preceptor Table Footnotes
+
+* **`pre_title_footnote`**: Explains the background or motivation for the expectations shown. Useful for describing who the preceptors are, when the expectations were made, or why these units were selected.
+
+* **`pre_units_footnote`**: Clarifies the definition of a “unit” in this context — e.g., “Each row represents a senator during the 2022 election.” Also helpful to include time span or location info if applicable.
+
+* **`pre_outcome_footnote`**: Documents why these potential outcomes are meaningful. May include a note on how they were estimated or what they signify (e.g., "Re-election status under treatment vs. control").
+
+* **`pre_treatment_footnote`**: Defines what the treatment actually entails and how it is operationalized. For example, a phone call campaign, assignment to tutoring, or access to a program.
+
+* **`pre_covariates_footnote`**: Explains why the selected covariates were chosen and their role in forming expectations. Should also clarify whether these differ between tables.
+
+---
+
+### Population Table Footnotes
+
+* **`pop_title_footnote`**: Describes the purpose of the population table — usually to compare expected vs. observed outcomes, merged with preceptor rows.
+
+* **`pop_units_footnote`**: Defines what each unit represents in the population — e.g., “Each row represents an observed student or a preceptor-generated scenario.”
+
+* **`pop_outcome_footnote`**: Documents the source of outcome data. For example: “Outcomes observed from the 2022 voter file” or “Final grades from school records.”
+
+* **`pop_treatment_footnote`**: Explains how actual treatment status was observed or inferred. May differ from the assumptions made in the Preceptor Table.
+
+* **`pop_covariates_footnote`**: Describes where the covariate data comes from in the population table and whether it’s measured identically to the preceptor rows.
+
+---
+
+These footnotes ensure that **both the data structure and the logic of your modeling assumptions are transparent** to readers. They serve as a form of embedded documentation and can be styled or omitted as needed.
+
+---
+
+
+### Examples
 When you run:
 
 ```r
@@ -297,98 +397,4 @@ For more on how and why to use these tables, see:
 
 * [The Cardinal Virtues](https://ppbds.github.io/primer.tutorials/articles/cardinal_virtues.html#preceptor-table) article from *primer.tutorials*
 
-#' Insert Preceptor and Population Table Templates in Quarto
-#'
-#' This function inserts a five-chunk Quarto-ready template for creating **Preceptor Tables** and **Population Tables**. These tables are designed to support causal and predictive modeling workflows by clearly labeling variables with spanners and encouraging thorough documentation via editable footnotes.
-#'
-#' The output includes:
-#' - a tibble for the **Preceptor Table**
-#' - a tibble for the **Population Table** (which includes Preceptor rows)
-#' - `gt` code to display each table with labeled spanners
-#' - editable footnotes for each section of the table
-#' - cleanup code to remove temporary objects
-#'
-#' @description
-#' These tables are meant to be self-contained and interpretable in isolation. Each table includes five spanner headers:
-#'
-#' - `"Unit"` (or `"Unit/Time"` in the Population Table)
-#' - `"Outcome"` for predictive models, or `"Potential Outcomes"` for causal models
-#' - `"Treatment"` (included only in causal models)
-#' - `"Covariates"` — a set of user-specified labels (typically 3)
-#'
-#' The *labels* provided to this function are **not variable names from a dataset**, but rather **human-readable phrases** (e.g., `"Math Score if in Small Class"`). Long labels will be wrapped automatically when rendered using the `{gt}` package.
-#'
-#' The goal is to visually communicate which variables play which roles in your modeling. Each spanner groups columns of a shared type. Footnotes help document the rationale and context for each set of variables.
-#'
-#' NOTE: all table entries must be surrounded by double quotes, even numbers (Ex: "42").
-#' 
-#' Footnotes will appear under:
-#' - the **table title** (background/motivation)
-#' - the **Units** (unit/time range)
-#' - the **Outcome(s)** (why this outcome is used)
-#' - the **Treatment** (how it’s defined in the Preceptor vs. Population Table)
-#' - the **Covariates** (why these were chosen and whether they differ across the two tables)
-#'
-#' The author is encouraged to fill in or delete these footnotes after the code is inserted. To **remove** a footnote, simply set it to `NULL`. This will hide the footnote from the rendered `gt` table.
-#'
-#' Preceptor and Population Tables are inserted together. The Population Table includes a `"Source"` column as its first column, which takes values `"Data"` or `"Preceptor Table"` depending on origin. This structure encourages comparison between expected and observed values.
-#'
-#' Behind the scenes, these tables are generated using `tibble::tribble()` for easier manual editing by row. This helps authors align values vertically and encourages clear visual structure in the Quarto document.
-#'
-#' @param is_causal Logical. If `TRUE`, generates a causal table with treatment and potential outcomes; if `FALSE`, generates a predictive table with one outcome and no treatment column.
-#' @param unit_label Character. Label for the unit spanner (e.g., `"Student"` or `"Senator"`).
-#' @param outcome_label Character. Label for the outcome spanner. Should be `"Outcome"` for predictive models, or `"Potential Outcomes"` for causal models.
-#' @param treatment_label Character. Label for the treatment spanner. Required only if `is_causal = TRUE`.
-#' @param covariate_1_label Character. Label for the first covariate.
-#' @param covariate_2_label Character. Label for the second covariate.
-#' @param covariate_3_label Character. Label for the third covariate.
-#' @param pre_time Character. Default value used to populate the `"Time/Year"` column of the Preceptor Table. This helps authors indicate when expectations were formed.
-#' 
-#' @note
-#'
-#' Required packages:
-#' This function depends on the following packages:
-#' - `gt`: for rendering the tables
-#' - `tibble`: for creating the data structure
-#' - `glue`: for dynamically constructing column names and labels
-#'
-#' You can install them if not already installed:
-#' ```r
-#' install.packages(c("gt", "tibble", "glue"))
-#' ```
-
-#' @return This function inserts R code chunks directly into your currently open Quarto document, using `rstudioapi::insertText()`. The chunks include tibbles, `gt` rendering code, editable footnotes, and cleanup.
-#'
-#' @note
-#' - No default values are provided for labels, other than `NULL`. If a required argument is not supplied, the function will return an error.
-#' - The code chunk environments are self-contained and designed to avoid variable conflicts in the surrounding document.
-#' - Labels should be kept concise but human-readable. If necessary, abbreviate.
-#'
-#' @importFrom glue glue
-#' @importFrom tibble tribble
-#' @importFrom gt gt tab_spanner tab_header cols_align fmt_markdown tab_footnote cells_title cells_column_spanners
-#'
-#' @examples
-#' \dontrun{
-#' make_p_tables(
-#'   is_causal = TRUE,
-#'   unit_label = "Senator",
-#'   outcome_label = "Potential Outcomes",
-#'   treatment_label = "Phone Call",
-#'   covariate_1_label = "Sex",
-#'   covariate_2_label = "Age",
-#'   covariate_3_label = "Incumbency",
-#'   pre_time = "2022"
-#' )
-#' }
-#' 
-#'@examples
-#' Example output (Preceptor and Population Tables):
-#'
-#' \figure{Screenshot-2025-08-06-181554.png}{options: width=80%}
-#' \figure{Screenshot-2025-08-06-181621.png}{options: width=80%}
-#'
-#' The images above show a sample Preceptor Table and Population Table generated by this function.
-#' 
-#' @export
 
