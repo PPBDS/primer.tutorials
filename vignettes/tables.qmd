@@ -12,20 +12,79 @@ vignette: >
 ---
 
 
+And when you render that document, you will see:
+
+---insert the results---
+
+here is my fixed.
+
+
+show it when rendered
+
+
+
+## Overview
+
+This vignette introduces the `make_p_tables()` function in the `primer.tutorials` package, which inserts a five-chunk Quarto-ready template into your open document for creating **Preceptor Tables** and **Population Tables**.
+
+These tables are designed to support both **causal** and **predictive** modeling workflows by clearly labeling variables with spanners and encouraging detailed documentation via footnotes.
+
+## What Are Preceptor and Population Tables?
+
+**Preceptor Tables** and **Population Tables** help represent structured information about observational units, treatment status, potential or predicted outcomes, and covariates in a standardized format. They are especially useful in modeling workflows, particularly in education or social science contexts where modeling assumptions must be made transparent.
+
+This format draws inspiration from the [Cardinal Virtues](https://ppbds.github.io/primer.tutorials/articles/cardinal_virtues.html#preceptor-table) article, and aims to make tables interpretable in isolation by including both clear labeling and explanatory footnotes.
+
+### Preceptor Table
+
+A **Preceptor Table** contains hypothetical or expected outcomes for units (such as students or senators). It often includes unknowns (denoted by `"?"`) where real data is not yet available, and reflects researcher or instructor expectations.
+
+### Population Table
+
+A **Population Table** contains a merged view of observed data (from the population) alongside preceptor-defined expectations. It includes an additional column `Source` that distinguishes between actual data (`"Data"`) and expectations (`"Preceptor Table"`).
+
+## Key Features
+
+The output of `make_p_tables()` includes:
+
+* A `tibble` for the **Preceptor Table**
+* A `tibble` for the **Population Table** (which includes rows from the Preceptor Table)
+* `gt` code to render both tables with grouped column headers ("spanners")
+* Editable footnotes for each section of the table
+* Cleanup code to remove temporary objects
+
+## Spanner Structure
+
+Each table includes spanners for:
+
+* **Unit** (or **Unit/Time** in the Population Table)
+* **Outcome** (for predictive models) or **Potential Outcomes** (for causal models)
+* **Treatment** (included only in causal models)
+* **Covariates** (typically 3 columns, customizable)
+
+> **Note:** All table entries must be surrounded by **double quotes**, even for numeric values (e.g., `"42"`).
+
+## Package Requirements
+
+This function depends on the following packages:
+
+```r
+install.packages(c("gt", "tibble", "glue"))
+```
+
+It automatically constructs code using these libraries:
+
 ```{r}
-#| message: false
+#| message: FALSE
 library(tidyverse)
 library(primer.tutorials)
 ```
 
+## Running `make_p_tables()`
+
 When you run `primer.tutorials::make_p_tables()`, the following code chunks are placed in the active document.
 
 ````{verbatim}
-```{r}
-# Install the following packages if not already (visit the help page for more details)
-install.packages(c("gt", "tibble", "glue"))
-```
-
 ```{r}
 # Edit the following PRECEPTOR/POPULATION footnotes (look at the help page for more details):
 pre_title_footnote <- "..."
@@ -110,12 +169,133 @@ rm(p_tibble, d_tibble)
 ```
 ````
 
-And when you render that document, you will see:
+When you run:
 
-here is my fixed.
+```r
+make_p_tables(
+  is_causal = TRUE,
+  unit_label = "Senator",
+  outcome_label = "Potential Outcomes",
+  treatment_label = "Phone Call",
+  covariate_1_label = "Sex",
+  covariate_2_label = "Age",
+  covariate_3_label = "Incumbency",
+  pre_time = "2022"
+)
+```
 
+The following chunks are inserted (after manually filling in the rest):
 
-show it when rendered
+### 1. Installation + Footnotes
+
+```{r}
+pre_title_footnote <- "Expected outcomes for 2022 Senate elections based on expert judgment and historical data."
+pre_units_footnote <- "Each row represents a single U.S. senator during the 2022 election cycle."
+pre_outcome_footnote <- "Potential outcomes reflect election results with and without treatment (phone calls)."
+pre_treatment_footnote <- "Treatment indicates whether targeted phone call campaigns were conducted."
+pre_covariates_footnote <- "Covariates include demographic factors (Sex, Age) and incumbency status."
+
+pop_title_footnote <- "Observed 2022 Senate election data merged with preceptor expectations."
+pop_units_footnote <- "Each row represents an observed senator or a preceptor-defined expected case."
+pop_outcome_footnote <- "Observed election results recorded after the 2022 election."
+pop_treatment_footnote <- "Observed phone call campaign status from actual campaign data."
+pop_covariates_footnote <- "Covariates drawn from voter file demographics and campaign records."
+```
+
+### 2. Preceptor Table
+
+```{r}
+# Use "?" for unknowns in Preceptor Table rows
+p_tibble <- tibble::tribble(
+  ~`Senator`, ~`Time/Year`, ~`Potential Outcomes 1`, ~`Potential Outcomes 2`, ~`Phone Call`, ~`Sex`, ~`Age`, ~`Incumbency`, ~`Other`,
+  "John Smith",   "2022", "?", "Not Re-elected", "Yes", "Male", "58", "Incumbent", "...",
+  "Jane Doe",     "2022", "?", "Not Re-elected", "No",  "Female", "49", "Challenger", "...",
+  "Alex Johnson", "2022", "Re-elected", "?", "Yes", "Male", "62", "Incumbent", "...",
+  "Chris Lee",    "2022", "?", "Not Re-elected", "No",  "Female", "55", "Incumbent", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "..."
+)
+```
+
+### 3. Population Table (Includes Preceptor Rows)
+
+```{r}
+d_tibble <- tibble::tribble(
+  ~`Source`, ~`Senator`, ~`Time/Year`, ~`Potential Outcomes 1`, ~`Potential Outcomes 2`, ~`Phone Call`, ~`Sex`, ~`Age`, ~`Incumbency`, ~`Other`,
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  "Data", "John Smith",   "2022", "Re-elected", "---", "Yes", "Male", "58", "Incumbent", "...",
+  "Data", "Jane Doe",     "2022", "---", "Re-elected", "No", "Female", "49", "Challenger", "...",
+  "Data", "Alex Johnson", "2022", "---", "Not Re-elected", "Yes", "Male", "62", "Incumbent", "...",
+  "Data", "Chris Lee",    "2022", "Re-elected", "---", "No", "Female", "55", "Incumbent", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  # Add Preceptor rows
+  "Preceptor Table", "John Smith",   "2022", "?", "Not Re-elected", "Yes", "Male", "58", "Incumbent", "...",
+  "Preceptor Table", "Jane Doe",     "2022", "?", "Not Re-elected", "No",  "Female", "49", "Challenger", "...",
+  "Preceptor Table", "Alex Johnson", "2022", "Re-elected", "?", "Yes", "Male", "62", "Incumbent", "...",
+  "Preceptor Table", "Chris Lee",    "2022", "?", "Not Re-elected", "No",  "Female", "55", "Incumbent", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
+)
+```
+
+### 4. Rendering Tables
+
+```{r}
+# Preceptor Table
+gt::gt(data = p_tibble) |>
+  gt::tab_header(title = "Preceptor Table") |>
+  gt::tab_spanner(label = "Senator", id = "unit_span", columns = c(`Senator`, `Time/Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Potential Outcomes 1`, `Potential Outcomes 2`)) |>
+  gt::tab_spanner(label = "Phone Call", id = "treatment_span", columns = c(`Phone Call`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Sex`, `Age`, `Incumbency`)) |>
+  gt::cols_align("center", columns = gt::everything()) |>
+  gt::cols_align("left", columns = `Senator`) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(pre_title_footnote, locations = gt::cells_title("title")) |>
+  gt::tab_footnote(pre_units_footnote, locations = gt::cells_column_spanners("unit_span")) |>
+  gt::tab_footnote(pre_outcome_footnote, locations = gt::cells_column_spanners("outcome_span")) |>
+  gt::tab_footnote(pre_treatment_footnote, locations = gt::cells_column_spanners("treatment_span")) |>
+  gt::tab_footnote(pre_covariates_footnote, locations = gt::cells_column_spanners("covariates_span"))
+```
+
+```{r}
+# Population Table
+gt::gt(data = d_tibble) |>
+  gt::tab_header(title = "Population Table") |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Senator`, `Time/Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Potential Outcomes 1`, `Potential Outcomes 2`)) |>
+  gt::tab_spanner(label = "Phone Call", id = "treatment_span", columns = c(`Phone Call`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Sex`, `Age`, `Incumbency`)) |>
+  gt::cols_align("center", columns = gt::everything()) |>
+  gt::cols_align("left", columns = `Senator`) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(pop_title_footnote, locations = gt::cells_title("title")) |>
+  gt::tab_footnote(pop_units_footnote, locations = gt::cells_column_spanners("unit_span")) |>
+  gt::tab_footnote(pop_outcome_footnote, locations = gt::cells_column_spanners("outcome_span")) |>
+  gt::tab_footnote(pop_treatment_footnote, locations = gt::cells_column_spanners("treatment_span")) |>
+  gt::tab_footnote(pop_covariates_footnote, locations = gt::cells_column_spanners("covariates_span"))
+```
+
+### 5. Cleanup
+
+```{r}
+rm(p_tibble, d_tibble)
+```
+
+---
+
+## Summary
+
+The `make_p_tables()` function simplifies the creation of interpretable, spanner-labeled tables for modeling workflows. It promotes clarity, transparency, and rigor by encouraging authors to:
+
+* Replace placeholders with meaningful values
+* Use `"?"` or `"---"` for unknowns in pre/post data
+* Fill in footnotes with useful context
+* Ensure every table entry is surrounded by double quotes
+
+This workflow supports better modeling documentation and instructional design.
+
+For more on how and why to use these tables, see:
+
+* [The Cardinal Virtues](https://ppbds.github.io/primer.tutorials/articles/cardinal_virtues.html#preceptor-table) article from *primer.tutorials*
 
 #' Insert Preceptor and Population Table Templates in Quarto
 #'
@@ -212,188 +392,3 @@ show it when rendered
 #' 
 #' @export
 
-## Overview
-
-This vignette introduces the `make_p_tables()` function in the `primer.tutorials` package, which inserts a five-chunk Quarto-ready template into your open document for creating **Preceptor Tables** and **Population Tables**.
-
-These tables are designed to support both **causal** and **predictive** modeling workflows by clearly labeling variables with spanners and encouraging detailed documentation via footnotes.
-
-## What Are Preceptor and Population Tables?
-
-**Preceptor Tables** and **Population Tables** help represent structured information about observational units, treatment status, potential or predicted outcomes, and covariates in a standardized format. They are especially useful in modeling workflows, particularly in education or social science contexts where modeling assumptions must be made transparent.
-
-This format draws inspiration from the [Cardinal Virtues](https://ppbds.github.io/primer.tutorials/articles/cardinal_virtues.html#preceptor-table) article, and aims to make tables interpretable in isolation by including both clear labeling and explanatory footnotes.
-
-### Preceptor Table
-
-A **Preceptor Table** contains hypothetical or expected outcomes for units (such as students or senators). It often includes unknowns (denoted by `"?"`) where real data is not yet available, and reflects researcher or instructor expectations.
-
-### Population Table
-
-A **Population Table** contains a merged view of observed data (from the population) alongside preceptor-defined expectations. It includes an additional column `Source` that distinguishes between actual data (`"Data"`) and expectations (`"Preceptor Table"`).
-
-## Key Features
-
-The output of `make_p_tables()` includes:
-
-* A `tibble` for the **Preceptor Table**
-* A `tibble` for the **Population Table** (which includes rows from the Preceptor Table)
-* `gt` code to render both tables with grouped column headers ("spanners")
-* Editable footnotes for each section of the table
-* Cleanup code to remove temporary objects
-
-## Spanner Structure
-
-Each table includes spanners for:
-
-* **Unit** (or **Unit/Time** in the Population Table)
-* **Outcome** (for predictive models) or **Potential Outcomes** (for causal models)
-* **Treatment** (included only in causal models)
-* **Covariates** (typically 3 columns, customizable)
-
-> **Note:** All table entries must be surrounded by **double quotes**, even for numeric values (e.g., `"42"`).
-
-## Package Requirements
-
-This function depends on the following packages:
-
-```r
-install.packages(c("gt", "tibble", "glue"))
-```
-
-It automatically constructs code using these libraries:
-
-```{r}
-library(tidyverse)
-library(primer.tutorials)
-```
-
-## Running `make_p_tables()`
-
-When you run:
-
-```r
-make_p_tables(
-  is_causal = TRUE,
-  unit_label = "Senator",
-  outcome_label = "Potential Outcomes",
-  treatment_label = "Phone Call",
-  covariate_1_label = "Sex",
-  covariate_2_label = "Age",
-  covariate_3_label = "Incumbency",
-  pre_time = "2022"
-)
-```
-
-The following chunks are inserted:
-
-### 1. Installation + Footnotes
-
-```{r}
-pre_title_footnote <- "Expected outcomes for 2022 Senate elections based on expert judgment and historical data."
-pre_units_footnote <- "Each row represents a single U.S. senator during the 2022 election cycle."
-pre_outcome_footnote <- "Potential outcomes reflect election results with and without treatment (phone calls)."
-pre_treatment_footnote <- "Treatment indicates whether targeted phone call campaigns were conducted."
-pre_covariates_footnote <- "Covariates include demographic factors (Sex, Age) and incumbency status."
-
-pop_title_footnote <- "Observed 2022 Senate election data merged with preceptor expectations."
-pop_units_footnote <- "Each row represents an observed senator or a preceptor-defined expected case."
-pop_outcome_footnote <- "Observed election results recorded after the 2022 election."
-pop_treatment_footnote <- "Observed phone call campaign status from actual campaign data."
-pop_covariates_footnote <- "Covariates drawn from voter file demographics and campaign records."
-```
-
-### 2. Preceptor Table
-
-```{r}
-# Use "?" for unknowns in Preceptor Table rows
-d_tibble <- tibble::tribble(
-  ~`Senator`, ~`Time/Year`, ~`Potential Outcomes 1`, ~`Potential Outcomes 2`, ~`Phone Call`, ~`Sex`, ~`Age`, ~`Incumbency`, ~`Other`,
-  "John Smith",   "2022", "?", "Not Re-elected", "Yes", "Male", "58", "Incumbent", "...",
-  "Jane Doe",     "2022", "?", "Not Re-elected", "No",  "Female", "49", "Challenger", "...",
-  "Alex Johnson", "2022", "Re-elected", "?", "Yes", "Male", "62", "Incumbent", "...",
-  "Chris Lee",    "2022", "?", "Not Re-elected", "No",  "Female", "55", "Incumbent", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "..."
-)
-```
-
-### 3. Population Table (Includes Preceptor Rows)
-
-```{r}
-d_tibble <- tibble::tribble(
-  ~`Source`, ~`Senator`, ~`Time/Year`, ~`Potential Outcomes 1`, ~`Potential Outcomes 2`, ~`Phone Call`, ~`Sex`, ~`Age`, ~`Incumbency`, ~`Other`,
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Data", "John Smith",   "2022", "Re-elected", "---", "Yes", "Male", "58", "Incumbent", "...",
-  "Data", "Jane Doe",     "2022", "---", "Re-elected", "No", "Female", "49", "Challenger", "...",
-  "Data", "Alex Johnson", "2022", "---", "Not Re-elected", "Yes", "Male", "62", "Incumbent", "...",
-  "Data", "Chris Lee",    "2022", "Re-elected", "---", "No", "Female", "55", "Incumbent", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  # Add Preceptor rows
-  "Preceptor Table", "John Smith",   "2022", "?", "Not Re-elected", "Yes", "Male", "58", "Incumbent", "...",
-  "Preceptor Table", "Jane Doe",     "2022", "?", "Not Re-elected", "No",  "Female", "49", "Challenger", "...",
-  "Preceptor Table", "Alex Johnson", "2022", "Re-elected", "?", "Yes", "Male", "62", "Incumbent", "...",
-  "Preceptor Table", "Chris Lee",    "2022", "?", "Not Re-elected", "No",  "Female", "55", "Incumbent", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
-)
-```
-
-### 4. Rendering Tables
-
-```{r}
-# Preceptor Table
-gt::gt(data = p_tibble) |>
-  gt::tab_header(title = "Preceptor Table") |>
-  gt::tab_spanner(label = "Senator", id = "unit_span", columns = c(`Senator`, `Time/Year`)) |>
-  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Potential Outcomes 1`, `Potential Outcomes 2`)) |>
-  gt::tab_spanner(label = "Phone Call", id = "treatment_span", columns = c(`Phone Call`)) |>
-  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Sex`, `Age`, `Incumbency`)) |>
-  gt::cols_align("center", columns = gt::everything()) |>
-  gt::cols_align("left", columns = `Senator`) |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(pre_title_footnote, locations = gt::cells_title("title")) |>
-  gt::tab_footnote(pre_units_footnote, locations = gt::cells_column_spanners("unit_span")) |>
-  gt::tab_footnote(pre_outcome_footnote, locations = gt::cells_column_spanners("outcome_span")) |>
-  gt::tab_footnote(pre_treatment_footnote, locations = gt::cells_column_spanners("treatment_span")) |>
-  gt::tab_footnote(pre_covariates_footnote, locations = gt::cells_column_spanners("covariates_span"))
-```
-
-```{r}
-# Population Table
-gt::gt(data = d_tibble) |>
-  gt::tab_header(title = "Population Table") |>
-  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Senator`, `Time/Year`)) |>
-  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Potential Outcomes 1`, `Potential Outcomes 2`)) |>
-  gt::tab_spanner(label = "Phone Call", id = "treatment_span", columns = c(`Phone Call`)) |>
-  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Sex`, `Age`, `Incumbency`)) |>
-  gt::cols_align("center", columns = gt::everything()) |>
-  gt::cols_align("left", columns = `Senator`) |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(pop_title_footnote, locations = gt::cells_title("title")) |>
-  gt::tab_footnote(pop_units_footnote, locations = gt::cells_column_spanners("unit_span")) |>
-  gt::tab_footnote(pop_outcome_footnote, locations = gt::cells_column_spanners("outcome_span")) |>
-  gt::tab_footnote(pop_treatment_footnote, locations = gt::cells_column_spanners("treatment_span")) |>
-  gt::tab_footnote(pop_covariates_footnote, locations = gt::cells_column_spanners("covariates_span"))
-```
-
-### 5. Cleanup
-
-```{r}
-rm(p_tibble, d_tibble)
-```
-
----
-
-## Summary
-
-The `make_p_tables()` function simplifies the creation of interpretable, spanner-labeled tables for modeling workflows. It promotes clarity, transparency, and rigor by encouraging authors to:
-
-* Replace placeholders with meaningful values
-* Use `"?"` or `"---"` for unknowns in pre/post data
-* Fill in footnotes with useful context
-* Ensure every table entry is surrounded by double quotes
-
-This workflow supports better modeling documentation and instructional design.
-
-For more on how and why to use these tables, see:
-
-* [The Cardinal Virtues](https://ppbds.github.io/primer.tutorials/articles/cardinal_virtues.html#preceptor-table) article from *primer.tutorials*
