@@ -59,3 +59,6 @@ This function depends on the following packages:
 \item \code{glue}: for dynamically constructing column names and labels
 }
 }
+\author{
+David Kane, Aashna Patel
+}
