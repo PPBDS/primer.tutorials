@@ -29,11 +29,15 @@
 #'
 #' @return Inserts R code chunks into the active Quarto document using `rstudioapi::insertText()`.
 #'
+#' @author
+#' David Kane, Aashna Patel
+#'
 #' @importFrom glue glue
 #' @importFrom tibble tribble
 #' @importFrom gt gt tab_spanner tab_header cols_align fmt_markdown tab_footnote cells_title cells_column_spanners
 #'
 #' @export
+
 
 make_p_tables <- function(
   is_causal = TRUE,
