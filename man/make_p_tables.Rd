@@ -16,68 +16,41 @@ make_p_tables(
 )
 }
 \arguments{
-\item{is_causal}{Logical. If \code{TRUE}, generates a causal table with treatment and potential outcomes; if \code{FALSE}, generates a predictive table with one outcome and no treatment column.}
+\item{is_causal}{Logical. If \code{TRUE}, includes treatment and potential outcomes; if \code{FALSE}, includes a single outcome and no treatment.}
 
-\item{unit_label}{Character. Label for the unit spanner (e.g., \code{"Student"} or \code{"Senator"}).}
+\item{unit_label}{Character. Label for the unit spanner.}
 
-\item{outcome_label}{Character. Label for the outcome spanner. Should be \code{"Outcome"} for predictive models, or \code{"Potential Outcomes"} for causal models.}
+\item{outcome_label}{Character. Label for the outcome or potential outcomes spanner.}
 
-\item{treatment_label}{Character. Label for the treatment spanner. Required only if \code{is_causal = TRUE}.}
+\item{treatment_label}{Character. Label for the treatment spanner (required if \code{is_causal = TRUE}).}
 
-\item{covariate_1_label}{Character. Label for the first covariate.}
+\item{covariate_1_label}{Character. First covariate label.}
 
-\item{covariate_2_label}{Character. Label for the second covariate.}
+\item{covariate_2_label}{Character. Second covariate label.}
 
-\item{covariate_3_label}{Character. Label for the third covariate.}
+\item{covariate_3_label}{Character. Third covariate label.}
 
-\item{pre_time}{Character. Default value used to populate the \code{"Time/Year"} column of the Preceptor Table. This helps authors indicate when expectations were formed.}
+\item{pre_time}{Character. Default value for the \code{"Time/Year"} column in the Preceptor Table.}
 }
 \value{
-This function inserts R code chunks directly into your currently open Quarto document, using \code{rstudioapi::insertText()}. The chunks include tibbles, \code{gt} rendering code, editable footnotes, and cleanup.
+Inserts R code chunks into the active Quarto document using \code{rstudioapi::insertText()}.
 }
 \description{
-These tables are meant to be self-contained and interpretable in isolation. Each table includes five spanner headers:
-\itemize{
-\item \code{"Unit"} (or \code{"Unit/Time"} in the Population Table)
-\item \code{"Outcome"} for predictive models, or \code{"Potential Outcomes"} for causal models
-\item \code{"Treatment"} (included only in causal models)
-\item \code{"Covariates"} — a set of user-specified labels (typically 3)
-}
-
-The \emph{labels} provided to this function are \strong{not variable names from a dataset}, but rather \strong{human-readable phrases} (e.g., \code{"Math Score if in Small Class"}). Long labels will be wrapped automatically when rendered using the \code{{gt}} package.
-
-The goal is to visually communicate which variables play which roles in your modeling. Each spanner groups columns of a shared type. Footnotes help document the rationale and context for each set of variables.
-
-NOTE: all table entries must be surrounded by double quotes, even numbers (Ex: "42").
-
-Footnotes will appear under:
-\itemize{
-\item the \strong{table title} (background/motivation)
-\item the \strong{Units} (unit/time range)
-\item the \strong{Outcome(s)} (why this outcome is used)
-\item the \strong{Treatment} (how it’s defined in the Preceptor vs. Population Table)
-\item the \strong{Covariates} (why these were chosen and whether they differ across the two tables)
-}
-
-The author is encouraged to fill in or delete these footnotes after the code is inserted. To \strong{remove} a footnote, simply set it to \code{NULL}. This will hide the footnote from the rendered \code{gt} table.
-
-Preceptor and Population Tables are inserted together. The Population Table includes a \code{"Source"} column as its first column, which takes values \code{"Data"} or \code{"Preceptor Table"} depending on origin. This structure encourages comparison between expected and observed values.
-
-Behind the scenes, these tables are generated using \code{tibble::tribble()} for easier manual editing by row. This helps authors align values vertically and encourages clear visual structure in the Quarto document.
+Inserts a Quarto-ready template consisting of five code chunks for creating \strong{Preceptor Tables} and \strong{Population Tables}. These tables support both causal and predictive workflows.
 }
 \details{
-This function inserts a five-chunk Quarto-ready template for creating \strong{Preceptor Tables} and \strong{Population Tables}. These tables are designed to support causal and predictive modeling workflows by clearly labeling variables with spanners and encouraging thorough documentation via editable footnotes.
-
 The output includes:
 \itemize{
-\item a tibble for the \strong{Preceptor Table}
-\item a tibble for the \strong{Population Table} (which includes Preceptor rows)
-\item \code{gt} code to display each table with labeled spanners
-\item editable footnotes for each section of the table
-\item cleanup code to remove temporary objects
+\item A \code{tibble} for the Preceptor Table
+\item A \code{tibble} for the Population Table (includes Preceptor rows)
+\item \code{gt} code to render each table with labeled spanners
+\item Editable footnotes for documentation
+\item Cleanup code to remove temporary objects
 }
 }
 \note{
+All cell entries must be wrapped in double quotes, including numbers (e.g., \code{"42"}).
+
 Required packages:
 This function depends on the following packages:
 \itemize{
@@ -85,37 +58,4 @@ This function depends on the following packages:
 \item \code{tibble}: for creating the data structure
 \item \code{glue}: for dynamically constructing column names and labels
 }
-
-You can install them if not already installed:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{install.packages(c("gt", "tibble", "glue"))
-}\if{html}{\out{</div>}}
-
-\itemize{
-\item No default values are provided for labels, other than \code{NULL}. If a required argument is not supplied, the function will return an error.
-\item The code chunk environments are self-contained and designed to avoid variable conflicts in the surrounding document.
-\item Labels should be kept concise but human-readable. If necessary, abbreviate.
-}
-}
-\examples{
-\dontrun{
-make_p_tables(
-  is_causal = TRUE,
-  unit_label = "Senator",
-  outcome_label = "Potential Outcomes",
-  treatment_label = "Phone Call",
-  covariate_1_label = "Sex",
-  covariate_2_label = "Age",
-  covariate_3_label = "Incumbency",
-  pre_time = "2022"
-)
-}
-
-Example output (Preceptor and Population Tables):
-
-\figure{Screenshot-2025-08-06-181554.png}{options: width=80\%}
-\figure{Screenshot-2025-08-06-181621.png}{options: width=80\%}
-
-The images above show a sample Preceptor Table and Population Table generated by this function.
-
 }
