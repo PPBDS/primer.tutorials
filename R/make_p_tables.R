@@ -109,13 +109,6 @@ make_p_tables <- function(
   covariate_values <- '"...", "...", "..."'
   covariate_gt_spanner_cols <- glue::glue("`{covariate_1_label}`, `{covariate_2_label}`, `{covariate_3_label}`")
 
-  install <- glue::glue(
-    '```{{r}}
-# Install the following packages if not already (visit the help page for more details)
-install.packages(c("gt", "tibble", "glue"))
-```'
-  )
-
   code_footnotes <- glue::glue(
     '```{{r}}
 # Edit the following PRECEPTOR/POPULATION footnotes (look at the help page for more details):
@@ -256,7 +249,6 @@ rm(p_tibble, d_tibble)
   )
 
   full_code <- paste(
-    install,
     code_footnotes,
     code_p_tibble,
     code_d_tibble,
