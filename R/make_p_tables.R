@@ -15,7 +15,6 @@
 #' @param treatment_label Character. Label for the treatment spanner (required if `is_causal = TRUE`).
 #' @param covariate_1_label Character. First covariate label.
 #' @param covariate_2_label Character. Second covariate label.
-#' @param covariate_3_label Character. Third covariate label.
 #'
 #' @note
 #' All cell entries must be wrapped in double quotes, including numbers (e.g., `"42"`).
@@ -44,15 +43,14 @@ make_p_tables <- function(
   outcome_label,
   treatment_label,
   covariate_1_label,
-  covariate_2_label,
-  covariate_3_label
+  covariate_2_label
 )
 
  {
 
-    covariate_headers <- glue::glue("~`{covariate_1_label}`, ~`{covariate_2_label}`, ~`{covariate_3_label}`")
+    covariate_headers <- glue::glue("~`{covariate_1_label}`, ~`{covariate_2_label}`")
   covariate_values <- '"...", "...", "..."'
-  covariate_gt_spanner_cols <- glue::glue("`{covariate_1_label}`, `{covariate_2_label}`, `{covariate_3_label}`")
+  covariate_gt_spanner_cols <- glue::glue("`{covariate_1_label}`, `{covariate_2_label}`")
 
   code_footnotes <- glue::glue(
     '```{{r}}
