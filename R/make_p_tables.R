@@ -3,8 +3,8 @@
 #' Inserts a Quarto-ready template consisting of five code chunks for creating **Preceptor Tables** and **Population Tables**. These tables support both causal and predictive workflows.
 #'
 #' The output includes:
-#' - A `tibble` for the Preceptor Table
-#' - A `tibble` for the Population Table (includes Preceptor rows)
+#' - An empty `tibble` for the Preceptor Table
+#' - An empty `tibble` for the Population Table (includes Preceptor rows)
 #' - `gt` code to render each table with labeled spanners
 #' - Editable footnotes for documentation
 #' - Cleanup code to remove temporary objects
@@ -15,8 +15,6 @@
 #' @param treatment_label Character. Label for the treatment spanner (required if `is_causal = TRUE`).
 #' @param covariate_1_label Character. First covariate label.
 #' @param covariate_2_label Character. Second covariate label.
-#' @param covariate_3_label Character. Third covariate label.
-#' @param pre_time Character. Default value for the `"Time/Year"` column in the Preceptor Table.
 #'
 #' @note
 #' All cell entries must be wrapped in double quotes, including numbers (e.g., `"42"`).
@@ -40,20 +38,19 @@
 
 
 make_p_tables <- function(
-  is_causal = TRUE,
-  unit_label = "Unit",
-  outcome_label = if (is_causal) "Potential Outcomes" else "Outcome",
-  treatment_label = "Treatment",
-  covariate_1_label = "sex",
-  covariate_2_label = "age",
-  covariate_3_label = "incumbent",
-  pre_time = "2020"
+  is_causal,
+  unit_label,
+  outcome_label,
+  treatment_label,
+  covariate_1_label,
+  covariate_2_label
 )
+
  {
 
-    covariate_headers <- glue::glue("~`{covariate_1_label}`, ~`{covariate_2_label}`, ~`{covariate_3_label}`")
+    covariate_headers <- glue::glue("~`{covariate_1_label}`, ~`{covariate_2_label}`")
   covariate_values <- '"...", "...", "..."'
-  covariate_gt_spanner_cols <- glue::glue("`{covariate_1_label}`, `{covariate_2_label}`, `{covariate_3_label}`")
+  covariate_gt_spanner_cols <- glue::glue("`{covariate_1_label}`, `{covariate_2_label}`")
 
   code_footnotes <- glue::glue(
     '```{{r}}
@@ -75,12 +72,12 @@ pop_covariates_footnote <- "..."
 code_p_tibble <- glue::glue(
   '```{{r}}
 # Use "?" for unknowns in Preceptor Table rows, and "---" for unknowns in Population (data) rows.
-# Leave the last row and column as-is to signal more rows exist
+# Leave the third row and last column as-is to signal more rows exist
 p_tibble <- tibble::tribble(
   ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers}, ~`More`,
-  "...", "{pre_time}", "...", "...", "...", {covariate_values}, "...",
-  "...", "{pre_time}", "...", "...", "...", {covariate_values}, "...",
-  "...", "{pre_time}", "...", "...", "...", {covariate_values}, "...",
+  "...", "...", "...", "...", "...", {covariate_values}, "...",
+  "...", "...", "...", "...", "...", {covariate_values}, "...",
+  "...", "...", "...", "...", "...", "...", "...",
   "...", "...", "...", "...", "...", {covariate_values}, "..."
 )
 ```'
@@ -111,9 +108,9 @@ code_p_table_causal <- glue::glue(
   '```{{r}}
 gt::gt(data = p_tibble) |>
   gt::tab_header(title = "Preceptor Table") |>
-  gt::tab_spanner(label = "{unit_label}", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
-  gt::tab_spanner(label = "{outcome_label}", id = "outcome_span", columns = c(`{outcome_label} 1`, `{outcome_label} 2`)) |>
-  gt::tab_spanner(label = "{treatment_label}", id = "treatment_span", columns = c(`{treatment_label}`)) |>
+  gt::tab_spanner(label = "Unit", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`{outcome_label} 1`, `{outcome_label} 2`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`{treatment_label}`)) |>
   gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c({covariate_gt_spanner_cols})) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
   gt::cols_align(align = "left", columns = c(`{unit_label}`)) |>
@@ -132,8 +129,8 @@ code_p_table_predictive <- glue::glue(
   '```{{r}}
 gt::gt(data = p_tibble) |>
   gt::tab_header(title = "Preceptor Table") |>
-  gt::tab_spanner(label = "{unit_label}", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
-  gt::tab_spanner(label = "{outcome_label}", id = "outcome_span", columns = c(`{outcome_label} 1`, `{outcome_label} 2`)) |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
+  gt::tab_spanner(label = "Outcomes", id = "outcome_span", columns = c(`{outcome_label} 1`, `{outcome_label} 2`)) |>
   gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c({covariate_gt_spanner_cols})) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
   gt::cols_align(align = "left", columns = c(`{unit_label}`)) |>
@@ -151,9 +148,9 @@ code_pop_table_causal <- glue::glue(
   '```{{r}}
 gt::gt(data = d_tibble) |>
   gt::tab_header(title = "Population Table") |>
-  gt::tab_spanner(label = "{unit_label}/Time", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
-  gt::tab_spanner(label = "{outcome_label}", id = "outcome_span", columns = c(`{outcome_label} 1`, `{outcome_label} 2`)) |>
-  gt::tab_spanner(label = "{treatment_label}", id = "treatment_span", columns = c(`{treatment_label}`)) |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`{outcome_label} 1`, `{outcome_label} 2`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`{treatment_label}`)) |>
   gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c({covariate_gt_spanner_cols})) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
   gt::cols_align(align = "left", columns = c(`{unit_label}`)) |>
@@ -170,8 +167,8 @@ code_pop_table_predictive <- glue::glue(
   '```{{r}}
 gt::gt(data = d_tibble) |>
   gt::tab_header(title = "Population Table") |>
-  gt::tab_spanner(label = "{unit_label}/Time", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
-  gt::tab_spanner(label = "{outcome_label}", id = "outcome_span", columns = c(`{outcome_label} 1`, `{outcome_label} 2`)) |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
+  gt::tab_spanner(label = "Outcomes", id = "outcome_span", columns = c(`{outcome_label} 1`, `{outcome_label} 2`)) |>
   gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c({covariate_gt_spanner_cols})) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
   gt::cols_align(align = "left", columns = c(`{unit_label}`)) |>

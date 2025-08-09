@@ -5,14 +5,12 @@
 \title{Insert Preceptor and Population Table Templates in Quarto}
 \usage{
 make_p_tables(
-  is_causal = TRUE,
-  unit_label = "Unit",
-  outcome_label = if (is_causal) "Potential Outcomes" else "Outcome",
-  treatment_label = "Treatment",
-  covariate_1_label = "sex",
-  covariate_2_label = "age",
-  covariate_3_label = "incumbent",
-  pre_time = "2020"
+  is_causal,
+  unit_label,
+  outcome_label,
+  treatment_label,
+  covariate_1_label,
+  covariate_2_label
 )
 }
 \arguments{
@@ -27,10 +25,6 @@ make_p_tables(
 \item{covariate_1_label}{Character. First covariate label.}
 
 \item{covariate_2_label}{Character. Second covariate label.}
-
-\item{covariate_3_label}{Character. Third covariate label.}
-
-\item{pre_time}{Character. Default value for the \code{"Time/Year"} column in the Preceptor Table.}
 }
 \value{
 Inserts R code chunks into the active Quarto document using \code{rstudioapi::insertText()}.
@@ -41,8 +35,8 @@ Inserts a Quarto-ready template consisting of five code chunks for creating \str
 \details{
 The output includes:
 \itemize{
-\item A \code{tibble} for the Preceptor Table
-\item A \code{tibble} for the Population Table (includes Preceptor rows)
+\item An empty \code{tibble} for the Preceptor Table
+\item An empty \code{tibble} for the Population Table (includes Preceptor rows)
 \item \code{gt} code to render each table with labeled spanners
 \item Editable footnotes for documentation
 \item Cleanup code to remove temporary objects

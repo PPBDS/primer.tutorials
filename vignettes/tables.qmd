@@ -35,8 +35,8 @@ A **Population Table** contains a merged view of observed data (from the populat
 
 The output of `make_p_tables()` includes:
 
-* A `tibble` for the **Preceptor Table**
-* A `tibble` for the **Population Table** (which includes rows from the Preceptor Table)
+* An empty `tibble` for the **Preceptor Table**
+* An empty `tibble` for the **Population Table** (which includes rows from the Preceptor Table)
 * `gt` code to render both tables with grouped column headers ("spanners")
 * Editable footnotes for each section of the table
 * Cleanup code to remove temporary objects
@@ -56,12 +56,6 @@ The goal is to visually communicate which variables play which roles in your mod
 
 ## Package Requirements
 
-This function depends on the following packages:
-
-```r
-install.packages(c("gt", "tibble", "glue"))
-```
-
 It automatically constructs code using these libraries:
 
 ```{r}
@@ -76,96 +70,25 @@ Preceptor and Population Tables are inserted together. The Population Table incl
 
 Behind the scenes, these tables are generated using `tibble::tribble()` for easier manual editing by row. This helps authors align values vertically and encourages clear visual structure in the Quarto document
 
-When you run `primer.tutorials::make_p_tables()`, the following code chunks are placed in the active document.
+When you run `primer.tutorials::make_p_tables()` without any argument values, the following error appears in the console.
 
-````{verbatim}
-```{r}
-# Edit the following PRECEPTOR/POPULATION footnotes (look at the help page for more details):
-pre_title_footnote <- "..."
-pre_units_footnote <- "..."
-pre_outcome_footnote <- "..."
-pre_treatment_footnote <- "..."
-pre_covariates_footnote <- "..." 
-
-pop_title_footnote <- "..."
-pop_units_footnote <- "..."
-pop_outcome_footnote <- "..."
-pop_treatment_footnote <- "..."
-pop_covariates_footnote <- "..."
-```
-
-```{r}
-# Use "?" for unknowns in Preceptor Table rows, and "---" for unknowns in Population (data) rows.
-# Leave the last row and column as-is to signal more rows exist
-p_tibble <- tibble::tribble(
-  ~`Unit`, ~`Time/Year`, ~`Potential Outcomes 1`, ~`Potential Outcomes 2`, ~`Treatment`, ~`sex`, ~`age`, ~`incumbent`, ~`More`,
-  "...", "2020", "...", "...", "...", "...", "...", "...", "...",
-  "...", "2020", "...", "...", "...", "...", "...", "...", "...",
-  "...", "2020", "...", "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "..."
-)
-```
-
-```{r}
-d_tibble <- tibble::tribble(
-  ~`Source`, ~`Unit`, ~`Time/Year`, ~`Potential Outcomes 1`, ~`Potential Outcomes 2`, ~`Treatment`, ~`sex`, ~`age`, ~`incumbent`, ~`More`,
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Data", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Data", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Data", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Data", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  # Reuse preceptor rows from p_tibble
-  "Preceptor Table", !!!p_tibble[1, ] |> dplyr::as_tibble() |> dplyr::slice(1) |> unname() |> as.list(),
-  "Preceptor Table", !!!p_tibble[2, ] |> dplyr::as_tibble() |> dplyr::slice(1) |> unname() |> as.list(),
-  "Preceptor Table", !!!p_tibble[3, ] |> dplyr::as_tibble() |> dplyr::slice(1) |> unname() |> as.list(),
-  "Preceptor Table", !!!p_tibble[4, ] |> dplyr::as_tibble() |> dplyr::slice(1) |> unname() |> as.list(),
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
-)
-```
-
-```{r}
-gt::gt(data = p_tibble) |>
-  gt::tab_header(title = "Preceptor Table") |>
-  gt::tab_spanner(label = "Unit", id = "unit_span", columns = c(`Unit`, `Time/Year`)) |>
-  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Potential Outcomes 1`, `Potential Outcomes 2`)) |>
-  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Treatment`)) |>
-  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`sex`, `age`, `incumbent`)) |>
-  gt::cols_align(align = "center", columns = gt::everything()) |>
-  gt::cols_align(align = "left", columns = c(`Unit`)) |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(pre_title_footnote, locations = gt::cells_title("title")) |>
-  gt::tab_footnote(pre_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
-  gt::tab_footnote(pre_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
-  gt::tab_footnote(pre_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
-  gt::tab_footnote(pre_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
-```
-
-```{r}
-gt::gt(data = d_tibble) |>
-  gt::tab_header(title = "Population Table") |>
-  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Unit`, `Time/Year`)) |>
-  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Potential Outcomes 1`, `Potential Outcomes 2`)) |>
-  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Treatment`)) |>
-  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`sex`, `age`, `incumbent`)) |>
-  gt::cols_align(align = "center", columns = gt::everything()) |>
-  gt::cols_align(align = "left", columns = c(`Unit`)) |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(pop_title_footnote, locations = gt::cells_title("title")) |>
-  gt::tab_footnote(pop_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
-  gt::tab_footnote(pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
-  gt::tab_footnote(pop_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
-  gt::tab_footnote(pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
-```
-
-```{r}
-rm(p_tibble, d_tibble)
-```
 ````
+> make_p_tables()
+Error:
+! Failed to evaluate glue component {covariate_1_label}
+Caused by error:
+! argument "covariate_1_label" is missing, with no default
+Show Traceback
+>
+````
+
+This is because the function requires labels to create a template of the tables. For the best results, it is encouraged to fill in each argument when calling the function.
 
 ## Understanding the Function Arguments
 
 The `make_p_tables()` function takes a set of user-defined labels and options that control how the **Preceptor** and **Population** tables are built and displayed. Each argument serves a clear conceptual role and is used to populate column headers, spanner labels, and the default content in `tibble::tribble()` calls. Here is a detailed breakdown:
+
+* We use the term "label" rather than "vars" to indicate that these are the labels in the table rather than the variable names from the data. As such, they are often human-readable phrases with spaces, like "Math Score if in Small Class". Will long labels be wrapped automagically? We probably want that. Of course, these descriptions can not be too long and so must be shortened in some way. In a pinch, the variable names may be used, but this is not preferred.
 
 ### `is_causal` *(Logical)*
 
@@ -206,22 +129,12 @@ The `make_p_tables()` function takes a set of user-defined labels and options th
 
 ---
 
-### `covariate_1_label`, `covariate_2_label`, `covariate_3_label` *(Characters)*
+### `covariate_1_label` and `covariate_2_label`*(Characters)*
 
-* Labels for three covariates relevant to the analysis.
+* Labels for two covariates relevant to the analysis.
 * These are grouped under a `"Covariates"` spanner.
 * These labels will be used directly as column headers (e.g., `"Sex"`, `"Age"`, `"School Type"`).
 * All should be simple phrases, and together they describe the pre-treatment information on which comparisons or predictions may be based.
-
----
-
-### `pre_time` *(Character)*
-
-* Default value for the `"Time/Year"` column in the Preceptor Table.
-* Typically a 4-digit year (e.g., `"2022"`) or full date if desired.
-* Meant to communicate **when the expectations were formed**, not when the outcome occurred.
-
----
 
 Each of these labels should be understood as **descriptive display names**, not as variable names from an existing dataset. The goal is clarity and interpretability for readers of the resulting Quarto document.
 
@@ -278,9 +191,7 @@ make_p_tables(
   outcome_label = "Potential Outcomes",
   treatment_label = "Phone Call",
   covariate_1_label = "Sex",
-  covariate_2_label = "Age",
-  covariate_3_label = "Incumbency",
-  pre_time = "2022"
+  covariate_2_label = "Age"
 )
 ```
 
@@ -307,12 +218,12 @@ pop_covariates_footnote <- "Covariates drawn from voter file demographics and ca
 ```{r}
 # Use "?" for unknowns in Preceptor Table rows
 p_tibble <- tibble::tribble(
-  ~`Senator`, ~`Time/Year`, ~`Potential Outcomes 1`, ~`Potential Outcomes 2`, ~`Phone Call`, ~`Sex`, ~`Age`, ~`Incumbency`, ~`Other`,
-  "John Smith",   "2022", "?", "Not Re-elected", "Yes", "Male", "58", "Incumbent", "...",
-  "Jane Doe",     "2022", "?", "Not Re-elected", "No",  "Female", "49", "Challenger", "...",
-  "Alex Johnson", "2022", "Re-elected", "?", "Yes", "Male", "62", "Incumbent", "...",
-  "Chris Lee",    "2022", "?", "Not Re-elected", "No",  "Female", "55", "Incumbent", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "..."
+  ~`Senator`, ~`Time/Year`, ~`Potential Outcomes 1`, ~`Potential Outcomes 2`, ~`Phone Call`, ~`Sex`, ~`Age`, ~`Other`,
+ "John Smith",   "2025", "?", "Not Re-elected", "Yes", "Male", "58", "...",
+  "Jane Doe",     "2025", "?", "Not Re-elected", "No",  "Female", "49", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...",
+  "Chris Lee",    "2025", "Re-elected", "?", "No",  "Male", "55", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...",
 )
 ```
 
@@ -320,19 +231,19 @@ p_tibble <- tibble::tribble(
 
 ```{r}
 d_tibble <- tibble::tribble(
-  ~`Source`, ~`Senator`, ~`Time/Year`, ~`Potential Outcomes 1`, ~`Potential Outcomes 2`, ~`Phone Call`, ~`Sex`, ~`Age`, ~`Incumbency`, ~`Other`,
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Data", "John Smith",   "2022", "Re-elected", "---", "Yes", "Male", "58", "Incumbent", "...",
-  "Data", "Jane Doe",     "2022", "---", "Re-elected", "No", "Female", "49", "Challenger", "...",
-  "Data", "Alex Johnson", "2022", "---", "Not Re-elected", "Yes", "Male", "62", "Incumbent", "...",
-  "Data", "Chris Lee",    "2022", "Re-elected", "---", "No", "Female", "55", "Incumbent", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  ~`Source`, ~`Senator`, ~`Time/Year`, ~`Potential Outcomes 1`, ~`Potential Outcomes 2`, ~`Phone Call`, ~`Sex`, ~`Age`, ~`Other`,
+  "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  "Data", "Mary Jackson",   "2021", "Re-elected", "---", "Yes", "Female", "51", "...",
+  "Data", "Alex Johnson",     "2022", "---", "Not Re-elected", "Yes", "Male", "46", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  "Data", "Bobby Norris",    "2022", "Re-elected", "---", "No", "Male", "63", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "...",
   # Add Preceptor rows
-  "Preceptor Table", "John Smith",   "2022", "?", "Not Re-elected", "Yes", "Male", "58", "Incumbent", "...",
-  "Preceptor Table", "Jane Doe",     "2022", "?", "Not Re-elected", "No",  "Female", "49", "Challenger", "...",
-  "Preceptor Table", "Alex Johnson", "2022", "Re-elected", "?", "Yes", "Male", "62", "Incumbent", "...",
-  "Preceptor Table", "Chris Lee",    "2022", "?", "Not Re-elected", "No",  "Female", "55", "Incumbent", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."
+  "Preceptor Table", "John Smith",   "2025", "?", "Not Re-elected", "Yes", "Male", "58", "...",
+  "Preceptor Table", "Jane Doe",     "2025", "?", "Not Re-elected", "No",  "Female", "49", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "...",
+  "Preceptor Table", "Chris Lee",    "2025", "Re-elected", "?", "No",  "Male", "55", "...",
+  "...", "...", "...", "...", "...", "...", "...", "...", "..."
 )
 ```
 
@@ -342,10 +253,10 @@ d_tibble <- tibble::tribble(
 # Preceptor Table
 gt::gt(data = p_tibble) |>
   gt::tab_header(title = "Preceptor Table") |>
-  gt::tab_spanner(label = "Senator", id = "unit_span", columns = c(`Senator`, `Time/Year`)) |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Senator`, `Year`)) |>
   gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Potential Outcomes 1`, `Potential Outcomes 2`)) |>
-  gt::tab_spanner(label = "Phone Call", id = "treatment_span", columns = c(`Phone Call`)) |>
-  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Sex`, `Age`, `Incumbency`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Phone Call`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Sex`, `Age`)) |>
   gt::cols_align("center", columns = gt::everything()) |>
   gt::cols_align("left", columns = `Senator`) |>
   gt::fmt_markdown(columns = gt::everything()) |>
@@ -363,7 +274,7 @@ gt::gt(data = d_tibble) |>
   gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Senator`, `Time/Year`)) |>
   gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Potential Outcomes 1`, `Potential Outcomes 2`)) |>
   gt::tab_spanner(label = "Phone Call", id = "treatment_span", columns = c(`Phone Call`)) |>
-  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Sex`, `Age`, `Incumbency`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Sex`, `Age`)) |>
   gt::cols_align("center", columns = gt::everything()) |>
   gt::cols_align("left", columns = `Senator`) |>
   gt::fmt_markdown(columns = gt::everything()) |>
