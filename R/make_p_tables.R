@@ -49,26 +49,26 @@
 #' )
 #' }
 
-
-
 make_p_tables <- function(
-  is_causal,
+  type,                # "causal" or "predictive"
   unit_label,
   outcome_label,
   treatment_label,
-  covariate_1_label,
-  covariate_2_label
-)
+  covariate_label,
+  source_col = TRUE    # whether to include Source column in population table
+) {
+  # Validate type
+  if (!type %in% c("causal", "predictive")) {
+    stop("`type` must be either 'causal' or 'predictive'.")
+  }
 
- {
-
-    covariate_headers <- glue::glue("~`{covariate_1_label}`, ~`{covariate_2_label}`")
-  covariate_values <- '"...", "...", "..."'
-  covariate_gt_spanner_cols <- glue::glue("`{covariate_1_label}`, `{covariate_2_label}`")
+  covariate_headers <- glue::glue("~`{covariate_label}`")
+  covariate_values <- '"...", "..."'
+  covariate_gt_spanner_cols <- glue::glue("`{covariate_label}`")
 
   code_footnotes <- glue::glue(
     '```{{r}}
-# Edit the following PRECEPTOR/POPULATION footnotes (look at the vignette for more details):
+# Edit the following PRECEPTOR/POPULATION footnotes:
 pre_title_footnote <- "..."
 pre_units_footnote <- "..."
 pre_outcome_footnote <- "..."
@@ -83,43 +83,67 @@ pop_covariates_footnote <- "..."
 ```'
   )
 
-code_p_tibble <- glue::glue(
-  '```{{r}}
-# Use "?" for unknowns in Preceptor Table rows, and "---" for unknowns in Data rows in the Population Table.
-# Leave the third row and last column as-is to signal more rows exist
+  # Preceptor table tibble
+  if (type == "causal") {
+    code_p_tibble <- glue::glue(
+      '```{{r}}
 p_tibble <- tibble::tribble(
   ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers}, ~`More`,
-  "...", "...", "...", "...", "...", {covariate_values}, "...",
-  "...", "...", "...", "...", "...", {covariate_values}, "...",
   "...", "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", {covariate_values}, "..."
+  "...", "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...", "..."
 )
 ```'
+    )
+  } else {
+    code_p_tibble <- glue::glue(
+      '```{{r}}
+p_tibble <- tibble::tribble(
+  ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, {covariate_headers}, ~`More`,
+  "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "..."
 )
+```'
+    )
+  }
 
+  # Population table tibble
+  source_col_header <- if (source_col) "~`Source`, " else ""
+  source_col_value <- if (source_col) '"...", ' else ""
 
-code_d_tibble <- glue::glue(
-  '```{{r}}
+  if (type == "causal") {
+    code_d_tibble <- glue::glue(
+      '```{{r}}
 d_tibble <- tibble::tribble(
-  ~`Source`, ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers}, ~`More`,
-  "...", "...", "...", "...", "...", "...", {covariate_values}, "...",
-  "Data", "...", "...", "...", "...", "...", {covariate_values}, "...",
-  "Data", "...", "...", "...", "...", "...", {covariate_values}, "...",
-  "Data", "...", "...", "...", "...", "...", {covariate_values}, "...",
-  "Data", "...", "...", "...", "...", "...", {covariate_values}, "...",
-  "...", "...", "...", "...", "...", "...", {covariate_values}, "...",
-  # Reuse preceptor rows from p_tibble
-  "Preceptor Table", !!!p_tibble[1, ] |> dplyr::as_tibble() |> dplyr::slice(1) |> unname() |> as.list(),
-  "Preceptor Table", !!!p_tibble[2, ] |> dplyr::as_tibble() |> dplyr::slice(1) |> unname() |> as.list(),
-  "Preceptor Table", !!!p_tibble[3, ] |> dplyr::as_tibble() |> dplyr::slice(1) |> unname() |> as.list(),
-  "Preceptor Table", !!!p_tibble[4, ] |> dplyr::as_tibble() |> dplyr::slice(1) |> unname() |> as.list(),
-  "...", "...", "...", "...", "...", "...", {covariate_values}, "..."
+  {source_col_header}~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers}, ~`More`,
+  {source_col_value}"...", "...", "...", "...", "...", "...", "...",
+  {source_col_value}"Data", "...", "...", "...", "...", "...", "...",
+  {source_col_value}"Data", "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...", "..."
 )
 ```'
+    )
+  } else {
+    code_d_tibble <- glue::glue(
+      '```{{r}}
+d_tibble <- tibble::tribble(
+  {source_col_header}~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, {covariate_headers}, ~`More`,
+  {source_col_value}"...", "...", "...", "...", "...", "...",
+  {source_col_value}"Data", "...", "...", "...", "...", "...",
+  {source_col_value}"Data", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "..."
 )
+```'
+    )
+  }
 
-code_p_table_causal <- glue::glue(
-  '```{{r}}
+  # Preceptor table rendering
+  if (type == "causal") {
+    code_p_table <- glue::glue(
+      '```{{r}}
 gt::gt(data = p_tibble) |>
   gt::tab_header(title = "Preceptor Table") |>
   gt::tab_spanner(label = "Unit", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
@@ -128,19 +152,12 @@ gt::gt(data = p_tibble) |>
   gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c({covariate_gt_spanner_cols})) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
   gt::cols_align(align = "left", columns = c(`{unit_label}`)) |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(pre_title_footnote, locations = gt::cells_title("title")) |>
-  gt::tab_footnote(pre_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
-  gt::tab_footnote(pre_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
-  gt::tab_footnote(pre_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
-  gt::tab_footnote(pre_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+  gt::fmt_markdown(columns = gt::everything())
 ```'
-)
-
-
-
-code_p_table_predictive <- glue::glue(
-  '```{{r}}
+    )
+  } else {
+    code_p_table <- glue::glue(
+      '```{{r}}
 gt::gt(data = p_tibble) |>
   gt::tab_header(title = "Preceptor Table") |>
   gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
@@ -148,18 +165,15 @@ gt::gt(data = p_tibble) |>
   gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c({covariate_gt_spanner_cols})) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
   gt::cols_align(align = "left", columns = c(`{unit_label}`)) |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(pre_title_footnote, locations = gt::cells_title("title")) |>
-  gt::tab_footnote(pre_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
-  gt::tab_footnote(pre_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
-  gt::tab_footnote(pre_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+  gt::fmt_markdown(columns = gt::everything())
 ```'
-)
+    )
+  }
 
-
-
-code_pop_table_causal <- glue::glue(
-  '```{{r}}
+  # Population table rendering
+  if (type == "causal") {
+    code_pop_table <- glue::glue(
+      '```{{r}}
 gt::gt(data = d_tibble) |>
   gt::tab_header(title = "Population Table") |>
   gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
@@ -168,17 +182,12 @@ gt::gt(data = d_tibble) |>
   gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c({covariate_gt_spanner_cols})) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
   gt::cols_align(align = "left", columns = c(`{unit_label}`)) |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(pop_title_footnote, locations = gt::cells_title("title")) |>
-  gt::tab_footnote(pop_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
-  gt::tab_footnote(pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
-  gt::tab_footnote(pop_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
-  gt::tab_footnote(pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+  gt::fmt_markdown(columns = gt::everything())
 ```'
-)
-
-code_pop_table_predictive <- glue::glue(
-  '```{{r}}
+    )
+  } else {
+    code_pop_table <- glue::glue(
+      '```{{r}}
 gt::gt(data = d_tibble) |>
   gt::tab_header(title = "Population Table") |>
   gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
@@ -186,19 +195,10 @@ gt::gt(data = d_tibble) |>
   gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c({covariate_gt_spanner_cols})) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
   gt::cols_align(align = "left", columns = c(`{unit_label}`)) |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(pop_title_footnote, locations = gt::cells_title("title")) |>
-  gt::tab_footnote(pop_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
-  gt::tab_footnote(pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
-  gt::tab_footnote(pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+  gt::fmt_markdown(columns = gt::everything())
 ```'
-)
-
-
-
-  code_p_table <- if (is_causal) code_p_table_causal else code_p_table_predictive
-  code_pop_table <- if (is_causal) code_pop_table_causal else code_pop_table_predictive
-
+    )
+  }
 
   full_code <- paste(
     code_footnotes,
