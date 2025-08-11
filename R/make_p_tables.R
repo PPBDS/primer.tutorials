@@ -1,38 +1,48 @@
 #' Insert Preceptor and Population Table Templates in Quarto
 #'
-#' Inserts a Quarto-ready template consisting of five code chunks for creating **Preceptor Tables** and **Population Tables**. These tables support both causal and predictive workflows.
+#' Inserts a Quarto-ready template consisting of multiple code chunks for creating
+#' **Preceptor Tables** and **Population Tables**. These tables support both causal
+#' and predictive workflows.
 #'
 #' The output includes:
-#' - An empty `tibble` for the Preceptor Table
-#' - An empty `tibble` for the Population Table (includes Preceptor rows)
-#' - `gt` code to render each table with labeled spanners
 #' - Editable footnotes for documentation
-#' - Cleanup code to remove temporary objects
+#' - Empty `tibble`s for the Preceptor Table and Population Table (the latter includes
+#'   the Preceptor rows)
+#' - `gt` code chunks to render each table with labeled spanners and columns
+#'   sized roughly proportional to label length
+#' - The Preceptor and Population tables include a final "More" column and
+#'   a last empty row added during rendering for easier editing
 #'
-#' @param is_causal Logical. If `TRUE`, includes treatment and potential outcomes; if `FALSE`, includes a single outcome and no treatment.
-#' @param unit_label Character. Label for the unit.
-#' @param outcome_label Character. Label for the outcome or potential outcomes
-#' @param treatment_label Character. Label for the treatment (required if `is_causal = TRUE`).
-#' @param covariate_1_label Character. First covariate label.
-#' @param covariate_2_label Character. Second covariate label.
+#' @param type Character. Either `"causal"` or `"predictive"`. Determines
+#'   whether treatment and potential outcomes columns are included (`"causal"`)
+#'   or a single outcome and no treatment (`"predictive"`).
+#' @param unit_label Character. Label for the unit column.
+#' @param outcome_label Character. Label for the outcome or potential outcomes.
+#' @param treatment_label Character. Label for the treatment column (required if `type = "causal"`).
+#' @param covariate_label Character. Label for the covariate column.
+#' @param source_col Logical. Whether to include a `"Source"` column in the population table. Defaults to `TRUE`.
 #'
 #' @note
-#' All cell entries must be wrapped in double quotes, including numbers (e.g., `"42"`).
+#' - All cell entries in the tibbles must be wrapped in double quotes, including numbers (e.g., `"42"`).
+#' - The initial tibbles are simplified for easier editing; an additional row and "More" column
+#'   are added during table rendering.
+#' - Column widths in the rendered `gt` tables are set proportionally to the length of the column labels,
+#'   helping maintain readable, centered columns.
 #'
-#' Required packages:
-#' This function depends on the following packages:
-#' - `gt`: for rendering the tables
-#' - `tibble`: for creating the data structure
-#' - `glue`: for dynamically constructing column names and labels
+#' @details
+#' This function inserts R code chunks into the active Quarto document via
+#' `rstudioapi::insertText()`. The inserted code includes editable footnotes,
+#' two tibbles (`p_tibble` and `d_tibble`) for the user to fill out, and the
+#' assembly of final tables with proper column grouping and formatting.
 #'
-#' @return Inserts R code chunks into the active Quarto document using `rstudioapi::insertText()`.
+#' @return Invisibly returns `NULL`. Inserts code into the active Quarto document.
 #'
-#' @author
-#' David Kane, Aashna Patel
+#' @author David Kane, Aashna Patel
 #'
 #' @importFrom glue glue
 #' @importFrom tibble tribble
-#' @importFrom gt gt tab_spanner tab_header cols_align fmt_markdown tab_footnote cells_title cells_column_spanners
+#' @importFrom gt gt tab_spanner tab_header cols_align cols_width fmt_markdown
+#' @importFrom dplyr add_row mutate
 #'
 #' @export
 #'
@@ -40,14 +50,23 @@
 #' \dontrun{
 #' # Insert causal tables for a study of senators
 #' make_p_tables(
-#'   is_causal = TRUE,
+#'   type = "causal",
 #'   unit_label = "Senator",
 #'   outcome_label = "Potential Outcomes",
 #'   treatment_label = "Phone Call",
-#'   covariate_1_label = "Sex",
-#'   covariate_2_label = "Age"
+#'   covariate_label = "Sex"
+#' )
+#'
+#' # Insert predictive tables without treatment
+#' make_p_tables(
+#'   type = "predictive",
+#'   unit_label = "Patient",
+#'   outcome_label = "Outcome",
+#'   treatment_label = NULL,
+#'   covariate_label = "Age"
 #' )
 #' }
+
 
 make_p_tables <- function(
   type,                # "causal" or "predictive"
