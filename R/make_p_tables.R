@@ -68,7 +68,7 @@ make_p_tables <- function(
 
   code_footnotes <- glue::glue(
     '```{{r}}
-# Edit the following PRECEPTOR/POPULATION footnotes (look at the help page for more details):
+# Edit the following PRECEPTOR/POPULATION footnotes (look at the vignette for more details):
 pre_title_footnote <- "..."
 pre_units_footnote <- "..."
 pre_outcome_footnote <- "..."
@@ -85,7 +85,7 @@ pop_covariates_footnote <- "..."
 
 code_p_tibble <- glue::glue(
   '```{{r}}
-# Use "?" for unknowns in Preceptor Table rows, and "---" for unknowns in Population (data) rows.
+# Use "?" for unknowns in Preceptor Table rows, and "---" for unknowns in Data rows in the Population Table.
 # Leave the third row and last column as-is to signal more rows exist
 p_tibble <- tibble::tribble(
   ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers}, ~`More`,

@@ -53,6 +53,19 @@ This function depends on the following packages:
 \item \code{glue}: for dynamically constructing column names and labels
 }
 }
+\examples{
+\dontrun{
+# Insert causal tables for a study of senators
+make_p_tables(
+  is_causal = TRUE,
+  unit_label = "Senator",
+  outcome_label = "Potential Outcomes",
+  treatment_label = "Phone Call",
+  covariate_1_label = "Sex",
+  covariate_2_label = "Age"
+)
+}
+}
 \author{
 David Kane, Aashna Patel
 }
