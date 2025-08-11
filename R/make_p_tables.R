@@ -10,9 +10,9 @@
 #' - Cleanup code to remove temporary objects
 #'
 #' @param is_causal Logical. If `TRUE`, includes treatment and potential outcomes; if `FALSE`, includes a single outcome and no treatment.
-#' @param unit_label Character. Label for the unit spanner.
-#' @param outcome_label Character. Label for the outcome or potential outcomes spanner.
-#' @param treatment_label Character. Label for the treatment spanner (required if `is_causal = TRUE`).
+#' @param unit_label Character. Label for the unit.
+#' @param outcome_label Character. Label for the outcome or potential outcomes
+#' @param treatment_label Character. Label for the treatment (required if `is_causal = TRUE`).
 #' @param covariate_1_label Character. First covariate label.
 #' @param covariate_2_label Character. Second covariate label.
 #'
@@ -199,11 +199,6 @@ gt::gt(data = d_tibble) |>
   code_p_table <- if (is_causal) code_p_table_causal else code_p_table_predictive
   code_pop_table <- if (is_causal) code_pop_table_causal else code_pop_table_predictive
 
-  code_cleanup <- glue::glue(
-    '```{{r}}
-rm(p_tibble, d_tibble)
-```'
-  )
 
   full_code <- paste(
     code_footnotes,
@@ -211,7 +206,6 @@ rm(p_tibble, d_tibble)
     code_d_tibble,
     code_p_table,
     code_pop_table,
-    code_cleanup,
     sep = "\n\n"
   )
 
