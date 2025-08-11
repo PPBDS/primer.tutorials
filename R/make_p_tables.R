@@ -225,3 +225,4 @@ gt::gt(data = d_tibble_full) |>
     text = full_code
   )
 }
+ 
