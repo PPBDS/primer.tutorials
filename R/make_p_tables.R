@@ -63,7 +63,6 @@ make_p_tables <- function(
   }
 
   covariate_headers <- glue::glue("~`{covariate_label}`")
-  covariate_values <- '"...", "..."'
   covariate_gt_spanner_cols <- glue::glue("`{covariate_label}`")
 
   code_footnotes <- glue::glue(
@@ -83,16 +82,15 @@ pop_covariates_footnote <- "..."
 ```'
   )
 
-  # Preceptor table tibble
+  # Preceptor table tibble — user editable: NO More column, NO extra row
   if (type == "causal") {
     code_p_tibble <- glue::glue(
       '```{{r}}
 p_tibble <- tibble::tribble(
-  ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers}, ~`More`,
-  "...", "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "...", "..."
+  ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers},
+  "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "..."
 )
 ```'
     )
@@ -100,17 +98,16 @@ p_tibble <- tibble::tribble(
     code_p_tibble <- glue::glue(
       '```{{r}}
 p_tibble <- tibble::tribble(
-  ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, {covariate_headers}, ~`More`,
-  "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "..."
+  ~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, {covariate_headers},
+  "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "..."
 )
 ```'
     )
   }
 
-  # Population table tibble
+  # Population table tibble — user editable: NO More column, NO extra row
   source_col_header <- if (source_col) "~`Source`, " else ""
   source_col_value <- if (source_col) '"...", ' else ""
 
@@ -118,11 +115,10 @@ p_tibble <- tibble::tribble(
     code_d_tibble <- glue::glue(
       '```{{r}}
 d_tibble <- tibble::tribble(
-  {source_col_header}~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers}, ~`More`,
-  {source_col_value}"...", "...", "...", "...", "...", "...", "...",
-  {source_col_value}"Data", "...", "...", "...", "...", "...", "...",
-  {source_col_value}"Data", "...", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "...", "..."
+  {source_col_header}~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, ~`{treatment_label}`, {covariate_headers},
+  {source_col_value}"...", "...", "...", "...", "...", "...",
+  {source_col_value}"Data", "...", "...", "...", "...", "...",
+  {source_col_value}"Data", "...", "...", "...", "...", "..."
 )
 ```'
     )
@@ -130,21 +126,24 @@ d_tibble <- tibble::tribble(
     code_d_tibble <- glue::glue(
       '```{{r}}
 d_tibble <- tibble::tribble(
-  {source_col_header}~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, {covariate_headers}, ~`More`,
-  {source_col_value}"...", "...", "...", "...", "...", "...",
-  {source_col_value}"Data", "...", "...", "...", "...", "...",
-  {source_col_value}"Data", "...", "...", "...", "...", "...",
-  "...", "...", "...", "...", "...", "..."
+  {source_col_header}~`{unit_label}`, ~`Time/Year`, ~`{outcome_label} 1`, ~`{outcome_label} 2`, {covariate_headers},
+  {source_col_value}"...", "...", "...", "...", "...",
+  {source_col_value}"Data", "...", "...", "...", "...",
+  {source_col_value}"Data", "...", "...", "...", "..."
 )
 ```'
     )
   }
 
-  # Preceptor table rendering
+  # Preceptor table rendering — add missing row + More column here
   if (type == "causal") {
     code_p_table <- glue::glue(
       '```{{r}}
-gt::gt(data = p_tibble) |>
+p_tibble_full <- p_tibble |>
+  dplyr::add_row(!!!as.list(rep(NA, ncol(p_tibble)))) |>
+  dplyr::mutate(More = c(rep(NA, nrow(.)-1), "..."))
+
+gt::gt(data = p_tibble_full) |>
   gt::tab_header(title = "Preceptor Table") |>
   gt::tab_spanner(label = "Unit", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
   gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`{outcome_label} 1`, `{outcome_label} 2`)) |>
@@ -158,7 +157,11 @@ gt::gt(data = p_tibble) |>
   } else {
     code_p_table <- glue::glue(
       '```{{r}}
-gt::gt(data = p_tibble) |>
+p_tibble_full <- p_tibble |>
+  dplyr::add_row(!!!as.list(rep(NA, ncol(p_tibble)))) |>
+  dplyr::mutate(More = c(rep(NA, nrow(.)-1), "..."))
+
+gt::gt(data = p_tibble_full) |>
   gt::tab_header(title = "Preceptor Table") |>
   gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
   gt::tab_spanner(label = "Outcomes", id = "outcome_span", columns = c(`{outcome_label} 1`, `{outcome_label} 2`)) |>
@@ -170,11 +173,15 @@ gt::gt(data = p_tibble) |>
     )
   }
 
-  # Population table rendering
+  # Population table rendering — add missing row + More column here
   if (type == "causal") {
     code_pop_table <- glue::glue(
       '```{{r}}
-gt::gt(data = d_tibble) |>
+d_tibble_full <- d_tibble |>
+  dplyr::add_row(!!!as.list(rep(NA, ncol(d_tibble)))) |>
+  dplyr::mutate(More = c(rep(NA, nrow(.)-1), "..."))
+
+gt::gt(data = d_tibble_full) |>
   gt::tab_header(title = "Population Table") |>
   gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
   gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`{outcome_label} 1`, `{outcome_label} 2`)) |>
@@ -188,7 +195,11 @@ gt::gt(data = d_tibble) |>
   } else {
     code_pop_table <- glue::glue(
       '```{{r}}
-gt::gt(data = d_tibble) |>
+d_tibble_full <- d_tibble |>
+  dplyr::add_row(!!!as.list(rep(NA, ncol(d_tibble)))) |>
+  dplyr::mutate(More = c(rep(NA, nrow(.)-1), "..."))
+
+gt::gt(data = d_tibble_full) |>
   gt::tab_header(title = "Population Table") |>
   gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`{unit_label}`, `Time/Year`)) |>
   gt::tab_spanner(label = "Outcomes", id = "outcome_span", columns = c(`{outcome_label} 1`, `{outcome_label} 2`)) |>
