@@ -35,6 +35,20 @@
 #' @importFrom gt gt tab_spanner tab_header cols_align fmt_markdown tab_footnote cells_title cells_column_spanners
 #'
 #' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Insert causal tables for a study of senators
+#' make_p_tables(
+#'   is_causal = TRUE,
+#'   unit_label = "Senator",
+#'   outcome_label = "Potential Outcomes",
+#'   treatment_label = "Phone Call",
+#'   covariate_1_label = "Sex",
+#'   covariate_2_label = "Age"
+#' )
+#' }
+
 
 
 make_p_tables <- function(
