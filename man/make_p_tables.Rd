@@ -5,52 +5,82 @@
 \title{Insert Preceptor and Population Table Templates in Quarto}
 \usage{
 make_p_tables(
-  is_causal,
+  type,
   unit_label,
   outcome_label,
   treatment_label,
-  covariate_1_label,
-  covariate_2_label
+  covariate_label,
+  source_col = TRUE
 )
 }
 \arguments{
-\item{is_causal}{Logical. If \code{TRUE}, includes treatment and potential outcomes; if \code{FALSE}, includes a single outcome and no treatment.}
+\item{type}{Character. Either \code{"causal"} or \code{"predictive"}. Determines
+whether treatment and potential outcomes columns are included (\code{"causal"})
+or a single outcome and no treatment (\code{"predictive"}).}
 
-\item{unit_label}{Character. Label for the unit spanner.}
+\item{unit_label}{Character. Label for the unit column.}
 
-\item{outcome_label}{Character. Label for the outcome or potential outcomes spanner.}
+\item{outcome_label}{Character. Label for the outcome or potential outcomes.}
 
-\item{treatment_label}{Character. Label for the treatment spanner (required if \code{is_causal = TRUE}).}
+\item{treatment_label}{Character. Label for the treatment column (required if \code{type = "causal"}).}
 
-\item{covariate_1_label}{Character. First covariate label.}
+\item{covariate_label}{Character. Label for the covariate column.}
 
-\item{covariate_2_label}{Character. Second covariate label.}
+\item{source_col}{Logical. Whether to include a \code{"Source"} column in the population table. Defaults to \code{TRUE}.}
 }
 \value{
-Inserts R code chunks into the active Quarto document using \code{rstudioapi::insertText()}.
+Invisibly returns \code{NULL}. Inserts code into the active Quarto document.
 }
 \description{
-Inserts a Quarto-ready template consisting of five code chunks for creating \strong{Preceptor Tables} and \strong{Population Tables}. These tables support both causal and predictive workflows.
+Inserts a Quarto-ready template consisting of multiple code chunks for creating
+\strong{Preceptor Tables} and \strong{Population Tables}. These tables support both causal
+and predictive workflows.
 }
 \details{
 The output includes:
 \itemize{
-\item An empty \code{tibble} for the Preceptor Table
-\item An empty \code{tibble} for the Population Table (includes Preceptor rows)
-\item \code{gt} code to render each table with labeled spanners
 \item Editable footnotes for documentation
-\item Cleanup code to remove temporary objects
+\item Empty \code{tibble}s for the Preceptor Table and Population Table (the latter includes
+the Preceptor rows)
+\item \code{gt} code chunks to render each table with labeled spanners and columns
+sized roughly proportional to label length
+\item The Preceptor and Population tables include a final "More" column and
+a last empty row added during rendering for easier editing
 }
+
+This function inserts R code chunks into the active Quarto document via
+\code{rstudioapi::insertText()}. The inserted code includes editable footnotes,
+two tibbles (\code{p_tibble} and \code{d_tibble}) for the user to fill out, and the
+assembly of final tables with proper column grouping and formatting.
 }
 \note{
-All cell entries must be wrapped in double quotes, including numbers (e.g., \code{"42"}).
-
-Required packages:
-This function depends on the following packages:
 \itemize{
-\item \code{gt}: for rendering the tables
-\item \code{tibble}: for creating the data structure
-\item \code{glue}: for dynamically constructing column names and labels
+\item All cell entries in the tibbles must be wrapped in double quotes, including numbers (e.g., \code{"42"}).
+\item The initial tibbles are simplified for easier editing; an additional row and "More" column
+are added during table rendering.
+\item Column widths in the rendered \code{gt} tables are set proportionally to the length of the column labels,
+helping maintain readable, centered columns.
+}
+}
+\examples{
+\dontrun{
+# Insert causal tables for a study of senators
+make_p_tables(
+  type = "causal",
+  unit_label = "Senator",
+  outcome_label = "Potential Outcomes",
+  treatment_label = "Phone Call",
+  covariate_label = "Sex"
+)
+
+# Insert predictive tables without treatment
+make_p_tables(
+  type = "predictive",
+  unit_label = "Patient",
+  outcome_label = "Outcome",
+  treatment_label = NULL,
+  covariate_label = "Age"
+)
 }
 }
 \author{
