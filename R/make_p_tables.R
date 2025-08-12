@@ -1,5 +1,5 @@
 #' Insert Preceptor and Population Table Templates in Quarto
-#'
+#' 
 #' Inserts a Quarto-ready template consisting of multiple code chunks for creating
 #' **Preceptor Tables** and **Population Tables**. These tables support both causal
 #' and predictive workflows.
@@ -12,6 +12,9 @@
 #'   sized roughly proportional to label length
 #' - The Preceptor and Population tables include a final "More" column and
 #'   a last empty row added during rendering for easier editing
+#' 
+#' @name make_p_tables
+#' @title Insert Preceptor and Population Table Templates
 #'
 #' @param type Character. Either `"causal"` or `"predictive"`. Determines
 #'   whether potential outcomes are used (`"causal"`) or a single outcome (`"predictive"`).
@@ -65,11 +68,6 @@
 #'   covariate_label = "Baseline Health Score"
 #' )
 #' }
-
-
-make_labels <- function(x) {
-  paste0("~`", x, "`")
-}
 
 make_p_tables <- function(
   type,
@@ -208,3 +206,8 @@ gt::gt(d_tibble_full) |>
 
   invisible(NULL)
 }
+
+make_labels <- function(x) {
+  paste0("~`", x, "`")
+}
+
