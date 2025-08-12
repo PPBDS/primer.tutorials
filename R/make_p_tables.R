@@ -67,83 +67,72 @@
 #' )
 #' }
 
-
 make_labels <- function(x) {
   paste0("~`", x, "`")
 }
 
 make_p_tables <- function(
-  type,                # "causal" or "predictive"
+  type,
   unit_label,
   outcome_label,
   treatment_label = NULL,
   covariate_label,
-  source_col = TRUE    # whether to include Source column in population table
+  source_col = TRUE
 ) {
   if (!type %in% c("causal", "predictive")) {
     stop("`type` must be either 'causal' or 'predictive'.")
   }
-  
-  # Outcome columns always two with suffixes
+
   outcome_cols <- c(paste0(outcome_label, " 1"), paste0(outcome_label, " 2"))
-  
-  # Columns for p_tibble and d_tibble
+
   if (type == "causal") {
     all_cols <- c(unit_label, "Time/Year", outcome_cols, treatment_label, covariate_label)
   } else {
     all_cols <- c(unit_label, "Time/Year", outcome_cols, covariate_label)
   }
-  
-  # Population table includes Source column optionally at front
+
   pop_cols <- if (source_col) c("Source", all_cols) else all_cols
-  
-  # Number of columns
-  n_p_cols <- length(all_cols)
-  n_d_cols <- length(pop_cols)
-  
-  # Column headers for tribble: wrapped with make_labels
-  p_col_headers <- make_labels(all_cols)
-  d_col_headers <- make_labels(pop_cols)
-  
-  # Compose empty rows: all columns filled with "..."
-  p_empty_row <- paste(rep('"..."', n_p_cols), collapse = ", ")
-  d_empty_row <- paste(rep('"..."', n_d_cols), collapse = ", ")
-  
-  # Compose extra rows for user editing (3 total rows)
-  p_rows <- paste(rep(p_empty_row, 3), collapse = ",\n  ")
-  d_rows <- paste(rep(d_empty_row, 3), collapse = ",\n  ")
-  
-  # Prepare gt spanner columns (without ~), backtick-quoted
-  # Note: must match exact tibble column names (no ~)
+
+  # *** FIX HERE: collapse vector into one string ***
+  p_col_headers <- paste(make_labels(all_cols), collapse = ", ")
+  d_col_headers <- paste(make_labels(pop_cols), collapse = ", ")
+
+  # Create rows of placeholders
+  p_rows <- paste(
+    paste(rep('"..."', length(all_cols)), collapse = ", "),
+    paste(rep('"..."', length(all_cols)), collapse = ", "),
+    paste(rep('"..."', length(all_cols)), collapse = ", "),
+    sep = ",\n  "
+  )
+
+  d_rows <- paste(
+    paste(rep('"..."', length(pop_cols)), collapse = ", "),
+    paste(rep('"..."', length(pop_cols)), collapse = ", "),
+    paste(rep('"..."', length(pop_cols)), collapse = ", "),
+    sep = ",\n  "
+  )
+
   unit_spanner_cols <- c(unit_label, "Time/Year")
   outcome_spanner_cols <- outcome_cols
   treatment_spanner_cols <- if (type == "causal") treatment_label else character(0)
   covariate_spanner_cols <- covariate_label
-  
-  # For population table, add "Source" if included
   pop_unit_cols <- if (source_col) c("Source", unit_spanner_cols) else unit_spanner_cols
-  
-  # Construct gt cols_width widths proportional to label length + padding
-  # Use nchar on labels (no tilde), plus fixed widths for "Time/Year" and "More"
+
   widths <- c(
     nchar(unit_label) + 2,
-    9,  # "Time/Year"
+    9,
     rep(nchar(outcome_label) + 2, 2),
     if (type == "causal") nchar(treatment_label) + 2 else numeric(0),
     nchar(covariate_label) + 2,
-    5 # "More" column
+    5
   )
-  
-  # Compose comma-separated backtick-quoted strings for glue (for tab_spanner and cols_width)
+
   glue_cols <- function(cols) {
     paste0("`", cols, "`", collapse = ", ")
   }
-  
-  # Compose code chunks --------------------------------------------------------
-  
+
   code_footnotes <- 
-'```{r}
-# Edit the following PRECEPTOR/POPULATION footnotes:
+    '```{{r}}
 pre_title_footnote <- "..."
 pre_units_footnote <- "..."
 pre_outcome_footnote <- "..."
@@ -155,30 +144,23 @@ pop_units_footnote <- "..."
 pop_outcome_footnote <- "..."
 pop_treatment_footnote <- "..."
 pop_covariates_footnote <- "..."
-```'
-  
-  # Preceptor tibble
-  code_p_tibble <- glue::glue(
-'```{{r}}
+
 p_tibble <- tibble::tribble(
-  {paste(p_col_headers, collapse = ", ")},
+  {p_col_headers},
   {p_rows}
 )
-```')
-  
-  # Population tibble
-  code_d_tibble <- glue::glue(
-'```{{r}}
+
 d_tibble <- tibble::tribble(
-  {paste(d_col_headers, collapse = ", ")},
+  {d_col_headers},
   {d_rows}
 )
-```')
-  
-  # Preceptor table rendering chunk (add row + More column)
+```'
+
+  code_footnotes <- glue::glue(code_footnotes)
+
   if (type == "causal") {
     code_p_table <- glue::glue(
-'```{{r}}
+      '```{{r}}
 p_tibble_full <- p_tibble |>
   dplyr::add_row(!!!as.list(rep(NA, ncol(p_tibble)))) |>
   dplyr::mutate(More = c(rep(NA, nrow(.) - 1), "..."))
@@ -194,10 +176,11 @@ gt::gt(p_tibble_full) |>
   gt::cols_width(columns = c({glue_cols(c(unit_spanner_cols, outcome_spanner_cols, treatment_spanner_cols, covariate_spanner_cols, "More"))}),
                  widths = gt::px(c({paste(widths, collapse = ", ")}))) |>
   gt::fmt_markdown(columns = gt::everything())
-```')
+```'
+    )
   } else {
     code_p_table <- glue::glue(
-'```{{r}}
+      '```{{r}}
 p_tibble_full <- p_tibble |>
   dplyr::add_row(!!!as.list(rep(NA, ncol(p_tibble)))) |>
   dplyr::mutate(More = c(rep(NA, nrow(.) - 1), "..."))
@@ -212,13 +195,13 @@ gt::gt(p_tibble_full) |>
   gt::cols_width(columns = c({glue_cols(c(unit_spanner_cols, outcome_spanner_cols, covariate_spanner_cols, "More"))}),
                  widths = gt::px(c({paste(widths, collapse = ", ")}))) |>
   gt::fmt_markdown(columns = gt::everything())
-```')
+```'
+    )
   }
-  
-  # Population table rendering chunk (add row + More column)
+
   if (type == "causal") {
     code_pop_table <- glue::glue(
-'```{{r}}
+      '```{{r}}
 d_tibble_full <- d_tibble |>
   dplyr::add_row(!!!as.list(rep(NA, ncol(d_tibble)))) |>
   dplyr::mutate(More = c(rep(NA, nrow(.) - 1), "..."))
@@ -234,41 +217,40 @@ gt::gt(d_tibble_full) |>
   gt::cols_width(columns = c({glue_cols(c(pop_unit_cols, outcome_spanner_cols, treatment_spanner_cols, covariate_spanner_cols, "More"))}),
                  widths = gt::px(c({paste(widths, collapse = ", ")}))) |>
   gt::fmt_markdown(columns = gt::everything())
-```')
+```'
+    )
   } else {
     code_pop_table <- glue::glue(
-'```{{r}}
+      '```{{r}}
 d_tibble_full <- d_tibble |>
   dplyr::add_row(!!!as.list(rep(NA, ncol(d_tibble)))) |>
   dplyr::mutate(More = c(rep(NA, nrow(.) - 1), "..."))
 
 gt::gt(d_tibble_full) |>
   gt::tab_header(title = "Population Table") |>
-  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c({glue_cols(pop_unit_cols)})) |>
   gt::tab_spanner(label = "Outcomes", id = "outcome_span", columns = c({glue_cols(outcome_spanner_cols)})) |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c({glue_cols(pop_unit_cols)})) |>
   gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c({glue_cols(covariate_spanner_cols)})) |>
   gt::cols_align(align = "center", columns = gt::everything()) |>
   gt::cols_align(align = "left", columns = c(`{unit_label}`)) |>
   gt::cols_width(columns = c({glue_cols(c(pop_unit_cols, outcome_spanner_cols, covariate_spanner_cols, "More"))}),
                  widths = gt::px(c({paste(widths, collapse = ", ")}))) |>
   gt::fmt_markdown(columns = gt::everything())
-```')
+```'
+    )
   }
-  
-  # Combine all code chunks
+
   full_code <- paste(
     code_footnotes,
-    code_p_tibble,
-    code_d_tibble,
     code_p_table,
     code_pop_table,
     sep = "\n\n"
   )
-  
+
   rstudioapi::insertText(
     location = rstudioapi::getActiveDocumentContext()$selection[[1]]$range,
     text = full_code
   )
-  
+
   invisible(NULL)
 }
