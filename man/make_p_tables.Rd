@@ -2,7 +2,7 @@
 % Please edit documentation in R/make_p_tables.R
 \name{make_p_tables}
 \alias{make_p_tables}
-\title{Insert Preceptor and Population Table Templates in Quarto}
+\title{Insert Preceptor and Population Table Templates}
 \usage{
 make_p_tables(
   type,
@@ -15,14 +15,13 @@ make_p_tables(
 }
 \arguments{
 \item{type}{Character. Either \code{"causal"} or \code{"predictive"}. Determines
-whether treatment and potential outcomes columns are included (\code{"causal"})
-or a single outcome and no treatment (\code{"predictive"}).}
+whether potential outcomes are used (\code{"causal"}) or a single outcome (\code{"predictive"}).}
 
-\item{unit_label}{Character. Label for the unit column.}
+\item{unit_label}{Character. Label for the unit column (length 2).}
 
 \item{outcome_label}{Character. Label for the outcome or potential outcomes.}
 
-\item{treatment_label}{Character. Label for the treatment column (required if \code{type = "causal"}).}
+\item{treatment_label}{Character. Label for the treatment column (always required).}
 
 \item{covariate_label}{Character. Label for the covariate column.}
 
@@ -32,11 +31,13 @@ or a single outcome and no treatment (\code{"predictive"}).}
 Invisibly returns \code{NULL}. Inserts code into the active Quarto document.
 }
 \description{
+Insert Preceptor and Population Table Templates in Quarto
+}
+\details{
 Inserts a Quarto-ready template consisting of multiple code chunks for creating
 \strong{Preceptor Tables} and \strong{Population Tables}. These tables support both causal
 and predictive workflows.
-}
-\details{
+
 The output includes:
 \itemize{
 \item Editable footnotes for documentation
@@ -64,22 +65,22 @@ helping maintain readable, centered columns.
 }
 \examples{
 \dontrun{
-# Insert causal tables for a study of senators
+# Insert causal tables for a study of senators' voting behavior over years
 make_p_tables(
   type = "causal",
-  unit_label = "Senator",
-  outcome_label = "Potential Outcomes",
-  treatment_label = "Phone Call",
-  covariate_label = "Sex"
+  unit_label = c("Senator", "Session Year"),
+  outcome_label = c("Support Bill", "Oppose Bill"),
+  treatment_label = "Lobbying Contact",
+  covariate_label = "Senator Age"
 )
 
-# Insert predictive tables without treatment
+# Insert predictive tables for a clinical trial measuring patient recovery over time
 make_p_tables(
   type = "predictive",
-  unit_label = "Patient",
-  outcome_label = "Outcome",
-  treatment_label = NULL,
-  covariate_label = "Age"
+  unit_label = c("Patient ID", "Visit Number"),
+  outcome_label = c("Recovery Score"),
+  treatment_label = "Drug Dosage Group",
+  covariate_label = "Baseline Health Score"
 )
 }
 }
