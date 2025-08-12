@@ -10,7 +10,7 @@ make_labels(x)
 \item{type}{Character. Either \code{"causal"} or \code{"predictive"}. Determines
 whether potential outcomes are used (\code{"causal"}) or a single outcome (\code{"predictive"}).}
 
-\item{unit_label}{Character. Label for the unit column.}
+\item{unit_label}{Character. Label for the unit column (length 2).}
 
 \item{outcome_label}{Character. Label for the outcome or potential outcomes.}
 
@@ -56,22 +56,22 @@ helping maintain readable, centered columns.
 }
 \examples{
 \dontrun{
-# Insert causal tables for a study of senators
+# Insert causal tables for a study of senators' voting behavior over years
 make_p_tables(
   type = "causal",
-  unit_label = "Senator",
-  outcome_label = "Potential Outcomes",
-  treatment_label = "Phone Call",
-  covariate_label = "Sex"
+  unit_label = c("Senator", "Session Year"),
+  outcome_label = c("Support Bill", "Oppose Bill"),
+  treatment_label = "Lobbying Contact",
+  covariate_label = "Senator Age"
 )
 
-# Insert predictive tables with treatment
+# Insert predictive tables for a clinical trial measuring patient recovery over time
 make_p_tables(
   type = "predictive",
-  unit_label = "Patient",
-  outcome_label = "Years Lived",
-  treatment_label = "Treatment Group",
-  covariate_label = "Age"
+  unit_label = c("Patient ID", "Visit Number"),
+  outcome_label = c("Recovery Score"),
+  treatment_label = "Drug Dosage Group",
+  covariate_label = "Baseline Health Score"
 )
 }
 }
