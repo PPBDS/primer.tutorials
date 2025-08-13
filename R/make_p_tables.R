@@ -89,18 +89,15 @@ make_p_tables <- function(
     stop("`type` must be either 'causal' or 'predictive'.")
   }
 
-
   # Both p_tibble and d_tibble use the same columns (no Source column yet)
   all_cols <- c(unit_label, outcome_label, treatment_label, covariate_label)
  
   # Source column only added during population table rendering
   pop_unit_cols <- if (source_col) c("Source", unit_label) else unit_label
 
-
   # Generate tribble code using helper function
   p_tribble_code <- write_input_tribble(all_cols)
   d_tribble_code <- write_input_tribble(all_cols)
-
 
   widths <- c(
     if (source_col) 80 else NULL,  # Source column width
@@ -112,9 +109,7 @@ make_p_tables <- function(
     60  # More column
   )
 
-
   glue_cols <- function(cols) paste0("`", cols, "`", collapse = ", ")
-
 
   code_footnotes <- glue::glue(
     "```{{r}}
@@ -122,16 +117,13 @@ make_p_tables <- function(
   
 p_tibble <- {p_tribble_code}
 
-
 d_tibble <- {d_tribble_code}
-  
   
 pre_title_footnote <- \"...\"
 pre_units_footnote <- \"...\"
 pre_outcome_footnote <- \"...\"
 pre_treatment_footnote <- \"...\"
 pre_covariates_footnote <- \"...\"
-
 
 pop_title_footnote <- \"...\"
 pop_units_footnote <- \"...\"
@@ -141,13 +133,11 @@ pop_covariates_footnote <- \"...\"
 ```"
   )
 
-
   code_p_table <- glue::glue(
     "```{{r}}
 # This code chunk will generate the Preceptor Table
   
 p_tibble_full <- expand_input_tibble(list(p_tibble), \"preceptor\")
-
 
 gt::gt(p_tibble_full) |>
   gt::tab_header(title = \"Preceptor Table\") |>
@@ -182,10 +172,14 @@ gt::gt(p_tibble_full) |>
     table.margin.left = gt::px(0),
     table.margin.right = gt::px(0)
   ) |>
-  gt::fmt_markdown(columns = gt::everything())
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(footnote = pre_title_footnote, locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pre_units_footnote, locations = gt::cells_column_spanners(spanners = \"unit_span\")) |>
+  gt::tab_footnote(footnote = pre_outcome_footnote, locations = gt::cells_column_spanners(spanners = \"outcome_span\")) |>
+  gt::tab_footnote(footnote = pre_treatment_footnote, locations = gt::cells_column_spanners(spanners = \"treatment_span\")) |>
+  gt::tab_footnote(footnote = pre_covariates_footnote, locations = gt::cells_column_spanners(spanners = \"covariates_span\"))
 ```"
   )
-
 
   # Population table code - fixed to show all 4 data rows and proper structure
   if (source_col) {
@@ -199,7 +193,6 @@ data_tibble <- dplyr::bind_rows(
   d_tibble[3, , drop = FALSE]     
 ) |>
   dplyr::mutate(Source = \"Data\", .before = 1)
-
 
 preceptor_tibble <- p_tibble_full |>
   dplyr::select(-More) |>
@@ -251,7 +244,12 @@ gt::gt(population_tibble) |>
     table.margin.left = gt::px(0),
     table.margin.right = gt::px(0)
   ) |>
-  gt::fmt_markdown(columns = gt::everything())
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = \"unit_span\")) |>
+  gt::tab_footnote(footnote = pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = \"outcome_span\")) |>
+  gt::tab_footnote(footnote = pop_treatment_footnote, locations = gt::cells_column_spanners(spanners = \"treatment_span\")) |>
+  gt::tab_footnote(footnote = pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = \"covariates_span\"))
 ```"
     )
   } else {
@@ -267,7 +265,6 @@ data_tibble <- dplyr::bind_rows(
 
 preceptor_tibble <- p_tibble_full |>
   dplyr::select(-More)
-
 
 empty_row <- data_tibble[1, , drop = FALSE]
 empty_row[,] <- \"...\"
@@ -287,7 +284,7 @@ gt::gt(population_tibble) |>
   gt::tab_spanner(label = \"Unit/Time\", id = \"unit_span\", columns = c({glue_cols(pop_unit_cols)})) |>
   gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_label)})) |>
   gt::tab_spanner(label = \"Treatment\", id = \"treatment_span\", columns = c({glue_cols(treatment_label)})) |>
-  gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)})) |>
+  gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)}, \"More\")) |>
   gt::cols_align(align = \"center\", columns = gt::everything()) |>
   gt::cols_align(align = \"left\", columns = c(`{unit_label[1]}`)) |>
   gt::cols_width({
@@ -295,11 +292,15 @@ gt::gt(population_tibble) |>
     width_assignments <- paste0('\"', all_cols_with_more, '\" ~ gt::px(', widths[!is.null(widths)], ')', collapse = \", \")
     width_assignments
   }) |>
-  gt::fmt_markdown(columns = gt::everything())
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = \"unit_span\")) |>
+  gt::tab_footnote(footnote = pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = \"outcome_span\")) |>
+  gt::tab_footnote(footnote = pop_treatment_footnote, locations = gt::cells_column_spanners(spanners = \"treatment_span\")) |>
+  gt::tab_footnote(footnote = pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = \"covariates_span\"))
 ```"
     )
   }
-
 
   full_code <- paste(
     code_footnotes,
@@ -308,12 +309,10 @@ gt::gt(population_tibble) |>
     sep = "\n\n"
   )
 
-
   rstudioapi::insertText(
     location = rstudioapi::getActiveDocumentContext()$selection[[1]]$range,
     text = full_code
   )
-
 
   invisible(NULL)
 }
