@@ -1,19 +1,87 @@
-AP: Still working on aligning the columns (had lots of errors)
+Change DESCRIPTION to use the current released version of primer.data, so it stops updating each time.
+
+```{r}
+pre_title_footnote <- "Preceptor Table Title"
+pre_units_footnote <- "Units and time information"
+pre_outcome_footnote <- "Outcome or potential outcomes description"
+pre_treatment_footnote <- "Treatment or intervention description"
+pre_covariates_footnote <- "Covariates and their units"
+
+pop_title_footnote <- "Population Table Title"
+pop_units_footnote <- "Units and time information"
+pop_outcome_footnote <- "Outcome or potential outcomes description"
+pop_treatment_footnote <- "Treatment or intervention description"
+pop_covariates_footnote <- "Covariates and their units"
+
+p_tibble <- tibble::tribble(
+  ~`Senator`, ~`Session Year`, ~`Support Bill`, ~`Oppose Bill`, ~`Lobbying Contact`, ~`Senator Age`,
+  "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "..."
+)
+
+d_tibble <- tibble::tribble(
+  ~`Source`, ~`Senator`, ~`Session Year`, ~`Support Bill`, ~`Oppose Bill`, ~`Lobbying Contact`, ~`Senator Age`,
+  "...", "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...", "...",
+  "...", "...", "...", "...", "...", "...", "..."
+)
+```
+
+```{r}
+p_tibble_full <- p_tibble |>
+  dplyr::add_row(!!!as.list(rep(NA, ncol(p_tibble)))) |>
+  dplyr::mutate(More = c(rep(NA, nrow(.) - 1), "..."))
+
+gt::gt(p_tibble_full) |>
+  gt::tab_header(title = "Preceptor Table") |>
+  gt::tab_spanner(label = "Unit", id = "unit_span", columns = c(`Senator`, `Session Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Support Bill`, `Oppose Bill`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Lobbying Contact`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Senator Age`)) |>
+  gt::cols_align(align = "center", columns = gt::everything()) |>
+  gt::cols_align(align = "left", columns = c(`Senator`)) |>
+  gt::cols_width(columns = c(`Senator`, `Session Year`, `Support Bill`, `Oppose Bill`, `Lobbying Contact`, `Senator Age`, `More`),
+                 widths = gt::px(c(9, 14, 14, 14, 18, 13, 5))) |>
+  gt::fmt_markdown(columns = gt::everything())
+```
+
+```{r}
+d_tibble_full <- d_tibble |>
+  dplyr::add_row(!!!as.list(rep(NA, ncol(d_tibble)))) |>
+  dplyr::mutate(More = c(rep(NA, nrow(.) - 1), "..."))
+
+gt::gt(d_tibble_full) |>
+  gt::tab_header(title = "Population Table") |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Source`, `Senator`, `Session Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Support Bill`, `Oppose Bill`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Lobbying Contact`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Senator Age`)) |>
+  gt::cols_align(align = "center", columns = gt::everything()) |>
+  gt::cols_align(align = "left", columns = c(`Senator`)) |>
+  gt::cols_width(columns = c(`Source`, `Senator`, `Session Year`, `Support Bill`, `Oppose Bill`, `Lobbying Contact`, `Senator Age`, `More`),
+                 widths = gt::px(c(9, 14, 14, 14, 18, 13, 5))) |>
+  gt::fmt_markdown(columns = gt::everything())
+```
 
 ### make_p_table()
 
-* Only three tibbles. First tibble includes footnotes and data entry. AP: Fixed
+* "pre_title_footnote <- "Preceptor Table Title"" should be "pre_title_footnote <- ""
 
-* Make examples plausible, i.e., outcome_label should be "Years Lived" not "Outcome". AP: fixed the example
+* center the ... in p/d_tibble creation
 
-* unit_label must be of length 2. AP: done
+* Example case does not work. 
 
-* If causal, then there outcome_label must be of length 2 or greater. AP: done
+* Example outcome labels need **if** and a reference to the treatment variable. Support in Contract and Support if No Contract. Include first sentence in vignette.
+
+* d_tibble should not include Source. You add that at the end, just before the gt code.
+
+* expand_input_tibble is not working. Ought to fail if not at least three rows.
+
 
 * Tell the AI to reorganize the code. Make sure that, at the top, it calculates the sizes of various things (and their names) before it needs to use those things. AP: had it calculate length and number of characters
 
-  + How many columns is the empty tibble going to have? Should be the sum of the length of each of the label arguments.   AP: did this
-  + What are the names of the columns in the p/d tibble? A character vector of all the labels concatenated in order.  AP: did this too
+
 
  * Make this a couple of separate functions. All included on this one page. All with roxygen stuff which documents them.
   + Key function is write_input_tribble(names) which takes a character vector of names and then writes out the input tribble text, centering as appropriate. 
@@ -22,11 +90,7 @@ AP: Still working on aligning the columns (had lots of errors)
   Feed the result from expand_input_tibble() directly to the gt pipeline for making the table.
 
 
-* Not this: "# Leave the third row and last column as-is to signal more rows exist" User only gets three rows. You add the third row of ... magically in your own code.  AP: does that
-
-
-* If causal, outcome_label must 2 or greater.    AP: fixed this!!!
-
+* Not this: "# Leave the third row and last column as-is to signal more rows exist" User only gets three rows. You add the third row of ... magically in your own code.  
 
 * Use the number of characters in each label to space out the "..." entries so that they are beneath (centered) (even if only roughly) the relevant label. There is no Source column   AP: still working on
 

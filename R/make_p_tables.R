@@ -88,13 +88,15 @@ make_p_tables <- function(
     stop("`type` must be either 'causal' or 'predictive'.")
   }
 
-  outcome_cols <- outcome_label
+# DK: Add Source at end. Not now.
 
-  all_cols <- c(unit_label, outcome_cols, treatment_label, covariate_label)
+  all_cols <- c(unit_label, outcome_label, treatment_label, covariate_label)
   pop_cols <- if (source_col) c("Source", all_cols) else all_cols
 
   p_col_headers <- paste(make_labels(all_cols), collapse = ", ")
   d_col_headers <- paste(make_labels(pop_cols), collapse = ", ")
+
+# Don't need duplicate code.  
 
   p_rows <- paste(
     paste(rep('"..."', length(all_cols)), collapse = ", "),
@@ -109,8 +111,10 @@ make_p_tables <- function(
     sep = ",\n  "
   )
 
+  # No need to rename these variables.
+
   unit_spanner_cols <- unit_label
-  outcome_spanner_cols <- outcome_cols
+  outcome_spanner_cols <- outcome_label
   treatment_spanner_cols <- treatment_label
   covariate_spanner_cols <- covariate_label
   pop_unit_cols <- if (source_col) c("Source", unit_spanner_cols) else unit_spanner_cols
@@ -118,7 +122,7 @@ make_p_tables <- function(
   widths <- c(
     nchar(unit_label[1]) + 2,
     nchar(unit_label[2]) + 2,
-    rep(nchar(outcome_cols[1]) + 2, length(outcome_cols)),
+    rep(nchar(outcome_label[1]) + 2, length(outcome_label)),
     nchar(treatment_label) + 2,
     nchar(covariate_label) + 2,
     5
