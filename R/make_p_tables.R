@@ -128,17 +128,17 @@ make_p_tables <- function(
 
   code_footnotes <- glue::glue(
     "```{{r}}
-pre_title_footnote <- \"Preceptor Table Title\"
-pre_units_footnote <- \"Units and time information\"
-pre_outcome_footnote <- \"Outcome or potential outcomes description\"
-pre_treatment_footnote <- \"Treatment or intervention description\"
-pre_covariates_footnote <- \"Covariates and their units\"
+pre_title_footnote <- \"...\"
+pre_units_footnote <- \"...\"
+pre_outcome_footnote <- \"...\"
+pre_treatment_footnote <- \"...\"
+pre_covariates_footnote <- \"...\"
 
-pop_title_footnote <- \"Population Table Title\"
-pop_units_footnote <- \"Units and time information\"
-pop_outcome_footnote <- \"Outcome or potential outcomes description\"
-pop_treatment_footnote <- \"Treatment or intervention description\"
-pop_covariates_footnote <- \"Covariates and their units\"
+pop_title_footnote <- \"...\"
+pop_units_footnote <- \"...\"
+pop_outcome_footnote <- \"...\"
+pop_treatment_footnote <- \"...\"
+pop_covariates_footnote <- \"...\"
 
 p_tibble <- tibble::tribble(
   {p_col_headers},
