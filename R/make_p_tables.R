@@ -1,5 +1,5 @@
 #' Insert Preceptor and Population Table Templates in Quarto
-#' 
+#'
 #' Inserts a Quarto-ready template consisting of multiple code chunks for creating
 #' **Preceptor Tables** and **Population Tables**. These tables support both causal
 #' and predictive workflows.
@@ -12,7 +12,7 @@
 #'   sized roughly proportional to label length
 #' - The Preceptor and Population tables include a final "More" column and
 #'   a last empty row added during rendering for easier editing
-#' 
+#'
 #' @name make_p_tables
 #' @title Insert Preceptor and Population Table Templates
 #'
@@ -69,6 +69,7 @@
 #' )
 #' }
 
+
 make_p_tables <- function(
   type,
   unit_label,
@@ -88,15 +89,18 @@ make_p_tables <- function(
     stop("`type` must be either 'causal' or 'predictive'.")
   }
 
+
   # Both p_tibble and d_tibble use the same columns (no Source column yet)
   all_cols <- c(unit_label, outcome_label, treatment_label, covariate_label)
-  
+ 
   # Source column only added during population table rendering
   pop_unit_cols <- if (source_col) c("Source", unit_label) else unit_label
+
 
   # Generate tribble code using helper function
   p_tribble_code <- write_input_tribble(all_cols)
   d_tribble_code <- write_input_tribble(all_cols)
+
 
   widths <- c(
     if (source_col) 80 else NULL,  # Source column width
@@ -108,7 +112,9 @@ make_p_tables <- function(
     60  # More column
   )
 
+
   glue_cols <- function(cols) paste0("`", cols, "`", collapse = ", ")
+
 
   code_footnotes <- glue::glue(
     "```{{r}}
@@ -118,21 +124,26 @@ pre_outcome_footnote <- \"...\"
 pre_treatment_footnote <- \"...\"
 pre_covariates_footnote <- \"...\"
 
+
 pop_title_footnote <- \"...\"
 pop_units_footnote <- \"...\"
 pop_outcome_footnote <- \"...\"
 pop_treatment_footnote <- \"...\"
 pop_covariates_footnote <- \"...\"
 
+
 p_tibble <- {p_tribble_code}
+
 
 d_tibble <- {d_tribble_code}
 ```"
   )
 
+
   code_p_table <- glue::glue(
     "```{{r}}
 p_tibble_full <- expand_input_tibble(list(p_tibble), \"preceptor\")
+
 
 gt::gt(p_tibble_full) |>
   gt::tab_header(title = \"Preceptor Table\") |>
@@ -171,22 +182,47 @@ gt::gt(p_tibble_full) |>
 ```"
   )
 
-  # Population table code - using p_tibble_full for preceptor rows
+
+  # Population table code - fixed to show all 4 data rows and proper structure
   if (source_col) {
     code_pop_table <- glue::glue(
       "```{{r}}
-# Create data tibble from d_tibble (first 2 rows) with Source column
-data_tibble <- d_tibble[1:2, , drop = FALSE] |>
+# Create full data tibble with 4 rows (3 content, 1 blank in 3rd position)
+data_tibble <- dplyr::bind_rows(
+  d_tibble[1:2, , drop = FALSE],  # First 2 data rows
+  d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ \"...\")),  # Blank row
+  d_tibble[3, , drop = FALSE]     # Last data row
+) |>
   dplyr::mutate(Source = \"Data\", .before = 1)
+
 
 # Create preceptor tibble from p_tibble_full (remove More column, add Source)
 preceptor_tibble <- p_tibble_full |>
   dplyr::select(-More) |>
   dplyr::mutate(Source = \"Preceptor\", .before = 1)
 
-d_tibble_full <- expand_input_tibble(list(data_tibble, preceptor_tibble), \"population\", source = TRUE)
 
-gt::gt(d_tibble_full) |>
+# Create the 11-row population table structure manually
+# Row structure: blank, 4 data (3rd blank), blank, 4 preceptor (3rd blank), blank
+
+# Create empty row template
+empty_row <- data_tibble[1, , drop = FALSE]
+empty_row[,] <- \"...\"
+
+# Build the 11-row structure
+population_tibble <- dplyr::bind_rows(
+  empty_row,              # Row 1: blank
+  data_tibble,            # Rows 2-5: 4 data rows (3rd is blank)
+  empty_row,              # Row 6: blank  
+  preceptor_tibble,       # Rows 7-10: 4 preceptor rows (3rd is blank)
+  empty_row               # Row 11: blank
+)
+
+# Add More column
+population_tibble$More <- \"...\"
+
+
+gt::gt(population_tibble) |>
   gt::tab_header(title = \"Population Table\") |>
   gt::tab_spanner(label = \"Unit/Time\", id = \"unit_span\", columns = c({glue_cols(pop_unit_cols)})) |>
   gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_label)})) |>
@@ -225,16 +261,40 @@ gt::gt(d_tibble_full) |>
   } else {
     code_pop_table <- glue::glue(
       "```{{r}}
-# Create data tibble from d_tibble (first 2 rows)
-data_tibble <- d_tibble[1:2, , drop = FALSE]
+# Create full data tibble with 4 rows (3 content, 1 blank in 3rd position)
+data_tibble <- dplyr::bind_rows(
+  d_tibble[1:2, , drop = FALSE],  # First 2 data rows
+  d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ \"...\")),  # Blank row
+  d_tibble[3, , drop = FALSE]     # Last data row
+)
+
 
 # Create preceptor tibble from p_tibble_full (remove More column)
 preceptor_tibble <- p_tibble_full |>
   dplyr::select(-More)
 
-d_tibble_full <- expand_input_tibble(list(data_tibble, preceptor_tibble), \"population\", source = FALSE)
 
-gt::gt(d_tibble_full) |>
+# Create the 11-row population table structure manually
+# Row structure: blank, 4 data (3rd blank), blank, 4 preceptor (3rd blank), blank
+
+# Create empty row template
+empty_row <- data_tibble[1, , drop = FALSE]
+empty_row[,] <- \"...\"
+
+# Build the 11-row structure
+population_tibble <- dplyr::bind_rows(
+  empty_row,              # Row 1: blank
+  data_tibble,            # Rows 2-5: 4 data rows (3rd is blank)
+  empty_row,              # Row 6: blank  
+  preceptor_tibble,       # Rows 7-10: 4 preceptor rows (3rd is blank)
+  empty_row               # Row 11: blank
+)
+
+# Add More column
+population_tibble$More <- \"...\"
+
+
+gt::gt(population_tibble) |>
   gt::tab_header(title = \"Population Table\") |>
   gt::tab_spanner(label = \"Unit/Time\", id = \"unit_span\", columns = c({glue_cols(pop_unit_cols)})) |>
   gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_label)})) |>
@@ -252,6 +312,7 @@ gt::gt(d_tibble_full) |>
     )
   }
 
+
   full_code <- paste(
     code_footnotes,
     code_p_table,
@@ -259,12 +320,12 @@ gt::gt(d_tibble_full) |>
     sep = "\n\n"
   )
 
+
   rstudioapi::insertText(
     location = rstudioapi::getActiveDocumentContext()$selection[[1]]$range,
     text = full_code
   )
 
+
   invisible(NULL)
 }
-
-
