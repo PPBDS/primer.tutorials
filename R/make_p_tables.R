@@ -171,22 +171,17 @@ gt::gt(p_tibble_full) |>
 ```"
   )
 
-  # Population table code - different based on source_col
+  # Population table code - using p_tibble_full for preceptor rows
   if (source_col) {
-    # Add Source column to d_tibble before processing
     code_pop_table <- glue::glue(
       "```{{r}}
-d_tibble_with_source <- d_tibble |>
-  dplyr::mutate(Source = c(\"Data\", \"Data\", \"Preceptor\"), .before = 1)
-
-data_tibble <- d_tibble_with_source |> 
-  dplyr::filter(Source == \"Data\") |>
-  dplyr::select(-Source) |>
+# Create data tibble from d_tibble (first 2 rows) with Source column
+data_tibble <- d_tibble[1:2, , drop = FALSE] |>
   dplyr::mutate(Source = \"Data\", .before = 1)
 
-preceptor_tibble <- d_tibble_with_source |> 
-  dplyr::filter(Source == \"Preceptor\") |>
-  dplyr::select(-Source) |>
+# Create preceptor tibble from p_tibble_full (remove More column, add Source)
+preceptor_tibble <- p_tibble_full |>
+  dplyr::select(-More) |>
   dplyr::mutate(Source = \"Preceptor\", .before = 1)
 
 d_tibble_full <- expand_input_tibble(list(data_tibble, preceptor_tibble), \"population\", source = TRUE)
@@ -228,11 +223,14 @@ gt::gt(d_tibble_full) |>
 ```"
     )
   } else {
-    # Without Source column
     code_pop_table <- glue::glue(
       "```{{r}}
-data_tibble <- d_tibble[1:2, ]
-preceptor_tibble <- d_tibble[3, , drop = FALSE]
+# Create data tibble from d_tibble (first 2 rows)
+data_tibble <- d_tibble[1:2, , drop = FALSE]
+
+# Create preceptor tibble from p_tibble_full (remove More column)
+preceptor_tibble <- p_tibble_full |>
+  dplyr::select(-More)
 
 d_tibble_full <- expand_input_tibble(list(data_tibble, preceptor_tibble), \"population\", source = FALSE)
 
@@ -269,20 +267,7 @@ gt::gt(d_tibble_full) |>
   invisible(NULL)
 }
 
-write_input_tribble <- function(names) {
-  n <- length(names)
-  rows <- replicate(3, paste(rep('"..."', n), collapse = ", "), simplify = FALSE)
-  header <- paste0("~`", names, "`", collapse = ", ")
-  
-  tribble_text <- paste0(
-    "tibble::tribble(\n",
-    "  ", header, ",\n  ",
-    paste(rows, collapse = ",\n  "),
-    "\n)"
-  )
-  return(tribble_text)
-}
-
+# Fixed expand_input_tibble function
 expand_input_tibble <- function(x, type, source = FALSE) {
   stopifnot(type %in% c("preceptor", "population"))
   
@@ -310,42 +295,43 @@ expand_input_tibble <- function(x, type, source = FALSE) {
   } else if (type == "population") {
     if (length(x) != 2) stop("For 'population', x must be a list of length 2.")
     
-    expand_one <- function(tib) {
-      if (nrow(tib) >= 3) {
-        new_row <- tib[1, , drop = FALSE]
-        new_row[,] <- "..."
-        
-        expanded <- dplyr::bind_rows(
-          tib[1:(nrow(tib)-1), ],
-          new_row,
-          tib[nrow(tib), ]
-        )
-      } else {
-        expanded <- tib
-      }
-      return(expanded)
-    }
+    data_tibble <- x[[1]]    # Should be 2 rows from d_tibble
+    preceptor_tibble <- x[[2]] # Should be 4 rows from p_tibble_full (without More column)
     
-    tib1 <- expand_one(x[[1]])
-    tib2 <- expand_one(x[[2]])
+    # Create empty row template
+    empty_row <- data_tibble[1, , drop = FALSE]
+    empty_row[,] <- "..."
     
-    empty_row <- tib1[1, , drop = FALSE]
-    empty_row[,] <- NA_character_
+    # Build the 11-row structure:
+    # Row 1: blank (all "...")
+    # Rows 2-3: data rows (2 rows)
+    # Row 4: blank ("..." in all columns)
+    # Rows 5-8: preceptor rows (4 rows, already has "..." in 3rd position)
+    # Row 9: blank (all "...")
     
-    combined <- dplyr::bind_rows(
-      empty_row,
-      tib1,
-      empty_row,
-      tib2,
-      empty_row
+    # For data section: 2 data rows + 1 blank + 1 more blank = 4 rows total
+    data_section <- dplyr::bind_rows(
+      data_tibble[1, ],  # First data row
+      data_tibble[2, ],  # Second data row  
+      empty_row,         # Blank row
+      empty_row          # Another blank to match preceptor structure
     )
     
+    # Preceptor section is already 4 rows from p_tibble_full
+    preceptor_section <- preceptor_tibble
+    
+    # Combine: blank + data(4) + blank + preceptor(4) + blank = 11 rows
+    combined <- dplyr::bind_rows(
+      empty_row,          # Row 1: blank
+      data_section,       # Rows 2-5: data section (2 data + 2 blank)
+      empty_row,          # Row 6: blank  
+      preceptor_section,  # Rows 7-10: preceptor section (4 rows)
+      empty_row           # Row 11: blank
+    )
+    
+    # Add More column
     combined$More <- "..."
     
     return(combined)
   }
-}
-
-make_labels <- function(x) {
-  paste0("~`", x, "`")
 }
