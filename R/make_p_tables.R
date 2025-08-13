@@ -144,6 +144,8 @@ pop_covariates_footnote <- \"...\"
 
   code_p_table <- glue::glue(
     "```{{r}}
+# This code chunk will generate the Preceptor Table
+  
 p_tibble_full <- expand_input_tibble(list(p_tibble), \"preceptor\")
 
 
@@ -189,29 +191,23 @@ gt::gt(p_tibble_full) |>
   if (source_col) {
     code_pop_table <- glue::glue(
       "```{{r}}
-# Create full data tibble with 4 rows (3 content, 1 blank in 3rd position)
+# This code chunk will generate the Population Table
+    
 data_tibble <- dplyr::bind_rows(
-  d_tibble[1:2, , drop = FALSE],  # First 2 data rows
-  d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ \"...\")),  # Blank row
-  d_tibble[3, , drop = FALSE]     # Last data row
+  d_tibble[1:2, , drop = FALSE],  
+  d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ \"...\")),  
+  d_tibble[3, , drop = FALSE]     
 ) |>
   dplyr::mutate(Source = \"Data\", .before = 1)
 
 
-# Create preceptor tibble from p_tibble_full (remove More column, add Source)
 preceptor_tibble <- p_tibble_full |>
   dplyr::select(-More) |>
   dplyr::mutate(Source = \"Preceptor\", .before = 1)
 
-
-# Create the 11-row population table structure manually
-# Row structure: blank, 4 data (3rd blank), blank, 4 preceptor (3rd blank), blank
-
-# Create empty row template
 empty_row <- data_tibble[1, , drop = FALSE]
 empty_row[,] <- \"...\"
 
-# Build the 11-row structure
 population_tibble <- dplyr::bind_rows(
   empty_row,              # Row 1: blank
   data_tibble,            # Rows 2-5: 4 data rows (3rd is blank)
@@ -220,9 +216,7 @@ population_tibble <- dplyr::bind_rows(
   empty_row               # Row 11: blank
 )
 
-# Add More column
 population_tibble$More <- \"...\"
-
 
 gt::gt(population_tibble) |>
   gt::tab_header(title = \"Population Table\") |>
@@ -263,27 +257,21 @@ gt::gt(population_tibble) |>
   } else {
     code_pop_table <- glue::glue(
       "```{{r}}
-# Create full data tibble with 4 rows (3 content, 1 blank in 3rd position)
+# This code chunk will generate the Population Table
+    
 data_tibble <- dplyr::bind_rows(
-  d_tibble[1:2, , drop = FALSE],  # First 2 data rows
-  d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ \"...\")),  # Blank row
-  d_tibble[3, , drop = FALSE]     # Last data row
+  d_tibble[1:2, , drop = FALSE],  
+  d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ \"...\")),  
+  d_tibble[3, , drop = FALSE]    
 )
 
-
-# Create preceptor tibble from p_tibble_full (remove More column)
 preceptor_tibble <- p_tibble_full |>
   dplyr::select(-More)
 
 
-# Create the 11-row population table structure manually
-# Row structure: blank, 4 data (3rd blank), blank, 4 preceptor (3rd blank), blank
-
-# Create empty row template
 empty_row <- data_tibble[1, , drop = FALSE]
 empty_row[,] <- \"...\"
 
-# Build the 11-row structure
 population_tibble <- dplyr::bind_rows(
   empty_row,              # Row 1: blank
   data_tibble,            # Rows 2-5: 4 data rows (3rd is blank)
@@ -292,9 +280,7 @@ population_tibble <- dplyr::bind_rows(
   empty_row               # Row 11: blank
 )
 
-# Add More column
 population_tibble$More <- \"...\"
-
 
 gt::gt(population_tibble) |>
   gt::tab_header(title = \"Population Table\") |>
