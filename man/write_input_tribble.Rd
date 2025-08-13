@@ -11,12 +11,12 @@ write_input_tribble(names)
 }
 \value{
 Character string containing the R code for an input tribble with placeholders \code{"..."},
-formatted for manual editing.
+formatted for manual editing with aligned columns.
 }
 \description{
 Generates a character string representing an R tibble::tribble()
 with the specified column names and 3 rows filled with placeholder
-text \code{"..."}. Useful for quickly creating editable table templates.
+text \code{"..."}. Column values are aligned under their headers for easy editing.
 }
 \examples{
 write_input_tribble(c("Unit", "Year", "Outcome", "Treatment"))

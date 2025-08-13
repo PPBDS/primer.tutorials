@@ -50,16 +50,17 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Insert causal tables for a study of senators' voting behavior over years
+#' # Insert causal tables for a study of senators' voting behavior
+#' # Outcomes reflect support conditional on the treatment
 #' make_p_tables(
 #'   type = "causal",
 #'   unit_label = c("Senator", "Session Year"),
-#'   outcome_label = c("Support Bill", "Oppose Bill"),
+#'   outcome_label = c("Support if Contact", "Support if No Contact"),
 #'   treatment_label = "Lobbying Contact",
 #'   covariate_label = "Senator Age"
 #' )
 #'
-#' # Insert predictive tables for a clinical trial measuring patient recovery over time
+#' # Insert predictive tables for a clinical trial measuring patient recovery
 #' make_p_tables(
 #'   type = "predictive",
 #'   unit_label = c("Patient ID", "Visit Number"),
@@ -68,6 +69,7 @@
 #'   covariate_label = "Baseline Health Score"
 #' )
 #' }
+
 
 
 make_p_tables <- function(

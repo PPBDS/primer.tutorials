@@ -22,26 +22,29 @@ Processes one or two input tibbles to add missing rows (to at least 3 rows),
 a final "More" column with "..." in the last row, and combines them if type is 'population'.
 }
 \details{
-For "preceptor": adds missing rows to ensure at least 3 rows, adds a "More" column
-with NA except last row contains "...".
+For "preceptor": adds a third row between the last 2 rows filled with "...",
+adds a "More" column with "..." in all positions.
 
 For "population": expands each tibble similarly, then combines them with
-empty rows before, between, and after, then adds "More" column.
+empty rows before, between, and after, then adds "More" column with "...".
 }
 \examples{
 # Preceptor example
 pre_tib <- tibble::tribble(~Unit, ~Year, ~Outcome,
                            "A", "2020", "5",
-                           "B", "2021", "6")
+                           "B", "2021", "6",
+                           "C", "2022", "7")
 expand_input_tibble(list(pre_tib), "preceptor")
 
 # Population example
 pop1 <- tibble::tribble(~Source, ~Unit, ~Year,
                        "S1", "A", "2020",
-                       "S2", "B", "2021")
+                       "S2", "B", "2021",
+                       "S3", "C", "2022")
 pop2 <- tibble::tribble(~Source, ~Unit, ~Year,
-                       "S1", "C", "2022",
-                       "S2", "D", "2023")
+                       "S1", "D", "2023",
+                       "S2", "E", "2024", 
+                       "S3", "F", "2025")
 expand_input_tibble(list(pop1, pop2), "population", source = TRUE)
 
 }
