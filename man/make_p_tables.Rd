@@ -40,9 +40,9 @@ and predictive workflows.
 
 The output includes:
 \itemize{
-\item Editable footnotes for documentation
 \item Empty \code{tibble}s for the Preceptor Table and Population Table (the latter includes
 the Preceptor rows)
+\item Editable footnotes for documentation
 \item \code{gt} code chunks to render each table with labeled spanners and columns
 sized roughly proportional to label length
 \item The Preceptor and Population tables include a final "More" column and
@@ -65,16 +65,17 @@ helping maintain readable, centered columns.
 }
 \examples{
 \dontrun{
-# Insert causal tables for a study of senators' voting behavior over years
+# Insert causal tables for a study of senators' voting behavior
+# Outcomes reflect support conditional on the treatment
 make_p_tables(
   type = "causal",
   unit_label = c("Senator", "Session Year"),
-  outcome_label = c("Support Bill", "Oppose Bill"),
+  outcome_label = c("Support if Contact", "Support if No Contact"),
   treatment_label = "Lobbying Contact",
   covariate_label = "Senator Age"
 )
 
-# Insert predictive tables for a clinical trial measuring patient recovery over time
+# Insert predictive tables for a clinical trial measuring patient recovery
 make_p_tables(
   type = "predictive",
   unit_label = c("Patient ID", "Visit Number"),
