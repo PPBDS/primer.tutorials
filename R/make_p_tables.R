@@ -96,28 +96,16 @@ make_p_tables <- function(
   p_col_headers <- paste(make_labels(all_cols), collapse = ", ")
   d_col_headers <- paste(make_labels(pop_cols), collapse = ", ")
 
-# Don't need duplicate code.  
 
-  p_rows <- paste(
+  rows <- paste(
     paste(rep('"..."', length(all_cols)), collapse = ", "),
     paste(rep('"..."', length(all_cols)), collapse = ", "),
     paste(rep('"..."', length(all_cols)), collapse = ", "),
     sep = ",\n  "
   )
-  d_rows <- paste(
-    paste(rep('"..."', length(pop_cols)), collapse = ", "),
-    paste(rep('"..."', length(pop_cols)), collapse = ", "),
-    paste(rep('"..."', length(pop_cols)), collapse = ", "),
-    sep = ",\n  "
-  )
 
-  # No need to rename these variables.
 
-  unit_spanner_cols <- unit_label
-  outcome_spanner_cols <- outcome_label
-  treatment_spanner_cols <- treatment_label
-  covariate_spanner_cols <- covariate_label
-  pop_unit_cols <- if (source_col) c("Source", unit_spanner_cols) else unit_spanner_cols
+  pop_unit_cols <- if (source_col) c("Source", unit_label) else unit_label
 
   widths <- c(
     nchar(unit_label[1]) + 2,
@@ -146,12 +134,12 @@ pop_covariates_footnote <- \"...\"
 
 p_tibble <- tibble::tribble(
   {p_col_headers},
-  {p_rows}
+  {rows}
 )
 
 d_tibble <- tibble::tribble(
   {d_col_headers},
-  {d_rows}
+  {rows}
 )
 ```"
   )
@@ -164,13 +152,13 @@ p_tibble_full <- p_tibble |>
 
 gt::gt(p_tibble_full) |>
   gt::tab_header(title = \"Preceptor Table\") |>
-  gt::tab_spanner(label = \"Unit\", id = \"unit_span\", columns = c({glue_cols(unit_spanner_cols)})) |>
-  gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_spanner_cols)})) |>
-  gt::tab_spanner(label = \"Treatment\", id = \"treatment_span\", columns = c({glue_cols(treatment_spanner_cols)})) |>
-  gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_spanner_cols)})) |>
+  gt::tab_spanner(label = \"Unit\", id = \"unit_span\", columns = c({glue_cols(unit_label)})) |>
+  gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_label)})) |>
+  gt::tab_spanner(label = \"Treatment\", id = \"treatment_span\", columns = c({glue_cols(treatment_label)})) |>
+  gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)})) |>
   gt::cols_align(align = \"center\", columns = gt::everything()) |>
   gt::cols_align(align = \"left\", columns = c(`{unit_label[1]}`)) |>
-  gt::cols_width(columns = c({glue_cols(c(unit_spanner_cols, outcome_spanner_cols, treatment_spanner_cols, covariate_spanner_cols, \"More\"))}),
+  gt::cols_width(columns = c({glue_cols(c(unit_label, outcome_label, treatment_label, covariate_label, \"More\"))}),
                  widths = gt::px(c({paste(widths, collapse = \", \")}))) |>
   gt::fmt_markdown(columns = gt::everything())
 ```"
@@ -185,12 +173,12 @@ d_tibble_full <- d_tibble |>
 gt::gt(d_tibble_full) |>
   gt::tab_header(title = \"Population Table\") |>
   gt::tab_spanner(label = \"Unit/Time\", id = \"unit_span\", columns = c({glue_cols(pop_unit_cols)})) |>
-  gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_spanner_cols)})) |>
-  gt::tab_spanner(label = \"Treatment\", id = \"treatment_span\", columns = c({glue_cols(treatment_spanner_cols)})) |>
-  gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_spanner_cols)})) |>
+  gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_label)})) |>
+  gt::tab_spanner(label = \"Treatment\", id = \"treatment_span\", columns = c({glue_cols(treatment_label)})) |>
+  gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)})) |>
   gt::cols_align(align = \"center\", columns = gt::everything()) |>
   gt::cols_align(align = \"left\", columns = c(`{unit_label[1]}`)) |>
-  gt::cols_width(columns = c({glue_cols(c(pop_unit_cols, outcome_spanner_cols, treatment_spanner_cols, covariate_spanner_cols, \"More\"))}),
+  gt::cols_width(columns = c({glue_cols(c(pop_unit_cols, outcome_label, treatment_label, covariate_label, \"More\"))}),
                  widths = gt::px(c({paste(widths, collapse = \", \")}))) |>
   gt::fmt_markdown(columns = gt::everything())
 ```"
