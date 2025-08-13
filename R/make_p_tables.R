@@ -150,7 +150,7 @@ gt::gt(p_tibble_full) |>
   gt::tab_spanner(label = \"Unit/Time\", id = \"unit_span\", columns = c({glue_cols(unit_label)})) |>
   gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_label)})) |>
   gt::tab_spanner(label = \"Treatment\", id = \"treatment_span\", columns = c({glue_cols(treatment_label)})) |>
-  gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)})) |>
+  gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)}, \"More\")) |>
   gt::cols_align(align = \"center\", columns = gt::everything()) |>
   gt::cols_align(align = \"left\", columns = c(`{unit_label[1]}`)) |>
   gt::cols_width({
@@ -227,7 +227,7 @@ gt::gt(population_tibble) |>
   gt::tab_spanner(label = \"Unit/Time\", id = \"unit_span\", columns = c({glue_cols(pop_unit_cols)})) |>
   gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_label)})) |>
   gt::tab_spanner(label = \"Treatment\", id = \"treatment_span\", columns = c({glue_cols(treatment_label)})) |>
-  gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)})) |>
+  gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)}, \"More\")) |>
   gt::cols_align(align = \"center\", columns = gt::everything()) |>
   gt::cols_align(align = \"left\", columns = c(`{unit_label[1]}`)) |>
   gt::cols_width({
