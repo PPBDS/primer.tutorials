@@ -88,32 +88,24 @@ make_p_tables <- function(
     stop("`type` must be either 'causal' or 'predictive'.")
   }
 
-# DK: Add Source at end. Not now.
-
+  # Both p_tibble and d_tibble use the same columns (no Source column yet)
   all_cols <- c(unit_label, outcome_label, treatment_label, covariate_label)
-  pop_cols <- if (source_col) c("Source", all_cols) else all_cols
-
-  p_col_headers <- paste(make_labels(all_cols), collapse = ", ")
-  d_col_headers <- paste(make_labels(pop_cols), collapse = ", ")
-
-
-  rows <- paste(
-    paste(rep('"..."', length(all_cols)), collapse = ", "),
-    paste(rep('"..."', length(all_cols)), collapse = ", "),
-    paste(rep('"..."', length(all_cols)), collapse = ", "),
-    sep = ",\n  "
-  )
-
-
+  
+  # Source column only added during population table rendering
   pop_unit_cols <- if (source_col) c("Source", unit_label) else unit_label
 
+  # Generate tribble code using helper function
+  p_tribble_code <- write_input_tribble(all_cols)
+  d_tribble_code <- write_input_tribble(all_cols)
+
   widths <- c(
-    nchar(unit_label[1]) + 2,
-    nchar(unit_label[2]) + 2,
-    rep(nchar(outcome_label[1]) + 2, length(outcome_label)),
-    nchar(treatment_label) + 2,
-    nchar(covariate_label) + 2,
-    5
+    if (source_col) 80 else NULL,  # Source column width
+    max(nchar(unit_label[1]) * 8, 100),  # Minimum 100px for first unit column
+    max(nchar(unit_label[2]) * 8, 120),  # Minimum 120px for second unit column
+    rep(max(max(nchar(outcome_label)) * 8, 120), length(outcome_label)),  # Minimum 120px per outcome
+    max(nchar(treatment_label) * 8, 120),  # Minimum 120px for treatment
+    max(nchar(covariate_label) * 8, 120),  # Minimum 120px for covariate
+    60  # More column
   )
 
   glue_cols <- function(cols) paste0("`", cols, "`", collapse = ", ")
@@ -132,43 +124,72 @@ pop_outcome_footnote <- \"...\"
 pop_treatment_footnote <- \"...\"
 pop_covariates_footnote <- \"...\"
 
-p_tibble <- tibble::tribble(
-  {p_col_headers},
-  {rows}
-)
+p_tibble <- {p_tribble_code}
 
-d_tibble <- tibble::tribble(
-  {d_col_headers},
-  {rows}
-)
+d_tibble <- {d_tribble_code}
 ```"
   )
 
   code_p_table <- glue::glue(
     "```{{r}}
-p_tibble_full <- p_tibble |>
-  dplyr::add_row(!!!as.list(rep(NA, ncol(p_tibble)))) |>
-  dplyr::mutate(More = c(rep(NA, nrow(.) - 1), \"...\"))
+p_tibble_full <- expand_input_tibble(list(p_tibble), \"preceptor\")
 
 gt::gt(p_tibble_full) |>
   gt::tab_header(title = \"Preceptor Table\") |>
-  gt::tab_spanner(label = \"Unit\", id = \"unit_span\", columns = c({glue_cols(unit_label)})) |>
+  gt::tab_spanner(label = \"Unit/Time\", id = \"unit_span\", columns = c({glue_cols(unit_label)})) |>
   gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_label)})) |>
   gt::tab_spanner(label = \"Treatment\", id = \"treatment_span\", columns = c({glue_cols(treatment_label)})) |>
   gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)})) |>
   gt::cols_align(align = \"center\", columns = gt::everything()) |>
   gt::cols_align(align = \"left\", columns = c(`{unit_label[1]}`)) |>
-  gt::cols_width(columns = c({glue_cols(c(unit_label, outcome_label, treatment_label, covariate_label, \"More\"))}),
-                 widths = gt::px(c({paste(widths, collapse = \", \")}))) |>
+  gt::cols_width({
+    all_cols_with_more <- c(unit_label, outcome_label, treatment_label, covariate_label, \"More\")
+    width_assignments <- paste0('\"', all_cols_with_more, '\" ~ gt::px(', widths[!is.null(widths)], ')', collapse = \", \")
+    width_assignments
+  }) |>
+  gt::tab_style(
+    style = gt::cell_text(size = gt::px(14)),
+    locations = gt::cells_body()
+  ) |>
+  gt::tab_style(
+    style = list(
+      gt::cell_text(size = gt::px(14), weight = \"bold\"),
+      gt::cell_borders(sides = \"bottom\", weight = gt::px(2))
+    ),
+    locations = gt::cells_column_labels()
+  ) |>
+  gt::tab_options(
+    table.font.size = gt::px(14),
+    data_row.padding = gt::px(12),
+    column_labels.padding = gt::px(12),
+    row_group.padding = gt::px(12),
+    table.width = gt::pct(100),
+    table.margin.left = gt::px(0),
+    table.margin.right = gt::px(0)
+  ) |>
   gt::fmt_markdown(columns = gt::everything())
 ```"
   )
 
-  code_pop_table <- glue::glue(
-    "```{{r}}
-d_tibble_full <- d_tibble |>
-  dplyr::add_row(!!!as.list(rep(NA, ncol(d_tibble)))) |>
-  dplyr::mutate(More = c(rep(NA, nrow(.) - 1), \"...\"))
+  # Population table code - different based on source_col
+  if (source_col) {
+    # Add Source column to d_tibble before processing
+    code_pop_table <- glue::glue(
+      "```{{r}}
+d_tibble_with_source <- d_tibble |>
+  dplyr::mutate(Source = c(\"Data\", \"Data\", \"Preceptor\"), .before = 1)
+
+data_tibble <- d_tibble_with_source |> 
+  dplyr::filter(Source == \"Data\") |>
+  dplyr::select(-Source) |>
+  dplyr::mutate(Source = \"Data\", .before = 1)
+
+preceptor_tibble <- d_tibble_with_source |> 
+  dplyr::filter(Source == \"Preceptor\") |>
+  dplyr::select(-Source) |>
+  dplyr::mutate(Source = \"Preceptor\", .before = 1)
+
+d_tibble_full <- expand_input_tibble(list(data_tibble, preceptor_tibble), \"population\", source = TRUE)
 
 gt::gt(d_tibble_full) |>
   gt::tab_header(title = \"Population Table\") |>
@@ -178,11 +199,60 @@ gt::gt(d_tibble_full) |>
   gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)})) |>
   gt::cols_align(align = \"center\", columns = gt::everything()) |>
   gt::cols_align(align = \"left\", columns = c(`{unit_label[1]}`)) |>
-  gt::cols_width(columns = c({glue_cols(c(pop_unit_cols, outcome_label, treatment_label, covariate_label, \"More\"))}),
-                 widths = gt::px(c({paste(widths, collapse = \", \")}))) |>
+  gt::cols_width({
+    all_cols_with_more <- c(pop_unit_cols, outcome_label, treatment_label, covariate_label, \"More\")
+    width_assignments <- paste0('\"', all_cols_with_more, '\" ~ gt::px(', widths[!is.null(widths)], ')', collapse = \", \")
+    width_assignments
+  }) |>
+  gt::tab_style(
+    style = gt::cell_text(size = gt::px(14)),
+    locations = gt::cells_body()
+  ) |>
+  gt::tab_style(
+    style = list(
+      gt::cell_text(size = gt::px(14), weight = \"bold\"),
+      gt::cell_borders(sides = \"bottom\", weight = gt::px(2))
+    ),
+    locations = gt::cells_column_labels()
+  ) |>
+  gt::tab_options(
+    table.font.size = gt::px(14),
+    data_row.padding = gt::px(12),
+    column_labels.padding = gt::px(12),
+    row_group.padding = gt::px(12),
+    table.width = gt::pct(100),
+    table.margin.left = gt::px(0),
+    table.margin.right = gt::px(0)
+  ) |>
   gt::fmt_markdown(columns = gt::everything())
 ```"
-  )
+    )
+  } else {
+    # Without Source column
+    code_pop_table <- glue::glue(
+      "```{{r}}
+data_tibble <- d_tibble[1:2, ]
+preceptor_tibble <- d_tibble[3, , drop = FALSE]
+
+d_tibble_full <- expand_input_tibble(list(data_tibble, preceptor_tibble), \"population\", source = FALSE)
+
+gt::gt(d_tibble_full) |>
+  gt::tab_header(title = \"Population Table\") |>
+  gt::tab_spanner(label = \"Unit/Time\", id = \"unit_span\", columns = c({glue_cols(pop_unit_cols)})) |>
+  gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_label)})) |>
+  gt::tab_spanner(label = \"Treatment\", id = \"treatment_span\", columns = c({glue_cols(treatment_label)})) |>
+  gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)})) |>
+  gt::cols_align(align = \"center\", columns = gt::everything()) |>
+  gt::cols_align(align = \"left\", columns = c(`{unit_label[1]}`)) |>
+  gt::cols_width({
+    all_cols_with_more <- c(pop_unit_cols, outcome_label, treatment_label, covariate_label, \"More\")
+    width_assignments <- paste0('\"', all_cols_with_more, '\" ~ gt::px(', widths[!is.null(widths)], ')', collapse = \", \")
+    width_assignments
+  }) |>
+  gt::fmt_markdown(columns = gt::everything())
+```"
+    )
+  }
 
   full_code <- paste(
     code_footnotes,
@@ -199,7 +269,83 @@ gt::gt(d_tibble_full) |>
   invisible(NULL)
 }
 
+write_input_tribble <- function(names) {
+  n <- length(names)
+  rows <- replicate(3, paste(rep('"..."', n), collapse = ", "), simplify = FALSE)
+  header <- paste0("~`", names, "`", collapse = ", ")
+  
+  tribble_text <- paste0(
+    "tibble::tribble(\n",
+    "  ", header, ",\n  ",
+    paste(rows, collapse = ",\n  "),
+    "\n)"
+  )
+  return(tribble_text)
+}
+
+expand_input_tibble <- function(x, type, source = FALSE) {
+  stopifnot(type %in% c("preceptor", "population"))
+  
+  if (type == "preceptor") {
+    if (length(x) != 1) stop("For 'preceptor', x must be a list of length 1.")
+    tib <- x[[1]]
+    
+    if (nrow(tib) >= 3) {
+      new_row <- tib[1, , drop = FALSE]
+      new_row[,] <- "..."
+      
+      tib_expanded <- dplyr::bind_rows(
+        tib[1:(nrow(tib)-1), ],
+        new_row,
+        tib[nrow(tib), ]
+      )
+    } else {
+      tib_expanded <- tib
+    }
+    
+    tib_expanded$More <- "..."
+    
+    return(tib_expanded)
+    
+  } else if (type == "population") {
+    if (length(x) != 2) stop("For 'population', x must be a list of length 2.")
+    
+    expand_one <- function(tib) {
+      if (nrow(tib) >= 3) {
+        new_row <- tib[1, , drop = FALSE]
+        new_row[,] <- "..."
+        
+        expanded <- dplyr::bind_rows(
+          tib[1:(nrow(tib)-1), ],
+          new_row,
+          tib[nrow(tib), ]
+        )
+      } else {
+        expanded <- tib
+      }
+      return(expanded)
+    }
+    
+    tib1 <- expand_one(x[[1]])
+    tib2 <- expand_one(x[[2]])
+    
+    empty_row <- tib1[1, , drop = FALSE]
+    empty_row[,] <- NA_character_
+    
+    combined <- dplyr::bind_rows(
+      empty_row,
+      tib1,
+      empty_row,
+      tib2,
+      empty_row
+    )
+    
+    combined$More <- "..."
+    
+    return(combined)
+  }
+}
+
 make_labels <- function(x) {
   paste0("~`", x, "`")
 }
-

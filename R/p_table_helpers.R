@@ -43,26 +43,29 @@ write_input_tribble <- function(names) {
 #' @return A single tibble with added missing rows and 'More' column, suitable for piping to gt.
 #'
 #' @details
-#' For "preceptor": adds missing rows to ensure at least 3 rows, adds a "More" column
-#' with NA except last row contains "...".
+#' For "preceptor": adds a third row between the last 2 rows filled with "...", 
+#' adds a "More" column with "..." in all positions.
 #'
 #' For "population": expands each tibble similarly, then combines them with
-#' empty rows before, between, and after, then adds "More" column.
+#' empty rows before, between, and after, then adds "More" column with "...".
 #'
 #' @examples
 #' # Preceptor example
 #' pre_tib <- tibble::tribble(~Unit, ~Year, ~Outcome,
 #'                            "A", "2020", "5",
-#'                            "B", "2021", "6")
+#'                            "B", "2021", "6",
+#'                            "C", "2022", "7")
 #' expand_input_tibble(list(pre_tib), "preceptor")
 #'
 #' # Population example
 #' pop1 <- tibble::tribble(~Source, ~Unit, ~Year,
 #'                        "S1", "A", "2020",
-#'                        "S2", "B", "2021")
+#'                        "S2", "B", "2021",
+#'                        "S3", "C", "2022")
 #' pop2 <- tibble::tribble(~Source, ~Unit, ~Year,
-#'                        "S1", "C", "2022",
-#'                        "S2", "D", "2023")
+#'                        "S1", "D", "2023",
+#'                        "S2", "E", "2024", 
+#'                        "S3", "F", "2025")
 #' expand_input_tibble(list(pop1, pop2), "population", source = TRUE)
 #'
 #' @export
@@ -73,52 +76,69 @@ expand_input_tibble <- function(x, type, source = FALSE) {
     if (length(x) != 1) stop("For 'preceptor', x must be a list of length 1.")
     tib <- x[[1]]
     
-    # Add missing rows to reach at least 3 rows
-    n_missing <- max(0, 3 - nrow(tib))
-    if (n_missing > 0) {
-      missing_rows <- tib[rep(nrow(tib), n_missing), , drop = FALSE]
-      missing_rows[,] <- NA_character_
-      tib <- dplyr::bind_rows(tib, missing_rows)
+    # For a 3-row tibble, insert a new row between row 2 and row 3 (the last row)
+    # This new row should be filled with "..."
+    if (nrow(tib) >= 3) {
+      # Create a new row filled with "..."
+      new_row <- tib[1, , drop = FALSE]  # Use first row as template
+      new_row[,] <- "..."  # Fill all columns with "..."
+      
+      # Insert the new row between the second-to-last and last row
+      # For a 3-row table, this means between row 2 and row 3
+      tib_expanded <- dplyr::bind_rows(
+        tib[1:(nrow(tib)-1), ],  # All rows except the last
+        new_row,                 # New row with "..."
+        tib[nrow(tib), ]         # The last row
+      )
+    } else {
+      # If somehow less than 3 rows, just keep as is
+      tib_expanded <- tib
     }
     
-    # Add 'More' column: NA except last row is "..."
-    tib$More <- rep(NA_character_, nrow(tib))
-    tib$More[nrow(tib)] <- "..."
+    # Add 'More' column filled with "..."
+    tib_expanded$More <- "..."
     
-    return(tib)
+    return(tib_expanded)
     
   } else if (type == "population") {
     if (length(x) != 2) stop("For 'population', x must be a list of length 2.")
     
+    # Function to expand a single tibble (data or preceptor)
     expand_one <- function(tib) {
-      n_missing <- max(0, 3 - nrow(tib))
-      if (n_missing > 0) {
-        missing_rows <- tib[rep(nrow(tib), n_missing), , drop = FALSE]
-        missing_rows[,] <- NA_character_
-        tib <- dplyr::bind_rows(tib, missing_rows)
+      # Insert a row between second-to-last and last row filled with "..."
+      if (nrow(tib) >= 3) {
+        new_row <- tib[1, , drop = FALSE]
+        new_row[,] <- "..."
+        
+        expanded <- dplyr::bind_rows(
+          tib[1:(nrow(tib)-1), ],
+          new_row,
+          tib[nrow(tib), ]
+        )
+      } else {
+        expanded <- tib
       }
-      tib
+      return(expanded)
     }
     
-    tib1 <- expand_one(x[[1]])
-    tib2 <- expand_one(x[[2]])
+    tib1 <- expand_one(x[[1]])  # Data tibble
+    tib2 <- expand_one(x[[2]])  # Preceptor tibble
     
-    # Create empty row with same columns filled NA
+    # Create empty row with same columns filled with NA
     empty_row <- tib1[1, , drop = FALSE]
     empty_row[,] <- NA_character_
     
-    # Combine with empty rows before, between, and after
+    # Combine with empty rows: blank, data, blank, preceptor, blank
     combined <- dplyr::bind_rows(
-      empty_row,
-      tib1,
-      empty_row,
-      tib2,
-      empty_row
+      empty_row,    # blank row
+      tib1,         # data rows (expanded)
+      empty_row,    # blank row  
+      tib2,         # preceptor rows (expanded)
+      empty_row     # blank row
     )
     
-    # Add 'More' column with NA except last row is "..."
-    combined$More <- rep(NA_character_, nrow(combined))
-    combined$More[nrow(combined)] <- "..."
+    # Add 'More' column filled with "..."
+    combined$More <- "..."
     
     return(combined)
   }
