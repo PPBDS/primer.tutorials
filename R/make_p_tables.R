@@ -5,9 +5,9 @@
 #' and predictive workflows.
 #'
 #' The output includes:
-#' - Editable footnotes for documentation
 #' - Empty `tibble`s for the Preceptor Table and Population Table (the latter includes
 #'   the Preceptor rows)
+#' - Editable footnotes for documentation
 #' - `gt` code chunks to render each table with labeled spanners and columns
 #'   sized roughly proportional to label length
 #' - The Preceptor and Population tables include a final "More" column and
@@ -118,6 +118,14 @@ make_p_tables <- function(
 
   code_footnotes <- glue::glue(
     "```{{r}}
+# Edit the following tibbles and footnotes, look at the vignette for more details
+  
+p_tibble <- {p_tribble_code}
+
+
+d_tibble <- {d_tribble_code}
+  
+  
 pre_title_footnote <- \"...\"
 pre_units_footnote <- \"...\"
 pre_outcome_footnote <- \"...\"
@@ -130,12 +138,6 @@ pop_units_footnote <- \"...\"
 pop_outcome_footnote <- \"...\"
 pop_treatment_footnote <- \"...\"
 pop_covariates_footnote <- \"...\"
-
-
-p_tibble <- {p_tribble_code}
-
-
-d_tibble <- {d_tribble_code}
 ```"
   )
 

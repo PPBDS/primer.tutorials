@@ -13,7 +13,7 @@ vignette: >
 
 ## Overview
 
-This vignette introduces the `make_p_tables()` function in the `primer.tutorials` package, which inserts a five-chunk Quarto-ready template into your open document for creating **Preceptor Tables** and **Population Tables**.
+This vignette introduces the `make_p_tables()` function in the `primer.tutorials` package, which inserts a three-chunk Quarto-ready template into your open document for creating **Preceptor Tables** and **Population Tables**.
 
 These tables are designed to support both **causal** and **predictive** modeling workflows by clearly labeling variables with spanners and encouraging detailed documentation via footnotes.
 
@@ -25,30 +25,31 @@ This format draws inspiration from the [Cardinal Virtues](https://ppbds.github.i
 
 ### Preceptor Table
 
-A **Preceptor Table** contains hypothetical or expected outcomes for units (such as students or senators). It often includes unknowns (denoted by `"?"`) where real data is not yet available, and reflects researcher or instructor expectations.
+A **Preceptor Table** contains hypothetical or expected outcomes for units (such as students or senators). It often includes unknowns (denoted by `"..."`) where real data is not yet available, and reflects researcher or instructor expectations. The table automatically includes a blank third row and a "More" column for additional covariates.
 
 ### Population Table
 
-A **Population Table** contains a merged view of observed data (from the population) alongside preceptor-defined expectations. It includes an additional column `Source` that distinguishes between actual data (`"Data"`) and expectations (`"Preceptor Table"`).
+A **Population Table** contains a merged view of observed data (from the population) alongside preceptor-defined expectations. It includes an additional column `Source` that distinguishes between actual data (`"Data"`) and expectations (`"Preceptor"`). The table follows an 11-row structure with proper spacing between data and preceptor sections.
 
 ## Key Features
 
 The output of `make_p_tables()` includes:
 
-* An empty `tibble` for the **Preceptor Table**
-* An empty `tibble` for the **Population Table** (which includes rows from the Preceptor Table)
+* Editable footnotes for documentation
+* An empty `tibble` for the **Preceptor Table** (`p_tibble`)
+* An empty `tibble` for data input (`d_tibble`)
 * `gt` code to render both tables with grouped column headers ("spanners")
-* Editable footnotes for each section of the table
-* Cleanup code to remove temporary objects
+* Automatic addition of missing rows and "More" column during rendering
+* Column alignment in the tribble code for easier editing
 
 ## Spanner Structure
 
 Each table includes spanners for:
 
-* **Unit** (or **Unit/Time** in the Population Table)
-* **Outcome** (for predictive models) or **Potential Outcomes** (for causal models)
+* **Unit/Time** (for the unit columns)
+* **Potential Outcomes** (for causal models) or **Outcome** (for predictive models)
 * **Treatment** (included only in causal models)
-* **Covariates** (typically 3 columns, customizable)
+* **Covariates** (includes the covariate column and the "More" column)
 
 > **Note:** All table entries must be surrounded by **double quotes**, even for numeric values (e.g., `"42"`).
 
@@ -66,75 +67,68 @@ library(primer.tutorials)
 
 ## Running `make_p_tables()`
 
-Preceptor and Population Tables are inserted together. The Population Table includes a `"Source"` column as its first column, which takes values `"Data"` or `"Preceptor Table"` depending on origin. This structure encourages comparison between expected and observed values.
+Preceptor and Population Tables are inserted together. The Population Table includes a `"Source"` column as its first column (controlled by the `source_col` argument), which takes values `"Data"` or `"Preceptor"` depending on origin. This structure encourages comparison between expected and observed values.
 
-Behind the scenes, these tables are generated using `tibble::tribble()` for easier manual editing by row. This helps authors align values vertically and encourages clear visual structure in the Quarto document
+Behind the scenes, these tables are generated using `tibble::tribble()` for easier manual editing by row. The tribble code is formatted with aligned columns to help authors maintain visual structure while editing.
 
-When you run `primer.tutorials::make_p_tables()` without any argument values, the following error appears in the console.
-
-````
-> make_p_tables()
-Error:
-! Failed to evaluate glue component {covariate_1_label}
-Caused by error:
-! argument "covariate_1_label" is missing, with no default
-Show Traceback
->
-````
-
-This is because the function requires labels to create a template of the tables. For the best results, it is encouraged to fill in each argument when calling the function.
+When you run `primer.tutorials::make_p_tables()` without any argument values, you'll get an error because the function requires specific labels to create the template.
 
 ## Understanding the Function Arguments
 
 The `make_p_tables()` function takes a set of user-defined labels and options that control how the **Preceptor** and **Population** tables are built and displayed. Each argument serves a clear conceptual role and is used to populate column headers, spanner labels, and the default content in `tibble::tribble()` calls. Here is a detailed breakdown:
 
-* We use the term "label" rather than "vars" to indicate that these are the labels in the table rather than the variable names from the data. As such, they are often human-readable phrases with spaces, like "Math Score if in Small Class". Will long labels be wrapped automagically? We probably want that. Of course, these descriptions can not be too long and so must be shortened in some way. In a pinch, the variable names may be used, but this is not preferred.
+* We use the term "label" rather than "vars" to indicate that these are the labels in the table rather than the variable names from the data. As such, they are often human-readable phrases with spaces, like "Math Score if in Small Class". These descriptions should be concise but meaningful.
 
-### `is_causal` *(Logical)*
+### `type` *(Character)*
 
-* Set to `TRUE` to generate a causal table structure, which includes:
-
-  * Two columns for **Potential Outcomes** (under treatment and control).
+* Set to `"causal"` to generate a causal table structure, which includes:
+  * Multiple columns for **Potential Outcomes** (specified in `outcome_label`).
   * A **Treatment** column representing an intervention or assigned condition.
-* Set to `FALSE` for a predictive model:
-
-  * Includes a single **Outcome** column.
-  * Omits the Treatment column entirely.
-* This flag determines not only what variables appear in the tables, but also how they are **spanned** and **labeled** in the rendered `gt` tables.
-
----
-
-### `unit_label` *(Character)*
-
-* Human-readable name for the **unit of analysis** — e.g., `"Senator"`, `"Student"`, or `"School"`.
-* This will appear both as a column name in the tibble and as part of the `"Unit"` or `"Unit/Time"` spanner in the `gt` table.
-* The label should be capitalized and concise.
+* Set to `"predictive"` for a predictive model:
+  * Includes outcome columns as specified in `outcome_label`.
+  * Treatment column is still included but represents the predictor variable.
+* This determines not only what variables appear in the tables, but also how they are **spanned** and **labeled** in the rendered `gt` tables.
 
 ---
 
-### `outcome_label` *(Character)*
+### `unit_label` *(Character vector of length 2)*
 
-* Describes the **key outcome** being predicted or causally modeled.
-* In predictive mode, this creates one column: `Outcome`.
-* In causal mode, this generates two: `{outcome_label} 1` and `{outcome_label} 2`, reflecting potential outcomes under treatment and control, respectively.
-* Should be an interpretable phrase like `"Test Score"` or `"Re-election Status"`.
+* Human-readable names for the **unit of analysis** — e.g., `c("Senator", "Session Year")` or `c("Student", "Grade Level")`.
+* These will appear as the first two columns and are grouped under the `"Unit/Time"` spanner.
+* The labels should be capitalized and concise.
+
+---
+
+### `outcome_label` *(Character vector)*
+
+* Describes the **key outcomes** being predicted or causally modeled.
+* For causal models, typically includes multiple potential outcomes like `c("Support Bill", "Oppose Bill")`.
+* For predictive models, might be a single outcome like `c("Test Score")`.
+* Should be interpretable phrases that clearly describe the outcomes.
 
 ---
 
 ### `treatment_label` *(Character)*
 
-* Only required if `is_causal = TRUE`.
-* Appears as the label of the treatment column, such as `"Phone Call"` or `"Received Tutoring"`.
+* Label for the treatment/predictor column, such as `"Phone Call"` or `"Tutoring Program"`.
 * Used to title the corresponding `gt::tab_spanner()`.
+* Required for both causal and predictive models.
 
 ---
 
-### `covariate_1_label` and `covariate_2_label`*(Characters)*
+### `covariate_label` *(Character)*
 
-* Labels for two covariates relevant to the analysis.
-* These are grouped under a `"Covariates"` spanner.
-* These labels will be used directly as column headers (e.g., `"Sex"`, `"Age"`, `"School Type"`).
-* All should be simple phrases, and together they describe the pre-treatment information on which comparisons or predictions may be based.
+* Label for the main covariate column relevant to the analysis.
+* This is grouped under the `"Covariates"` spanner along with the "More" column.
+* Should be a simple phrase like `"Age"` or `"School Type"`.
+
+---
+
+### `source_col` *(Logical, default TRUE)*
+
+* Controls whether the Population Table includes a `"Source"` column.
+* When `TRUE`, adds a column distinguishing between `"Data"` and `"Preceptor"` rows.
+* When `FALSE`, the Population Table omits the source column.
 
 Each of these labels should be understood as **descriptive display names**, not as variable names from an existing dataset. The goal is clarity and interpretability for readers of the resulting Quarto document.
 
@@ -142,7 +136,7 @@ Each of these labels should be understood as **descriptive display names**, not 
 
 ## Understanding the Footnotes
 
-Footnotes in these tables are not decorative — they are an essential part of **documenting analytical intent**. When you use `make_p_tables()`, it generates editable placeholders for ten footnotes, five for each table. These can be filled in or deleted (by setting to `NULL`), and they appear in the rendered table using `gt::tab_footnote()`.
+Footnotes in these tables are not decorative — they are an essential part of **documenting analytical intent**. When you use `make_p_tables()`, it generates editable placeholders for ten footnotes, five for each table. These can be filled in or deleted, and they appear in the rendered table using `gt::tab_footnote()`.
 
 Below is a guide to what each footnote is for:
 
@@ -152,13 +146,13 @@ Below is a guide to what each footnote is for:
 
 * **`pre_title_footnote`**: Explains the background or motivation for the expectations shown. Useful for describing who the preceptors are, when the expectations were made, or why these units were selected.
 
-* **`pre_units_footnote`**: Clarifies the definition of a “unit” in this context — e.g., “Each row represents a senator during the 2022 election.” Also helpful to include time span or location info if applicable.
+* **`pre_units_footnote`**: Clarifies the definition of a "unit" in this context — e.g., "Each row represents a senator during the 2022 election." Also helpful to include time span or location info if applicable.
 
-* **`pre_outcome_footnote`**: Documents why these potential outcomes are meaningful. May include a note on how they were estimated or what they signify (e.g., "Re-election status under treatment vs. control").
+* **`pre_outcome_footnote`**: Documents why these potential outcomes are meaningful. May include a note on how they were estimated or what they signify.
 
 * **`pre_treatment_footnote`**: Defines what the treatment actually entails and how it is operationalized. For example, a phone call campaign, assignment to tutoring, or access to a program.
 
-* **`pre_covariates_footnote`**: Explains why the selected covariates were chosen and their role in forming expectations. Should also clarify whether these differ between tables.
+* **`pre_covariates_footnote`**: Explains why the selected covariates were chosen and their role in forming expectations. Should also clarify the "More" column purpose.
 
 ---
 
@@ -166,13 +160,13 @@ Below is a guide to what each footnote is for:
 
 * **`pop_title_footnote`**: Describes the purpose of the population table — usually to compare expected vs. observed outcomes, merged with preceptor rows.
 
-* **`pop_units_footnote`**: Defines what each unit represents in the population — e.g., “Each row represents an observed student or a preceptor-generated scenario.”
+* **`pop_units_footnote`**: Defines what each unit represents in the population — e.g., "Each row represents an observed student or a preceptor-generated scenario."
 
-* **`pop_outcome_footnote`**: Documents the source of outcome data. For example: “Outcomes observed from the 2022 voter file” or “Final grades from school records.”
+* **`pop_outcome_footnote`**: Documents the source of outcome data. For example: "Outcomes observed from the 2022 voter file" or "Final grades from school records."
 
 * **`pop_treatment_footnote`**: Explains how actual treatment status was observed or inferred. May differ from the assumptions made in the Preceptor Table.
 
-* **`pop_covariates_footnote`**: Describes where the covariate data comes from in the population table and whether it’s measured identically to the preceptor rows.
+* **`pop_covariates_footnote`**: Describes where the covariate data comes from in the population table and whether it's measured identically to the preceptor rows.
 
 ---
 
@@ -180,116 +174,201 @@ These footnotes ensure that **both the data structure and the logic of your mode
 
 ---
 
+## Examples
 
-### Examples
 When you run:
 
 ```r
 make_p_tables(
-  is_causal = TRUE,
-  unit_label = "Senator",
-  outcome_label = "Potential Outcomes",
-  treatment_label = "Phone Call",
-  covariate_1_label = "Sex",
-  covariate_2_label = "Age"
+  type = "causal",
+  unit_label = c("Senator", "Session Year"),
+  outcome_label = c("Support Bill", "Oppose Bill"),
+  treatment_label = "Lobbying Contact",
+  covariate_label = "Senator Age"
 )
 ```
 
-The following chunks are inserted (after manually filling in the rest):
+The following chunks are inserted:
 
-### 1. Installation + Footnotes
+### 1. Footnotes and Data Setup
 
 ```{r}
-pre_title_footnote <- "Expected outcomes for 2022 Senate elections based on expert judgment and historical data."
-pre_units_footnote <- "Each row represents a single U.S. senator during the 2022 election cycle."
-pre_outcome_footnote <- "Potential outcomes reflect election results with and without treatment (phone calls)."
-pre_treatment_footnote <- "Treatment indicates whether targeted phone call campaigns were conducted."
-pre_covariates_footnote <- "Covariates include demographic factors (Sex, Age) and incumbency status."
+pre_title_footnote <- "..."
+pre_units_footnote <- "..."
+pre_outcome_footnote <- "..."
+pre_treatment_footnote <- "..."
+pre_covariates_footnote <- "..."
 
-pop_title_footnote <- "Observed 2022 Senate election data merged with preceptor expectations."
-pop_units_footnote <- "Each row represents an observed senator or a preceptor-defined expected case."
-pop_outcome_footnote <- "Observed election results recorded after the 2022 election."
-pop_treatment_footnote <- "Observed phone call campaign status from actual campaign data."
-pop_covariates_footnote <- "Covariates drawn from voter file demographics and campaign records."
+pop_title_footnote <- "..."
+pop_units_footnote <- "..."
+pop_outcome_footnote <- "..."
+pop_treatment_footnote <- "..."
+pop_covariates_footnote <- "..."
+
+p_tibble <- tibble::tribble(
+  ~`Senator`           , ~`Session Year`     , ~`Support Bill`     , ~`Oppose Bill`      , ~`Lobbying Contact` , ~`Senator Age`      ,
+  "..."                , "..."               , "..."               , "..."               , "..."               , "..."               ,
+  "..."                , "..."               , "..."               , "..."               , "..."               , "..."               ,
+  "..."                , "..."               , "..."               , "..."               , "..."               , "..."               
+)
+
+d_tibble <- tibble::tribble(
+  ~`Senator`           , ~`Session Year`     , ~`Support Bill`     , ~`Oppose Bill`      , ~`Lobbying Contact` , ~`Senator Age`      ,
+  "..."                , "..."               , "..."               , "..."               , "..."               , "..."               ,
+  "..."                , "..."               , "..."               , "..."               , "..."               , "..."               ,
+  "..."                , "..."               , "..."               , "..."               , "..."               , "..."               
+)
 ```
 
 ### 2. Preceptor Table
 
 ```{r}
-# Use "?" for unknowns in Preceptor Table rows
-p_tibble <- tibble::tribble(
-  ~`Senator`, ~`Time/Year`, ~`Potential Outcomes 1`, ~`Potential Outcomes 2`, ~`Phone Call`, ~`Sex`, ~`Age`, ~`Other`,
- "John Smith",   "2025", "?", "Not Re-elected", "Yes", "Male", "58", "...",
-  "Jane Doe",     "2025", "?", "Not Re-elected", "No",  "Female", "49", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...",
-  "Chris Lee",    "2025", "Re-elected", "?", "No",  "Male", "55", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...",
-)
-```
+p_tibble_full <- expand_input_tibble(list(p_tibble), "preceptor")
 
-### 3. Population Table (Includes Preceptor Rows)
-
-```{r}
-d_tibble <- tibble::tribble(
-  ~`Source`, ~`Senator`, ~`Time/Year`, ~`Potential Outcomes 1`, ~`Potential Outcomes 2`, ~`Phone Call`, ~`Sex`, ~`Age`, ~`Other`,
-  "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Data", "Mary Jackson",   "2021", "Re-elected", "---", "Yes", "Female", "51", "...",
-  "Data", "Alex Johnson",     "2022", "---", "Not Re-elected", "Yes", "Male", "46", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Data", "Bobby Norris",    "2022", "Re-elected", "---", "No", "Male", "63", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  # Add Preceptor rows
-  "Preceptor Table", "John Smith",   "2025", "?", "Not Re-elected", "Yes", "Male", "58", "...",
-  "Preceptor Table", "Jane Doe",     "2025", "?", "Not Re-elected", "No",  "Female", "49", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "...",
-  "Preceptor Table", "Chris Lee",    "2025", "Re-elected", "?", "No",  "Male", "55", "...",
-  "...", "...", "...", "...", "...", "...", "...", "...", "..."
-)
-```
-
-### 4. Rendering Tables
-
-```{r}
-# Preceptor Table
-gt::gt(data = p_tibble) |>
+gt::gt(p_tibble_full) |>
   gt::tab_header(title = "Preceptor Table") |>
-  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Senator`, `Year`)) |>
-  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Potential Outcomes 1`, `Potential Outcomes 2`)) |>
-  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Phone Call`)) |>
-  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Sex`, `Age`)) |>
-  gt::cols_align("center", columns = gt::everything()) |>
-  gt::cols_align("left", columns = `Senator`) |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(pre_title_footnote, locations = gt::cells_title("title")) |>
-  gt::tab_footnote(pre_units_footnote, locations = gt::cells_column_spanners("unit_span")) |>
-  gt::tab_footnote(pre_outcome_footnote, locations = gt::cells_column_spanners("outcome_span")) |>
-  gt::tab_footnote(pre_treatment_footnote, locations = gt::cells_column_spanners("treatment_span")) |>
-  gt::tab_footnote(pre_covariates_footnote, locations = gt::cells_column_spanners("covariates_span"))
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Senator`, `Session Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Support Bill`, `Oppose Bill`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Lobbying Contact`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Senator Age`, "More")) |>
+  gt::cols_align(align = "center", columns = gt::everything()) |>
+  gt::cols_align(align = "left", columns = c(`Senator`)) |>
+  gt::cols_width(
+    "Senator" ~ gt::px(100), 
+    "Session Year" ~ gt::px(120), 
+    "Support Bill" ~ gt::px(120), 
+    "Oppose Bill" ~ gt::px(120), 
+    "Lobbying Contact" ~ gt::px(120), 
+    "Senator Age" ~ gt::px(120), 
+    "More" ~ gt::px(60)
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(size = gt::px(14)),
+    locations = gt::cells_body()
+  ) |>
+  gt::tab_style(
+    style = list(
+      gt::cell_text(size = gt::px(14), weight = "bold"),
+      gt::cell_borders(sides = "bottom", weight = gt::px(2))
+    ),
+    locations = gt::cells_column_labels()
+  ) |>
+  gt::tab_options(
+    table.font.size = gt::px(14),
+    data_row.padding = gt::px(12),
+    column_labels.padding = gt::px(12),
+    row_group.padding = gt::px(12),
+    table.width = gt::pct(100),
+    table.margin.left = gt::px(0),
+    table.margin.right = gt::px(0)
+  ) |>
+  gt::fmt_markdown(columns = gt::everything())
 ```
 
+### 3. Population Table
+
 ```{r}
-# Population Table
-gt::gt(data = d_tibble) |>
+# Create full data tibble with 4 rows (3 content, 1 blank in 3rd position)
+data_tibble <- dplyr::bind_rows(
+  d_tibble[1:2, , drop = FALSE],  # First 2 data rows
+  d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ "...")),  # Blank row
+  d_tibble[3, , drop = FALSE]     # Last data row
+) |>
+  dplyr::mutate(Source = "Data", .before = 1)
+
+# Create preceptor tibble from p_tibble_full (remove More column, add Source)
+preceptor_tibble <- p_tibble_full |>
+  dplyr::select(-More) |>
+  dplyr::mutate(Source = "Preceptor", .before = 1)
+
+# Create the 11-row population table structure manually
+# Row structure: blank, 4 data (3rd blank), blank, 4 preceptor (3rd blank), blank
+
+# Create empty row template
+empty_row <- data_tibble[1, , drop = FALSE]
+empty_row[,] <- "..."
+
+# Build the 11-row structure
+population_tibble <- dplyr::bind_rows(
+  empty_row,              # Row 1: blank
+  data_tibble,            # Rows 2-5: 4 data rows (3rd is blank)
+  empty_row,              # Row 6: blank  
+  preceptor_tibble,       # Rows 7-10: 4 preceptor rows (3rd is blank)
+  empty_row               # Row 11: blank
+)
+
+# Add More column
+population_tibble$More <- "..."
+
+gt::gt(population_tibble) |>
   gt::tab_header(title = "Population Table") |>
-  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Senator`, `Time/Year`)) |>
-  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Potential Outcomes 1`, `Potential Outcomes 2`)) |>
-  gt::tab_spanner(label = "Phone Call", id = "treatment_span", columns = c(`Phone Call`)) |>
-  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Sex`, `Age`)) |>
-  gt::cols_align("center", columns = gt::everything()) |>
-  gt::cols_align("left", columns = `Senator`) |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(pop_title_footnote, locations = gt::cells_title("title")) |>
-  gt::tab_footnote(pop_units_footnote, locations = gt::cells_column_spanners("unit_span")) |>
-  gt::tab_footnote(pop_outcome_footnote, locations = gt::cells_column_spanners("outcome_span")) |>
-  gt::tab_footnote(pop_treatment_footnote, locations = gt::cells_column_spanners("treatment_span")) |>
-  gt::tab_footnote(pop_covariates_footnote, locations = gt::cells_column_spanners("covariates_span"))
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Source`, `Senator`, `Session Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Support Bill`, `Oppose Bill`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Lobbying Contact`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Senator Age`, "More")) |>
+  gt::cols_align(align = "center", columns = gt::everything()) |>
+  gt::cols_align(align = "left", columns = c(`Senator`)) |>
+  gt::cols_width(
+    "Source" ~ gt::px(80), 
+    "Senator" ~ gt::px(100), 
+    "Session Year" ~ gt::px(120), 
+    "Support Bill" ~ gt::px(120), 
+    "Oppose Bill" ~ gt::px(120), 
+    "Lobbying Contact" ~ gt::px(120), 
+    "Senator Age" ~ gt::px(120), 
+    "More" ~ gt::px(60)
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(size = gt::px(14)),
+    locations = gt::cells_body()
+  ) |>
+  gt::tab_style(
+    style = list(
+      gt::cell_text(size = gt::px(14), weight = "bold"),
+      gt::cell_borders(sides = "bottom", weight = gt::px(2))
+    ),
+    locations = gt::cells_column_labels()
+  ) |>
+  gt::tab_options(
+    table.font.size = gt::px(14),
+    data_row.padding = gt::px(12),
+    column_labels.padding = gt::px(12),
+    row_group.padding = gt::px(12),
+    table.width = gt::pct(100),
+    table.margin.left = gt::px(0),
+    table.margin.right = gt::px(0)
+  ) |>
+  gt::fmt_markdown(columns = gt::everything())
 ```
 
-### 5. Cleanup
+After filling in the tibbles and footnotes with actual data, you would see properly formatted tables with:
 
-```{r}
-rm(p_tibble, d_tibble)
-```
+- **Preceptor Table**: 4 rows (3 content + 1 blank) with a "More" column
+- **Population Table**: 11 rows with proper separation between data and preceptor sections
+- **Column alignment**: Easy-to-edit tribble format with aligned columns
+- **Source labeling**: Clear distinction between "Data" and "Preceptor" rows
+
+---
+
+## Table Structure Details
+
+### Preceptor Table
+- Uses `p_tibble` as input (3 rows of placeholders)
+- Automatically adds a blank third row and "More" column via `expand_input_tibble()`
+- Results in 4 total rows for the final table
+
+### Population Table  
+- Uses `d_tibble` for data input (3 rows of placeholders)
+- Creates 4 data rows (3 content + 1 blank in 3rd position)
+- Uses the expanded preceptor table (4 rows) 
+- Combines into 11-row structure: blank + 4 data + blank + 4 preceptor + blank
+- All rows are properly labeled in the Source column
+
+### Column Alignment
+The tribble code is formatted with aligned columns to make editing easier:
+- Headers and values are padded to align vertically
+- Minimum column width accommodates the `"..."` placeholder
+- Makes it easy to see which column you're editing
 
 ---
 
@@ -298,14 +377,13 @@ rm(p_tibble, d_tibble)
 The `make_p_tables()` function simplifies the creation of interpretable, spanner-labeled tables for modeling workflows. It promotes clarity, transparency, and rigor by encouraging authors to:
 
 * Replace placeholders with meaningful values
-* Use `"?"` or `"---"` for unknowns in pre/post data
+* Use proper formatting with double quotes around all entries
 * Fill in footnotes with useful context
-* Ensure every table entry is surrounded by double quotes
+* Take advantage of the aligned column structure for easy editing
+* Understand the automatic row and column additions during rendering
 
 This workflow supports better modeling documentation and instructional design.
 
 For more on how and why to use these tables, see:
 
 * [The Cardinal Virtues](https://ppbds.github.io/primer.tutorials/articles/cardinal_virtues.html#preceptor-table) article from *primer.tutorials*
-
-
