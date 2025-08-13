@@ -76,26 +76,19 @@ expand_input_tibble <- function(x, type, source = FALSE) {
     if (length(x) != 1) stop("For 'preceptor', x must be a list of length 1.")
     tib <- x[[1]]
     
-    # For a 3-row tibble, insert a new row between row 2 and row 3 (the last row)
-    # This new row should be filled with "..."
     if (nrow(tib) >= 3) {
-      # Create a new row filled with "..."
-      new_row <- tib[1, , drop = FALSE]  # Use first row as template
-      new_row[,] <- "..."  # Fill all columns with "..."
+      new_row <- tib[1, , drop = FALSE]
+      new_row[,] <- "..."
       
-      # Insert the new row between the second-to-last and last row
-      # For a 3-row table, this means between row 2 and row 3
       tib_expanded <- dplyr::bind_rows(
-        tib[1:(nrow(tib)-1), ],  # All rows except the last
-        new_row,                 # New row with "..."
-        tib[nrow(tib), ]         # The last row
+        tib[1:(nrow(tib)-1), ],
+        new_row,
+        tib[nrow(tib), ]
       )
     } else {
-      # If somehow less than 3 rows, just keep as is
       tib_expanded <- tib
     }
     
-    # Add 'More' column filled with "..."
     tib_expanded$More <- "..."
     
     return(tib_expanded)
@@ -103,41 +96,41 @@ expand_input_tibble <- function(x, type, source = FALSE) {
   } else if (type == "population") {
     if (length(x) != 2) stop("For 'population', x must be a list of length 2.")
     
-    # Function to expand a single tibble (data or preceptor)
-    expand_one <- function(tib) {
-      # Insert a row between second-to-last and last row filled with "..."
-      if (nrow(tib) >= 3) {
-        new_row <- tib[1, , drop = FALSE]
-        new_row[,] <- "..."
-        
-        expanded <- dplyr::bind_rows(
-          tib[1:(nrow(tib)-1), ],
-          new_row,
-          tib[nrow(tib), ]
-        )
-      } else {
-        expanded <- tib
-      }
-      return(expanded)
-    }
+    data_tibble <- x[[1]]    # Should be 2 rows from d_tibble
+    preceptor_tibble <- x[[2]] # Should be 4 rows from p_tibble_full (without More column)
     
-    tib1 <- expand_one(x[[1]])  # Data tibble
-    tib2 <- expand_one(x[[2]])  # Preceptor tibble
+    # Create empty row template
+    empty_row <- data_tibble[1, , drop = FALSE]
+    empty_row[,] <- "..."
     
-    # Create empty row with same columns filled with NA
-    empty_row <- tib1[1, , drop = FALSE]
-    empty_row[,] <- NA_character_
+    # Build the 11-row structure:
+    # Row 1: blank (all "...")
+    # Rows 2-3: data rows (2 rows)
+    # Row 4: blank ("..." in all columns)
+    # Rows 5-8: preceptor rows (4 rows, already has "..." in 3rd position)
+    # Row 9: blank (all "...")
     
-    # Combine with empty rows: blank, data, blank, preceptor, blank
-    combined <- dplyr::bind_rows(
-      empty_row,    # blank row
-      tib1,         # data rows (expanded)
-      empty_row,    # blank row  
-      tib2,         # preceptor rows (expanded)
-      empty_row     # blank row
+    # For data section: 2 data rows + 1 blank + 1 more blank = 4 rows total
+    data_section <- dplyr::bind_rows(
+      data_tibble[1, ],  # First data row
+      data_tibble[2, ],  # Second data row  
+      empty_row,         # Blank row
+      empty_row          # Another blank to match preceptor structure
     )
     
-    # Add 'More' column filled with "..."
+    # Preceptor section is already 4 rows from p_tibble_full
+    preceptor_section <- preceptor_tibble
+    
+    # Combine: blank + data(4) + blank + preceptor(4) + blank = 11 rows
+    combined <- dplyr::bind_rows(
+      empty_row,          # Row 1: blank
+      data_section,       # Rows 2-5: data section (2 data + 2 blank)
+      empty_row,          # Row 6: blank  
+      preceptor_section,  # Rows 7-10: preceptor section (4 rows)
+      empty_row           # Row 11: blank
+    )
+    
+    # Add More column
     combined$More <- "..."
     
     return(combined)
