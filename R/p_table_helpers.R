@@ -137,7 +137,7 @@ expand_input_tibble <- function(x, type, source = FALSE) {
       data_tibble[1, ],  # First data row
       data_tibble[2, ],  # Second data row  
       empty_row,         # Blank row
-      empty_row          # Another blank to match preceptor structure
+      data_tibble[3, ]   # Third data row
     )
     
     # Preceptor section is already 4 rows from p_tibble_full
