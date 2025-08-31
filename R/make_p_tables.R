@@ -154,26 +154,6 @@ gt::gt(p_tibble_full) |>
     width_assignments <- paste0('\"', all_cols_with_more, '\" ~ gt::px(', widths[!is.null(widths)], ')', collapse = \", \")
     width_assignments
   }) |>
-  gt::tab_style(
-    style = gt::cell_text(size = gt::px(14)),
-    locations = gt::cells_body()
-  ) |>
-  gt::tab_style(
-    style = list(
-      gt::cell_text(size = gt::px(14), weight = \"bold\"),
-      gt::cell_borders(sides = \"bottom\", weight = gt::px(2))
-    ),
-    locations = gt::cells_column_labels()
-  ) |>
-  gt::tab_options(
-    table.font.size = gt::px(14),
-    data_row.padding = gt::px(12),
-    column_labels.padding = gt::px(12),
-    row_group.padding = gt::px(12),
-    table.width = gt::pct(100),
-    table.margin.left = gt::px(0),
-    table.margin.right = gt::px(0)
-  ) |>
   gt::fmt_markdown(columns = gt::everything()) |>
   gt::tab_footnote(footnote = pre_title_footnote, locations = gt::cells_title()) |>
   gt::tab_footnote(footnote = pre_units_footnote, locations = gt::cells_column_spanners(spanners = \"unit_span\")) |>
@@ -226,26 +206,6 @@ gt::gt(population_tibble) |>
     width_assignments <- paste0('\"', all_cols_with_more, '\" ~ gt::px(', widths[!is.null(widths)], ')', collapse = \", \")
     width_assignments
   }) |>
-  gt::tab_style(
-    style = gt::cell_text(size = gt::px(14)),
-    locations = gt::cells_body()
-  ) |>
-  gt::tab_style(
-    style = list(
-      gt::cell_text(size = gt::px(14), weight = \"bold\"),
-      gt::cell_borders(sides = \"bottom\", weight = gt::px(2))
-    ),
-    locations = gt::cells_column_labels()
-  ) |>
-  gt::tab_options(
-    table.font.size = gt::px(14),
-    data_row.padding = gt::px(12),
-    column_labels.padding = gt::px(12),
-    row_group.padding = gt::px(12),
-    table.width = gt::pct(100),
-    table.margin.left = gt::px(0),
-    table.margin.right = gt::px(0)
-  ) |>
   gt::fmt_markdown(columns = gt::everything()) |>
   gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title()) |>
   gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = \"unit_span\")) |>
