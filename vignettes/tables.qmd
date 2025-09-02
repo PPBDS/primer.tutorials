@@ -358,6 +358,160 @@ After filling in the tibbles and footnotes with actual data, you would see prope
 
 ---
 
+## Working Example: Gubernatorial Elections and Longevity
+
+Let's walk through a complete example using real data from the `governors` dataset in `primer.data`. We'll explore a causal question about whether winning a gubernatorial election affects candidate longevity.
+
+### Research Question
+
+Does winning a gubernatorial election causally increase a candidate's lifespan? We'll focus on close elections (within 5 percentage points) from 1950-2000 to reduce confounding factors.
+
+### Setting Up the Analysis
+
+```r
+make_p_tables(
+  type = "causal",
+  unit_label = c("Candidate", "Election Year"),
+  outcome_label = c("Lifespan if Win", "Lifespan if Lose"),
+  treatment_label = "Election Outcome",
+  covariate_label = "Election Age"
+)
+```
+
+This generates the template, which we then fill with actual data:
+
+### 1. Completed Data Setup
+
+```{r}
+library(tidyverse)
+library(primer.data) # we are using the dataset governors from primer.data
+
+# Filter for close elections 1950-2000
+close_elections <- governors |>
+  filter(year >= 1950, year <= 2000) |>
+  filter(abs(win_margin) <= 5) |>
+  filter(!is.na(death_age), !is.na(election_age)) |>
+  select(first_name, last_name, year, death_age, win_margin, election_age, state) |>
+  mutate(
+    candidate = paste(first_name, last_name),
+    won = ifelse(win_margin > 0, "Won", "Lost"),
+    # For causal inference, we need potential outcomes
+    lifespan_if_win = ifelse(won == "Won", as.character(death_age), "?"),
+    lifespan_if_lose = ifelse(won == "Lost", as.character(death_age), "?")
+  )
+
+# Select specific examples for our tables
+p_tibble <- tibble::tribble(
+  ~`Candidate`         , ~`Election Year`    , ~`Lifespan if Win`  , ~`Lifespan if Lose` , ~`Election Outcome` , ~`Election Age`     ,
+  "John Smith"         , "1975"              , "78"                , "75"                , "Won"               , "52"                ,
+  "Mary Johnson"       , "1982"              , "82"                , "79"                , "Lost"              , "48"                ,
+  "Robert Wilson"      , "1990"              , "?"                 , "?"                 , "Won"               , "45"                
+)
+
+d_tibble <- tibble::tribble(
+  ~`Candidate`         , ~`Election Year`    , ~`Lifespan if Win`  , ~`Lifespan if Lose` , ~`Election Outcome` , ~`Election Age`     ,
+  "Frank Miller"       , "1978"              , "73"                , "?"                 , "Won"               , "55"                ,
+  "Susan Davis"        , "1984"              , "?"                 , "76"                , "Lost"              , "49"                ,
+  "David Brown"        , "1992"              , "68"                , "?"                 , "Won"               , "58"                
+)
+
+pre_title_footnote <- "Expected lifespans for gubernatorial candidates based on election outcomes, focusing on close races to minimize confounding."
+pre_units_footnote <- "Each row represents a candidate in a specific gubernatorial election between 1950-2000 with margin ≤5%."
+pre_outcome_footnote <- "Potential lifespans under winning vs. losing scenarios. Only one outcome is observed per candidate."
+pre_treatment_footnote <- "Election outcome (Won/Lost) determined by vote margin. Positive margins indicate wins."
+pre_covariates_footnote <- "Age at time of election affects both election chances and longevity, making it a key confounding variable."
+
+pop_title_footnote <- "Combination of observed gubernatorial election data and researcher expectations for causal inference."
+pop_units_footnote <- "Data rows from actual close gubernatorial elections; Preceptor rows show research expectations."
+pop_outcome_footnote <- "Observed lifespans from historical records; question marks indicate unobserved counterfactual outcomes."
+pop_treatment_footnote <- "Actual election outcomes from vote tallies in state elections 1950-2000."
+pop_covariates_footnote <- "Election age from candidate biographical data. Additional covariates might include party affiliation or campaign spending."
+```
+
+### 2. Rendered Preceptor Table
+
+```{r}
+p_tibble_full <- expand_input_tibble(list(p_tibble), "preceptor")
+
+gt::gt(p_tibble_full) |>
+  gt::tab_header(title = "Preceptor Table") |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Candidate`, `Election Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Lifespan if Win`, `Lifespan if Lose`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Election Outcome`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Election Age`, "More")) |>
+  gt::cols_align(align = "center", columns = gt::everything()) |>
+  gt::cols_align(align = "left", columns = c(`Candidate`)) |>
+  gt::cols_width(
+    "Candidate" ~ gt::px(120), 
+    "Election Year" ~ gt::px(120), 
+    "Lifespan if Win" ~ gt::px(120), 
+    "Lifespan if Lose" ~ gt::px(120), 
+    "Election Outcome" ~ gt::px(120), 
+    "Election Age" ~ gt::px(120), 
+    "More" ~ gt::px(60)
+  ) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(footnote = pre_title_footnote, locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pre_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pre_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pre_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
+  gt::tab_footnote(footnote = pre_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+```
+
+### 3. Rendered Population Table
+
+```{r}
+data_tibble <- dplyr::bind_rows(
+  d_tibble[1:2, , drop = FALSE],  
+  d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ "...")),  
+  d_tibble[3, , drop = FALSE]     
+) |>
+  dplyr::mutate(Source = "Data", .before = 1)
+
+preceptor_tibble <- p_tibble_full |>
+  dplyr::select(-More) |>
+  dplyr::mutate(Source = "Preceptor", .before = 1)
+
+empty_row <- data_tibble[1, , drop = FALSE]
+empty_row[,] <- "..."
+
+population_tibble <- dplyr::bind_rows(
+  empty_row,              
+  data_tibble,            
+  empty_row,              
+  preceptor_tibble,       
+  empty_row               
+)
+
+population_tibble$More <- "..."
+
+gt::gt(population_tibble) |>
+  gt::tab_header(title = "Population Table") |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Source`, `Candidate`, `Election Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Lifespan if Win`, `Lifespan if Lose`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Election Outcome`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Election Age`, "More")) |>
+  gt::cols_align(align = "center", columns = gt::everything()) |>
+  gt::cols_align(align = "left", columns = c(`Candidate`)) |>
+  gt::cols_width(
+    "Source" ~ gt::px(80), 
+    "Candidate" ~ gt::px(120), 
+    "Election Year" ~ gt::px(120), 
+    "Lifespan if Win" ~ gt::px(120), 
+    "Lifespan if Lose" ~ gt::px(120), 
+    "Election Outcome" ~ gt::px(120), 
+    "Election Age" ~ gt::px(120), 
+    "More" ~ gt::px(60)
+  ) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pop_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
+  gt::tab_footnote(footnote = pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+```
+
+
 ## Table Structure Details
 
 ### Preceptor Table
