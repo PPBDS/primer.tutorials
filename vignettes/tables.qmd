@@ -134,6 +134,46 @@ Each of these labels should be understood as **descriptive display names**, not 
 
 ---
 
+## Helper Functions
+
+The `make_p_tables()` function relies on two key helper functions that handle the generation and formatting of the table templates:
+
+### `write_input_tribble()`
+
+This function generates properly formatted `tibble::tribble()` code with aligned columns for easy manual editing:
+
+* **Purpose**: Creates a character string representing R code for a tribble with placeholder values (`"..."`)
+* **Input**: Character vector of column names
+* **Output**: Formatted tribble code with columns aligned under their headers
+* **Key Feature**: Calculates appropriate spacing so that column values align vertically, making it easier to see which column you're editing
+
+The function ensures that:
+- Column headers are wrapped in backticks and prefixed with `~`
+- All placeholder values are `"..."` 
+- Column widths accommodate both header names and placeholder text
+- The resulting code is properly formatted for insertion into Quarto documents
+
+### `expand_input_tibble()`
+
+This function processes the user-filled tibbles to add missing structural elements before rendering:
+
+* **Purpose**: Adds missing rows and the "More" column to create the final table structure
+* **Input**: List of tibbles, table type ("preceptor" or "population"), and source column option
+* **Output**: A single expanded tibble ready for `gt` rendering
+
+For **Preceptor Tables**:
+- Ensures at least 4 rows by adding a blank row in the third position
+- Adds a "More" column filled with `"..."`
+
+For **Population Tables**:
+- Creates the 11-row structure with proper spacing
+- Combines data and preceptor sections with blank rows
+- Handles the "Source" column labeling ("Data" vs "Preceptor")
+
+This function ensures that the final rendered tables have consistent structure regardless of how much data the user initially provides in their tibbles.
+
+---
+
 ## Understanding the Footnotes
 
 Footnotes in these tables are not decorative — they are an essential part of **documenting analytical intent**. When you use `make_p_tables()`, it generates editable placeholders for ten footnotes, five for each table. These can be filled in or deleted, and they appear in the rendered table using `gt::tab_footnote()`.
@@ -193,18 +233,8 @@ The following chunks are inserted:
 ### 1. Footnotes and Data Setup
 
 ```{r}
-pre_title_footnote <- "..."
-pre_units_footnote <- "..."
-pre_outcome_footnote <- "..."
-pre_treatment_footnote <- "..."
-pre_covariates_footnote <- "..."
-
-pop_title_footnote <- "..."
-pop_units_footnote <- "..."
-pop_outcome_footnote <- "..."
-pop_treatment_footnote <- "..."
-pop_covariates_footnote <- "..."
-
+# Edit the following tibbles and footnotes, look at the vignette for more details
+  
 p_tibble <- tibble::tribble(
   ~`Senator`           , ~`Session Year`     , ~`Support Bill`     , ~`Oppose Bill`      , ~`Lobbying Contact` , ~`Senator Age`      ,
   "..."                , "..."               , "..."               , "..."               , "..."               , "..."               ,
@@ -218,11 +248,25 @@ d_tibble <- tibble::tribble(
   "..."                , "..."               , "..."               , "..."               , "..."               , "..."               ,
   "..."                , "..."               , "..."               , "..."               , "..."               , "..."               
 )
+  
+pre_title_footnote <- "..."
+pre_units_footnote <- "..."
+pre_outcome_footnote <- "..."
+pre_treatment_footnote <- "..."
+pre_covariates_footnote <- "..."
+
+pop_title_footnote <- "..."
+pop_units_footnote <- "..."
+pop_outcome_footnote <- "..."
+pop_treatment_footnote <- "..."
+pop_covariates_footnote <- "..."
 ```
 
 ### 2. Preceptor Table
 
 ```{r}
+# This code chunk will generate the Preceptor Table
+  
 p_tibble_full <- expand_input_tibble(list(p_tibble), "preceptor")
 
 gt::gt(p_tibble_full) |>
@@ -242,53 +286,33 @@ gt::gt(p_tibble_full) |>
     "Senator Age" ~ gt::px(120), 
     "More" ~ gt::px(60)
   ) |>
-  gt::tab_style(
-    style = gt::cell_text(size = gt::px(14)),
-    locations = gt::cells_body()
-  ) |>
-  gt::tab_style(
-    style = list(
-      gt::cell_text(size = gt::px(14), weight = "bold"),
-      gt::cell_borders(sides = "bottom", weight = gt::px(2))
-    ),
-    locations = gt::cells_column_labels()
-  ) |>
-  gt::tab_options(
-    table.font.size = gt::px(14),
-    data_row.padding = gt::px(12),
-    column_labels.padding = gt::px(12),
-    row_group.padding = gt::px(12),
-    table.width = gt::pct(100),
-    table.margin.left = gt::px(0),
-    table.margin.right = gt::px(0)
-  ) |>
-  gt::fmt_markdown(columns = gt::everything())
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(footnote = pre_title_footnote, locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pre_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pre_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pre_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
+  gt::tab_footnote(footnote = pre_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
 ```
 
 ### 3. Population Table
 
 ```{r}
-# Create full data tibble with 4 rows (3 content, 1 blank in 3rd position)
+# This code chunk will generate the Population Table
+    
 data_tibble <- dplyr::bind_rows(
-  d_tibble[1:2, , drop = FALSE],  # First 2 data rows
-  d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ "...")),  # Blank row
-  d_tibble[3, , drop = FALSE]     # Last data row
+  d_tibble[1:2, , drop = FALSE],  
+  d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ "...")),  
+  d_tibble[3, , drop = FALSE]     
 ) |>
   dplyr::mutate(Source = "Data", .before = 1)
 
-# Create preceptor tibble from p_tibble_full (remove More column, add Source)
 preceptor_tibble <- p_tibble_full |>
   dplyr::select(-More) |>
   dplyr::mutate(Source = "Preceptor", .before = 1)
 
-# Create the 11-row population table structure manually
-# Row structure: blank, 4 data (3rd blank), blank, 4 preceptor (3rd blank), blank
-
-# Create empty row template
 empty_row <- data_tibble[1, , drop = FALSE]
 empty_row[,] <- "..."
 
-# Build the 11-row structure
 population_tibble <- dplyr::bind_rows(
   empty_row,              # Row 1: blank
   data_tibble,            # Rows 2-5: 4 data rows (3rd is blank)
@@ -297,7 +321,6 @@ population_tibble <- dplyr::bind_rows(
   empty_row               # Row 11: blank
 )
 
-# Add More column
 population_tibble$More <- "..."
 
 gt::gt(population_tibble) |>
@@ -318,27 +341,12 @@ gt::gt(population_tibble) |>
     "Senator Age" ~ gt::px(120), 
     "More" ~ gt::px(60)
   ) |>
-  gt::tab_style(
-    style = gt::cell_text(size = gt::px(14)),
-    locations = gt::cells_body()
-  ) |>
-  gt::tab_style(
-    style = list(
-      gt::cell_text(size = gt::px(14), weight = "bold"),
-      gt::cell_borders(sides = "bottom", weight = gt::px(2))
-    ),
-    locations = gt::cells_column_labels()
-  ) |>
-  gt::tab_options(
-    table.font.size = gt::px(14),
-    data_row.padding = gt::px(12),
-    column_labels.padding = gt::px(12),
-    row_group.padding = gt::px(12),
-    table.width = gt::pct(100),
-    table.margin.left = gt::px(0),
-    table.margin.right = gt::px(0)
-  ) |>
-  gt::fmt_markdown(columns = gt::everything())
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pop_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
+  gt::tab_footnote(footnote = pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
 ```
 
 After filling in the tibbles and footnotes with actual data, you would see properly formatted tables with:
@@ -350,11 +358,165 @@ After filling in the tibbles and footnotes with actual data, you would see prope
 
 ---
 
+## Working Example: Gubernatorial Elections and Longevity
+
+Let's walk through a complete example using real data from the `governors` dataset in `primer.data`. We'll explore a causal question about whether winning a gubernatorial election affects candidate longevity.
+
+### Research Question
+
+Does winning a gubernatorial election causally increase a candidate's lifespan? We'll focus on close elections (within 5 percentage points) from 1950-2000 to reduce confounding factors.
+
+### Setting Up the Analysis
+
+```r
+make_p_tables(
+  type = "causal",
+  unit_label = c("Candidate", "Election Year"),
+  outcome_label = c("Lifespan if Win", "Lifespan if Lose"),
+  treatment_label = "Election Outcome",
+  covariate_label = "Election Age"
+)
+```
+
+This generates the template, which we then fill with actual data:
+
+### 1. Completed Data Setup
+
+```{r}
+library(tidyverse)
+library(primer.data) # we are using the dataset governors from primer.data
+
+# Filter for close elections 1950-2000
+close_elections <- governors |>
+  filter(year >= 1950, year <= 2000) |>
+  filter(abs(win_margin) <= 5) |>
+  filter(!is.na(death_age), !is.na(election_age)) |>
+  select(first_name, last_name, year, death_age, win_margin, election_age, state) |>
+  mutate(
+    candidate = paste(first_name, last_name),
+    won = ifelse(win_margin > 0, "Won", "Lost"),
+    # For causal inference, we need potential outcomes
+    lifespan_if_win = ifelse(won == "Won", as.character(death_age), "?"),
+    lifespan_if_lose = ifelse(won == "Lost", as.character(death_age), "?")
+  )
+
+# Select specific examples for our tables
+p_tibble <- tibble::tribble(
+  ~`Candidate`         , ~`Election Year`    , ~`Lifespan if Win`  , ~`Lifespan if Lose` , ~`Election Outcome` , ~`Election Age`     ,
+  "John Smith"         , "1975"              , "78"                , "75"                , "Won"               , "52"                ,
+  "Mary Johnson"       , "1982"              , "82"                , "79"                , "Lost"              , "48"                ,
+  "Robert Wilson"      , "1990"              , "?"                 , "?"                 , "Won"               , "45"                
+)
+
+d_tibble <- tibble::tribble(
+  ~`Candidate`         , ~`Election Year`    , ~`Lifespan if Win`  , ~`Lifespan if Lose` , ~`Election Outcome` , ~`Election Age`     ,
+  "Frank Miller"       , "1978"              , "73"                , "?"                 , "Won"               , "55"                ,
+  "Susan Davis"        , "1984"              , "?"                 , "76"                , "Lost"              , "49"                ,
+  "David Brown"        , "1992"              , "68"                , "?"                 , "Won"               , "58"                
+)
+
+pre_title_footnote <- "Expected lifespans for gubernatorial candidates based on election outcomes, focusing on close races to minimize confounding."
+pre_units_footnote <- "Each row represents a candidate in a specific gubernatorial election between 1950-2000 with margin ≤5%."
+pre_outcome_footnote <- "Potential lifespans under winning vs. losing scenarios. Only one outcome is observed per candidate."
+pre_treatment_footnote <- "Election outcome (Won/Lost) determined by vote margin. Positive margins indicate wins."
+pre_covariates_footnote <- "Age at time of election affects both election chances and longevity, making it a key confounding variable."
+
+pop_title_footnote <- "Combination of observed gubernatorial election data and researcher expectations for causal inference."
+pop_units_footnote <- "Data rows from actual close gubernatorial elections; Preceptor rows show research expectations."
+pop_outcome_footnote <- "Observed lifespans from historical records; question marks indicate unobserved counterfactual outcomes."
+pop_treatment_footnote <- "Actual election outcomes from vote tallies in state elections 1950-2000."
+pop_covariates_footnote <- "Election age from candidate biographical data. Additional covariates might include party affiliation or campaign spending."
+```
+
+### 2. Rendered Preceptor Table
+
+```{r}
+p_tibble_full <- expand_input_tibble(list(p_tibble), "preceptor")
+
+gt::gt(p_tibble_full) |>
+  gt::tab_header(title = "Preceptor Table") |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Candidate`, `Election Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Lifespan if Win`, `Lifespan if Lose`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Election Outcome`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Election Age`, "More")) |>
+  gt::cols_align(align = "center", columns = gt::everything()) |>
+  gt::cols_align(align = "left", columns = c(`Candidate`)) |>
+  gt::cols_width(
+    "Candidate" ~ gt::px(120), 
+    "Election Year" ~ gt::px(120), 
+    "Lifespan if Win" ~ gt::px(120), 
+    "Lifespan if Lose" ~ gt::px(120), 
+    "Election Outcome" ~ gt::px(120), 
+    "Election Age" ~ gt::px(120), 
+    "More" ~ gt::px(60)
+  ) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(footnote = pre_title_footnote, locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pre_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pre_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pre_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
+  gt::tab_footnote(footnote = pre_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+```
+
+### 3. Rendered Population Table
+
+```{r}
+data_tibble <- dplyr::bind_rows(
+  d_tibble[1:2, , drop = FALSE],  
+  d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ "...")),  
+  d_tibble[3, , drop = FALSE]     
+) |>
+  dplyr::mutate(Source = "Data", .before = 1)
+
+preceptor_tibble <- p_tibble_full |>
+  dplyr::select(-More) |>
+  dplyr::mutate(Source = "Preceptor", .before = 1)
+
+empty_row <- data_tibble[1, , drop = FALSE]
+empty_row[,] <- "..."
+
+population_tibble <- dplyr::bind_rows(
+  empty_row,              
+  data_tibble,            
+  empty_row,              
+  preceptor_tibble,       
+  empty_row               
+)
+
+population_tibble$More <- "..."
+
+gt::gt(population_tibble) |>
+  gt::tab_header(title = "Population Table") |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Source`, `Candidate`, `Election Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Lifespan if Win`, `Lifespan if Lose`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Election Outcome`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Election Age`, "More")) |>
+  gt::cols_align(align = "center", columns = gt::everything()) |>
+  gt::cols_align(align = "left", columns = c(`Candidate`)) |>
+  gt::cols_width(
+    "Source" ~ gt::px(80), 
+    "Candidate" ~ gt::px(120), 
+    "Election Year" ~ gt::px(120), 
+    "Lifespan if Win" ~ gt::px(120), 
+    "Lifespan if Lose" ~ gt::px(120), 
+    "Election Outcome" ~ gt::px(120), 
+    "Election Age" ~ gt::px(120), 
+    "More" ~ gt::px(60)
+  ) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pop_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
+  gt::tab_footnote(footnote = pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+```
+
+
 ## Table Structure Details
 
 ### Preceptor Table
 - Uses `p_tibble` as input (3 rows of placeholders)
-- Automatically adds a blank third row and "More" column via `expand_input_tibble()`
+- Processed by `expand_input_tibble()` to add a blank third row and "More" column
 - Results in 4 total rows for the final table
 
 ### Population Table  
@@ -365,7 +527,7 @@ After filling in the tibbles and footnotes with actual data, you would see prope
 - All rows are properly labeled in the Source column
 
 ### Column Alignment
-The tribble code is formatted with aligned columns to make editing easier:
+The tribble code generated by `write_input_tribble()` is formatted with aligned columns to make editing easier:
 - Headers and values are padded to align vertically
 - Minimum column width accommodates the `"..."` placeholder
 - Makes it easy to see which column you're editing
@@ -382,7 +544,7 @@ The `make_p_tables()` function simplifies the creation of interpretable, spanner
 * Take advantage of the aligned column structure for easy editing
 * Understand the automatic row and column additions during rendering
 
-This workflow supports better modeling documentation and instructional design.
+This workflow supports better modeling documentation and instructional design, with helper functions ensuring consistent formatting and structure.
 
 For more on how and why to use these tables, see:
 
