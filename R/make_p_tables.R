@@ -281,3 +281,4 @@ gt::gt(population_tibble) |>
 
   invisible(NULL)
 }
+ 
