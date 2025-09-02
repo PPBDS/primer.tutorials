@@ -154,6 +154,7 @@ gt::gt(p_tibble_full) |>
     width_assignments <- paste0('\"', all_cols_with_more, '\" ~ gt::px(', widths[!is.null(widths)], ')', collapse = \", \")
     width_assignments
   }) |>
+  gt::cols_label(More = \"...\") |>
   gt::fmt_markdown(columns = gt::everything()) |>
   gt::tab_footnote(footnote = pre_title_footnote, locations = gt::cells_title()) |>
   gt::tab_footnote(footnote = pre_units_footnote, locations = gt::cells_column_spanners(spanners = \"unit_span\")) |>
@@ -206,6 +207,7 @@ gt::gt(population_tibble) |>
     width_assignments <- paste0('\"', all_cols_with_more, '\" ~ gt::px(', widths[!is.null(widths)], ')', collapse = \", \")
     width_assignments
   }) |>
+  gt::cols_label(More = \"...\") |>
   gt::fmt_markdown(columns = gt::everything()) |>
   gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title()) |>
   gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = \"unit_span\")) |>
@@ -254,6 +256,7 @@ gt::gt(population_tibble) |>
     width_assignments <- paste0('\"', all_cols_with_more, '\" ~ gt::px(', widths[!is.null(widths)], ')', collapse = \", \")
     width_assignments
   }) |>
+  gt::cols_label(More = \"...\") |>
   gt::fmt_markdown(columns = gt::everything()) |>
   gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title()) |>
   gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = \"unit_span\")) |>
