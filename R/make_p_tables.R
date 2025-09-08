@@ -93,9 +93,6 @@ make_p_tables <- function(
 
   # Both p_tibble and d_tibble use the same columns (no Source column yet)
   all_cols <- c(unit_label, outcome_label, treatment_label, covariate_label)
- 
-  # Source column only added during population table rendering
-  pop_unit_cols <- if (source_col) c("Source", unit_label) else unit_label
 
   # Generate tribble code using helper function
   p_tribble_code <- write_input_tribble(all_cols)
@@ -164,7 +161,7 @@ gt::gt(p_tibble_full) |>
 ```"
   )
 
-  # Population table code - fixed to show all 4 data rows and proper structure
+  # Population table code - fixed to keep Source column separate from spanners
   if (source_col) {
     code_pop_table <- glue::glue(
       "```{{r}}
@@ -196,14 +193,14 @@ population_tibble$More <- \"...\"
 
 gt::gt(population_tibble) |>
   gt::tab_header(title = \"Population Table\") |>
-  gt::tab_spanner(label = \"Unit/Time\", id = \"unit_span\", columns = c({glue_cols(pop_unit_cols)})) |>
+  gt::tab_spanner(label = \"Unit/Time\", id = \"unit_span\", columns = c({glue_cols(unit_label)})) |>
   gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_label)})) |>
   gt::tab_spanner(label = \"Treatment\", id = \"treatment_span\", columns = c({glue_cols(treatment_label)})) |>
   gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)}, \"More\")) |>
   gt::cols_align(align = \"center\", columns = gt::everything()) |>
   gt::cols_align(align = \"left\", columns = c(`{unit_label[1]}`)) |>
   gt::cols_width({
-    all_cols_with_more <- c(pop_unit_cols, outcome_label, treatment_label, covariate_label, \"More\")
+    all_cols_with_more <- c(\"Source\", unit_label, outcome_label, treatment_label, covariate_label, \"More\")
     width_assignments <- paste0('\"', all_cols_with_more, '\" ~ gt::px(', widths[!is.null(widths)], ')', collapse = \", \")
     width_assignments
   }) |>
@@ -243,26 +240,40 @@ population_tibble <- dplyr::bind_rows(
 
 population_tibble$More <- \"...\"
 
-gt::gt(population_tibble) |>
+pop_table <- gt::gt(population_tibble) |>
   gt::tab_header(title = \"Population Table\") |>
-  gt::tab_spanner(label = \"Unit/Time\", id = \"unit_span\", columns = c({glue_cols(pop_unit_cols)})) |>
+  gt::tab_spanner(label = \"Unit/Time\", id = \"unit_span\", columns = c({glue_cols(unit_label)})) |>
   gt::tab_spanner(label = \"Potential Outcomes\", id = \"outcome_span\", columns = c({glue_cols(outcome_label)})) |>
   gt::tab_spanner(label = \"Treatment\", id = \"treatment_span\", columns = c({glue_cols(treatment_label)})) |>
   gt::tab_spanner(label = \"Covariates\", id = \"covariates_span\", columns = c({glue_cols(covariate_label)}, \"More\")) |>
   gt::cols_align(align = \"center\", columns = gt::everything()) |>
   gt::cols_align(align = \"left\", columns = c(`{unit_label[1]}`)) |>
   gt::cols_width({
-    all_cols_with_more <- c(pop_unit_cols, outcome_label, treatment_label, covariate_label, \"More\")
+    all_cols_with_more <- c(unit_label, outcome_label, treatment_label, covariate_label, \"More\")
     width_assignments <- paste0('\"', all_cols_with_more, '\" ~ gt::px(', widths[!is.null(widths)], ')', collapse = \", \")
     width_assignments
   }) |>
   gt::cols_label(More = \"...\") |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title()) |>
-  gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = \"unit_span\")) |>
-  gt::tab_footnote(footnote = pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = \"outcome_span\")) |>
-  gt::tab_footnote(footnote = pop_treatment_footnote, locations = gt::cells_column_spanners(spanners = \"treatment_span\")) |>
-  gt::tab_footnote(footnote = pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = \"covariates_span\"))
+  gt::fmt_markdown(columns = gt::everything())
+
+# Add footnotes only if they have content
+if (!is.null(pop_title_footnote)) {{
+  pop_table <- pop_table |> gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title())
+}}
+if (!is.null(pop_units_footnote)) {{
+  pop_table <- pop_table |> gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = \"unit_span\"))
+}}
+if (!is.null(pop_outcome_footnote)) {{
+  pop_table <- pop_table |> gt::tab_footnote(footnote = pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = \"outcome_span\"))
+}}
+if (!is.null(pop_treatment_footnote)) {{
+  pop_table <- pop_table |> gt::tab_footnote(footnote = pop_treatment_footnote, locations = gt::cells_column_spanners(spanners = \"treatment_span\"))
+}}
+if (!is.null(pop_covariates_footnote)) {{
+  pop_table <- pop_table |> gt::tab_footnote(footnote = pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = \"covariates_span\"))
+}}
+
+pop_table
 ```"
     )
   }
@@ -281,4 +292,3 @@ gt::gt(population_tibble) |>
 
   invisible(NULL)
 }
- 
