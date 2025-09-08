@@ -180,9 +180,7 @@ This function ensures that the final rendered tables have consistent structure r
 
 ## Understanding the Footnotes
 
-Footnotes in these tables are not decorative — they are an essential part of **documenting analytical intent**. When you use `make_p_tables()`, it generates editable placeholders for ten footnotes, five for each table. These can be filled in or deleted, and they appear in the rendered table using `gt::tab_footnote()`.
-
-Below is a guide to what each footnote is for:
+Footnotes in these tables document your analytical assumptions and connect to the **cardinal virtues** of data science. When you use `make_p_tables()`, it generates editable placeholders for ten footnotes, five for each table.
 
 ---
 
@@ -190,33 +188,31 @@ Below is a guide to what each footnote is for:
 
 * **`pre_title_footnote`**: Make clear the question we are trying to answer. That question helps to define the universe of interest.
 
-* **`pre_units_footnote`**: Clarifies the definition of a "unit" in this context — e.g., "Each row represents a senator during the 2022 election." Also helpful to include time span or location info if applicable.
+* **`pre_units_footnote`**: Defines each unit/row and connects to **stability** and **representativeness**. Explains what each row represents and any temporal/spatial scope. The missing rows (indicated by "...") represent the rest of the population from which both your data and expectations are drawn.
 
-* **`pre_outcome_footnote`**: Documents why these potential outcomes are meaningful. May include a note on how they were estimated or what they signify.
+* **`pre_outcome_footnote`**: For causal tables, connects to **validity** - explains how the potential outcomes relate to the true causal effects you want to measure. For predictive tables, simply describes the outcome variable and its measurement.
 
-* **`pre_treatment_footnote`**: Defines what the treatment actually entails and how it is operationalized. For example, a phone call campaign, assignment to tutoring, or access to a program.
+* **`pre_treatment_footnote`**: Defines the treatment and connects to **unconfoundedness**. Explains the treatment assignment mechanism and what makes it "as good as random" for causal inference.
 
-* **`pre_covariates_footnote`**: Explains why the selected covariates were chosen and their role in forming expectations. Should also clarify the "More" column purpose.
+* **`pre_covariates_footnote`**: Explains covariate selection and the "..." in the More column, indicating additional variables that might matter but aren't included.
 
 ---
 
 ### Population Table Footnotes
 
-* **`pop_title_footnote`**: Describes the purpose of the population table — usually to compare expected vs. observed outcomes, merged with preceptor rows.
+* **`pop_title_footnote`**: Describes how this table combines observed data with researcher expectations from the Preceptor Table.
 
-* **`pop_units_footnote`**: Defines what each unit represents in the population — e.g., "Each row represents an observed student or a preceptor-generated scenario."
+* **`pop_units_footnote`**: Distinguishes between Data rows (observed units) and Preceptor rows (researcher expectations), connecting to **stability** and **representativeness**. The "..." rows represent the broader population from which both are drawn.
 
-* **`pop_outcome_footnote`**: Documents the source of outcome data. For example: "Outcomes observed from the 2022 voter file" or "Final grades from school records."
+* **`pop_outcome_footnote`**: Documents data sources and measurement procedures. For causal tables, connects to **validity** by explaining how observed outcomes relate to the potential outcomes of interest.
 
-* **`pop_treatment_footnote`**: Explains how actual treatment status was observed or inferred. May differ from the assumptions made in the Preceptor Table.
+* **`pop_treatment_footnote`**: Explains how treatment was assigned or observed in the data, connecting to **unconfoundedness** assumptions about the assignment mechanism.
 
-* **`pop_covariates_footnote`**: Describes where the covariate data comes from in the population table and whether it's measured identically to the preceptor rows.
-
----
-
-These footnotes ensure that **both the data structure and the logic of your modeling assumptions are transparent** to readers. They serve as a form of embedded documentation and can be styled or omitted as needed.
+* **`pop_covariates_footnote`**: Describes covariate data sources and any measurement differences between observed data and researcher expectations.
 
 ---
+
+The key insight is that **question marks in the Preceptor Table represent the fundamental problem of causal inference** - we can never observe both potential outcomes for the same unit. These footnotes make your assumptions about this missing data explicit and connect them to the cardinal virtues that make causal inference possible: **validity**, **stability**, **representativeness**, and **unconfoundedness**.
 
 ## Examples
 
@@ -409,7 +405,7 @@ p_tibble <- tibble::tribble(
   ~`Candidate`         , ~`Election Year`    , ~`Lifespan if Win`  , ~`Lifespan if Lose` , ~`Election Outcome` , ~`Election Age`     ,
   "John Smith"         , "1975"              , "78"                , "75"                , "Won"               , "52"                ,
   "Mary Johnson"       , "1982"              , "82"                , "79"                , "Lost"              , "48"                ,
-  "Robert Wilson"      , "1990"              , "?"                 , "?"                 , "Won"               , "45"                
+  "Robert Wilson"      , "1990"              , "75"                , "81"                , "Won"               , "45"                
 )
 
 d_tibble <- tibble::tribble(
@@ -419,25 +415,27 @@ d_tibble <- tibble::tribble(
   "David Brown"        , "1992"              , "68"                , "?"                 , "Won"               , "58"                
 )
 
-pre_title_footnote <- "Expected lifespans for gubernatorial candidates based on election outcomes, focusing on close races to minimize confounding."
-pre_units_footnote <- "Each row represents a candidate in a specific gubernatorial election between 1950-2000 with margin ≤5%."
-pre_outcome_footnote <- "Potential lifespans under winning vs. losing scenarios. Only one outcome is observed per candidate."
-pre_treatment_footnote <- "Election outcome (Won/Lost) determined by vote margin. Positive margins indicate wins."
-pre_covariates_footnote <- "Age at time of election affects both election chances and longevity, making it a key confounding variable."
+pre_title_footnote <- NULL
+pre_units_footnote <- "Each row represents a candidate in a close gubernatorial election (1950-2000, margin ≤5%). Missing rows represent the broader population (stability, representativeness)."
+pre_outcome_footnote <- "Potential lifespans under winning vs. losing. Question marks show unobserved counterfactuals (validity)."
+pre_treatment_footnote <- "Election outcome determined by vote margin. Close races approximate random assignment (unconfoundedness)."
+pre_covariates_footnote <- NULL
 
-pop_title_footnote <- "Combination of observed gubernatorial election data and researcher expectations for causal inference."
-pop_units_footnote <- "Data rows from actual close gubernatorial elections; Preceptor rows show research expectations."
-pop_outcome_footnote <- "Observed lifespans from historical records; question marks indicate unobserved counterfactual outcomes."
-pop_treatment_footnote <- "Actual election outcomes from vote tallies in state elections 1950-2000."
-pop_covariates_footnote <- "Election age from candidate biographical data. Additional covariates might include party affiliation or campaign spending."
+pop_title_footnote <- NULL
+pop_units_footnote <- "Data rows: actual elections; Preceptor rows: expectations. Missing rows represent broader population (stability, representativeness)."
+pop_outcome_footnote <- "Historical lifespans; question marks show unobserved counterfactuals (validity)."
+pop_treatment_footnote <- "Election outcomes from vote tallies. Close margins approximate randomization (unconfoundedness)."
+pop_covariates_footnote <- NULL
 ```
 
 ### 2. Rendered Preceptor Table
 
 ```{r}
+# This code chunk will generate the Preceptor Table
+  
 p_tibble_full <- expand_input_tibble(list(p_tibble), "preceptor")
 
-gt::gt(p_tibble_full) |>
+p_table <- gt::gt(p_tibble_full) |>
   gt::tab_header(title = "Preceptor Table") |>
   gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Candidate`, `Election Year`)) |>
   gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Lifespan if Win`, `Lifespan if Lose`)) |>
@@ -454,44 +452,71 @@ gt::gt(p_tibble_full) |>
     "Election Age" ~ gt::px(120), 
     "More" ~ gt::px(60)
   ) |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(footnote = pre_title_footnote, locations = gt::cells_title()) |>
-  gt::tab_footnote(footnote = pre_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
-  gt::tab_footnote(footnote = pre_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
-  gt::tab_footnote(footnote = pre_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
-  gt::tab_footnote(footnote = pre_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+  gt::cols_label(More = "...") |>
+  gt::fmt_markdown(columns = gt::everything())
+
+# Add footnotes only if they have content
+if (!is.null(pre_title_footnote)) {
+  p_table <- p_table |> gt::tab_footnote(footnote = pre_title_footnote, locations = gt::cells_title())
+}
+if (!is.null(pre_units_footnote)) {
+  p_table <- p_table |> gt::tab_footnote(footnote = pre_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span"))
+}
+if (!is.null(pre_outcome_footnote)) {
+  p_table <- p_table |> gt::tab_footnote(footnote = pre_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span"))
+}
+if (!is.null(pre_treatment_footnote)) {
+  p_table <- p_table |> gt::tab_footnote(footnote = pre_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span"))
+}
+if (!is.null(pre_covariates_footnote)) {
+  p_table <- p_table |> gt::tab_footnote(footnote = pre_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+}
+
+p_table
 ```
 
 ### 3. Rendered Population Table
 
 ```{r}
+# This code chunk will generate the Population Table
+    
 data_tibble <- dplyr::bind_rows(
   d_tibble[1:2, , drop = FALSE],  
   d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ "...")),  
   d_tibble[3, , drop = FALSE]     
-) |>
-  dplyr::mutate(Source = "Data", .before = 1)
+)
 
 preceptor_tibble <- p_tibble_full |>
-  dplyr::select(-More) |>
-  dplyr::mutate(Source = "Preceptor", .before = 1)
+  dplyr::select(-More)
 
+# Create empty row template (this will have "..." in Source too)
 empty_row <- data_tibble[1, , drop = FALSE]
 empty_row[,] <- "..."
 
+# Add Source column with proper values - Data/Preceptor preserved even for "..." rows
+data_tibble_with_source <- data_tibble |>
+  dplyr::mutate(Source = "Data", .before = 1)
+
+preceptor_tibble_with_source <- preceptor_tibble |>
+  dplyr::mutate(Source = "Preceptor", .before = 1)
+
+# Create empty row with Source as "..."
+empty_row_with_source <- empty_row |>
+  dplyr::mutate(Source = "...", .before = 1)
+
 population_tibble <- dplyr::bind_rows(
-  empty_row,              
-  data_tibble,            
-  empty_row,              
-  preceptor_tibble,       
-  empty_row               
+  empty_row_with_source,              # Row 1: blank
+  data_tibble_with_source,            # Rows 2-5: 4 data rows (3rd is "..." but Source still "Data")
+  empty_row_with_source,              # Row 6: blank  
+  preceptor_tibble_with_source,       # Rows 7-10: 4 preceptor rows (3rd is "..." but Source still "Preceptor")
+  empty_row_with_source               # Row 11: blank
 )
 
 population_tibble$More <- "..."
 
-gt::gt(population_tibble) |>
+pop_table <- gt::gt(population_tibble) |>
   gt::tab_header(title = "Population Table") |>
-  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Source`, `Candidate`, `Election Year`)) |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Candidate`, `Election Year`)) |>
   gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Lifespan if Win`, `Lifespan if Lose`)) |>
   gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Election Outcome`)) |>
   gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Election Age`, "More")) |>
@@ -507,14 +532,28 @@ gt::gt(population_tibble) |>
     "Election Age" ~ gt::px(120), 
     "More" ~ gt::px(60)
   ) |>
-  gt::fmt_markdown(columns = gt::everything()) |>
-  gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title()) |>
-  gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
-  gt::tab_footnote(footnote = pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
-  gt::tab_footnote(footnote = pop_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
-  gt::tab_footnote(footnote = pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
-```
+  gt::cols_label(More = "...") |>
+  gt::fmt_markdown(columns = gt::everything())
 
+# Add footnotes only if they have content
+if (!is.null(pop_title_footnote)) {
+  pop_table <- pop_table |> gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title())
+}
+if (!is.null(pop_units_footnote)) {
+  pop_table <- pop_table |> gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span"))
+}
+if (!is.null(pop_outcome_footnote)) {
+  pop_table <- pop_table |> gt::tab_footnote(footnote = pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span"))
+}
+if (!is.null(pop_treatment_footnote)) {
+  pop_table <- pop_table |> gt::tab_footnote(footnote = pop_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span"))
+}
+if (!is.null(pop_covariates_footnote)) {
+  pop_table <- pop_table |> gt::tab_footnote(footnote = pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+}
+
+pop_table
+```
 
 ## Table Structure Details
 
