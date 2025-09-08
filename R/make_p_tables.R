@@ -18,10 +18,15 @@
 #'
 #' @param type Character. Either `"causal"` or `"predictive"`. Determines
 #'   whether potential outcomes are used (`"causal"`) or a single outcome (`"predictive"`).
+#' 
 #' @param unit_label Character. Label for the unit column (length 2).
+#' 
 #' @param outcome_label Character. Label for the outcome or potential outcomes.
+#' 
 #' @param treatment_label Character. Label for the treatment column (always required).
+#' 
 #' @param covariate_label Character. Label for the covariate column.
+#' 
 #' @param source_col Logical. Whether to include a `"Source"` column in the population table. Defaults to `TRUE`.
 #'
 #' @note
@@ -57,7 +62,7 @@
 #'   unit_label = c("Senator", "Session Year"),
 #'   outcome_label = c("Support if Contact", "Support if No Contact"),
 #'   treatment_label = "Lobbying Contact",
-#'   covariate_label = "Senator Age"
+#'   covariate_label = "Age"
 #' )
 #'
 #' # Insert predictive tables for a clinical trial measuring patient recovery

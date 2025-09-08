@@ -1,0 +1,108 @@
+---
+title: "Untitled"
+format: html
+---
+
+```{r}
+library(gt)
+library(tibble)
+library(primer.tutorials)
+```
+
+```{r}
+# Edit the following tibbles and footnotes, look at the vignette for more details
+  
+p_tibble <- tibble::tribble(
+  ~`Senator`, ~`Session Year`, ~`Support if Contact`, ~`Support if No Contact`, ~`Lobbying Contact`, ~`Senator Age`,
+  "..."     , "..."          , "..."                , "..."                   , "..."              , "..."         ,
+  "..."     , "..."          , "..."                , "..."                   , "..."              , "..."         ,
+  "..."     , "..."          , "..."                , "..."                   , "..."              , "..."         
+)
+
+d_tibble <- tibble::tribble(
+  ~`Senator`, ~`Session Year`, ~`Support if Contact`, ~`Support if No Contact`, ~`Lobbying Contact`, ~`Senator Age`,
+  "..."     , "..."          , "..."                , "..."                   , "..."              , "..."         ,
+  "..."     , "..."          , "..."                , "..."                   , "..."              , "..."         ,
+  "..."     , "..."          , "..."                , "..."                   , "..."              , "..."         
+)
+  
+pre_title_footnote <- "hello"
+pre_units_footnote <- "..."
+pre_outcome_footnote <- "..."
+pre_treatment_footnote <- NULL
+pre_covariates_footnote <- "..."
+
+pop_title_footnote <- "..."
+pop_units_footnote <- "..."
+pop_outcome_footnote <- "..."
+pop_treatment_footnote <- "..."
+pop_covariates_footnote <- "..."
+```
+
+```{r}
+# This code chunk will generate the Preceptor Table
+  
+p_tibble_full <- expand_input_tibble(list(p_tibble), "preceptor")
+
+gt::gt(p_tibble_full) |>
+  gt::tab_header(title = "Preceptor Table") |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Senator`, `Session Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Support if Contact`, `Support if No Contact`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Lobbying Contact`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Senator Age`, "More")) |>
+  gt::cols_align(align = "center", columns = gt::everything()) |>
+  gt::cols_align(align = "left", columns = c(`Senator`)) |>
+  gt::cols_width("Senator" ~ gt::px(80), "Session Year" ~ gt::px(100), "Support if Contact" ~ gt::px(120), "Support if No Contact" ~ gt::px(168), "Lobbying Contact" ~ gt::px(168), "Senator Age" ~ gt::px(128), "More" ~ gt::px(120), "Senator" ~ gt::px(60)) |>
+  gt::cols_label(More = "...") |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(footnote = pre_title_footnote, locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pre_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pre_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pre_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
+  gt::tab_footnote(footnote = pre_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+```
+
+```{r}
+# This code chunk will generate the Population Table
+    
+data_tibble <- dplyr::bind_rows(
+  d_tibble[1:2, , drop = FALSE],  
+  d_tibble[1, , drop = FALSE] |> dplyr::mutate(dplyr::across(dplyr::everything(), ~ "...")),  
+  d_tibble[3, , drop = FALSE]     
+) |>
+  dplyr::mutate(Source = "Data", .before = 1)
+
+preceptor_tibble <- p_tibble_full |>
+  dplyr::select(-More) |>
+  dplyr::mutate(Source = "Preceptor", .before = 1)
+
+empty_row <- data_tibble[1, , drop = FALSE]
+empty_row[,] <- "..."
+
+population_tibble <- dplyr::bind_rows(
+  empty_row,              # Row 1: blank
+  data_tibble,            # Rows 2-5: 4 data rows (3rd is blank)
+  empty_row,              # Row 6: blank  
+  preceptor_tibble,       # Rows 7-10: 4 preceptor rows (3rd is blank)
+  empty_row               # Row 11: blank
+)
+
+population_tibble$More <- "..."
+
+gt::gt(population_tibble) |>
+  gt::tab_header(title = "Population Table") |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span", columns = c(`Source`, `Senator`, `Session Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span", columns = c(`Support if Contact`, `Support if No Contact`)) |>
+  gt::tab_spanner(label = "Treatment", id = "treatment_span", columns = c(`Lobbying Contact`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span", columns = c(`Senator Age`, "More")) |>
+  gt::cols_align(align = "center", columns = gt::everything()) |>
+  gt::cols_align(align = "left", columns = c(`Senator`)) |>
+  gt::cols_width("Source" ~ gt::px(80), "Senator" ~ gt::px(100), "Session Year" ~ gt::px(120), "Support if Contact" ~ gt::px(168), "Support if No Contact" ~ gt::px(168), "Lobbying Contact" ~ gt::px(128), "Senator Age" ~ gt::px(120), "More" ~ gt::px(60)) |>
+  gt::cols_label(More = "...") |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_footnote(footnote = pop_title_footnote, locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pop_units_footnote, locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pop_outcome_footnote, locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pop_treatment_footnote, locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
+  gt::tab_footnote(footnote = pop_covariates_footnote, locations = gt::cells_column_spanners(spanners = "covariates_span"))
+```
