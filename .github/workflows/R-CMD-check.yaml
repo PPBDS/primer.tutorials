@@ -3,49 +3,43 @@
 # Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
+ push:
+   branches: [main, master]
+ pull_request:
+   branches: [main, master]
 
 name: R-CMD-check
 
 jobs:
-  R-CMD-check:
-    runs-on: ubuntu-latest
+ R-CMD-check:
+   runs-on: ubuntu-latest
 
-    name: ubuntu-latest (release)
-          
-    env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      R_KEEP_PKG_SOURCE: yes
-    steps:
-      - uses: actions/checkout@v4
-      
-      # Using setup-renv below makes pandoc necessary.
+   name: ubuntu-latest (release)
+         
+   env:
+     GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+     R_KEEP_PKG_SOURCE: yes
+     
+   steps:
+     - uses: actions/checkout@v4
+     
+     - uses: r-lib/actions/setup-pandoc@v2
+     
+     - uses: quarto-dev/quarto-actions/setup@v2
 
-      - uses: r-lib/actions/setup-pandoc@v2
-      
-      # Currently need to set up quarto by hand.
-      
-      - uses: quarto-dev/quarto-actions/setup@v2
+     - uses: r-lib/actions/setup-r@v2
+       with:
+         use-public-rspm: true
 
-      - uses: r-lib/actions/setup-r@v2
-        with:
-          use-public-rspm: true
+     - name: Install system dependencies for V8
+       run: |
+         sudo apt-get update
+         sudo apt-get install -y libnode-dev libv8-dev
 
-      - name: Install system dependencies for V8
-          run: |
-            sudo apt-get update
-            sudo apt-get install -y libnode-dev libv8-dev
+     - uses: r-lib/actions/setup-renv@v2
+       with:
+         cache-version: 1
+ 
+     - run: Rscript -e 'install.packages("rcmdcheck")'
 
-      # The default value of the cache-version is 1, which just uses what is there. If
-      # you want to rebuild the cache, set this to >1.
-
-      - uses: r-lib/actions/setup-renv@v2
-        with:
-          cache-version: 1
-  
-      - run: Rscript -e 'install.packages("rcmdcheck")'
-
-      - uses: r-lib/actions/check-r-package@v2
+     - uses: r-lib/actions/check-r-package@v2
