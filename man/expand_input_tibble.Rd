@@ -8,7 +8,7 @@ expand_input_tibble(x, type, source = FALSE)
 }
 \arguments{
 \item{x}{List of tibble(s). For type "preceptor", a list of length 1.
-For type "population", a list of length 2.}
+For type "population", a list of length 2 (data tibble and preceptor tibble).}
 
 \item{type}{Character string. Either "preceptor" or "population".}
 
@@ -18,33 +18,52 @@ For type "population", a list of length 2.}
 A single tibble with added missing rows and 'More' column, suitable for piping to gt.
 }
 \description{
-Processes one or two input tibbles to add missing rows (to at least 3 rows),
-a final "More" column with "..." in the last row, and combines them if type is 'population'.
+Processes one or two input tibbles to add missing rows and structure,
+a final "More" column with "..." placeholders, and combines them if type is 'population'.
+This function ensures consistent table structure regardless of initial input.
 }
 \details{
-For "preceptor": adds a third row between the last 2 rows filled with "...",
-adds a "More" column with "..." in all positions.
+For "preceptor": Takes a 3-row input tibble, adds a blank row in the third position
+(filled with "..."), then adds a "More" column with "..." in all positions.
+Results in a 4-row tibble.
 
-For "population": expands each tibble similarly, then combines them with
-empty rows before, between, and after, then adds "More" column with "...".
+For "population": Takes two tibbles (data and preceptor), expands the data tibble
+to 4 rows, uses the 4-row preceptor tibble, then combines them into an 11-row
+structure with proper spacing: blank + 4 data rows + blank + 4 preceptor rows + blank.
+Finally adds "More" column with "..." placeholders.
 }
 \examples{
 # Preceptor example
-pre_tib <- tibble::tribble(~Unit, ~Year, ~Outcome,
-                           "A", "2020", "5",
-                           "B", "2021", "6",
-                           "C", "2022", "7")
-expand_input_tibble(list(pre_tib), "preceptor")
+library(tibble)
+library(dplyr)
 
-# Population example
-pop1 <- tibble::tribble(~Source, ~Unit, ~Year,
-                       "S1", "A", "2020",
-                       "S2", "B", "2021",
-                       "S3", "C", "2022")
-pop2 <- tibble::tribble(~Source, ~Unit, ~Year,
-                       "S1", "D", "2023",
-                       "S2", "E", "2024", 
-                       "S3", "F", "2025")
-expand_input_tibble(list(pop1, pop2), "population", source = TRUE)
+student_data <- tribble(
+  ~Student, ~Year, ~Grade,
+  "Alice", "2020", "A",
+  "Bob", "2021", "B", 
+  "Carol", "2022", "A"
+)
+expand_input_tibble(list(student_data), "preceptor")
 
+# Population example - combining data and preceptor sections
+data_section <- tribble(
+  ~Senator, ~Year, ~Vote,
+  "Smith", "2020", "Yes",
+  "Jones", "2021", "No",
+  "Davis", "2022", "Yes"
+)
+
+preceptor_section <- tribble(
+  ~Senator, ~Year, ~Vote, 
+  "Expected A", "2023", "Yes",
+  "Expected B", "2024", "No",
+  "...", "...", "...",
+  "Expected C", "2025", "Yes"
+)
+
+expand_input_tibble(list(data_section, preceptor_section), "population")
+
+}
+\author{
+David Kane, Aashna Patel
 }

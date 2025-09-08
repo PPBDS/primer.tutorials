@@ -14,11 +14,26 @@ Character string containing the R code for an input tribble with placeholders \c
 formatted for manual editing with aligned columns.
 }
 \description{
-Generates a character string representing an R tibble::tribble()
+Generates a character string representing R code for a \code{tibble::tribble()}
 with the specified column names and 3 rows filled with placeholder
 text \code{"..."}. Column values are aligned under their headers for easy editing.
 }
+\details{
+This function is primarily used internally by \code{make_p_tables()} to generate
+properly formatted tribble code that gets inserted into Quarto documents.
+The alignment ensures that when users edit the placeholders, they can easily
+see which column they're working in.
+}
 \examples{
-write_input_tribble(c("Unit", "Year", "Outcome", "Treatment"))
+# Generate tribble code for a simple table
+cat(write_input_tribble(c("Student", "Year", "Grade")))
 
+# Generate tribble code for a causal inference table
+causal_cols <- c("Senator", "Session Year", "Vote if Contact", "Vote if No Contact", 
+                 "Lobbying Contact", "Senator Age")
+cat(write_input_tribble(causal_cols))
+
+}
+\author{
+David Kane, Aashna Patel
 }

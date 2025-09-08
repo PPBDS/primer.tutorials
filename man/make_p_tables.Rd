@@ -72,7 +72,7 @@ make_p_tables(
   unit_label = c("Senator", "Session Year"),
   outcome_label = c("Support if Contact", "Support if No Contact"),
   treatment_label = "Lobbying Contact",
-  covariate_label = "Senator Age"
+  covariate_label = "Age"
 )
 
 # Insert predictive tables for a clinical trial measuring patient recovery
