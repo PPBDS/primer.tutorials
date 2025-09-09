@@ -15,8 +15,10 @@ function_for_import  <- function()
 }
 
 # Best way to demonstrate these packages are actually "used", thereby stopping
-# renv::status() from bothering us.
+# renv::status() from bothering us. And, for some reason, you need katex installed
+# explicitly on GA even though it is not (?) needed locally.
 
+library(katex)
 library(quarto)
 
 ## usethis namespace: start
