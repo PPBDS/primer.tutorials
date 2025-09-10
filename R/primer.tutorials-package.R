@@ -1,27 +1,29 @@
+#' primer.tutorials: Interactive Tutorials for Preceptor's Primer for Bayesian Data Science
+#'
+#' @description
+#' This package provides interactive tutorials that accompany "Preceptor's Primer 
+#' for Bayesian Data Science: Using the Cardinal Virtues for Inference". The 
+#' tutorials cover the fundamental concepts of data science through the lens of 
+#' Bayesian thinking, including data visualization, wrangling, modeling, and 
+#' statistical inference using modern R tools.
+#'
+#' @section Getting Started:
+#' To see available tutorials, run:
+#' \code{learnr::available_tutorials("primer.tutorials")}
+#'
+#' To start a tutorial, run:
+#' \code{learnr::run_tutorial("131-stops", package = "primer.tutorials")}
+#'
+#' @section About the Primer:
+#' These tutorials are designed to complement "Preceptor's Primer for Bayesian 
+#' Data Science: Using the Cardinal Virtues for Inference", which teaches data 
+#' science through the framework of the four cardinal virtues: Wisdom, Justice, 
+#' Courage, and Temperance. The textbook is available 
+#' at \url{https://ppbds.github.io/primer/}.
+#'
+#' @docType package
+#' @name primer.tutorials-package
+#' @aliases primer.tutorials
+#'
 #' @keywords internal
 "_PACKAGE"
-
-
-# Was able to resolve R CMD check import note by doing stuff with these
-# packages. Note that it needs to be inside of a function definition for the
-# build to recognize it. Seems hacky!
-
-function_for_import  <- function()
-{
-  temp <- tutorial.helpers::return_tutorial_paths('learnr')
-  z <- primer.data::trains
-  
-
-}
-
-# Best way to demonstrate these packages are actually "used", thereby stopping
-# renv::status() from bothering us. And, for some reason, you need katex installed
-# explicitly for GitHub Actions even though it is not (?) needed locally. I think 
-# that the key cause is the gt tables with headers like $Y_t$ and other LaTeX math.
-
-library(katex)
-library(quarto)
-
-## usethis namespace: start
-## usethis namespace: end
-NULL

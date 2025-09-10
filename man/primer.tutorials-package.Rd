@@ -2,12 +2,34 @@
 % Please edit documentation in R/primer.tutorials-package.R
 \docType{package}
 \name{primer.tutorials-package}
-\alias{primer.tutorials}
 \alias{primer.tutorials-package}
-\title{primer.tutorials: Tutorials for Preceptor's Primer for Bayesian Data Science}
+\alias{primer.tutorials}
+\title{primer.tutorials: Interactive Tutorials for Preceptor's Primer for Bayesian Data Science}
 \description{
-Collection of tutorials for use with Preceptor's Primer for Bayesian Data Science. Makes extensive use of the tools in 'tutorial.helpers' package.
+This package provides interactive tutorials that accompany "Preceptor's Primer
+for Bayesian Data Science: Using the Cardinal Virtues for Inference". The
+tutorials cover the fundamental concepts of data science through the lens of
+Bayesian thinking, including data visualization, wrangling, modeling, and
+statistical inference using modern R tools.
 }
+\section{Getting Started}{
+
+To see available tutorials, run:
+\code{learnr::available_tutorials("primer.tutorials")}
+
+To start a tutorial, run:
+\code{learnr::run_tutorial("131-stops", package = "primer.tutorials")}
+}
+
+\section{About the Primer}{
+
+These tutorials are designed to complement "Preceptor's Primer for Bayesian
+Data Science: Using the Cardinal Virtues for Inference", which teaches data
+science through the framework of the four cardinal virtues: Wisdom, Justice,
+Courage, and Temperance. The textbook is available
+at \url{https://ppbds.github.io/primer/}.
+}
+
 \seealso{
 Useful links:
 \itemize{
