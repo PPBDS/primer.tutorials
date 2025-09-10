@@ -21,9 +21,10 @@
 #' Courage, and Temperance. The textbook is available 
 #' at \url{https://ppbds.github.io/primer/}.
 #'
-#' @docType package
 #' @name primer.tutorials-package
 #' @aliases primer.tutorials
 #'
 #' @keywords internal
-"_PACKAGE"
+#' @import primer.data
+#' @import tutorial.helpers
+"_PACKAGE" 
