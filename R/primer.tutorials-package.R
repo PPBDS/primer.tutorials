@@ -16,7 +16,8 @@ function_for_import  <- function()
 
 # Best way to demonstrate these packages are actually "used", thereby stopping
 # renv::status() from bothering us. And, for some reason, you need katex installed
-# explicitly on GA even though it is not (?) needed locally.
+# explicitly for GitHub Actions even though it is not (?) needed locally. I think 
+# that the key cause is the gt tables with headers like $Y_t$ and other LaTeX math.
 
 library(katex)
 library(quarto)
