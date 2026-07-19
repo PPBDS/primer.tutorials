@@ -1,0 +1,2032 @@
+---
+title: "Mail"
+author: David Kane
+tutorial:
+  id: 12-mail
+output:
+  learnr::tutorial:
+    progressive: yes
+    allow_skip: yes
+runtime: shiny_prerendered
+description: "Tutorial #12 for Preceptor's Primer"
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(tutorial.helpers)
+library(gt)
+
+library(tidyverse)
+library(tidymodels)
+library(primer.data)
+library(broom)
+library(marginaleffects)
+library(easystats)
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "90%")
+options(tutorial.exercise.timelimit = 600,
+        tutorial.storage = "local")
+
+# Mirror of the cleaned tibble and final fit the student builds in
+# analysis.qmd (see Wisdom Exercise 2 and Courage Exercise 8).
+
+x <- mail |>
+  select(treatment, applied_mail, party, age, sex) |>
+  drop_na() |>
+  mutate(applied_mail = as.factor(applied_mail),
+         treatment = fct_relevel(treatment, "No Postcard"))
+
+fit_mail <- logistic_reg(engine = "glm") |>
+  fit(applied_mail ~ treatment + party + age + sex, data = x)
+```
+
+```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
+```
+
+
+## Introduction
+###
+
+This tutorial supports the [Mail](https://ppbds.github.io/primer/12-mail.html) chapter of [*Preceptor's Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
+
+The world confronts us. Make decisions we must.
+
+Imagine that you are on the staff of the Philadelphia City Commissioners' office ahead of the next general election. The Commissioners have a big-picture goal --- make voting work smoothly for every registered Philadelphian --- and a budget that does not stretch to every idea. They must decide how many postcards to print, which voters to mail them to, when to drop them, and what the postcards should say: is a mail ballot "safer for you," or "safer for your neighborhood"? Each choice is worth a question you could ask out loud in the Commissioners' meeting: Does a postcard move anyone to apply for a mail ballot at all? Does one wording work better than the other? Are older voters or younger voters more responsive? This tutorial focuses on one estimate: the causal effect of each postcard wording on the probability that a registered voter applies for a mail ballot, with its associated uncertainty. The estimate alone won't set the budget, but it is one good input. There are many decisions to make.
+
+### Exercise 1
+
+What are the four [Cardinal Virtues](https://en.wikipedia.org/wiki/Cardinal_virtues), in order, which we use to guide our data science work?
+
+```{r introduction-1}
+question_text(NULL,
+  message = "Wisdom, Justice, Courage, and Temperance.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 2)
+```
+
+###
+
+Mail is a companion to Shaming, two tutorials back: both study postcards mailed to registered voters in a randomized experiment. The mechanisms differ --- Shaming's postcards applied social pressure, Mail's simply offer information and reassurance --- and, as we will see, so do the sizes of the effects.
+
+### Exercise 2
+
+You should be working inside a GitHub repo named `mail`, opened in a Codespace from the [`PPBDS/codespace-starter`](https://github.com/PPBDS/codespace-starter) template. If you are not there yet, create that repo and open it in a Codespace now --- see the [package README](https://github.com/PPBDS/primer/tree/main/primer.tutorials#working-environments-and-repo-setup) for setup instructions or for working locally.
+
+Once you're inside the `mail` repo, create a new Quarto document titled `"Mail"` with yourself as the author, render it, and save it as `analysis.qmd`.
+
+Create a `.gitignore` file with `analysis_files` on the first line followed by a blank line. Save and push.
+
+In the R Terminal, run:
+
+```
+show_file(".gitignore")
+```
+
+CP/CR.
+
+```{r introduction-2}
+question_text(NULL,
+  message = "    > show_file(\".gitignore\")\n    analysis_files",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+In the spring of 2020, with the pandemic making in-person voting feel risky, Philadelphia ran one of the largest voting field experiments ever conducted: nearly a million registered voters, randomly assigned to receive an encouraging postcard --- or nothing.
+
+### Exercise 3
+
+In your QMD, put `library(tidyverse)` and `library(primer.data)` in a new code chunk. Render the file. Add `#| message: false` to suppress the messages, and add the following to the YAML header to hide the code:
+
+```
+execute:
+  echo: false
+```
+
+Render again. In the R Terminal, run:
+
+```
+show_file("analysis.qmd", chunk = "Last")
+```
+
+CP/CR.
+
+```{r introduction-3}
+question_text(NULL,
+  message = "    > show_file(\"analysis.qmd\", chunk = \"Last\")\n    ```{r}\n    #| message: false\n    library(tidyverse)\n    library(primer.data)\n    ```",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+The `mail` tibble in **[primer.data](https://ppbds.github.io/primer.data/)** has 935,707 rows --- one per registered Philadelphia voter in the experiment --- and 11 variables combining treatment assignment, voting behavior, and demographics. It is by far the largest dataset in the Primer.
+
+### Exercise 4
+
+In the R Terminal, type `?mail` and paste the Description below.
+
+```{r introduction-4}
+question_text(NULL,
+  message = "This data is from a paper entitled Results from a 2020 field experiment encouraging voting by mail. See also the 'Details' section below. The aim of the study was to understand how facilitating mail ballot requests affects their use. A total of over 935,000 registered voters in Philadelphia were randomly assigned to either a control group or one of two treatment groups. The results combine information on voting behavior with voter's demographic background.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+The design is heavily unbalanced by choice: about 889,000 voters got no postcard, while each treatment arm got about 23,500. Field experimenters often keep treatment arms small --- postcards cost money --- and lean on an enormous control group for precision.
+
+### Exercise 5
+
+Since the treatment variable `treatment` can take on three values --- `No Postcard`, `Self`, and `Neighborhood` --- what is the fundamental problem of causal inference in this setting?
+
+```{r introduction-5}
+question_text(NULL,
+  message = "The fundamental problem of causal inference is that we can only observe one potential outcome. Each voter here has three potential outcomes --- whether they would apply under no postcard, under the Self wording, and under the Neighborhood wording --- and we see exactly one of the three.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+With a multi-arm treatment there are as many potential outcomes as arms. Every causal comparison --- Self versus nothing, Neighborhood versus nothing, Self versus Neighborhood --- is a difference between two columns of which at most one is ever observed for any given voter.
+
+### Exercise 6
+
+Mail-ballot usage is the broad topic of this tutorial. Given that topic, which variable in `mail` should we use as our outcome variable?
+
+```{r introduction-6}
+question_text(NULL,
+  message = "Our outcome variable is `applied_mail` --- whether the voter applied for a mail ballot before Pennsylvania's May 26, 2020 deadline. It takes the values `Yes` and `No`, so this is a binary outcome and our model will be a logistic regression.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+We will use `applied_mail` as our outcome variable. Below is the share of voters who applied, split by treatment arm.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+x |>
+  count(treatment, applied_mail) |>
+  group_by(treatment) |>
+  mutate(share = n / sum(n)) |>
+  filter(applied_mail == "Yes") |>
+  ggplot(aes(x = treatment, y = share, fill = treatment)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = scales::label_percent(accuracy = 0.1)(share)),
+            vjust = -0.5, size = 5) +
+  scale_y_continuous(labels = scales::label_percent(),
+                     limits = c(0, 0.25)) +
+  labs(
+    title    = "Share Applying for a Mail Ballot, by Treatment Arm",
+    subtitle = "Both postcard wordings nudge the application rate up by less than half a percentage point",
+    x        = NULL,
+    y        = NULL,
+    caption  = "Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.y     = element_blank(),
+        axis.ticks.y    = element_blank(),
+        panel.grid      = element_blank())
+```
+
+### Exercise 7
+
+Pick a single voter from the data. Specify two values the treatment variable `treatment` could take for that voter, guess the potential outcome under each, and compute the causal effect for that voter.
+
+```{r introduction-7}
+question_text(NULL,
+  message = "Consider one registered Philadelphia voter in the data. `treatment` could be `No Postcard` or `Neighborhood`. If she receives no postcard, suppose she does not apply for a mail ballot (No). If she receives the Neighborhood postcard, suppose she does apply (Yes). The causal effect on her application of the Neighborhood postcard versus no postcard is Yes − No: for this voter, the postcard causes her application.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+A causal effect is the difference between two potential outcomes. "Difference" does not necessarily mean "subtraction" --- our potential outcomes here are Yes/No values, not numbers. Only once we aggregate to *probabilities* across many voters does the causal effect become a number we can subtract.
+
+### Exercise 8
+
+Write a causal question connecting the outcome `applied_mail` to the treatment `treatment`. The question should specify one or more numbers to compute.
+
+```{r introduction-8}
+question_text(NULL,
+  message = "What is the average causal effect of each postcard wording --- Self or Neighborhood, relative to no postcard --- on the probability that a registered Philadelphia voter applies for a mail ballot?",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+Note what `treatment` actually records: the arm each voter was *assigned to*, meaning the postcard was mailed to their registration address. Some postcards were never delivered; many were never read. Our causal effect is therefore the effect of *being sent* a postcard --- what experimenters call an intent-to-treat effect --- not the effect of reading one.
+
+
+## Wisdom
+###
+
+Data science starts with some broad questions and a data set which might help us to answer them.
+
+The specific question: *What is the average causal effect of each postcard wording --- Self or Neighborhood, relative to no postcard --- on the probability that a registered Philadelphia voter applies for a mail ballot?*
+
+We will work from the 2020 Philadelphia mail-ballot field experiment, available in the `mail` tibble of the **primer.data** package.
+
+Remember that Wisdom begins with a question and then moves on to the creation of a Preceptor Table and an examination of our data.
+
+### Exercise 1
+
+Define a Preceptor Table.
+
+```{r wisdom-1}
+question_text(NULL,
+  message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, we can easily calculate the quantity of interest.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+Because our problem is causal with a three-arm treatment, the Preceptor Table needs three potential-outcome columns --- one per arm --- along with the treatment and the covariates the question conditions on.
+
+### Exercise 2
+
+The raw `mail` tibble has more columns than we need, some missing values, and a treatment variable whose default reference level is not the control group. Add a code chunk to `analysis.qmd` with the chunk option `#| cache: true` that builds our analysis tibble:
+
+```
+x <- mail |>
+  select(treatment, applied_mail, party, age, sex) |>
+  drop_na() |>
+  mutate(applied_mail = as.factor(applied_mail),
+         treatment = fct_relevel(treatment, "No Postcard"))
+```
+
+Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r wisdom-2}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+```{r wisdom-2-test}
+#| echo: true
+x <- mail |>
+  select(treatment, applied_mail, party, age, sex) |>
+  drop_na() |>
+  mutate(applied_mail = as.factor(applied_mail),
+         treatment = fct_relevel(treatment, "No Postcard"))
+x
+```
+
+###
+
+Three moves worth noticing. `drop_na()` removes about 239,000 voters with no recorded sex, leaving 696,638 rows --- a choice Justice will interrogate. `as.factor()` on `applied_mail` is required because `logistic_reg()` refuses a non-factor outcome. And `fct_relevel()` makes `No Postcard` the reference level, so every model coefficient will be measured *relative to the control group* --- which is the comparison our question asks about.
+
+### Exercise 3
+
+The Introduction plot showed application rates by treatment arm overall. Now look at the same comparison *within party*. Write R code that plots the share applying for a mail ballot by treatment arm, faceted by party, with the y-axis labeled as a percentage. Paste the code below.
+
+```{r wisdom-3}
+question_text(NULL,
+  message = "    x |>\n      count(party, treatment, applied_mail) |>\n      group_by(party, treatment) |>\n      mutate(share = n / sum(n)) |>\n      filter(applied_mail == \"Yes\") |>\n      ggplot(aes(x = treatment, y = share, fill = treatment)) +\n      geom_col(width = 0.6) +\n      facet_wrap(~ party) +\n      scale_y_continuous(labels = scales::label_percent()) +\n      labs(\n        title    = \"Mail-Ballot Application Rates, by Treatment and Party\",\n        subtitle = \"Democrats apply at twice the rate of Republicans; the postcard bumps are tiny everywhere\",\n        x        = NULL,\n        y        = NULL,\n        caption  = \"Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail\"\n      ) +\n      theme_minimal() +\n      theme(legend.position = \"none\",\n            axis.text.x = element_text(angle = 45, hjust = 1))",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 18)
+```
+
+###
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+x |>
+  count(party, treatment, applied_mail) |>
+  group_by(party, treatment) |>
+  mutate(share = n / sum(n)) |>
+  filter(applied_mail == "Yes") |>
+  ggplot(aes(x = treatment, y = share, fill = treatment)) +
+  geom_col(width = 0.6) +
+  facet_wrap(~ party) +
+  scale_y_continuous(labels = scales::label_percent()) +
+  labs(
+    title    = "Mail-Ballot Application Rates, by Treatment and Party",
+    subtitle = "Democrats apply at twice the rate of Republicans; the postcard bumps are tiny everywhere",
+    x        = NULL,
+    y        = NULL,
+    caption  = "Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+###
+
+The covariates dwarf the treatment: which party a voter belongs to shifts the application rate by ten percentage points or more, while the postcards move it by a fraction of one. That contrast --- big covariate differences, tiny treatment effects --- is the visual heart of this problem.
+
+### Exercise 4
+
+Describe the key components of Preceptor Tables in general, without worrying about this specific problem. Use words like "units," "outcomes," and "covariates."
+
+```{r wisdom-4}
+question_text(NULL,
+  message = "The rows of the Preceptor Table are the units. The outcome is at least one of the columns. If the problem is causal, there will be at least two (potential) outcome columns. The other columns are covariates. If the problem is causal, at least one of the covariates will be considered a treatment.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+This problem is causal, so one of the covariates is a treatment. In our problem, the treatment is the postcard assignment, and because it takes three values --- No Postcard, Self, Neighborhood --- there are three potential-outcome columns, one per value.
+
+### Exercise 5
+
+What are the units for this problem?
+
+```{r wisdom-5}
+question_text(NULL,
+  message = "Each row is one registered voter in Philadelphia at the time of the next general election --- the roughly one million people on the city's voter rolls whom the Commissioners could reach with a postcard campaign.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+Specifying the unit forces a question precise enough to answer. The Commissioners do not care which individual voter applies; they care about *aggregates* --- how many more applications a million-postcard print run would generate.
+
+### Exercise 6
+
+What is the outcome variable for this problem?
+
+```{r wisdom-6}
+question_text(NULL,
+  message = "Keep track of two outcome variables: the one in our Preceptor Table and the one in our data. The Preceptor Table's outcomes are whether each voter would apply for a mail ballot under each postcard condition at the next election. The data's outcome, `applied_mail`, is whether the county recorded a mail-ballot application from the voter before the May 26, 2020 deadline.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+An application is not a vote. Some voters apply for a mail ballot and never return it; others are denied. The Commissioners ultimately care about ballots cast, but the postcards can only plausibly move the first step in that chain, which is what the experiment measured.
+
+### Exercise 7
+
+What is a covariate which you think might be useful for this problem, regardless of whether or not it is in the data?
+
+```{r wisdom-7}
+question_text(NULL,
+  message = "Whether the voter has voted by mail before. A voter who has already used a mail ballot needs no persuading, while a lifelong in-person voter is the postcard's real target --- so prior mail voting would sharply separate voters the campaign can move from voters it cannot. Our cut of the data does not carry it, though the original study tracked prior voting behavior.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+The term *covariates* is used in three ways: variables that *might* matter, variables we have data for, and variables we end up putting in the model. Most candidates a researcher lists never make it into the final model.
+
+### Exercise 8
+
+What are the treatments, if any, for this problem?
+
+```{r wisdom-8}
+question_text(NULL,
+  message = "The treatment is `treatment`, the postcard assignment, taking three values: `No Postcard` (the control), `Self` (a postcard saying a mail ballot is safer for you), and `Neighborhood` (a postcard saying it is safer for your neighborhood). The experimenters manipulated it by randomly assigning which voters were mailed which postcard.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+A treatment is just a covariate that we can, at least in theory, manipulate. Here the manipulation is not theoretical: the Commissioners' office physically mailed the postcards, which is what makes the causal framing so natural.
+
+### Exercise 9
+
+What moment in time does the Preceptor Table refer to?
+
+```{r wisdom-9}
+question_text(NULL,
+  message = "The run-up to the next general election --- the application window in which the Commissioners would mail their postcards, several years after the spring of 2020 when our data was generated.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+A Preceptor Table can never really refer to an exact instant in time. The gap that matters here is between our data's moment --- the first pandemic election, when voting by mail was novel and vote-from-home messaging was everywhere --- and the ordinary election the Commissioners are planning for. That gap will do real damage in Justice.
+
+### Exercise 10
+
+Describe in words the Preceptor Table for this problem.
+
+```{r wisdom-10}
+question_text(NULL,
+  message = "Each row is one registered Philadelphia voter at the next general election. There are three potential-outcome columns --- whether the voter would apply for a mail ballot if sent no postcard, if sent the Self postcard, and if sent the Neighborhood postcard --- plus a treatment column recording which postcard the voter is actually sent, and covariate columns for party, age, and sex. For every voter, we would observe exactly one of the three potential outcomes.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+```{r}
+#| echo: false
+#| results: asis
+hatch <- function(z) {
+  paste0(
+    '<span style="background-image: repeating-linear-gradient(',
+    '45deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 6px);',
+    ' padding: 6px 10px; margin: -6px -10px; display: block;">',
+    z,
+    '</span>'
+  )
+}
+
+pre_tibble <- tibble::tribble(
+  ~`Voter`,          ~`Applied if No Postcard`, ~`Applied if Self`, ~`Applied if Neighborhood`, ~`Postcard`,      ~`Party`,      ~`Age`,    ~`Sex`,
+  "Denise Whitaker", "No",                      "No",               "Yes",                      "Neighborhood",   "Democrat",    "50-64",   "Female",
+  "Gregory Boyle",   "No",                      "No",               "No",                       "No Postcard",    "Republican",  "30-39",   "Male",
+  "...",             "...",                     "...",              "...",                      "...",            "...",         "...",     "...",
+  "Alice Ferraro",   "Yes",                     "Yes",              "Yes",                      "Self",           "Democrat",    "65-121",  "Female"
+)
+
+pre_title_footnote     <- "If all the information in this table were available, we could answer the question: What is the average causal effect of each postcard wording --- Self or Neighborhood, relative to no postcard --- on the probability that a registered Philadelphia voter applies for a mail ballot?"
+pre_units_footnote     <- "Each row is one registered Philadelphia voter at the next general election --- roughly one million people. The example rows use plausible names; missing rows represent the rest of the rolls."
+pre_outcome_footnote   <- "Three potential outcomes per voter: whether they would apply for a mail ballot under each postcard condition. The cross-hatched cells mark each voter's two unobservable potential outcomes --- the ones we could never see, because the voter was actually sent something else."
+pre_treatment_footnote <- "The postcard the voter is sent: No Postcard, Self ('safer for you'), or Neighborhood ('safer for your neighborhood')."
+pre_covariate_footnote <- "Party from the registration file; age in the file's bands (18-29, 30-39, 40-49, 50-64, 65-121); sex as recorded on the rolls."
+
+pre_gt_html <- gt::gt(pre_tibble, id = "preceptor_tbl") |>
+  gt::tab_header(title = "Preceptor Table") |>
+  gt::tab_spanner(label = "Unit",               id = "unit_span",
+                  columns = c(`Voter`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span",
+                  columns = c(`Applied if No Postcard`, `Applied if Self`, `Applied if Neighborhood`)) |>
+  gt::tab_spanner(label = "Treatment",          id = "treatment_span",
+                  columns = c(`Postcard`)) |>
+  gt::tab_spanner(label = "Covariates",         id = "covariates_span",
+                  columns = c(`Party`, `Age`, `Sex`)) |>
+  gt::cols_align(align = "left", columns = gt::everything()) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "outcome_span", "treatment_span", "covariates_span"))
+  ) |>
+  gt::text_transform(
+    locations = gt::cells_body(columns = c(`Applied if No Postcard`, `Applied if Self`), rows = 1),
+    fn = function(z) hatch(z)
+  ) |>
+  gt::text_transform(
+    locations = gt::cells_body(columns = c(`Applied if Self`, `Applied if Neighborhood`), rows = 2),
+    fn = function(z) hatch(z)
+  ) |>
+  gt::text_transform(
+    locations = gt::cells_body(columns = c(`Applied if No Postcard`, `Applied if Neighborhood`), rows = 4),
+    fn = function(z) hatch(z)
+  ) |>
+  gt::tab_footnote(footnote = pre_title_footnote,
+                   locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pre_units_footnote,
+                   locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pre_outcome_footnote,
+                   locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pre_treatment_footnote,
+                   locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
+  gt::tab_footnote(footnote = pre_covariate_footnote,
+                   locations = gt::cells_column_spanners(spanners = "covariates_span")) |>
+  gt::opt_css(
+    css = "
+      #preceptor_tbl .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  pre_gt_html,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+### Exercise 11
+
+Write the first two sentences of the summary paragraph. The first introduces the topic; the second introduces the data and the specific question.
+
+```{r wisdom-11}
+question_text(NULL,
+  message = "Election offices across the country spend real money encouraging voters to use mail ballots, usually without evidence about whether the encouragement works. Using a randomized field experiment covering nearly a million registered Philadelphia voters in the spring of 2020, we estimate the causal effect of two postcard wordings --- 'safer for you' and 'safer for your neighborhood' --- on the probability that a voter applies for a mail ballot.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Read our answer. It will not be the same as yours. You can change your answer to incorporate some of our ideas, but do not copy/paste exactly. Add your two sentences to the summary paragraph in your QMD. Render the QMD, then commit/push.
+
+
+## Justice
+###
+
+Wisdom gives us the Preceptor Table and the data.
+
+```{r}
+#| echo: false
+#| results: asis
+hatch_j <- function(z) {
+  paste0(
+    '<span style="background-image: repeating-linear-gradient(',
+    '45deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 6px);',
+    ' padding: 6px 10px; margin: -6px -10px; display: block;">',
+    z,
+    '</span>'
+  )
+}
+
+pre_tibble_j <- tibble::tribble(
+  ~`Voter`,          ~`Applied if No Postcard`, ~`Applied if Self`, ~`Applied if Neighborhood`, ~`Postcard`,      ~`Party`,      ~`Age`,    ~`Sex`,
+  "Denise Whitaker", "No",                      "No",               "Yes",                      "Neighborhood",   "Democrat",    "50-64",   "Female",
+  "Gregory Boyle",   "No",                      "No",               "No",                       "No Postcard",    "Republican",  "30-39",   "Male",
+  "...",             "...",                     "...",              "...",                      "...",            "...",         "...",     "...",
+  "Alice Ferraro",   "Yes",                     "Yes",              "Yes",                      "Self",           "Democrat",    "65-121",  "Female"
+)
+
+pre_gt_html_j <- gt::gt(pre_tibble_j, id = "preceptor_tbl_j") |>
+  gt::tab_header(title = "Preceptor Table") |>
+  gt::tab_spanner(label = "Unit",               id = "unit_span",
+                  columns = c(`Voter`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span",
+                  columns = c(`Applied if No Postcard`, `Applied if Self`, `Applied if Neighborhood`)) |>
+  gt::tab_spanner(label = "Treatment",          id = "treatment_span",
+                  columns = c(`Postcard`)) |>
+  gt::tab_spanner(label = "Covariates",         id = "covariates_span",
+                  columns = c(`Party`, `Age`, `Sex`)) |>
+  gt::cols_align(align = "left", columns = gt::everything()) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "outcome_span", "treatment_span", "covariates_span"))
+  ) |>
+  gt::text_transform(
+    locations = gt::cells_body(columns = c(`Applied if No Postcard`, `Applied if Self`), rows = 1),
+    fn = function(z) hatch_j(z)
+  ) |>
+  gt::text_transform(
+    locations = gt::cells_body(columns = c(`Applied if Self`, `Applied if Neighborhood`), rows = 2),
+    fn = function(z) hatch_j(z)
+  ) |>
+  gt::text_transform(
+    locations = gt::cells_body(columns = c(`Applied if No Postcard`, `Applied if Neighborhood`), rows = 4),
+    fn = function(z) hatch_j(z)
+  ) |>
+  gt::opt_css(
+    css = "
+      #preceptor_tbl_j .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  pre_gt_html_j,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+```{r}
+#| echo: false
+#| results: asis
+data_tibble <- tibble::tribble(
+  ~`Voter`,          ~`Year`, ~`Applied`, ~`Postcard`,     ~`Party`,     ~`Age`,    ~`Sex`,
+  "Voter 100482",    "2020",  "Yes",      "Neighborhood",  "Democrat",   "50-64",   "Female",
+  "Voter 315207",    "2020",  "No",       "No Postcard",   "Republican", "30-39",   "Male",
+  "...",             "...",   "...",      "...",           "...",        "...",     "...",
+  "Voter 771354",    "2020",  "No",       "Self",          "Democrat",   "65-121",  "Female"
+)
+
+data_title_footnote     <- "2020 Philadelphia mail-ballot field experiment (Morris et al.). Nearly a million registered voters were randomly assigned in spring 2020 to receive no postcard or one of two encouraging postcards; applications were tracked through the May 26 primary deadline in county records."
+data_units_footnote     <- "Each row is one registered Philadelphia voter in spring 2020. The published data is anonymized --- voters are records, not names --- and our cleaned tibble keeps the 696,638 voters with a recorded sex."
+data_outcome_footnote   <- "Whether the county recorded a mail-ballot application from this voter by the May 26, 2020 deadline. An administrative record, not self-report: if the county logged it, it counts."
+data_treatment_footnote <- "Postcard assignment: No Postcard for about 95% of voters, with roughly 23,500 voters in each of the two treatment arms."
+data_covariate_footnote <- "Party from the registration file, age in the file's bands, and sex as recorded on the rolls (missing for about a quarter of the raw file)."
+
+data_gt_html <- gt::gt(data_tibble, id = "data_tbl") |>
+  gt::tab_header(title = "Data: Philadelphia Mail-Ballot Experiment, 2020") |>
+  gt::tab_spanner(label = "Unit/Time",  id = "unit_span",
+                  columns = c(`Voter`, `Year`)) |>
+  gt::tab_spanner(label = "Outcome",    id = "outcome_span",
+                  columns = c(`Applied`)) |>
+  gt::tab_spanner(label = "Treatment",  id = "treatment_span",
+                  columns = c(`Postcard`)) |>
+  gt::tab_spanner(label = "Covariates", id = "covariates_span",
+                  columns = c(`Party`, `Age`, `Sex`)) |>
+  gt::cols_align(align = "left",  columns = c(`Voter`, `Applied`, `Postcard`, `Party`, `Age`, `Sex`)) |>
+  gt::cols_align(align = "right", columns = c(`Year`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "outcome_span", "treatment_span", "covariates_span"))
+  ) |>
+  gt::tab_footnote(footnote = data_title_footnote,
+                   locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = data_units_footnote,
+                   locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = data_outcome_footnote,
+                   locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = data_treatment_footnote,
+                   locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
+  gt::tab_footnote(footnote = data_covariate_footnote,
+                   locations = gt::cells_column_spanners(spanners = "covariates_span")) |>
+  gt::opt_css(
+    css = "
+      #data_tbl .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  data_gt_html,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+### Exercise 1
+
+In your own words, describe the components of Justice when working on a data science problem.
+
+```{r justice-1}
+question_text(NULL,
+  message = "Justice concerns the Population Table, the four key assumptions which underlie it (validity, stability, representativeness, and unconfoundedness), and selects the formula for the data generating mechanism.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+Justice surfaces the worries you (or your critics) might have about whether your model will work. The "formula for the data generating mechanism" has two pieces with formal names: a probability family (here Bernoulli, since the outcome is binary) and a link function (here the logit). We will use those terms freely starting in the Hard tutorials.
+
+### Exercise 2
+
+In your own words, define "validity" as we use the term.
+
+```{r justice-2}
+question_text(NULL,
+  message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+Validity is always about the columns, never the rows. The names of two columns matching across tables is no guarantee that they measure the same thing.
+
+### Exercise 3
+
+Provide one reason why the assumption of validity might not hold for the outcome variable `applied_mail` or for the treatment column.
+
+```{r justice-3}
+question_text(NULL,
+  message = "The data's treatment column records being mailed a postcard in May 2020, when a pandemic made 'safer for you' a matter of life and death. The Preceptor Table's treatment column is being mailed the same words at an ordinary election, when 'safer' has lost that resonance. The two columns share a label --- Neighborhood postcard --- but the treatment a voter experiences is not the same thing, so the correspondence between the columns is imperfect.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+Validity, if reasonable, is what lets us treat the Preceptor Table and the data as drawn from the same population. The outcome column is on firmer ground here --- a county-recorded application means the same thing in any year --- but the treatment's *meaning* is tied to its moment.
+
+### Exercise 4
+
+In your own words, define a Population Table.
+
+```{r justice-4}
+question_text(NULL,
+  message = "The Population Table includes a row for each unit/time combination in the underlying population from which both the Preceptor Table and the data are drawn.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+The Population Table is almost always larger than the Preceptor Table and the data combined: it covers the full universe of unit/time combinations both samples are drawn from.
+
+### Exercise 5
+
+Specify the unit/time combinations which define each row in this Population Table.
+
+```{r justice-5}
+question_text(NULL,
+  message = "Each row is one registered Philadelphia voter at one election. Data rows are the 696,638 voters in our cleaned 2020 experiment file. Preceptor rows are the roughly one million voters on the rolls at the next general election. The population spans registered Philadelphia voters across elections from 2020 through the Commissioners' planning horizon.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r}
+#| echo: false
+#| results: asis
+hatch_p <- function(z) {
+  paste0(
+    '<span style="background-image: repeating-linear-gradient(',
+    '45deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 6px);',
+    ' padding: 6px 10px; margin: -6px -10px; display: block;">',
+    z,
+    '</span>'
+  )
+}
+
+pop_tibble <- tibble::tribble(
+  ~Source    , ~`Voter`,          ~`Year`, ~`Applied if No Postcard`, ~`Applied if Self`, ~`Applied if Neighborhood`, ~`Postcard`,     ~`Party`,     ~`Age`,    ~`Sex`,
+  "..."      , "...",             "..."  , "...",                     "...",              "...",                      "...",           "...",        "...",     "...",
+  "Data"     , "Voter 100482",    "2020" , "...",                     "...",              "Yes",                      "Neighborhood",  "Democrat",   "50-64",   "Female",
+  "Data"     , "Voter 315207",    "2020" , "No",                      "...",              "...",                      "No Postcard",   "Republican", "30-39",   "Male",
+  "Data"     , "...",             "..."  , "...",                     "...",              "...",                      "...",           "...",        "...",     "...",
+  "Data"     , "Voter 771354",    "2020" , "...",                     "No",               "...",                      "Self",          "Democrat",   "65-121",  "Female",
+  "..."      , "...",             "..."  , "...",                     "...",              "...",                      "...",           "...",        "...",     "...",
+  "Preceptor", "Denise Whitaker", "2026" , "No",                      "No",               "Yes",                      "Neighborhood",  "Democrat",   "50-64",   "Female",
+  "Preceptor", "Gregory Boyle",   "2026" , "No",                      "No",               "No",                       "No Postcard",   "Republican", "30-39",   "Male",
+  "Preceptor", "...",             "..."  , "...",                     "...",              "...",                      "...",           "...",        "...",     "...",
+  "Preceptor", "Alice Ferraro",   "2026" , "Yes",                     "Yes",              "Yes",                      "Self",          "Democrat",   "65-121",  "Female",
+  "..."      , "...",             "..."  , "...",                     "...",              "...",                      "...",           "...",        "...",     "..."
+)
+
+pop_title_footnote     <- "Population: registered Philadelphia voters across elections from 2020 through the Commissioners' planning horizon, from which the 2020 experiment (Data rows) and the next election's rolls (Preceptor rows) are both drawn."
+pop_units_footnote     <- "Each row is one registered voter at one election. Data rows are 2020 experiment participants; Preceptor rows are voters at the next general election. The pandemic-to-ordinary-times gap between the blocks is the heart of the stability discussion."
+pop_outcome_footnote   <- "In Data rows, only the potential outcome matching the assigned arm was observed; the other two are shown as '...' because no one measured them. In Preceptor rows, all three potential outcomes are filled in with the truth, and the two unobservable ones are cross-hatched."
+pop_treatment_footnote <- "In Data rows, the arm was randomly assigned by the experimenters --- the basis for unconfoundedness. In Preceptor rows, it is whatever postcard the Commissioners choose to send."
+pop_covariate_footnote <- "Party, age band, and sex from the registration file, recorded the same way in both blocks."
+
+pop_gt_html <- gt::gt(pop_tibble, id = "population_tbl") |>
+  gt::tab_header(title = "Population Table") |>
+  gt::tab_spanner(label = "Unit/Time",          id = "unit_span",
+                  columns = c(`Voter`, `Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span",
+                  columns = c(`Applied if No Postcard`, `Applied if Self`, `Applied if Neighborhood`)) |>
+  gt::tab_spanner(label = "Treatment",          id = "treatment_span",
+                  columns = c(`Postcard`)) |>
+  gt::tab_spanner(label = "Covariates",         id = "covariates_span",
+                  columns = c(`Party`, `Age`, `Sex`)) |>
+  gt::cols_align(align = "left",  columns = c(`Source`, `Voter`, `Applied if No Postcard`, `Applied if Self`, `Applied if Neighborhood`, `Postcard`, `Party`, `Age`, `Sex`)) |>
+  gt::cols_align(align = "right", columns = c(`Year`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "outcome_span", "treatment_span", "covariates_span"))
+  ) |>
+  gt::text_transform(
+    locations = gt::cells_body(columns = c(`Applied if No Postcard`, `Applied if Self`), rows = 7),
+    fn = function(z) hatch_p(z)
+  ) |>
+  gt::text_transform(
+    locations = gt::cells_body(columns = c(`Applied if Self`, `Applied if Neighborhood`), rows = 8),
+    fn = function(z) hatch_p(z)
+  ) |>
+  gt::text_transform(
+    locations = gt::cells_body(columns = c(`Applied if No Postcard`, `Applied if Neighborhood`), rows = 10),
+    fn = function(z) hatch_p(z)
+  ) |>
+  gt::tab_footnote(footnote = pop_title_footnote,
+                   locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pop_units_footnote,
+                   locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pop_outcome_footnote,
+                   locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pop_treatment_footnote,
+                   locations = gt::cells_column_spanners(spanners = "treatment_span")) |>
+  gt::tab_footnote(footnote = pop_covariate_footnote,
+                   locations = gt::cells_column_spanners(spanners = "covariates_span")) |>
+  gt::opt_css(
+    css = "
+      #population_tbl .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  pop_gt_html,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+### Exercise 6
+
+In your own words, define the assumption of "stability."
+
+```{r justice-6}
+question_text(NULL,
+  message = "Stability means that the relationship between the columns in the Population Table is the same for three categories of rows: the data, the Preceptor Table, and the larger population from which both are drawn.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+Stability is a statement about *parameters*, not distributions. Our model's treatment coefficients measure how much a postcard moves the log-odds of applying; stability says those coefficients are the same in spring 2020 as at the election the Commissioners are planning.
+
+### Exercise 7
+
+Provide one reason why stability might not hold in this case.
+
+```{r justice-7}
+question_text(NULL,
+  message = "Our data comes from the first pandemic election, when mail voting was new to most Pennsylvanians and 'safer' was a public-health claim. The postcard-effect parameter --- the bump in the log-odds of applying caused by being sent a postcard --- was plausibly at its lifetime maximum in that moment. At the next ordinary election, voters already know about mail ballots and the safety framing has no force, so the treatment coefficient is likely smaller than the one our 2020 data estimates. That is a parameter change, not just a change in how many people vote by mail.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 7)
+```
+
+###
+
+The most common student mistake on stability is to conflate it with a distribution shift. Mail-ballot usage exploding after 2020 is a *distribution* change --- more people applying does not, by itself, alter the postcard coefficient. What violates stability is the *parameter* moving: the same postcard producing a different-sized nudge. Here we have good reason to fear both happened, but only the second one breaks our model. Distributional change is everywhere; parameter change is what hurts us.
+
+### Exercise 8
+
+We use our data to make inferences about the overall population. We use information about the population to make inferences about the Preceptor Table: Data → Population → Preceptor Table. In your own words, define the assumption of "representativeness."
+
+```{r justice-8}
+question_text(NULL,
+  message = "Representativeness, or the lack thereof, concerns two relationships among the rows in the Population Table. The first is between the data and the other rows. The second is between the other rows and the Preceptor Table.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+The experiment covered essentially the whole voter file, which is about as close to a census of the population of interest as data ever gets --- but our *cleaned* tibble is not the whole file, and that gap is where the trouble hides.
+
+### Exercise 9
+
+Provide one reason, involving the relationship between the data and the population, why representativeness might not hold.
+
+```{r justice-9}
+question_text(NULL,
+  message = "Our cleaned tibble drops the roughly 239,000 voters --- a quarter of the file --- whose sex is missing from the registration records. Missing sex is not random: it is more common among voters who registered through certain channels or in certain eras, and those registration patterns correlate with age, party, and propensity to vote by mail. The 696,638 voters we analyze may therefore differ systematically from the full population of registered Philadelphians.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+A non-representative sample does not *guarantee* a biased estimate --- the bias might wash out by chance. But chance is the only mechanism that would save us, and we have no principled reason to expect it to work in our favor. *"Might be biased"* is the correct stance, not *"will be biased."*
+
+### Exercise 10
+
+We use information about the population to make inferences about the Preceptor Table. Provide one reason, involving the relationship between the population and the Preceptor Table, why representativeness might not hold.
+
+```{r justice-10}
+question_text(NULL,
+  message = "The Preceptor Table's voters are whoever is on the rolls at the next general election. Registration files churn constantly --- new voters register, movers leave, inactive registrations are purged --- and Philadelphia's rolls several years after 2020 will contain hundreds of thousands of people who were not in our population at all, disproportionately young and recently arrived. Inferences tuned to the 2020-era rolls need not carry over to a file whose composition has turned over.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+Stability looks across time periods; representativeness looks within them. The pandemic-era postcard losing its punch is a stability worry; the voter file filling with different people is a representativeness worry. Both push in the same humbling direction here.
+
+### Exercise 11
+
+In your own words, define the assumption of "unconfoundedness."
+
+```{r justice-11}
+question_text(NULL,
+  message = "Unconfoundedness means that the treatment assignment is independent of the potential outcomes, when we condition on pre-treatment covariates.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+Unconfoundedness only matters for causal models. Predictive models make no claims about manipulation, so there is nothing to confound.
+
+### Exercise 12
+
+Provide one reason why the assumption of unconfoundedness might not be true (or relevant) in this case.
+
+```{r justice-12}
+question_text(NULL,
+  message = "Because the experimenters randomly assigned postcards, treatment assignment should be independent of the potential outcomes --- unconfoundedness holds by design. The honest residual worry is between assignment and delivery: postcards mailed to stale addresses never arrive, and voters with stale addresses (recent movers, infrequent voters) have systematically different application propensities. Assignment is clean; the treatment actually experienced is not perfectly so.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+This is why experimenters report intent-to-treat effects: the effect of *assignment* is protected by randomization even when the effect of *delivery* is not. Our estimates inherit that protection --- and that interpretation.
+
+### Exercise 13
+
+A statistical model consists of two parts: the probability family and the link function. The probability family is the probability distribution that generates the randomness in our data. Our outcome variable `applied_mail` is binary. What probability family should we use?
+
+```{r justice-13}
+question_text(NULL,
+  message = "Bernoulli: $Y \\sim \\text{Bernoulli}(\\rho)$, where $\\rho$ is the probability that the voter applies for a mail ballot.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+While you're here, also add `library(tidymodels)` to the setup chunk in `analysis.qmd` so the rest of Courage can call `logistic_reg()` and `fit()`.
+
+### Exercise 14
+
+The link function is the mathematical formula that links our data to the unknown parameters. What is the link function for a binary outcome?
+
+```{r justice-14}
+question_text(NULL,
+  message = "Logit: $\\log\\!\\big(\\rho/(1-\\rho)\\big) = \\beta_0 + \\beta_1 X_1 + \\cdots + \\beta_n X_n$. Our model will be a logistic regression.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+While you're here, also add `library(broom)` to the setup chunk in `analysis.qmd` so we can call `tidy()` on the fitted model in Courage.
+
+### Exercise 15
+
+Write one sentence highlighting a potential weakness in your model. So far our summary paragraph looks like this:
+
+> Election offices across the country spend real money encouraging voters to use mail ballots, usually without evidence about whether the encouragement works. Using a randomized field experiment covering nearly a million registered Philadelphia voters in the spring of 2020, we estimate the causal effect of two postcard wordings --- 'safer for you' and 'safer for your neighborhood' --- on the probability that a voter applies for a mail ballot.
+
+Your version will be somewhat different.
+
+```{r justice-15}
+question_text(NULL,
+  message = "One concern is that the experiment ran during the first pandemic election, when mail voting was novel and safety messaging unusually salient, so the postcard effect we estimate is probably larger than the same postcards would produce at the ordinary election the Commissioners are planning for.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Add a weakness sentence to your summary paragraph in your QMD. Don't copy/paste our answer exactly. Render the QMD, then commit/push.
+
+
+## Courage
+###
+
+Justice gives us the Population Table and the abstract data generating mechanism.
+
+```{r}
+#| echo: false
+#| results: asis
+hatch_c <- function(z) {
+  paste0(
+    '<span style="background-image: repeating-linear-gradient(',
+    '45deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 6px);',
+    ' padding: 6px 10px; margin: -6px -10px; display: block;">',
+    z,
+    '</span>'
+  )
+}
+
+pop_tibble_c <- tibble::tribble(
+  ~Source    , ~`Voter`,          ~`Year`, ~`Applied if No Postcard`, ~`Applied if Self`, ~`Applied if Neighborhood`, ~`Postcard`,     ~`Party`,     ~`Age`,    ~`Sex`,
+  "..."      , "...",             "..."  , "...",                     "...",              "...",                      "...",           "...",        "...",     "...",
+  "Data"     , "Voter 100482",    "2020" , "...",                     "...",              "Yes",                      "Neighborhood",  "Democrat",   "50-64",   "Female",
+  "Data"     , "Voter 315207",    "2020" , "No",                      "...",              "...",                      "No Postcard",   "Republican", "30-39",   "Male",
+  "Data"     , "...",             "..."  , "...",                     "...",              "...",                      "...",           "...",        "...",     "...",
+  "Data"     , "Voter 771354",    "2020" , "...",                     "No",               "...",                      "Self",          "Democrat",   "65-121",  "Female",
+  "..."      , "...",             "..."  , "...",                     "...",              "...",                      "...",           "...",        "...",     "...",
+  "Preceptor", "Denise Whitaker", "2026" , "No",                      "No",               "Yes",                      "Neighborhood",  "Democrat",   "50-64",   "Female",
+  "Preceptor", "Gregory Boyle",   "2026" , "No",                      "No",               "No",                       "No Postcard",   "Republican", "30-39",   "Male",
+  "Preceptor", "...",             "..."  , "...",                     "...",              "...",                      "...",           "...",        "...",     "...",
+  "Preceptor", "Alice Ferraro",   "2026" , "Yes",                     "Yes",              "Yes",                      "Self",          "Democrat",   "65-121",  "Female",
+  "..."      , "...",             "..."  , "...",                     "...",              "...",                      "...",           "...",        "...",     "..."
+)
+
+pop_gt_html_c <- gt::gt(pop_tibble_c, id = "population_tbl_c") |>
+  gt::tab_header(title = "Population Table") |>
+  gt::tab_spanner(label = "Unit/Time",          id = "unit_span",
+                  columns = c(`Voter`, `Year`)) |>
+  gt::tab_spanner(label = "Potential Outcomes", id = "outcome_span",
+                  columns = c(`Applied if No Postcard`, `Applied if Self`, `Applied if Neighborhood`)) |>
+  gt::tab_spanner(label = "Treatment",          id = "treatment_span",
+                  columns = c(`Postcard`)) |>
+  gt::tab_spanner(label = "Covariates",         id = "covariates_span",
+                  columns = c(`Party`, `Age`, `Sex`)) |>
+  gt::cols_align(align = "left",  columns = c(`Source`, `Voter`, `Applied if No Postcard`, `Applied if Self`, `Applied if Neighborhood`, `Postcard`, `Party`, `Age`, `Sex`)) |>
+  gt::cols_align(align = "right", columns = c(`Year`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "outcome_span", "treatment_span", "covariates_span"))
+  ) |>
+  gt::text_transform(
+    locations = gt::cells_body(columns = c(`Applied if No Postcard`, `Applied if Self`), rows = 7),
+    fn = function(z) hatch_c(z)
+  ) |>
+  gt::text_transform(
+    locations = gt::cells_body(columns = c(`Applied if Self`, `Applied if Neighborhood`), rows = 8),
+    fn = function(z) hatch_c(z)
+  ) |>
+  gt::text_transform(
+    locations = gt::cells_body(columns = c(`Applied if No Postcard`, `Applied if Neighborhood`), rows = 10),
+    fn = function(z) hatch_c(z)
+  ) |>
+  gt::opt_css(
+    css = "
+      #population_tbl_c .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  pop_gt_html_c,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+$$P(Y = 1) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_n X_n)}}$$
+
+with $Y \sim \text{Bernoulli}(\rho)$, where $\rho$ is the probability above.
+
+Remember that Courage creates the data generating mechanism.
+
+### Exercise 1
+
+Because our outcome variable is binary, add a code chunk to `analysis.qmd` that begins building the model with `logistic_reg(engine = "glm")`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-1}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-1-test}
+#| echo: true
+logistic_reg(engine = "glm")
+```
+
+###
+
+**[tidymodels](https://www.tidymodels.org/)** is the most popular framework for estimating models among R users. This is the same `logistic_reg()` we used in Smokes --- and it demands the same factor outcome, which is why Wisdom's data prep included `as.factor(applied_mail)`.
+
+### Exercise 2
+
+Extend the chunk in `analysis.qmd` to `logistic_reg(engine = "glm") |> fit(applied_mail ~ treatment, data = x)`. This is the simplest causal model: outcome on treatment, nothing else. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-2}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-2-test}
+#| echo: true
+logistic_reg(engine = "glm") |>
+  fit(applied_mail ~ treatment, data = x)
+```
+
+###
+
+Because we releveled `treatment` in Wisdom, both dummies are measured against `No Postcard` --- the control group --- which is exactly the comparison the question asks about. Had we skipped the relevel, R's alphabetical default would have made `Neighborhood` the reference and every coefficient harder to read.
+
+### Exercise 3
+
+Here is the parameter table for this first model:
+
+```{r}
+#| echo: false
+logistic_reg(engine = "glm") |>
+  fit(applied_mail ~ treatment, data = x) |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high) |>
+  mutate(across(where(is.numeric), \(z) round(z, 3)))
+```
+
+Write a sentence interpreting the `treatmentNeighborhood` estimate of 0.032.
+
+```{r courage-3}
+question_text(NULL,
+  message = "The causal effect of being sent the Neighborhood postcard, rather than no postcard, is to raise the log-odds of applying for a mail ballot by about 0.032. The 95% confidence interval (-0.008 to 0.071) includes zero, so even with nearly 700,000 voters we cannot rule out an effect of nothing.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+Because the treatment was randomized, *causal* language is earned: the postcard *causes* whatever change the coefficient measures. But *log-odds* is not the scale anyone cares about --- we will leave the translation to probabilities for `marginaleffects` in Temperance. The take-aways here are the sign (positive, probably) and the CI (crosses zero).
+
+### Exercise 4
+
+Fit a second candidate that adjusts for one covariate, with the formula `fit(applied_mail ~ treatment + party, data = x)`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-4}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-4-test}
+#| echo: true
+logistic_reg(engine = "glm") |>
+  fit(applied_mail ~ treatment + party, data = x)
+```
+
+###
+
+Adding a covariate to a randomized experiment is not about removing confounding --- randomization already did that. It can sharpen precision, and, as the next parameter table shows, it lets us *check* the randomization: if assignment was truly random, adjusting for party should barely move the treatment estimates.
+
+### Exercise 5
+
+Here is the parameter table for the party-adjusted model:
+
+```{r}
+#| echo: false
+logistic_reg(engine = "glm") |>
+  fit(applied_mail ~ treatment + party, data = x) |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high) |>
+  mutate(across(where(is.numeric), \(z) round(z, 3)))
+```
+
+Write a sentence interpreting the `treatmentNeighborhood` estimate in this model.
+
+```{r courage-5}
+question_text(NULL,
+  message = "The causal effect of being sent the Neighborhood postcard, rather than no postcard, is to raise the log-odds of applying by about 0.034, adjusting for party. The estimate barely moved from the unadjusted model (0.032), which is what randomization promises: treatment assignment is unrelated to party, so adjusting for party changes almost nothing.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+Meanwhile, the party coefficients are enormous by comparison --- registered Republicans' log-odds of applying sit about 0.89 *below* Democrats' --- a reminder that in this problem the covariates dwarf the treatment. Note the adjustment clause in the canonical answer: with more than one covariate in the model, *"adjusting for party"* is mandatory.
+
+### Exercise 6
+
+Fit the final model in `analysis.qmd` with the formula `fit(applied_mail ~ treatment + party + age + sex, data = x)`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-6}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-6-test}
+#| echo: true
+logistic_reg(engine = "glm") |>
+  fit(applied_mail ~ treatment + party + age + sex, data = x)
+```
+
+###
+
+Note that `age` in this file is a *categorical* variable --- five bands from 18-29 up to 65-121 --- so it enters the model as four dummies against the 18-29 reference, not as a single slope.
+
+### Exercise 7
+
+Here is the parameter table for the final model:
+
+```{r}
+#| echo: false
+fit_mail |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high) |>
+  mutate(across(where(is.numeric), \(z) round(z, 3)))
+```
+
+Write a sentence interpreting the `treatmentNeighborhood` estimate of 0.035 in the final model.
+
+```{r courage-7}
+question_text(NULL,
+  message = "The causal effect of being sent the Neighborhood postcard, rather than no postcard, is to raise the log-odds of applying for a mail ballot by about 0.035, adjusting for party, age, and sex. The 95% confidence interval (-0.006 to 0.076) still includes zero: whatever this postcard does, it is small.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+The more variables we add, the harder any one coefficient is to read --- and the less it matters, because what we ultimately want is predictions and comparisons on the probability scale. The *adjustment clause* is mandatory whenever the model has more than one covariate; skipping it is the single most common student mistake on interpretation exercises.
+
+### Exercise 8
+
+We've settled on the final fit. In `analysis.qmd`, add a new code chunk that assigns the result of `logistic_reg(engine = "glm") |> fit(applied_mail ~ treatment + party + age + sex, data = x)` to `fit_mail`, then on the next line prints `fit_mail`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-8}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-8-test}
+#| echo: true
+fit_mail <- logistic_reg(engine = "glm") |>
+  fit(applied_mail ~ treatment + party + age + sex, data = x)
+fit_mail
+```
+
+###
+
+Model naming convention: the fitted object starts with `fit_` and keeps that one name for the rest of the analysis. Every later `tidy()`, `check_predictions()`, and `avg_comparisons()` call will reference `fit_mail`.
+
+### Exercise 9
+
+Re-fitting a model on 696,638 rows takes a second or two on every render --- worth caching. The next three exercises set that up: clean the chunk, turn caching on, add the cache directory to `.gitignore`.
+
+First, clean up. In your chunk from Exercise 8, delete the `fit_mail` line at the bottom, leaving just the assignment. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-9}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+<pre><code>fit_mail <- logistic_reg(engine = "glm") |>
+  fit(applied_mail ~ treatment + party + age + sex, data = x)
+</code></pre>
+
+###
+
+A chunk ready to cache should contain only the artifact it builds.
+
+### Exercise 10
+
+Add `#| cache: true` as the first line inside the chunk. Render the QMD. Rendering creates an `analysis_cache/` directory next to your `analysis.qmd`, which holds the saved fit so Quarto can reload it rather than re-fit on every render. To confirm the directory is there, run `ls` in the **bash Terminal**. CP/CR.
+
+```{r courage-10}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+<pre><code>$ ls
+analysis.qmd  analysis_cache  analysis_files  analysis.html
+</code></pre>
+
+###
+
+This is the first tutorial where the cache genuinely earns its keep: with two cached chunks (the data prep and the fit), a re-render that once took several seconds now takes under one.
+
+### Exercise 11
+
+The Source Control change count just jumped, because `analysis_cache/` and everything inside it now look like untracked work to git. Cached files should never go to GitHub --- they're machine-specific and regenerated on every render.
+
+Add `analysis_cache` to your `.gitignore` on its own line. In the R Terminal, run `show_file(".gitignore")`. CP/CR.
+
+```{r courage-11}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+<pre><code>analysis_files
+analysis_cache
+</code></pre>
+
+###
+
+The Source Control change count should drop back to whatever it was before the render.
+
+### Exercise 12
+
+To check whether our model is reasonable, we compare our actual outcome distribution to draws simulated from the fitted model. In `analysis.qmd`, add a chunk that loads **[easystats](https://easystats.github.io/easystats/)** (`library(easystats)`) and runs `check_predictions(extract_fit_engine(fit_mail))`. The `extract_fit_engine()` step is necessary because `easystats::check_predictions()` expects a `glm` object, not the `parsnip` wrapper. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-12}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-12-test, message = FALSE, warning = FALSE}
+#| echo: true
+library(easystats)
+check_predictions(extract_fit_engine(fit_mail))
+```
+
+###
+
+The purpose of `check_predictions()` is to compare your actual data with data simulated from your fitted model. If your DGM is reasonable, the simulated and actual distributions should look similar. For a binary outcome the check is simple --- is the share of `Yes` close to what the model generates? --- and with 696,638 rows the simulated shares barely wobble.
+
+### Exercise 13
+
+With the parameters estimated, we can write the fitted model as a concrete formula:
+
+$$
+\begin{aligned}
+\widehat{P(\text{Applied} = \text{Yes})} = \frac{1}{1 + e^{-\eta}}, \quad
+\eta = -1.75 &+ 0.030 \cdot \text{Self} + 0.035 \cdot \text{Neighborhood} \\
+&- 0.864 \cdot \text{None} - 0.933 \cdot \text{Republican} - 0.950 \cdot \text{ThirdParty} \\
+&+ 0.276 \cdot \text{Age30-39} + 0.270 \cdot \text{Age40-49} + 0.554 \cdot \text{Age50-64} \\
+&+ 1.113 \cdot \text{Age65-121} - 0.355 \cdot \text{Male}
+\end{aligned}
+$$
+
+Every term is a 0/1 dummy. The intercept (-1.75) is the log-odds of applying for the reference voter: sent no postcard, registered Democrat, aged 18-29, Female. Each coefficient shifts that log-odds when the dummy switches on.
+
+**This is our data generating mechanism.**
+
+###
+
+A data generating mechanism is just a formula --- something we can write down and implement with computer code. Eleven parameters, and the two we actually care about (the postcard terms) are the two smallest in the whole equation. Turning them into probability-scale answers is what `marginaleffects` does in Temperance.
+
+### Exercise 14
+
+In `analysis.qmd`, add a chunk that runs `tidy(fit_mail, conf.int = TRUE)`. This returns 95% intervals for all the parameters in our model. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-14}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-14-test}
+#| echo: true
+tidy(fit_mail, conf.int = TRUE)
+```
+
+###
+
+`tidy()` is part of **[broom](https://broom.tidymodels.org/)**, used to summarize information from a wide variety of models. Notice how tight every interval is --- with nearly 700,000 rows, sampling uncertainty is almost gone, and yet the treatment intervals still cross zero. Precision is not the same thing as a big effect.
+
+### Exercise 15
+
+Create a new code chunk in your QMD. Make a nice-looking table from the tibble returned by `tidy()`. Insert your table code, Render the QMD, and in the R Terminal run:
+
+```
+show_file("analysis.qmd", chunk = "Last")
+```
+
+CP/CR.
+
+```{r courage-15}
+question_text(NULL,
+  message = "    > show_file(\"analysis.qmd\", chunk = \"Last\")\n    ```{r}\n    tidy(fit_mail, conf.int = TRUE) |>\n      select(term, estimate, conf.low, conf.high) |>\n      knitr::kable(\n        caption = \"Logistic-regression estimates (log-odds scale) and 95% CIs. Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail\",\n        digits = 3\n      )\n    ```",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+A nice table includes a title, a caption with the data source, and reasonable rounding. Three decimals keeps the small treatment coefficients visible without over-precising the party and age terms.
+
+### Exercise 16
+
+Add a sentence to your project summary explaining the model structure.
+
+```{r courage-16}
+question_text(NULL,
+  message = "We model whether a voter applies for a mail ballot as a Bernoulli variable which is a logistic function of treatment assignment, party, age, and sex.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Add your sentence to the summary paragraph. Render the QMD, then commit/push.
+
+
+## Temperance
+###
+
+Courage provides the data generating mechanism. We can express the DGM in four ways:
+
+**In words:** We model whether a voter applies for a mail ballot as a Bernoulli variable which is a logistic function of treatment assignment, party, age, and sex.
+
+**In R code:**
+
+```r
+fit_mail <- logistic_reg(engine = "glm") |>
+  fit(applied_mail ~ treatment + party + age + sex, data = x)
+```
+
+**In a parameter table:**
+
+```{r}
+#| echo: false
+fit_mail |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high) |>
+  mutate(across(where(is.numeric), \(z) round(z, 3)))
+```
+
+**As a mathematical formula:**
+
+$$
+\begin{aligned}
+\widehat{P(\text{Applied} = \text{Yes})} = \frac{1}{1 + e^{-\eta}}, \quad
+\eta = -1.75 &+ 0.030 \cdot \text{Self} + 0.035 \cdot \text{Neighborhood} \\
+&- 0.864 \cdot \text{None} - 0.933 \cdot \text{Republican} - 0.950 \cdot \text{ThirdParty} \\
+&+ 0.276 \cdot \text{Age30-39} + 0.270 \cdot \text{Age40-49} + 0.554 \cdot \text{Age50-64} \\
+&+ 1.113 \cdot \text{Age65-121} - 0.355 \cdot \text{Male}
+\end{aligned}
+$$
+
+### Exercise 1
+
+In your own words, describe the use of Temperance in data science.
+
+```{r temperance-1}
+question_text(NULL,
+  message = "Temperance interprets the data generating mechanism and then uses it to answer, with the help of graphics, the question(s) with which we began. Humility reminds us that this answer is always false.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+Courage gave us eleven parameters; Temperance's job is to turn them back into the two numbers the Commissioners actually asked for --- the effect of each postcard, in percentage points.
+
+### Exercise 2
+
+In the end, we don't really care about parameters, much less how to interpret them. Parameters are *imaginary*, like unicorns. We care about answers to our questions, on the outcome scale.
+
+Add `library(marginaleffects)` to the setup chunk in `analysis.qmd` and render.
+
+CP/CR.
+
+```{r temperance-2}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+<pre><code>
+#| message: false
+library(tidyverse)
+library(primer.data)
+library(tidymodels)
+library(broom)
+library(easystats)
+library(marginaleffects)
+</code></pre>
+
+###
+
+The tool for translating log-odds coefficients into outcome-scale probabilities is the **[marginaleffects](https://marginaleffects.com/)** package, with companion book *[Model to Meaning](https://marginaleffects.com/)* by Vincent Arel-Bundock.
+
+### Exercise 3
+
+What is the specific question we are trying to answer?
+
+```{r temperance-3}
+question_text(NULL,
+  message = "What is the average causal effect of each postcard wording --- Self or Neighborhood, relative to no postcard --- on the probability that a registered Philadelphia voter applies for a mail ballot?",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+A specific question must specify numbers to compute. Ours asks for two: one causal effect per wording, each measured against the same control condition.
+
+### Exercise 4
+
+In `analysis.qmd`, add a chunk that runs
+
+```
+predictions(extract_fit_engine(fit_mail),
+            newdata = datagrid(treatment = c("No Postcard", "Self", "Neighborhood")))
+```
+
+The `extract_fit_engine()` step is required because `marginaleffects` needs the underlying `glm` object, not the `parsnip` wrapper. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r temperance-4}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r temperance-4-test}
+#| echo: true
+predictions(extract_fit_engine(fit_mail),
+            newdata = datagrid(treatment = c("No Postcard", "Self", "Neighborhood")))
+```
+
+###
+
+`datagrid()` builds one representative voter --- covariates held at their typical values --- and varies only the treatment. The three predicted probabilities differ by well under one percentage point across arms. These are *levels*; our question is about *differences*, which comes next.
+
+### Exercise 5
+
+Predictions tell us the level of the outcome under each condition. *Comparisons* tell us the difference between conditions --- and a causal effect is exactly a comparison between potential outcomes.
+
+In `analysis.qmd`, add a chunk that runs `avg_comparisons(extract_fit_engine(fit_mail), variables = "treatment")`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r temperance-5}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r temperance-5-test}
+#| echo: true
+avg_comparisons(extract_fit_engine(fit_mail), variables = "treatment")
+```
+
+###
+
+These two rows are the answer to our question. The Neighborhood postcard raised the probability of applying by about 0.48 percentage points (95% CI: -0.08 to +1.03) and the Self postcard by about 0.41 percentage points (95% CI: -0.15 to +0.96) --- each averaged over the actual covariate distribution, each interval crossing zero. *Percentage points*, not *percent*: half a point on a 17% base rate is about a 3% relative change, and confusing the two would overstate the postcards tenfold.
+
+### Exercise 6
+
+The two effects deserve a picture. In `analysis.qmd`, add a chunk that saves the comparisons to a tibble:
+
+```
+comps <- avg_comparisons(extract_fit_engine(fit_mail),
+                         variables = "treatment") |>
+  as_tibble()
+```
+
+Then, on the next line, print `comps`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r temperance-6}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r temperance-6-test}
+#| echo: true
+comps <- avg_comparisons(extract_fit_engine(fit_mail),
+                         variables = "treatment") |>
+  as_tibble()
+comps
+```
+
+###
+
+Getting the estimates into an ordinary tibble is the same escape hatch as `draw = FALSE`: from here, ggplot can build exactly the effect plot we want, with a reference line at zero doing the interpretive work.
+
+### Exercise 7
+
+Create a beautiful plot starting from `comps`. Do this in your QMD. Title: key variables. Subtitle: takeaway. Caption: data source. X-axis: percentage points. Include a vertical line at zero. Paste the plot code below.
+
+```{r temperance-7}
+question_text(NULL,
+  message = "    comps |>\n      mutate(wording = if_else(str_detect(contrast, \"Self\"), \"Self\", \"Neighborhood\")) |>\n      ggplot(aes(x = estimate, y = wording)) +\n      geom_vline(xintercept = 0, linetype = \"dashed\", color = \"grey40\") +\n      geom_pointrange(aes(xmin = conf.low, xmax = conf.high), linewidth = 0.8) +\n      scale_x_continuous(labels = scales::label_percent(accuracy = 0.1)) +\n      labs(\n        title    = \"Causal Effect of Each Postcard on Mail-Ballot Applications\",\n        subtitle = \"Both wordings move applications by less than half a percentage point, and zero is inside both intervals\",\n        x        = \"Change in probability of applying (percentage points)\",\n        y        = NULL,\n        caption  = \"Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail\"\n      ) +\n      theme_minimal()",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 18)
+```
+
+###
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+avg_comparisons(extract_fit_engine(fit_mail),
+                variables = "treatment") |>
+  as_tibble() |>
+  mutate(wording = if_else(str_detect(contrast, "Self"), "Self", "Neighborhood")) |>
+  ggplot(aes(x = estimate, y = wording)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
+  geom_pointrange(aes(xmin = conf.low, xmax = conf.high), linewidth = 0.8) +
+  scale_x_continuous(labels = scales::label_percent(accuracy = 0.1)) +
+  labs(
+    title    = "Causal Effect of Each Postcard on Mail-Ballot Applications",
+    subtitle = "Both wordings move applications by less than half a percentage point, and zero is inside both intervals",
+    x        = "Change in probability of applying (percentage points)",
+    y        = NULL,
+    caption  = "Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail"
+  ) +
+  theme_minimal()
+```
+
+### Exercise 8
+
+Finalize the new graphics chunk in your QMD. Render the QMD. In the R Terminal, run:
+
+```
+show_file("analysis.qmd", chunk = "Last")
+```
+
+CP/CR.
+
+```{r temperance-8}
+question_text(NULL,
+  message = "    > show_file(\"analysis.qmd\", chunk = \"Last\")\n    ```{r}\n    comps |>\n      mutate(wording = if_else(str_detect(contrast, \"Self\"), \"Self\", \"Neighborhood\")) |>\n      ggplot(aes(x = estimate, y = wording)) +\n      geom_vline(xintercept = 0, linetype = \"dashed\", color = \"grey40\") +\n      geom_pointrange(aes(xmin = conf.low, xmax = conf.high), linewidth = 0.8) +\n      scale_x_continuous(labels = scales::label_percent(accuracy = 0.1)) +\n      labs(\n        title = \"Causal Effect of Each Postcard on Mail-Ballot Applications\",\n        subtitle = \"Both wordings move applications by less than half a percentage point\",\n        x = \"Change in probability of applying (percentage points)\", y = NULL,\n        caption = \"Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail\"\n      ) +\n      theme_minimal()\n    ```",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 18)
+```
+
+###
+
+The map is not the territory. A clean graphic tells a story, but the story always rests on assumptions that are at best approximately true.
+
+### Exercise 9
+
+Write the last sentence of your summary paragraph. It describes at least one Quantity of Interest and a measure of uncertainty.
+
+```{r temperance-9}
+question_text(NULL,
+  message = "We estimate that the Neighborhood wording raised the probability of applying by about 0.5 percentage points (95% CI: -0.1 to +1.0) and the Self wording by about 0.4 percentage points (95% CI: -0.2 to +1.0) --- effects so small that, even with nearly 700,000 voters, we cannot rule out zero for either.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Add a final sentence to your summary paragraph, but don't copy/paste exactly. Render the QMD.
+
+### Exercise 10
+
+Write a few sentences explaining why the estimate might be wrong. Suggest alternative estimates if warranted.
+
+```{r temperance-10}
+question_text(NULL,
+  message = "Our data comes from the first pandemic election, when mail voting was novel and safety framing unusually powerful, so both postcard effects are probably upper bounds for an ordinary election --- I would shade the point estimates toward zero. We also dropped a quarter of the voter file for missing sex, and the effect among the dropped voters need not match the effect among the kept ones. The direction of that bias is unclear, so mostly I would widen the intervals: a defensible report would say each wording's effect at the next election is somewhere between -0.5 and +1 percentage point.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+Always go back to your Preceptor Table. Even a perfectly estimated statistical model is rarely as useful as we'd like.
+
+### Exercise 11
+
+Rearrange the material in your QMD so the order is graphic, then summary paragraph. The chunk that creates `fit_mail` must occur before the chunk that creates the graphic. Render the QMD. In the R Terminal, run:
+
+```
+show_file("analysis.qmd")
+```
+
+CP/CR.
+
+```{r temperance-11}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 12)
+```
+
+###
+
+<pre><code>
+---
+title: "Mail"
+author: "&lt;your name&gt;"
+execute:
+  echo: false
+---
+
+#| message: false
+library(tidyverse)
+library(primer.data)
+library(tidymodels)
+library(broom)
+library(easystats)
+library(marginaleffects)
+
+#| cache: true
+x <- mail |>
+  select(treatment, applied_mail, party, age, sex) |>
+  drop_na() |>
+  mutate(applied_mail = as.factor(applied_mail),
+         treatment = fct_relevel(treatment, "No Postcard"))
+
+#| cache: true
+fit_mail <- logistic_reg(engine = "glm") |>
+  fit(applied_mail ~ treatment + party + age + sex, data = x)
+
+comps <- avg_comparisons(extract_fit_engine(fit_mail),
+                         variables = "treatment") |>
+  as_tibble()
+
+comps |>
+  mutate(wording = if_else(str_detect(contrast, "Self"), "Self", "Neighborhood")) |>
+  ggplot(aes(x = estimate, y = wording)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
+  geom_pointrange(aes(xmin = conf.low, xmax = conf.high), linewidth = 0.8) +
+  scale_x_continuous(labels = scales::label_percent(accuracy = 0.1)) +
+  labs(
+    title = "Causal Effect of Each Postcard on Mail-Ballot Applications",
+    subtitle = "Both wordings move applications by less than half a percentage point",
+    x = "Change in probability of applying (percentage points)", y = NULL,
+    caption = "Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail"
+  ) +
+  theme_minimal()
+
+Election offices spend real money encouraging voters to use mail ballots, usually without evidence about whether the encouragement works. Using a randomized field experiment covering nearly a million registered Philadelphia voters in spring 2020, we estimate the causal effect of two postcard wordings on the probability of applying for a mail ballot. One concern is that the experiment ran during the first pandemic election, so the effects we estimate are probably larger than the same postcards would produce today. We model whether a voter applies as a Bernoulli variable which is a logistic function of treatment, party, age, and sex. We estimate that the Neighborhood wording raised applications by about 0.5 percentage points (95% CI: -0.1 to +1.0) and the Self wording by about 0.4 percentage points (95% CI: -0.2 to +1.0) --- too small to distinguish from zero even at this sample size.
+</code></pre>
+
+###
+
+This is the version of your QMD your teacher is most likely to look at closely.
+
+### Exercise 12
+
+Publish your rendered QMD to GitHub Pages. In the bash Terminal (not the R Terminal!), run:
+
+```
+quarto publish gh-pages analysis.qmd
+```
+
+Copy/paste the resulting URL below.
+
+```{r temperance-12}
+question_text(NULL,
+  message = "https://<your-github-username>.github.io/mail/analysis.html",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 2)
+```
+
+###
+
+Commit/push everything.
+
+### Exercise 13
+
+Copy/paste the URL to your GitHub repo.
+
+```{r temperance-13}
+question_text(NULL,
+  message = "https://github.com/<your-github-username>/mail",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 2)
+```
+
+###
+
+We can never know all the entries in the Preceptor Table. That knowledge is reserved for God.
+
+The world confronts us. Make decisions we must.
+
+
+## Summary
+###
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+avg_comparisons(extract_fit_engine(fit_mail),
+                variables = "treatment") |>
+  as_tibble() |>
+  mutate(wording = if_else(str_detect(contrast, "Self"), "Self", "Neighborhood")) |>
+  ggplot(aes(x = estimate, y = wording)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
+  geom_pointrange(aes(xmin = conf.low, xmax = conf.high), linewidth = 0.8) +
+  scale_x_continuous(labels = scales::label_percent(accuracy = 0.1)) +
+  labs(
+    title    = "Causal Effect of Each Postcard on Mail-Ballot Applications",
+    subtitle = "Both wordings move applications by less than half a percentage point, and zero is inside both intervals",
+    x        = "Change in probability of applying (percentage points)",
+    y        = NULL,
+    caption  = "Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail"
+  ) +
+  theme_minimal()
+```
+
+Election offices across the country spend real money encouraging voters to use mail ballots, usually without evidence about whether the encouragement works. Using a randomized field experiment covering nearly a million registered Philadelphia voters in the spring of 2020, we estimate the causal effect of two postcard wordings --- "safer for you" and "safer for your neighborhood" --- on the probability that a voter applies for a mail ballot. One concern is that the experiment ran during the first pandemic election, when mail voting was novel and safety messaging unusually salient, so the effects we estimate are probably larger than the same postcards would produce at an ordinary election. We model whether a voter applies for a mail ballot as a Bernoulli variable which is a logistic function of treatment assignment, party, age, and sex. We estimate that the Neighborhood wording raised the probability of applying by about 0.5 percentage points (95% confidence interval of roughly -0.1 to +1.0) and the Self wording by about 0.4 percentage points (95% confidence interval of roughly -0.2 to +1.0) --- effects too small to distinguish from zero even with nearly 700,000 voters.
+
+This finding would inform the Commissioners' budget: informational postcards are cheap, but at half a percentage point per million postcards, the office should weigh whether the same dollars would buy more applications spent elsewhere --- and the contrast with Shaming's social-pressure mailers, which moved turnout by several *whole* percentage points, is the sharpest lesson in the pair. It does not address every question the Commissioners face --- nothing here speaks to timing, to repeated mailings, or to whether applications convert into returned ballots. But it gives a defensible starting point.
+
+The world is always more uncertain than our models would have us believe.
+
+```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
+```

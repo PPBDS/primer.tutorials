@@ -1,0 +1,1840 @@
+---
+title: "NES"
+author: David Kane
+tutorial:
+  id: 11-nes
+output:
+  learnr::tutorial:
+    progressive: yes
+    allow_skip: yes
+runtime: shiny_prerendered
+description: "Tutorial #11 for Preceptor's Primer"
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(tutorial.helpers)
+library(gt)
+
+library(tidyverse)
+library(tidymodels)
+library(primer.data)
+library(broom)
+library(marginaleffects)
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "90%")
+options(tutorial.exercise.timelimit = 600,
+        tutorial.storage = "local")
+
+# Mirror of the cleaned tibble and final fit the student builds in
+# analysis.qmd (see Wisdom Exercise 3 and Courage Exercise 7).
+
+nes_92 <- nes |>
+  filter(year == 1992) |>
+  select(sex, pres_vote) |>
+  drop_na() |>
+  mutate(pres_vote = as.factor(case_when(
+    pres_vote == "Democrat"    ~ "Clinton",
+    pres_vote == "Republican"  ~ "Bush",
+    pres_vote == "Third Party" ~ "Perot")))
+
+fit_nes <- multinom_reg(engine = "nnet") |>
+  fit(pres_vote ~ sex, data = nes_92)
+```
+
+```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
+```
+
+
+## Introduction
+###
+
+This tutorial supports the [NES](https://ppbds.github.io/primer/11-nes.html) chapter of [*Preceptor's Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
+
+The world confronts us. Make decisions we must.
+
+Imagine that you are a political scientist studying the 1992 presidential election. Your boss --- the editor of a university-press book on American electoral behavior --- has a big-picture goal: explain how Clinton, Bush, and Perot split the electorate. She has chapters to assign, page budgets to allocate, and referees to satisfy, and she trusts you to bring her evidence about which divides mattered. Did men and women vote differently? Did the young break for Perot? Did education or income sort voters more sharply than region did? Each is a question you could ask out loud in her office. This tutorial focuses on one estimate: the difference between men and women in the probability of voting for each of the three candidates, with its associated uncertainty. The estimate alone won't write the chapter, but it is one good input. There are many decisions to make.
+
+### Exercise 1
+
+What are the four [Cardinal Virtues](https://en.wikipedia.org/wiki/Cardinal_virtues), in order, which we use to guide our data science work?
+
+```{r introduction-1}
+question_text(NULL,
+  message = "Wisdom, Justice, Courage, and Temperance.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 2)
+```
+
+###
+
+NES is our first *multinomial* example: the outcome takes three unordered values (Clinton, Bush, Perot), not two. The model's coefficients live on a log-odds scale defined relative to a reference candidate --- even less readable than ordinary logistic coefficients --- so, as in Smokes, most of the answering happens in Temperance with `marginaleffects`.
+
+### Exercise 2
+
+You should be working inside a GitHub repo named `nes`, opened in a Codespace from the [`PPBDS/codespace-starter`](https://github.com/PPBDS/codespace-starter) template. If you are not there yet, create that repo and open it in a Codespace now --- see the [package README](https://github.com/PPBDS/primer/tree/main/primer.tutorials#working-environments-and-repo-setup) for setup instructions or for working locally.
+
+Once you're inside the `nes` repo, create a new Quarto document titled `"NES"` with yourself as the author, render it, and save it as `analysis.qmd`.
+
+Create a `.gitignore` file with `analysis_files` on the first line followed by a blank line. Save and push.
+
+In the R Terminal, run:
+
+```
+show_file(".gitignore")
+```
+
+CP/CR.
+
+```{r introduction-2}
+question_text(NULL,
+  message = "    > show_file(\".gitignore\")\n    analysis_files",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+The American National Election Studies (ANES) has interviewed a sample of Americans before and after every presidential election since 1948. It is the longest-running academic election survey in the world, and most of what political scientists claim about US voters ultimately traces back to it.
+
+### Exercise 3
+
+In your QMD, put `library(tidyverse)` and `library(primer.data)` in a new code chunk. Render the file. Add `#| message: false` to suppress the messages, and add the following to the YAML header to hide the code:
+
+```
+execute:
+  echo: false
+```
+
+Render again. In the R Terminal, run:
+
+```
+show_file("analysis.qmd", chunk = "Last")
+```
+
+CP/CR.
+
+```{r introduction-3}
+question_text(NULL,
+  message = "    > show_file(\"analysis.qmd\", chunk = \"Last\")\n    ```{r}\n    #| message: false\n    library(tidyverse)\n    library(primer.data)\n    ```",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+The `nes` tibble in **[primer.data](https://ppbds.github.io/primer.data/)** covers every ANES wave from 1948 forward --- 52,359 respondents and 19 variables, combining political attitudes with biographical information. We will use only the 1992 slice.
+
+### Exercise 4
+
+In the R Terminal, type `?nes` and paste the Description below.
+
+```{r introduction-4}
+question_text(NULL,
+  message = "This dataset is from the American National Election Studies (ANES), a survey that aims to provide insights into voter behavior. It has been conducted since 1948 before and after each presidential election, and combines questions about voters' political attitudes with extensive biographical information. Current as of September 16, 2022.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+The 1992 election was a three-way race: Bill Clinton won with 43% of the popular vote, George H. W. Bush took 37%, and Ross Perot --- the most successful third-party candidate since 1912 --- took 19% without winning a single state.
+
+### Exercise 5
+
+Presidential voting is the broad topic of this tutorial. Given that topic, which variable in `nes` should we use as our outcome variable?
+
+```{r introduction-5}
+question_text(NULL,
+  message = "Our outcome variable is `pres_vote` --- the respondent's reported presidential vote. In the 1992 wave it takes three values, which we will relabel as Clinton, Bush, and Perot. Because the outcome has three unordered categories, this is a multinomial problem, not a binary one.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+We will use `pres_vote` as our outcome variable. Below is how the 1,658 respondents in our 1992 analysis sample split across the three candidates.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+nes_92 |>
+  count(pres_vote) |>
+  mutate(share = n / sum(n),
+         pres_vote = fct_reorder(pres_vote, -share)) |>
+  ggplot(aes(x = pres_vote, y = share, fill = pres_vote)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = scales::label_percent(accuracy = 1)(share)),
+            vjust = -0.5, size = 5) +
+  scale_y_continuous(labels = scales::label_percent(),
+                     limits = c(0, 0.6)) +
+  labs(
+    title    = "Reported 1992 Presidential Vote in Our ANES Sample",
+    subtitle = "Clinton leads, with Perot pulling almost a fifth of the three-candidate vote",
+    x        = NULL,
+    y        = NULL,
+    caption  = "Source: American National Election Studies 1992 via primer.data::nes"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.y     = element_blank(),
+        axis.ticks.y    = element_blank(),
+        panel.grid      = element_blank())
+```
+
+### Exercise 6
+
+Specify two different groups of voters which have different values for `sex` and which might have different distributions of `pres_vote`.
+
+```{r introduction-6}
+question_text(NULL,
+  message = "Consider two groups: women who voted in 1992 and men who voted in 1992. The 1992 campaign season --- the \"Year of the Woman\" in Senate races --- featured a visible gender gap in the polls, so the two groups might well have split their votes across Clinton, Bush, and Perot in different proportions.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+In predictive models, do not use words like *"cause,"* *"influence,"* or *"impact"* --- the best phrasing is in terms of *differences* between groups of voters with different values for the covariate. Nothing about a voter's sex is being manipulated; we are comparing how two groups voted. Predictive models have no treatments --- only covariates.
+
+### Exercise 7
+
+Write a predictive question connecting the outcome `pres_vote` to the covariate `sex`. The question should specify a particular number to compute.
+
+```{r introduction-7}
+question_text(NULL,
+  message = "What is the difference in the probability of voting for Perot between men and women in the 1992 presidential election?",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+Note the wording of `pres_vote`: it is the vote respondents *report* in a post-election interview, not the ballot itself. Recalled vote is known to drift toward the winner --- some Bush and Perot voters, interviewed after the outcome was clear, told ANES they had voted for Clinton. Our outcome column therefore slightly overstates the winner's support, a wrinkle we will return to in Justice.
+
+
+## Wisdom
+###
+
+Data science starts with some broad questions and a data set which might help us to answer them.
+
+The specific question: *What is the difference in the probability of voting for Perot between men and women in the 1992 presidential election?*
+
+We will work from the American National Election Studies survey, available in the `nes` tibble of the **primer.data** package.
+
+### Exercise 1
+
+In your own words, describe the key components of Wisdom when working on a data science problem.
+
+```{r wisdom-1}
+question_text(NULL,
+  message = "Wisdom begins with a question and then moves on to the creation of a Preceptor Table and an examination of our data.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+> *The combination of some data and an aching desire for an answer does not ensure that a reasonable answer can be extracted from a given body of data.* --- John W. Tukey
+
+### Exercise 2
+
+Define a Preceptor Table.
+
+```{r wisdom-2}
+question_text(NULL,
+  message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, we can easily calculate the quantity of interest.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+The Preceptor Table only includes the variables mentioned in the question. For our question, that is one outcome column (the vote) and one covariate column (sex) --- nothing else, however many other columns the data may have.
+
+### Exercise 3
+
+The full `nes` tibble spans 1948 to 2020; we only want 1992, and we want the vote labels to name candidates rather than parties. Add a code chunk to `analysis.qmd` with the chunk option `#| cache: true` that builds our analysis tibble:
+
+```
+nes_92 <- nes |>
+  filter(year == 1992) |>
+  select(sex, pres_vote) |>
+  drop_na() |>
+  mutate(pres_vote = as.factor(case_when(
+    pres_vote == "Democrat"    ~ "Clinton",
+    pres_vote == "Republican"  ~ "Bush",
+    pres_vote == "Third Party" ~ "Perot")))
+```
+
+Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r wisdom-3}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+```{r wisdom-3-test}
+#| echo: true
+nes_92 <- nes |>
+  filter(year == 1992) |>
+  select(sex, pres_vote) |>
+  drop_na() |>
+  mutate(pres_vote = as.factor(case_when(
+    pres_vote == "Democrat"    ~ "Clinton",
+    pres_vote == "Republican"  ~ "Bush",
+    pres_vote == "Third Party" ~ "Perot")))
+nes_92
+```
+
+###
+
+The `case_when()` recode is purely presentational --- the model does not care whether the levels are called "Democrat" or "Clinton" --- but every plot, parameter table, and prediction downstream will now read in candidate names. `drop_na()` keeps the 1,658 respondents from the 1992 wave who reported a major-candidate vote and a value for `sex`.
+
+### Exercise 4
+
+The Introduction plot showed the overall three-way split. Now look at how `pres_vote` varies with `sex`, our covariate. Write R code that plots the share of each candidate's vote within each sex, with the y-axis labeled as a percentage. Paste the code below.
+
+```{r wisdom-4}
+question_text(NULL,
+  message = "    nes_92 |>\n      count(sex, pres_vote) |>\n      group_by(sex) |>\n      mutate(share = n / sum(n)) |>\n      ggplot(aes(x = pres_vote, y = share, fill = sex)) +\n      geom_col(position = \"dodge\", width = 0.7) +\n      scale_y_continuous(labels = scales::label_percent()) +\n      labs(\n        title    = \"Reported 1992 Vote, by Sex\",\n        subtitle = \"Women lean Clinton; men give Perot a visibly larger share\",\n        x        = NULL,\n        y        = NULL,\n        fill     = \"Sex\",\n        caption  = \"Source: American National Election Studies 1992 via primer.data::nes\"\n      ) +\n      theme_minimal()",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 15)
+```
+
+###
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+nes_92 |>
+  count(sex, pres_vote) |>
+  group_by(sex) |>
+  mutate(share = n / sum(n)) |>
+  ggplot(aes(x = pres_vote, y = share, fill = sex)) +
+  geom_col(position = "dodge", width = 0.7) +
+  scale_y_continuous(labels = scales::label_percent()) +
+  labs(
+    title    = "Reported 1992 Vote, by Sex",
+    subtitle = "Women lean Clinton; men give Perot a visibly larger share",
+    x        = NULL,
+    y        = NULL,
+    fill     = "Sex",
+    caption  = "Source: American National Election Studies 1992 via primer.data::nes"
+  ) +
+  theme_minimal()
+```
+
+###
+
+The raw shares already sketch the answer: women report voting for Clinton about ten percentage points more often than men do, and men report voting for Perot about eight percentage points more often than women do. The Bush share barely differs. The model in Courage will put confidence intervals on exactly these gaps.
+
+### Exercise 5
+
+Describe the key components of Preceptor Tables in general, without worrying about this specific problem. Use words like "units," "outcomes," and "covariates."
+
+```{r wisdom-5}
+question_text(NULL,
+  message = "The rows of the Preceptor Table are the units. The outcome is at least one of the columns. If the problem is causal, there will be at least two (potential) outcome columns. The other columns are covariates. If the problem is causal, at least one of the covariates will be considered a treatment.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+This problem is predictive, so there is exactly one outcome column (the vote) and no treatment. We compare groups of voters --- men and women --- rather than imagining any voter's sex being different than it is.
+
+### Exercise 6
+
+What are the units for this problem?
+
+```{r wisdom-6}
+question_text(NULL,
+  message = "Each row is one American who cast a vote for Clinton, Bush, or Perot in the November 1992 presidential election. About 104 million ballots were cast in 1992, nearly all for one of these three candidates, so the Preceptor Table has roughly 100 million rows.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+Specifying the unit forces a question precise enough to answer. Note who is *excluded*: adults who stayed home, and the sliver who voted for minor candidates. Our question is about the people who actually chose among the big three.
+
+### Exercise 7
+
+What is the outcome variable for this problem?
+
+```{r wisdom-7}
+question_text(NULL,
+  message = "Keep track of two outcome variables: the one in our Preceptor Table and the one in our data. The Preceptor Table's outcome is the ballot each voter actually cast. The data's outcome, `pres_vote`, is the vote each ANES respondent *reported* in a post-election interview --- close to the ballot, but not identical to it.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+The gap between a ballot and a report of a ballot is not hypothetical. Post-election surveys consistently find more people claiming to have voted for the winner than the winner's actual vote share supports --- misremembering and social desirability both push the same direction.
+
+### Exercise 8
+
+What is a covariate which you think might be useful for this problem, regardless of whether or not it is in the data?
+
+```{r wisdom-8}
+question_text(NULL,
+  message = "Party identification is the strongest single predictor of presidential vote --- most self-identified Democrats vote for the Democrat, most Republicans for the Republican --- so it would sharply separate voters that sex alone cannot. The `nes` tibble does not carry a party-ID column in this cut, though the full ANES questionnaire asks it.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+The term *covariates* is used in three ways: variables that *might* matter, variables we have data for, and variables we end up putting in the model. Party ID would matter; the full ANES measures it; our model will not include it. Most candidates a researcher lists never make it into the final model.
+
+### Exercise 9
+
+What are the treatments, if any, for this problem?
+
+```{r wisdom-9}
+question_text(NULL,
+  message = "There are no treatments. This is a predictive model: we compare the vote distributions of men and women, and do not imagine manipulating anyone's sex. Predictive models have no treatments --- only covariates.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+Without a treatment, the language we use changes. We talk about *differences in probabilities between groups*, not about *effects of one variable on another*. Same data, same model, different framing.
+
+### Exercise 10
+
+What moment in time does the Preceptor Table refer to?
+
+```{r wisdom-10}
+question_text(NULL,
+  message = "Election Day: November 3, 1992. Unusually for a Primer problem, our question is retrospective --- we are studying a past election, and our data was collected within weeks of the moment the Preceptor Table describes, in the ANES post-election interviews of late 1992.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+A Preceptor Table can never really refer to an exact instant in time --- but this one comes close, since balloting happens on a single day. The narrow gap between data collection and the Preceptor Table's moment makes stability less worrying here than in most tutorials; representativeness will do the heavy lifting in Justice instead.
+
+### Exercise 11
+
+Describe in words the Preceptor Table for this problem.
+
+```{r wisdom-11}
+question_text(NULL,
+  message = "The Preceptor Table has three columns: one identifying each voter, one outcome column recording the vote cast (Clinton, Bush, or Perot), and one covariate column for sex. Each row is one of the roughly 100 million Americans who voted for a major candidate on November 3, 1992. Because this is a predictive model, there is a single observed outcome per row --- no potential outcomes.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+```{r}
+#| echo: false
+#| results: asis
+pre_tibble <- tibble::tribble(
+  ~`Voter`,           ~`Vote`,     ~`Sex`,
+  "Carol Jenkins",    "Clinton",   "Female",
+  "Frank Kowalski",   "Perot",     "Male",
+  "...",              "...",       "...",
+  "Dorothy Mitchell", "Bush",      "Female"
+)
+
+pre_title_footnote     <- "If all the information in this table were available, we could answer the question: What is the difference in the probability of voting for Perot between men and women in the 1992 presidential election?"
+pre_units_footnote     <- "Each row is one American who cast a ballot for Clinton, Bush, or Perot on November 3, 1992 --- roughly 100 million voters. The example rows use plausible names; missing rows represent the rest of the electorate."
+pre_outcome_footnote   <- "The vote actually cast, taking one of three unordered values: Clinton, Bush, or Perot. Because the outcome has three categories, computing our quantity of interest means comparing category probabilities, not a single mean."
+pre_covariate_footnote <- "Sex as the voter would report it, Female or Male. Shown because the question asks how the vote distribution differed between the two groups."
+
+pre_gt_html <- gt::gt(pre_tibble, id = "preceptor_tbl") |>
+  gt::tab_header(title = "Preceptor Table") |>
+  gt::tab_spanner(label = "Unit",      id = "unit_span",
+                  columns = c(`Voter`)) |>
+  gt::tab_spanner(label = "Outcome",   id = "outcome_span",
+                  columns = c(`Vote`)) |>
+  gt::tab_spanner(label = "Covariate", id = "covariates_span",
+                  columns = c(`Sex`)) |>
+  gt::cols_align(align = "left", columns = c(`Voter`, `Vote`, `Sex`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "outcome_span", "covariates_span"))
+  ) |>
+  gt::tab_footnote(footnote = pre_title_footnote,
+                   locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pre_units_footnote,
+                   locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pre_outcome_footnote,
+                   locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pre_covariate_footnote,
+                   locations = gt::cells_column_spanners(spanners = "covariates_span")) |>
+  gt::opt_css(
+    css = "
+      #preceptor_tbl .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  pre_gt_html,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+### Exercise 12
+
+Write the first two sentences of the summary paragraph. The first introduces the topic; the second introduces the data and the specific question.
+
+```{r wisdom-12}
+question_text(NULL,
+  message = "The 1992 presidential election split the American electorate three ways, and political scientists still argue about which social divides drove the split. Using 1,658 respondents from the 1992 American National Election Studies survey, we estimate the difference in the probability of voting for Perot between men and women.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Read our answer. It will not be the same as yours. You can change your answer to incorporate some of our ideas, but do not copy/paste exactly. Add your two sentences to the summary paragraph in your QMD. Render the QMD, then commit/push.
+
+
+## Justice
+###
+
+Wisdom gives us the Preceptor Table and the data.
+
+```{r}
+#| echo: false
+#| results: asis
+pre_tibble_j <- tibble::tribble(
+  ~`Voter`,           ~`Vote`,     ~`Sex`,
+  "Carol Jenkins",    "Clinton",   "Female",
+  "Frank Kowalski",   "Perot",     "Male",
+  "...",              "...",       "...",
+  "Dorothy Mitchell", "Bush",      "Female"
+)
+
+pre_gt_html_j <- gt::gt(pre_tibble_j, id = "preceptor_tbl_j") |>
+  gt::tab_header(title = "Preceptor Table") |>
+  gt::tab_spanner(label = "Unit",      id = "unit_span",
+                  columns = c(`Voter`)) |>
+  gt::tab_spanner(label = "Outcome",   id = "outcome_span",
+                  columns = c(`Vote`)) |>
+  gt::tab_spanner(label = "Covariate", id = "covariates_span",
+                  columns = c(`Sex`)) |>
+  gt::cols_align(align = "left", columns = c(`Voter`, `Vote`, `Sex`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "outcome_span", "covariates_span"))
+  ) |>
+  gt::opt_css(
+    css = "
+      #preceptor_tbl_j .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  pre_gt_html_j,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+```{r}
+#| echo: false
+#| results: asis
+data_tibble <- tibble::tribble(
+  ~`Respondent`,      ~`Year`, ~`Vote`,     ~`Sex`,
+  "Susan Hartley",    "1992",  "Clinton",   "Female",
+  "Raymond Ortiz",    "1992",  "Perot",     "Male",
+  "...",              "...",   "...",       "...",
+  "Helen Brennan",    "1992",  "Bush",      "Female"
+)
+
+data_title_footnote     <- "American National Election Studies (ANES), 1992 wave. Respondents are interviewed face-to-face before and after the election; the vote question is asked in the post-election interview, conducted in November and December 1992."
+data_units_footnote     <- "Each row is one ANES respondent from the 1992 wave who reported voting for Clinton, Bush, or Perot and has a recorded sex --- 1,658 respondents in our cleaned tibble. ANES draws a multi-stage probability sample of voting-age citizens."
+data_outcome_footnote   <- "The candidate the respondent says they voted for, asked several weeks after Election Day. Recorded in `nes` by party and relabeled to candidate names in our `nes_92` tibble. Self-reported recall, not an examined ballot."
+data_covariate_footnote <- "Sex as recorded by the interviewer, Female or Male in this wave."
+
+data_gt_html <- gt::gt(data_tibble, id = "data_tbl") |>
+  gt::tab_header(title = "Data: American National Election Studies, 1992") |>
+  gt::tab_spanner(label = "Unit/Time",  id = "unit_span",
+                  columns = c(`Respondent`, `Year`)) |>
+  gt::tab_spanner(label = "Outcome",    id = "outcome_span",
+                  columns = c(`Vote`)) |>
+  gt::tab_spanner(label = "Covariate",  id = "covariates_span",
+                  columns = c(`Sex`)) |>
+  gt::cols_align(align = "left",  columns = c(`Respondent`, `Vote`, `Sex`)) |>
+  gt::cols_align(align = "right", columns = c(`Year`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "outcome_span", "covariates_span"))
+  ) |>
+  gt::tab_footnote(footnote = data_title_footnote,
+                   locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = data_units_footnote,
+                   locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = data_outcome_footnote,
+                   locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = data_covariate_footnote,
+                   locations = gt::cells_column_spanners(spanners = "covariates_span")) |>
+  gt::opt_css(
+    css = "
+      #data_tbl .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  data_gt_html,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+Remember that Justice concerns the Population Table, the four key assumptions which underlie it (validity, stability, representativeness, and unconfoundedness), and selects the formula for the data generating mechanism.
+
+### Exercise 1
+
+In your own words, define "validity" as we use the term.
+
+```{r justice-1}
+question_text(NULL,
+  message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+Validity is always about the columns, never the rows. The names of two columns matching across tables is no guarantee that they measure the same thing.
+
+### Exercise 2
+
+Provide one reason why the assumption of validity might not hold for the outcome variable `pres_vote` or for the covariate `sex`.
+
+```{r justice-2}
+question_text(NULL,
+  message = "The Preceptor Table's `Vote` column is the ballot each voter cast on November 3. The data's `pres_vote` column is what each respondent *told an interviewer* weeks later. Post-election recall drifts toward the winner --- some Bush and Perot voters reported voting for Clinton once the result was known --- so the two columns are not quite the same measurement, and treating them as one requires the validity assumption to hold at least approximately.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+Validity, if reasonable, is what lets us treat the Preceptor Table and the data as drawn from the same population. Vote-recall error in ANES is well documented but modest --- a few percentage points --- which is why analysts keep using the survey while flagging the issue.
+
+### Exercise 3
+
+In your own words, define a Population Table.
+
+```{r justice-3}
+question_text(NULL,
+  message = "The Population Table includes a row for each unit/time combination in the underlying population from which both the Preceptor Table and the data are drawn.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+The Population Table is almost always larger than the Preceptor Table and the data combined: it covers the full universe of unit/time combinations both samples are drawn from.
+
+### Exercise 4
+
+Specify the unit/time combinations which define each row in this Population Table.
+
+```{r justice-4}
+question_text(NULL,
+  message = "Each row is one American voter at one presidential election in the early 1990s. Data rows are the 1,658 ANES respondents interviewed in late 1992. Preceptor rows are the roughly 100 million Americans who cast major-candidate ballots on November 3, 1992. Because our question is about the same election our data measures, the two blocks sit unusually close together in time.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r}
+#| echo: false
+#| results: asis
+pop_tibble <- tibble::tribble(
+  ~Source    , ~`Voter`,            ~`Year`, ~`Vote`,     ~`Sex`,
+  "..."      , "...",               "..."  , "...",       "...",
+  "Data"     , "Susan Hartley",     "1992" , "Clinton",   "Female",
+  "Data"     , "Raymond Ortiz",     "1992" , "Perot",     "Male",
+  "Data"     , "...",               "..."  , "...",       "...",
+  "Data"     , "Helen Brennan",     "1992" , "Bush",      "Female",
+  "..."      , "...",               "..."  , "...",       "...",
+  "Preceptor", "Carol Jenkins",     "1992" , "Clinton",   "Female",
+  "Preceptor", "Frank Kowalski",    "1992" , "Perot",     "Male",
+  "Preceptor", "...",               "..."  , "...",       "...",
+  "Preceptor", "Dorothy Mitchell",  "1992" , "Bush",      "Female",
+  "..."      , "...",               "..."  , "...",       "..."
+)
+
+pop_title_footnote     <- "Population: American presidential voters in the early 1990s, from which both the ANES sample (Data rows) and the full 1992 major-candidate electorate (Preceptor rows) are drawn."
+pop_units_footnote     <- "Each row is one voter at one election. Data rows are ANES 1992 respondents; Preceptor rows are the roughly 100 million Americans who cast three-candidate ballots in 1992. Both blocks carry the same year --- the rare Primer problem where the data and the question share a moment."
+pop_outcome_footnote   <- "The presidential vote. In Data rows, the vote as reported to an ANES interviewer weeks after the election; in Preceptor rows, the ballot actually cast."
+pop_covariate_footnote <- "Sex, recorded as Female or Male in both blocks."
+
+pop_gt_html <- gt::gt(pop_tibble, id = "population_tbl") |>
+  gt::tab_header(title = "Population Table") |>
+  gt::tab_spanner(label = "Unit/Time",  id = "unit_span",
+                  columns = c(`Voter`, `Year`)) |>
+  gt::tab_spanner(label = "Outcome",    id = "outcome_span",
+                  columns = c(`Vote`)) |>
+  gt::tab_spanner(label = "Covariate",  id = "covariates_span",
+                  columns = c(`Sex`)) |>
+  gt::cols_align(align = "left",  columns = c(`Source`, `Voter`, `Vote`, `Sex`)) |>
+  gt::cols_align(align = "right", columns = c(`Year`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "outcome_span", "covariates_span"))
+  ) |>
+  gt::tab_footnote(footnote = pop_title_footnote,
+                   locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pop_units_footnote,
+                   locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pop_outcome_footnote,
+                   locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pop_covariate_footnote,
+                   locations = gt::cells_column_spanners(spanners = "covariates_span")) |>
+  gt::opt_css(
+    css = "
+      #population_tbl .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  pop_gt_html,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+### Exercise 5
+
+In your own words, define the assumption of "stability."
+
+```{r justice-5}
+question_text(NULL,
+  message = "Stability means that the relationship between the columns in the Population Table is the same for three categories of rows: the data, the Preceptor Table, and the larger population from which both are drawn.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+Stability is a statement about *parameters*, not distributions. Our model's parameters connect sex to the probability of each vote; stability says those parameters are the same for the ANES interviews, for Election Day, and for the broader early-1990s electorate the Population Table describes.
+
+### Exercise 6
+
+Provide one reason why stability might not hold in this case.
+
+```{r justice-6}
+question_text(NULL,
+  message = "The parameters connecting sex to vote choice may not have been constant even across the few weeks separating Election Day from the ANES post-election interviews. Perot's support was uniquely volatile --- he quit the race in July and re-entered in October --- and if male support for Perot softened or hardened after the election (say, as commentary framed his 19% as a spoiler showing), then the sex-to-Perot parameter in the interview window differs from the parameter that governed the ballots. The gap is small, but the assumption is doing real work even across weeks.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 7)
+```
+
+###
+
+The most common student mistake on stability is to conflate it with a distribution shift. If a few more women than men had shown up to vote, the *composition* of the electorate changes but the sex-to-vote parameters need not. What stability guards is the *relationship* --- the slope connecting sex to candidate probability --- not the mix of people it applies to. Distributional change is everywhere; parameter change is what hurts us.
+
+### Exercise 7
+
+We use our data to make inferences about the overall population. We use information about the population to make inferences about the Preceptor Table: Data → Population → Preceptor Table. In your own words, define the assumption of "representativeness."
+
+```{r justice-7}
+question_text(NULL,
+  message = "Representativeness, or the lack thereof, concerns two relationships among the rows in the Population Table. The first is between the data and the other rows. The second is between the other rows and the Preceptor Table.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+Ideally both the Preceptor Table and the data would be random samples from the population. ANES is built on a genuine probability sample --- much closer to the ideal than most data we use --- but the road from "sampled" to "interviewed twice, before and after the election" leaves room for slippage.
+
+### Exercise 8
+
+Provide one reason, involving the relationship between the data and the population, why representativeness might not hold.
+
+```{r justice-8}
+question_text(NULL,
+  message = "ANES requires two long face-to-face interviews, one before and one after the election. The citizens who complete both are systematically more politically engaged than the citizens who refuse or drop out --- and political engagement is correlated with both sex and vote choice. Our cut also drops the ANES survey weights that are designed to correct for exactly this kind of nonresponse, so our 1,658 rows over-represent the highly engaged relative to the early-1990s voting population.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+A non-representative sample does not *guarantee* a biased estimate --- the bias might wash out by chance. But chance is the only mechanism that would save us, and we have no principled reason to expect it to work in our favor. *"Might be biased"* is the correct stance, not *"will be biased."*
+
+### Exercise 9
+
+We use information about the population to make inferences about the Preceptor Table. Provide one reason, involving the relationship between the population and the Preceptor Table, why representativeness might not hold.
+
+```{r justice-9}
+question_text(NULL,
+  message = "The Preceptor Table contains only the people who actually turned out and voted for one of the three major candidates. The broader population of early-1990s voting-age citizens includes tens of millions who stayed home, and turnout is not random --- it rises with age, education, and engagement, and differed by sex in 1992. Inferences that hold for the citizenry as a whole need not hold for the self-selected subset who cast three-candidate ballots, which is the subset our question is about.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+Stability looks across time periods; representativeness looks within them. Here the two blocks share a year, so representativeness carries almost all the risk: the worry is not that 1992 differs from 1992, but that survey completers and actual voters are different kinds of people.
+
+### Exercise 10
+
+A statistical model consists of two parts: the probability family and the link function. The probability family is the probability distribution that generates the randomness in our data. Our outcome variable `pres_vote` takes three unordered values. What probability family should we use?
+
+```{r justice-10}
+question_text(NULL,
+  message = "Multinomial: $Y \\sim \\text{Multinomial}(\\boldsymbol{\\rho})$, where $\\boldsymbol{\\rho} = (\\rho_{Clinton}, \\rho_{Bush}, \\rho_{Perot})$ are the probabilities of each vote for a given voter.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+While you're here, also add `library(tidymodels)` to the setup chunk in `analysis.qmd` so the rest of Courage can call `multinom_reg()` and `fit()`.
+
+### Exercise 11
+
+The link function is the mathematical formula that links our data to the unknown parameters. What is the link function for a multinomial outcome?
+
+```{r justice-11}
+question_text(NULL,
+  message = "Multinomial logistic: each non-reference category $k$ gets its own linear predictor, and $P(Y = k) = e^{\\beta_{k0} + \\beta_{k1} X_1 + \\cdots} \\big/ \\sum_j e^{\\beta_{j0} + \\beta_{j1} X_1 + \\cdots}$. Our model will be a multinomial logistic regression --- the first one in the curriculum.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+While you're here, also add `library(broom)` to the setup chunk in `analysis.qmd` so we can call `tidy()` on the fitted model in Courage.
+
+### Exercise 12
+
+Write one sentence highlighting a potential weakness in your model. So far our summary paragraph looks like this:
+
+> The 1992 presidential election split the American electorate three ways, and political scientists still argue about which social divides drove the split. Using 1,658 respondents from the 1992 American National Election Studies survey, we estimate the difference in the probability of voting for Perot between men and women.
+
+Your version will be somewhat different.
+
+```{r justice-12}
+question_text(NULL,
+  message = "One concern is that our data records votes as respondents recalled them weeks after the election, and recalled votes drift toward the winner, so the reported Clinton share --- and every sex-specific probability we compute from it --- may be a few percentage points off the ballots actually cast.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Add a weakness sentence to your summary paragraph in your QMD. Don't copy/paste our answer exactly. Render the QMD, then commit/push.
+
+
+## Courage
+###
+
+Justice gives us the Population Table and the abstract data generating mechanism.
+
+```{r}
+#| echo: false
+#| results: asis
+pop_tibble_c <- tibble::tribble(
+  ~Source    , ~`Voter`,            ~`Year`, ~`Vote`,     ~`Sex`,
+  "..."      , "...",               "..."  , "...",       "...",
+  "Data"     , "Susan Hartley",     "1992" , "Clinton",   "Female",
+  "Data"     , "Raymond Ortiz",     "1992" , "Perot",     "Male",
+  "Data"     , "...",               "..."  , "...",       "...",
+  "Data"     , "Helen Brennan",     "1992" , "Bush",      "Female",
+  "..."      , "...",               "..."  , "...",       "...",
+  "Preceptor", "Carol Jenkins",     "1992" , "Clinton",   "Female",
+  "Preceptor", "Frank Kowalski",    "1992" , "Perot",     "Male",
+  "Preceptor", "...",               "..."  , "...",       "...",
+  "Preceptor", "Dorothy Mitchell",  "1992" , "Bush",      "Female",
+  "..."      , "...",               "..."  , "...",       "..."
+)
+
+pop_gt_html_c <- gt::gt(pop_tibble_c, id = "population_tbl_c") |>
+  gt::tab_header(title = "Population Table") |>
+  gt::tab_spanner(label = "Unit/Time",  id = "unit_span",
+                  columns = c(`Voter`, `Year`)) |>
+  gt::tab_spanner(label = "Outcome",    id = "outcome_span",
+                  columns = c(`Vote`)) |>
+  gt::tab_spanner(label = "Covariate",  id = "covariates_span",
+                  columns = c(`Sex`)) |>
+  gt::cols_align(align = "left",  columns = c(`Source`, `Voter`, `Vote`, `Sex`)) |>
+  gt::cols_align(align = "right", columns = c(`Year`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "outcome_span", "covariates_span"))
+  ) |>
+  gt::opt_css(
+    css = "
+      #population_tbl_c .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  pop_gt_html_c,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+$$P(Y = k) = \frac{e^{\beta_{k0} + \beta_{k1} X_1 + \beta_{k2} X_2 + \cdots + \beta_{kn} X_n}}{\sum_{j=1}^{K} e^{\beta_{j0} + \beta_{j1} X_1 + \beta_{j2} X_2 + \cdots + \beta_{jn} X_n}}$$
+
+with $Y \sim \text{Multinomial}(\boldsymbol{\rho})$ where $\boldsymbol{\rho} = (\rho_1, \rho_2, \ldots, \rho_K)$ are the probabilities above.
+
+### Exercise 1
+
+In your own words, describe the components of the virtue of Courage for analyzing data.
+
+```{r courage-1}
+question_text(NULL,
+  message = "Courage creates the data generating mechanism.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+Having decided on the basic mathematical structure of the model at the end of Justice --- a choice mostly driven by the distribution of our outcome variable --- we now turn toward estimating the model. The abstract formula above uses generic variables because Justice decided the *family*, not the covariates.
+
+### Exercise 2
+
+Because our outcome variable takes three unordered values, add a code chunk to `analysis.qmd` that begins building the model with `multinom_reg(engine = "nnet")`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-2}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-2-test}
+#| echo: true
+multinom_reg(engine = "nnet")
+```
+
+###
+
+**[tidymodels](https://www.tidymodels.org/)** is the most popular framework for estimating models among R users. `multinom_reg()` is the three-or-more-category counterpart to `logistic_reg()`; the `"nnet"` engine hands the actual fitting to the **nnet** package, the standard R implementation of multinomial logistic regression.
+
+### Exercise 3
+
+Extend the chunk in `analysis.qmd` to `multinom_reg(engine = "nnet") |> fit(pres_vote ~ 1, data = nes_92)`. The formula `pres_vote ~ 1` fits an intercept-only model --- no covariates at all. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-3}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-3-test, message = FALSE, warning = FALSE}
+#| echo: true
+multinom_reg(engine = "nnet") |>
+  fit(pres_vote ~ 1, data = nes_92)
+```
+
+###
+
+A multinomial model always works *relative to a reference category* --- by default the first factor level, here `Bush` (alphabetical order). Even this intercept-only model therefore has two intercepts: one for Clinton-versus-Bush and one for Perot-versus-Bush.
+
+### Exercise 4
+
+Here is the parameter table for the intercept-only model:
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+multinom_reg(engine = "nnet") |>
+  fit(pres_vote ~ 1, data = nes_92) |>
+  tidy(conf.int = TRUE) |>
+  select(y.level, term, estimate, conf.low, conf.high) |>
+  mutate(across(where(is.numeric), \(x) round(x, 2)))
+```
+
+Write a sentence interpreting the Clinton intercept of 0.34.
+
+```{r courage-4}
+question_text(NULL,
+  message = "The Clinton intercept of 0.34 is the log-odds of a voter choosing Clinton rather than Bush, the reference category. It is positive, meaning Clinton was the more common reported vote --- but the number itself is on the log-odds scale relative to Bush, which is not a scale anyone can read directly.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+Whenever you interpret a multinomial coefficient, state the reference category explicitly --- every number in the table is *relative to Bush*, and the table would look completely different if Perot were the reference. Without a covariate, the model can only emit one prediction --- the same three probabilities for every voter. Adding `sex` lets the DGM produce different predictions for different voters, which is the whole point of having a covariate.
+
+### Exercise 5
+
+Fit the final model in `analysis.qmd` with the formula `fit(pres_vote ~ sex, data = nes_92)`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-5}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-5-test, message = FALSE, warning = FALSE}
+#| echo: true
+multinom_reg(engine = "nnet") |>
+  fit(pres_vote ~ sex, data = nes_92)
+```
+
+###
+
+This is the model the rest of the tutorial uses. With one binary covariate, the model now carries four parameters: an intercept and a `sexMale` offset for Clinton-versus-Bush, and an intercept and a `sexMale` offset for Perot-versus-Bush.
+
+### Exercise 6
+
+Here is the parameter table for the final model:
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+multinom_reg(engine = "nnet") |>
+  fit(pres_vote ~ sex, data = nes_92) |>
+  tidy(conf.int = TRUE) |>
+  select(y.level, term, estimate, conf.low, conf.high) |>
+  mutate(across(where(is.numeric), \(x) round(x, 2)))
+```
+
+Write a sentence interpreting the Perot `sexMale` estimate of 0.42.
+
+```{r courage-6}
+question_text(NULL,
+  message = "Comparing two voters of different sex (one Male, one Female), the log-odds of voting Perot rather than Bush --- the reference category --- are about 0.42 higher for the man. The 95% confidence interval (0.14 to 0.70) excludes zero, so the direction is not just sampling noise. Note the language: this is a comparison between two groups of voters, not a claim that sex causes a Perot vote.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+*Log-odds relative to Bush* is two translations away from anything a reader wants: first from log-odds to probability, then from Bush-relative to absolute. We do not ask you to perform either translation in your head. The take-aways at this stage are the sign (positive: men lean Perot), the reference (everything is versus Bush), and the CI (excludes zero). The probability-scale answers come from `marginaleffects` in Temperance.
+
+### Exercise 7
+
+We've settled on the final fit. In `analysis.qmd`, add a new code chunk that assigns the result of `multinom_reg(engine = "nnet") |> fit(pres_vote ~ sex, data = nes_92)` to `fit_nes`, then on the next line prints `fit_nes`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-7}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-7-test, message = FALSE, warning = FALSE}
+#| echo: true
+fit_nes <- multinom_reg(engine = "nnet") |>
+  fit(pres_vote ~ sex, data = nes_92)
+fit_nes
+```
+
+###
+
+Model naming convention: the fitted object starts with `fit_` and is used under that one name for the rest of the analysis. Every later `tidy()`, `predictions()`, and plot call will reference `fit_nes`.
+
+### Exercise 8
+
+Re-fitting the model on every render is wasteful. `fit_nes` earns its own cached chunk. The next three exercises set that up: clean the chunk, turn caching on, add the cache directory to `.gitignore`.
+
+First, clean up. In your chunk from Exercise 7, delete the `fit_nes` line at the bottom, leaving just the assignment. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-8}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+<pre><code>fit_nes <- multinom_reg(engine = "nnet") |>
+  fit(pres_vote ~ sex, data = nes_92)
+</code></pre>
+
+###
+
+A chunk ready to cache should contain only the artifact it builds.
+
+### Exercise 9
+
+Add `#| cache: true` as the first line inside the chunk. Render the QMD. Rendering creates an `analysis_cache/` directory next to your `analysis.qmd`, which holds the saved fit so Quarto can reload it rather than re-fit on every render. To confirm the directory is there, run `ls` in the **bash Terminal**. CP/CR.
+
+```{r courage-9}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+<pre><code>$ ls
+analysis.qmd  analysis_cache  analysis_files  analysis.html
+</code></pre>
+
+###
+
+The savings here are modest --- this fit takes well under a second --- but the same three-step pattern (clean chunk, `#| cache: true`, ignore the cache directory) is exactly what you will use when a fit takes minutes.
+
+### Exercise 10
+
+The Source Control change count just jumped, because `analysis_cache/` and everything inside it now look like untracked work to git. Cached files should never go to GitHub --- they're machine-specific and regenerated on every render.
+
+Add `analysis_cache` to your `.gitignore` on its own line. In the R Terminal, run `show_file(".gitignore")`. CP/CR.
+
+```{r courage-10}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+<pre><code>analysis_files
+analysis_cache
+</code></pre>
+
+###
+
+The Source Control change count should drop back to whatever it was before the render.
+
+### Exercise 11
+
+To check whether our model is reasonable, we compare the vote shares the model predicts with the shares actually observed. In `analysis.qmd`, add a chunk that computes the observed shares:
+
+```
+nes_92 |>
+  count(sex, pres_vote) |>
+  group_by(sex) |>
+  mutate(share = n / sum(n))
+```
+
+Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-11}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-11-test}
+#| echo: true
+nes_92 |>
+  count(sex, pres_vote) |>
+  group_by(sex) |>
+  mutate(share = n / sum(n))
+```
+
+###
+
+For most models we would run `check_predictions()` from **[easystats](https://easystats.github.io/easystats/)** here, comparing simulated outcomes to real ones. That function does not support `nnet` multinomial fits (there is no `simulate()` method for them), so we check by hand instead. Our model has one parameter per candidate per sex --- as many parameters as there are group shares --- so its predicted probabilities will match these observed shares *exactly*. The check is trivially passed here; the habit of making the comparison is what matters, and it will have teeth as soon as a model has fewer parameters than groups.
+
+### Exercise 12
+
+With the parameters estimated, we can write the fitted model as a concrete formula. The linear predictors for the two non-reference candidates are:
+
+$$\log\!\left[\frac{P(\text{Clinton})}{P(\text{Bush})}\right] = 0.455 - 0.255 \cdot \text{sexMale}$$
+
+$$\log\!\left[\frac{P(\text{Perot})}{P(\text{Bush})}\right] = -0.852 + 0.420 \cdot \text{sexMale}$$
+
+`sexMale` is a dummy variable: 1 for Male, 0 for Female. Each equation is a log-odds *relative to Bush*, the reference category: the first says women (sexMale = 0) favor Clinton over Bush, and less so for men; the second says men favor Perot over Bush more than women do.
+
+**This is our data generating mechanism.**
+
+###
+
+A data generating mechanism is just a formula --- something we can write down and implement with computer code. The multinomial wrapper turns these two Bush-relative log-odds into three probabilities that sum to one for every voter. Translating the formulas into those probabilities is what `marginaleffects` does in Temperance.
+
+### Exercise 13
+
+In `analysis.qmd`, add a chunk that runs `tidy(fit_nes, conf.int = TRUE)`. This returns 95% intervals for all the parameters in our model. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r courage-13}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r courage-13-test}
+#| echo: true
+tidy(fit_nes, conf.int = TRUE)
+```
+
+###
+
+`tidy()` is part of **[broom](https://broom.tidymodels.org/)**, used to summarize information from a wide variety of models. For a multinomial fit it adds a `y.level` column naming which non-reference candidate each row's parameters belong to; everything in `estimate`, `conf.low`, and `conf.high` is on the Bush-relative log-odds scale.
+
+### Exercise 14
+
+Create a new code chunk in your QMD. Make a nice-looking table from the tibble returned by `tidy()`. Insert your table code, Render the QMD, and in the R Terminal run:
+
+```
+show_file("analysis.qmd", chunk = "Last")
+```
+
+CP/CR.
+
+```{r courage-14}
+question_text(NULL,
+  message = "    > show_file(\"analysis.qmd\", chunk = \"Last\")\n    ```{r}\n    tidy(fit_nes, conf.int = TRUE) |>\n      select(y.level, term, estimate, conf.low, conf.high) |>\n      knitr::kable(\n        caption = \"Multinomial logistic estimates (log-odds vs. Bush) and 95% CIs. Source: ANES 1992 via primer.data::nes\",\n        digits = 2\n      )\n    ```",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+A nice table includes a title, a caption with the data source, and reasonable rounding. For a multinomial model, keeping the `y.level` column visible is essential --- without it the reader cannot tell the Clinton parameters from the Perot ones.
+
+### Exercise 15
+
+Add a sentence to your project summary explaining the model structure.
+
+```{r courage-15}
+question_text(NULL,
+  message = "We model presidential vote as a multinomial variable which is a multinomial logistic function of sex.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Add your sentence to the summary paragraph. Render the QMD, then commit/push.
+
+
+## Temperance
+###
+
+Courage provides the data generating mechanism. We can express the DGM in four ways:
+
+**In words:** We model presidential vote as a multinomial variable which is a multinomial logistic function of sex.
+
+**In R code:**
+
+```r
+fit_nes <- multinom_reg(engine = "nnet") |>
+  fit(pres_vote ~ sex, data = nes_92)
+```
+
+**In a parameter table:**
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+fit_nes |>
+  tidy(conf.int = TRUE) |>
+  select(y.level, term, estimate, conf.low, conf.high) |>
+  mutate(across(where(is.numeric), \(x) round(x, 3)))
+```
+
+**As a mathematical formula:**
+
+$$\log\!\left[\frac{P(\text{Clinton})}{P(\text{Bush})}\right] = 0.455 - 0.255 \cdot \text{sexMale}
+\qquad
+\log\!\left[\frac{P(\text{Perot})}{P(\text{Bush})}\right] = -0.852 + 0.420 \cdot \text{sexMale}$$
+
+Remember that Temperance interprets the data generating mechanism and then uses it to answer, with the help of graphics, the question(s) with which we began. Humility reminds us that this answer is always false.
+
+### Exercise 1
+
+In the end, we don't really care about parameters, much less how to interpret them. Parameters are *imaginary*, like unicorns. We care about answers to our questions, on the outcome scale.
+
+Add `library(marginaleffects)` to the setup chunk in `analysis.qmd` and render.
+
+CP/CR.
+
+```{r temperance-1}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+<pre><code>
+#| message: false
+library(tidyverse)
+library(primer.data)
+library(tidymodels)
+library(broom)
+library(marginaleffects)
+</code></pre>
+
+###
+
+The tool for translating Bush-relative log-odds into probabilities is the **[marginaleffects](https://marginaleffects.com/)** package, with companion book *[Model to Meaning](https://marginaleffects.com/)* by Vincent Arel-Bundock.
+
+### Exercise 2
+
+What is the specific question we are trying to answer?
+
+```{r temperance-2}
+question_text(NULL,
+  message = "What is the difference in the probability of voting for Perot between men and women in the 1992 presidential election?",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+A specific question must specify a number to compute. With a multinomial outcome, that means picking one category to ask about --- *"the distribution of the vote by sex"* is a vector, not a number, but *"the Perot gap between men and women"* is one number we can produce, with an interval.
+
+### Exercise 3
+
+In `analysis.qmd`, add a chunk that runs
+
+```
+predictions(extract_fit_engine(fit_nes),
+            newdata = data.frame(sex = c("Female", "Male")))
+```
+
+The `extract_fit_engine()` step is required because `marginaleffects` needs the underlying `nnet` object, not the `parsnip` wrapper. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r temperance-3}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r temperance-3-test}
+#| echo: true
+predictions(extract_fit_engine(fit_nes),
+            newdata = data.frame(sex = c("Female", "Male")))
+```
+
+###
+
+For a multinomial model, `predictions()` returns one row per covariate combination *per outcome category* --- six rows here: two sexes times three candidates, with the `group` column naming the candidate. Reading them: women split 52.5% Clinton / 33.3% Bush / 14.2% Perot, while men split 42.5% / 34.8% / 22.6%. Each sex's three probabilities sum to one.
+
+### Exercise 4
+
+Predictions tell us the level of the outcome at specific covariate values. *Comparisons* tell us how the outcome shifts across groups --- and our question is exactly a comparison.
+
+In `analysis.qmd`, add a chunk that runs `avg_comparisons(extract_fit_engine(fit_nes), variables = "sex")`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r temperance-4}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r temperance-4-test}
+#| echo: true
+avg_comparisons(extract_fit_engine(fit_nes), variables = "sex")
+```
+
+###
+
+One row per candidate, each a Male-minus-Female difference in probability. The Perot row answers our question: men were about 8.4 percentage points more likely than women to vote for Perot (95% CI roughly 4.7 to 12.2). *Percentage points*, not *percent*: moving from 14.2% to 22.6% is 8.4 percentage points but a 59% relative increase --- different numbers answering different questions. The Clinton row shows the mirror-image gap (women +10.0 points), while the Bush interval crosses zero.
+
+### Exercise 5
+
+The `plot_predictions()` shortcut does not fully support `nnet` multinomial fits, so we build the plot ourselves from the `predictions()` tibble. In `analysis.qmd`, add a chunk that saves the predictions to a tibble:
+
+```
+preds <- predictions(extract_fit_engine(fit_nes),
+                     newdata = data.frame(sex = c("Female", "Male"))) |>
+  as_tibble()
+```
+
+Then, on the next line, print `preds`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r temperance-5}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r temperance-5-test}
+#| echo: true
+preds <- predictions(extract_fit_engine(fit_nes),
+                     newdata = data.frame(sex = c("Female", "Male"))) |>
+  as_tibble()
+preds
+```
+
+###
+
+This is the same escape hatch as `draw = FALSE` in other tutorials: get the estimates and intervals into an ordinary tibble, then build exactly the plot you want with ggplot. Multinomial models need the escape hatch more often than most, because their plotting shortcuts have to juggle the extra `group` dimension.
+
+### Exercise 6
+
+Create a beautiful plot starting from `preds`. Do this in your QMD. Title: key variables. Subtitle: takeaway. Caption: data source. Y-axis: percentages. Error bars: the 95% intervals. Paste the plot code below.
+
+```{r temperance-6}
+question_text(NULL,
+  message = "    preds |>\n      mutate(candidate = factor(group, levels = c(\"Clinton\", \"Bush\", \"Perot\"))) |>\n      ggplot(aes(x = candidate, y = estimate, fill = sex)) +\n      geom_col(position = position_dodge(width = 0.8), width = 0.7) +\n      geom_errorbar(aes(ymin = conf.low, ymax = conf.high),\n                    position = position_dodge(width = 0.8),\n                    width = 0.2) +\n      scale_y_continuous(labels = scales::label_percent()) +\n      labs(\n        title    = \"Predicted 1992 Vote Probabilities, by Sex\",\n        subtitle = \"Women favor Clinton by 10 points; men are 8 points more likely to back Perot\",\n        x        = NULL,\n        y        = NULL,\n        fill     = \"Sex\",\n        caption  = \"Source: American National Election Studies 1992 via primer.data::nes\"\n      ) +\n      theme_minimal()",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 18)
+```
+
+###
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+predictions(extract_fit_engine(fit_nes),
+            newdata = data.frame(sex = c("Female", "Male"))) |>
+  as_tibble() |>
+  mutate(candidate = factor(group, levels = c("Clinton", "Bush", "Perot"))) |>
+  ggplot(aes(x = candidate, y = estimate, fill = sex)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
+                position = position_dodge(width = 0.8),
+                width = 0.2) +
+  scale_y_continuous(labels = scales::label_percent()) +
+  labs(
+    title    = "Predicted 1992 Vote Probabilities, by Sex",
+    subtitle = "Women favor Clinton by 10 points; men are 8 points more likely to back Perot",
+    x        = NULL,
+    y        = NULL,
+    fill     = "Sex",
+    caption  = "Source: American National Election Studies 1992 via primer.data::nes"
+  ) +
+  theme_minimal()
+```
+
+### Exercise 7
+
+Finalize the new graphics chunk in your QMD. Render the QMD. In the R Terminal, run:
+
+```
+show_file("analysis.qmd", chunk = "Last")
+```
+
+CP/CR.
+
+```{r temperance-7}
+question_text(NULL,
+  message = "    > show_file(\"analysis.qmd\", chunk = \"Last\")\n    ```{r}\n    preds |>\n      mutate(candidate = factor(group, levels = c(\"Clinton\", \"Bush\", \"Perot\"))) |>\n      ggplot(aes(x = candidate, y = estimate, fill = sex)) +\n      geom_col(position = position_dodge(width = 0.8), width = 0.7) +\n      geom_errorbar(aes(ymin = conf.low, ymax = conf.high),\n                    position = position_dodge(width = 0.8),\n                    width = 0.2) +\n      scale_y_continuous(labels = scales::label_percent()) +\n      labs(\n        title = \"Predicted 1992 Vote Probabilities, by Sex\",\n        subtitle = \"Women favor Clinton by 10 points; men are 8 points more likely to back Perot\",\n        x = NULL, y = NULL, fill = \"Sex\",\n        caption = \"Source: American National Election Studies 1992 via primer.data::nes\"\n      ) +\n      theme_minimal()\n    ```",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 18)
+```
+
+###
+
+The map is not the territory. A clean graphic tells a story, but the story always rests on assumptions that are at best approximately true.
+
+### Exercise 8
+
+Write the last sentence of your summary paragraph. It describes at least one Quantity of Interest and a measure of uncertainty.
+
+```{r temperance-8}
+question_text(NULL,
+  message = "We estimate that men were about 8 percentage points more likely than women to vote for Perot (95% CI roughly 5 to 12 percentage points), with a mirror-image gap favoring Clinton among women and essentially no sex difference in the Bush vote.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Add a final sentence to your summary paragraph, but don't copy/paste exactly. Render the QMD.
+
+### Exercise 9
+
+Write a few sentences explaining why the estimate might be wrong. Suggest alternative estimates if warranted.
+
+```{r temperance-9}
+question_text(NULL,
+  message = "Our data records recalled votes, not ballots, and recall drifts toward the winner --- so the Clinton probabilities are likely a little high and the Bush and Perot probabilities a little low, for both sexes. ANES completers are also more politically engaged than the electorate, and our cut drops the survey weights that would correct for it. The direction of these biases for the *sex gap* specifically is unclear, so I would keep the point estimate near 8 percentage points but widen the interval: a defensible report would say the Perot gender gap was somewhere between 3 and 14 percentage points.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+Always go back to your Preceptor Table. Even a perfectly estimated statistical model is rarely as useful as we'd like.
+
+### Exercise 10
+
+Rearrange the material in your QMD so the order is graphic, then summary paragraph. The chunk that creates `fit_nes` must occur before the chunk that creates the graphic. Render the QMD. In the R Terminal, run:
+
+```
+show_file("analysis.qmd")
+```
+
+CP/CR.
+
+```{r temperance-10}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 12)
+```
+
+###
+
+<pre><code>
+---
+title: "NES"
+author: "&lt;your name&gt;"
+execute:
+  echo: false
+---
+
+#| message: false
+library(tidyverse)
+library(primer.data)
+library(tidymodels)
+library(broom)
+library(marginaleffects)
+
+#| cache: true
+nes_92 <- nes |>
+  filter(year == 1992) |>
+  select(sex, pres_vote) |>
+  drop_na() |>
+  mutate(pres_vote = as.factor(case_when(
+    pres_vote == "Democrat"    ~ "Clinton",
+    pres_vote == "Republican"  ~ "Bush",
+    pres_vote == "Third Party" ~ "Perot")))
+
+#| cache: true
+fit_nes <- multinom_reg(engine = "nnet") |>
+  fit(pres_vote ~ sex, data = nes_92)
+
+preds <- predictions(extract_fit_engine(fit_nes),
+                     newdata = data.frame(sex = c("Female", "Male"))) |>
+  as_tibble()
+
+preds |>
+  mutate(candidate = factor(group, levels = c("Clinton", "Bush", "Perot"))) |>
+  ggplot(aes(x = candidate, y = estimate, fill = sex)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
+                position = position_dodge(width = 0.8),
+                width = 0.2) +
+  scale_y_continuous(labels = scales::label_percent()) +
+  labs(
+    title = "Predicted 1992 Vote Probabilities, by Sex",
+    subtitle = "Women favor Clinton by 10 points; men are 8 points more likely to back Perot",
+    x = NULL, y = NULL, fill = "Sex",
+    caption = "Source: American National Election Studies 1992 via primer.data::nes"
+  ) +
+  theme_minimal()
+
+The 1992 presidential election split the American electorate three ways. Using 1,658 respondents from the 1992 American National Election Studies survey, we estimate the difference in the probability of voting for Perot between men and women. One concern is that recalled votes drift toward the winner, so reported Clinton support may overstate the ballots cast. We model presidential vote as a multinomial variable which is a multinomial logistic function of sex. We estimate that men were about 8 percentage points more likely than women to vote for Perot (95% CI roughly 5 to 12 percentage points), with a mirror-image Clinton gap among women and essentially no sex difference in the Bush vote.
+</code></pre>
+
+###
+
+This is the version of your QMD your teacher is most likely to look at closely.
+
+### Exercise 11
+
+Publish your rendered QMD to GitHub Pages. In the bash Terminal (not the R Terminal!), run:
+
+```
+quarto publish gh-pages analysis.qmd
+```
+
+Copy/paste the resulting URL below.
+
+```{r temperance-11}
+question_text(NULL,
+  message = "https://<your-github-username>.github.io/nes/analysis.html",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 2)
+```
+
+###
+
+Commit/push everything.
+
+### Exercise 12
+
+Copy/paste the URL to your GitHub repo.
+
+```{r temperance-12}
+question_text(NULL,
+  message = "https://github.com/<your-github-username>/nes",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 2)
+```
+
+###
+
+We can never know all the entries in the Preceptor Table. That knowledge is reserved for God.
+
+The world confronts us. Make decisions we must.
+
+
+## Summary
+###
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+predictions(extract_fit_engine(fit_nes),
+            newdata = data.frame(sex = c("Female", "Male"))) |>
+  as_tibble() |>
+  mutate(candidate = factor(group, levels = c("Clinton", "Bush", "Perot"))) |>
+  ggplot(aes(x = candidate, y = estimate, fill = sex)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
+                position = position_dodge(width = 0.8),
+                width = 0.2) +
+  scale_y_continuous(labels = scales::label_percent()) +
+  labs(
+    title    = "Predicted 1992 Vote Probabilities, by Sex",
+    subtitle = "Women favor Clinton by 10 points; men are 8 points more likely to back Perot",
+    x        = NULL,
+    y        = NULL,
+    fill     = "Sex",
+    caption  = "Source: American National Election Studies 1992 via primer.data::nes"
+  ) +
+  theme_minimal()
+```
+
+The 1992 presidential election split the American electorate three ways, and political scientists still argue about which social divides drove the split. Using 1,658 respondents from the 1992 American National Election Studies survey, we estimate the difference in the probability of voting for Perot between men and women. One concern is that our data records votes as respondents recalled them weeks after the election, and recalled votes drift toward the winner, so reported Clinton support may overstate the ballots actually cast. We model presidential vote as a multinomial variable which is a multinomial logistic function of sex. We estimate that men were about 8 percentage points more likely than women to vote for Perot (95% confidence interval of roughly 5 to 12 percentage points), with a mirror-image gap of about 10 percentage points favoring Clinton among women and essentially no sex difference in the Bush vote.
+
+This finding would inform the book chapter our political scientist is drafting: the 1992 gender gap ran less through the two major parties than through Perot, whose candidacy drew disproportionately from men. It does not address every question the editor might ask --- it says nothing about age, education, income, or region, and nothing about *why* Perot appealed more to men. But it gives a defensible starting point.
+
+The world is always more uncertain than our models would have us believe.
+
+```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
+```
