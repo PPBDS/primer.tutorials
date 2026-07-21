@@ -451,7 +451,7 @@ pre_tibble <- tibble::tribble(
 )
 
 pre_title_footnote     <- "A Preceptor Table is the smallest table such that, if every cell were filled with its true value, answering the question 'What is the difference in expected graduation rates between colleges with tuition of $20,000 and colleges with tuition of $30,000?' would be easy."
-pre_units_footnote     <- "Each row is one US four-year college or university in 2026. The three example rows are real institutions chosen to span the selectivity range; missing rows represent the other roughly 900 institutions not shown."
+pre_units_footnote     <- "Each row is one US four-year college or university in 2026 --- the year the non-profit's students are choosing, not the year of the data. There are roughly 2,500 such institutions; the three example rows are real ones spanning that range, and missing rows represent the rest."
 pre_outcome_footnote   <- "Six-year graduation rate, a proportion between 0 and 1. Reflects the entering class from six years before the snapshot year."
 pre_covariate_footnote <- "Annual tuition and fees in units of $10,000. A value of 3 means $30,000 per year."
 
@@ -876,24 +876,24 @@ question_text(NULL,
 #| echo: false
 #| results: asis
 pop_tibble <- tibble::tribble(
-  ~Source    , ~`College`           , ~`Year`, ~`Graduation Rate`, ~`Tuition ($10,000)`, ~`Selectivity`,
-  "..."      , "..."                , "..."  , "..."             , "..."               , "..."         ,
-  "Data"     , "Amherst College"    , "2013" , "0.95"            , "4.6"               , "Elite"       ,
-  "Data"     , "University of Iowa" , "2013" , "0.71"            , "2.7"               , "Moderately Selective",
-  "Data"     , "..."                , "..."  , "..."             , "..."               , "..."         ,
-  "Data"     , "Wagner College"     , "2013" , "0.51"            , "3.6"               , "Lowly Selective",
-  "..."      , "..."                , "..."  , "..."             , "..."               , "..."         ,
-  "Preceptor", "Amherst College"    , "2026" , "0.95"            , "7.4"               , "Elite"       ,
-  "Preceptor", "University of Iowa" , "2026" , "0.72"            , "3.3"               , "Moderately Selective",
-  "Preceptor", "..."                , "..."  , "..."             , "..."               , "..."         ,
-  "Preceptor", "Wagner College"     , "2026" , "0.55"            , "5.5"               , "Lowly Selective",
-  "..."      , "..."                , "..."  , "..."             , "..."               , "..."
+  ~Source    , ~`College`           , ~`Year`, ~`Graduation Rate`, ~`Tuition ($10,000)`,
+  "..."      , "..."                , "..."  , "..."             , "..."               ,
+  "Data"     , "Amherst College"    , "2013" , "0.95"            , "4.6"               ,
+  "Data"     , "University of Iowa" , "2013" , "0.71"            , "2.7"               ,
+  "Data"     , "..."                , "..."  , "..."             , "..."               ,
+  "Data"     , "Wagner College"     , "2013" , "0.51"            , "3.6"               ,
+  "..."      , "..."                , "..."  , "..."             , "..."               ,
+  "Preceptor", "Amherst College"    , "2026" , "0.95"            , "7.4"               ,
+  "Preceptor", "University of Iowa" , "2026" , "0.72"            , "3.3"               ,
+  "Preceptor", "..."                , "..."  , "..."             , "..."               ,
+  "Preceptor", "Wagner College"     , "2026" , "0.55"            , "5.5"               ,
+  "..."      , "..."                , "..."  , "..."             , "..."
 )
 
 pop_title_footnote     <- "This table combines the 2013 IPEDS snapshot with the Preceptor Table's view of the same colleges in 2026, when the non-profit's students are choosing. The data and Preceptor rows refer to overlapping institutions but at different points in time."
 pop_units_footnote     <- "Each row is one college at one point in time. The same three institutions --- Amherst College, the University of Iowa, and Wagner College --- appear in both the Data block (2013) and the Preceptor block (2026). Their tuition values rise and their graduation rates barely move over the 13-year gap; the assumption that the *parameters* of the model are stable across the gap is what stability is about."
 pop_outcome_footnote   <- "Six-year graduation rate, 0 to 1."
-pop_covariate_footnote <- "Tuition in units of $10,000. Selectivity is IPEDS's five-level ordered factor."
+pop_covariate_footnote <- "Annual tuition in units of $10,000, recorded the same way in both blocks."
 
 pop_gt_html <- gt::gt(pop_tibble, id = "population_tbl") |>
   gt::tab_header(title = "Population Table") |>
@@ -901,9 +901,9 @@ pop_gt_html <- gt::gt(pop_tibble, id = "population_tbl") |>
                   columns = c(`College`, `Year`)) |>
   gt::tab_spanner(label = "Outcome",   id = "outcome_span",
                   columns = c(`Graduation Rate`)) |>
-  gt::tab_spanner(label = "Covariates", id = "covariates_span",
-                  columns = c(`Tuition ($10,000)`, `Selectivity`)) |>
-  gt::cols_align(align = "left" , columns = c(`Source`, `College`, `Selectivity`)) |>
+  gt::tab_spanner(label = "Covariate", id = "covariates_span",
+                  columns = c(`Tuition ($10,000)`)) |>
+  gt::cols_align(align = "left" , columns = c(`Source`, `College`)) |>
   gt::cols_align(align = "right", columns = c(`Year`, `Graduation Rate`, `Tuition ($10,000)`)) |>
   gt::fmt_markdown(columns = gt::everything()) |>
   gt::tab_options(
@@ -917,11 +917,11 @@ pop_gt_html <- gt::gt(pop_tibble, id = "population_tbl") |>
   ) |>
   gt::tab_style(
     style     = gt::cell_text(align = "left"),
-    locations = gt::cells_column_spanners(spanners = c("unit_span", "covariates_span"))
+    locations = gt::cells_column_spanners(spanners = "unit_span")
   ) |>
   gt::tab_style(
     style     = gt::cell_text(align = "right"),
-    locations = gt::cells_column_spanners(spanners = "outcome_span")
+    locations = gt::cells_column_spanners(spanners = c("outcome_span", "covariates_span"))
   ) |>
   gt::tab_footnote(footnote = pop_title_footnote,
                    locations = gt::cells_title()) |>
@@ -1082,24 +1082,24 @@ Justice gives us the Population Table and the abstract data generating mechanism
 #| echo: false
 #| results: asis
 pop_tibble_c <- tibble::tribble(
-  ~Source    , ~`College`           , ~`Year`, ~`Graduation Rate`, ~`Tuition ($10,000)`, ~`Selectivity`,
-  "..."      , "..."                , "..."  , "..."             , "..."               , "..."         ,
-  "Data"     , "Amherst College"    , "2013" , "0.95"            , "4.6"               , "Elite"       ,
-  "Data"     , "University of Iowa" , "2013" , "0.71"            , "2.7"               , "Moderately Selective",
-  "Data"     , "..."                , "..."  , "..."             , "..."               , "..."         ,
-  "Data"     , "Wagner College"     , "2013" , "0.51"            , "3.6"               , "Lowly Selective",
-  "..."      , "..."                , "..."  , "..."             , "..."               , "..."         ,
-  "Preceptor", "Amherst College"    , "2026" , "0.95"            , "7.4"               , "Elite"       ,
-  "Preceptor", "University of Iowa" , "2026" , "0.72"            , "3.3"               , "Moderately Selective",
-  "Preceptor", "..."                , "..."  , "..."             , "..."               , "..."         ,
-  "Preceptor", "Wagner College"     , "2026" , "0.55"            , "5.5"               , "Lowly Selective",
-  "..."      , "..."                , "..."  , "..."             , "..."               , "..."
+  ~Source    , ~`College`           , ~`Year`, ~`Graduation Rate`, ~`Tuition ($10,000)`,
+  "..."      , "..."                , "..."  , "..."             , "..."               ,
+  "Data"     , "Amherst College"    , "2013" , "0.95"            , "4.6"               ,
+  "Data"     , "University of Iowa" , "2013" , "0.71"            , "2.7"               ,
+  "Data"     , "..."                , "..."  , "..."             , "..."               ,
+  "Data"     , "Wagner College"     , "2013" , "0.51"            , "3.6"               ,
+  "..."      , "..."                , "..."  , "..."             , "..."               ,
+  "Preceptor", "Amherst College"    , "2026" , "0.95"            , "7.4"               ,
+  "Preceptor", "University of Iowa" , "2026" , "0.72"            , "3.3"               ,
+  "Preceptor", "..."                , "..."  , "..."             , "..."               ,
+  "Preceptor", "Wagner College"     , "2026" , "0.55"            , "5.5"               ,
+  "..."      , "..."                , "..."  , "..."             , "..."
 )
 
 pop_title_footnote_c     <- "The 2013 IPEDS snapshot (Data rows) combined with the same colleges in 2026 (Preceptor rows). Same institutions, different points in time."
 pop_units_footnote_c     <- "Each row is one college at one point in time. The three colleges shown appear in both the Data and Preceptor blocks."
 pop_outcome_footnote_c   <- "Graduation rate, 0 to 1."
-pop_covariate_footnote_c <- "Tuition in units of $10,000. Selectivity is IPEDS's five-level factor."
+pop_covariate_footnote_c <- "Annual tuition in units of $10,000."
 
 pop_gt_html_c <- gt::gt(pop_tibble_c, id = "population_tbl_courage") |>
   gt::tab_header(title = "Population Table") |>
@@ -1107,9 +1107,9 @@ pop_gt_html_c <- gt::gt(pop_tibble_c, id = "population_tbl_courage") |>
                   columns = c(`College`, `Year`)) |>
   gt::tab_spanner(label = "Outcome",   id = "outcome_span",
                   columns = c(`Graduation Rate`)) |>
-  gt::tab_spanner(label = "Covariates", id = "covariates_span",
-                  columns = c(`Tuition ($10,000)`, `Selectivity`)) |>
-  gt::cols_align(align = "left" , columns = c(`Source`, `College`, `Selectivity`)) |>
+  gt::tab_spanner(label = "Covariate", id = "covariates_span",
+                  columns = c(`Tuition ($10,000)`)) |>
+  gt::cols_align(align = "left" , columns = c(`Source`, `College`)) |>
   gt::cols_align(align = "right", columns = c(`Year`, `Graduation Rate`, `Tuition ($10,000)`)) |>
   gt::fmt_markdown(columns = gt::everything()) |>
   gt::tab_options(
@@ -1123,11 +1123,11 @@ pop_gt_html_c <- gt::gt(pop_tibble_c, id = "population_tbl_courage") |>
   ) |>
   gt::tab_style(
     style     = gt::cell_text(align = "left"),
-    locations = gt::cells_column_spanners(spanners = c("unit_span", "covariates_span"))
+    locations = gt::cells_column_spanners(spanners = "unit_span")
   ) |>
   gt::tab_style(
     style     = gt::cell_text(align = "right"),
-    locations = gt::cells_column_spanners(spanners = "outcome_span")
+    locations = gt::cells_column_spanners(spanners = c("outcome_span", "covariates_span"))
   ) |>
   gt::tab_footnote(footnote = pop_title_footnote_c,
                    locations = gt::cells_title()) |>
