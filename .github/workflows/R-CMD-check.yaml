@@ -34,3 +34,38 @@ jobs:
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
+
+  # R-CMD-check above installs ALL dependencies, including Suggests, so it
+  # cannot catch bugs that only appear on student machines, where the package
+  # is installed with hard dependencies only. (This is how the katex bug
+  # shipped: gt needs katex only when a table cell contains $...$ math, katex
+  # was in Suggests, CI had it installed, students did not.) This job renders
+  # every tutorial inside the ACTUAL image students' Codespaces run --
+  # ghcr.io/ppbds/devcontainer, built by PPBDS/devcontainers -- after
+  # installing this package the same way a student update does (hard
+  # dependencies only). If this job is green, the tutorials render for
+  # students; if a tutorial needs a package the image lacks, this job fails
+  # exactly the way a codespace would.
+  student-env-render:
+    runs-on: ubuntu-latest
+    name: render tutorials in the student devcontainer
+
+    # Keep this tag in sync with the "image" pin in
+    # PPBDS/codespace-starter .devcontainer/devcontainer.json.
+    container:
+      image: ghcr.io/ppbds/devcontainer:1.0.2
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install this package the way students do (hard deps only)
+        run: R -q -e 'pak::local_install(".", ask = FALSE)'
+
+      - name: Render all tutorials
+        run: |
+          paths <- tutorial.helpers::return_tutorial_paths(package = "primer.tutorials")
+          tutorial.helpers::knit_tutorials(paths)
+        shell: Rscript {0}
