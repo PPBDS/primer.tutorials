@@ -27,6 +27,10 @@ knitr::opts_chunk$set(out.width = "90%")
 options(tutorial.exercise.timelimit = 600,
         tutorial.storage = "local")
 
+# We work with a 10,000-row random sample of the 344,084-voter file to keep
+# renders and model fits fast; see the EDA note in the Introduction. The seed
+# makes the sample (and every number in the prose) reproducible.
+set.seed(10)
 x <- shaming |>
   mutate(civ_engage = primary_00 + primary_02 + primary_04 +
                       general_00 + general_02 + general_04) |>
@@ -38,7 +42,8 @@ x <- shaming |>
     civ_engage %in% c(1, 2) ~ "Rarely Vote"),
     levels = c("Rarely Vote", "Sometimes Vote", "Always Vote"))) |>
   mutate(voted = as.factor(primary_06)) |>
-  drop_na()
+  drop_na() |>
+  slice_sample(n = 10000)
 
 fit_shaming <- logistic_reg(engine = "glm") |>
   fit(voted ~ age + sex + treatment*voter_class, data = x)
@@ -182,7 +187,9 @@ question_text(NULL,
 
 ###
 
-We will use `primary_06` as our outcome. The plot below shows the average turnout in the August 2006 primary, broken out by treatment arm.
+We will use `primary_06` as our outcome. One housekeeping note before we look at any data: the full experiment covers 344,084 voters, but throughout this tutorial --- and in your own `analysis.qmd` --- we work with a random sample of 10,000 of them, drawn with `set.seed(10)` so the sample is reproducible. We do this to save you time: at 344,084 rows, some of the model-based computations later in the tutorial take twenty seconds or more per render, and you will be rendering often. The price of the smaller sample is wider confidence intervals than the published full-data results.
+
+The plot below shows the average turnout in the August 2006 primary in our sample, broken out by treatment arm.
 
 ```{r}
 #| echo: false
@@ -236,7 +243,7 @@ Write a causal question connecting the outcome `voted` to `treatment`. The quest
 
 ```{r introduction-8}
 question_text(NULL,
-  message = "What is the average causal effect of the Neighbors postcard, relative to no postcard, on the probability that a registered voter casts a ballot in the August 2006 Michigan primary?",
+  message = "What is the average causal effect of the Neighbors postcard, relative to no postcard, on the share of registered voters who cast a ballot in the August 2006 Michigan primary?",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -253,7 +260,7 @@ The treatment variable here records the *experimentally assigned* postcard, not 
 
 Data science starts with some broad questions and a data set which might help us to answer them.
 
-The specific question: *What is the average causal effect of the Neighbors postcard, relative to no postcard, on the probability that a registered voter casts a ballot in the August 2006 Michigan primary?*
+The specific question: *What is the average causal effect of the Neighbors postcard, relative to no postcard, on the share of registered voters who cast a ballot in the August 2006 Michigan primary?*
 
 We will work from the Gerber-Green-Larimer 2006 Michigan experiment, available in the `shaming` tibble of the **primer.data** package.
 
@@ -282,7 +289,7 @@ The Introduction plot showed average turnout by treatment, pooled across all vot
 
 ```{r wisdom-2}
 question_text(NULL,
-  message = "    x |>\n      group_by(treatment, voter_class) |>\n      summarize(turnout = mean(primary_06), .groups = \"drop\") |>\n      ggplot(aes(x = treatment, y = turnout, fill = treatment)) +\n      geom_col(width = 0.7) +\n      scale_y_continuous(labels = scales::label_percent(),\n                         limits = c(0, 0.7)) +\n      scale_x_discrete(limits = c(\"No Postcard\", \"Civic Duty\", \"Hawthorne\",\n                                  \"Self\", \"Neighbors\")) +\n      facet_wrap(~ voter_class) +\n      labs(\n        title    = \"Turnout by Treatment, Faceted by Voter Class\",\n        subtitle = \"The Neighbors postcard helps Sometimes/Always voters most; Rarely Vote barely moves\",\n        x = NULL, y = NULL,\n        caption  = \"Source: Gerber, Green, Larimer 2008 via primer.data::shaming\"\n      ) +\n      theme_minimal() +\n      theme(legend.position = \"none\",\n            axis.text.x = element_text(angle = 30, hjust = 1))",
+  message = "    x |>\n      group_by(treatment, voter_class) |>\n      summarize(turnout = mean(primary_06), .groups = \"drop\") |>\n      ggplot(aes(x = treatment, y = turnout, fill = treatment)) +\n      geom_col(width = 0.7) +\n      scale_y_continuous(labels = scales::label_percent(),\n                         limits = c(0, 0.7)) +\n      scale_x_discrete(limits = c(\"No Postcard\", \"Civic Duty\", \"Hawthorne\",\n                                  \"Self\", \"Neighbors\")) +\n      facet_wrap(~ voter_class) +\n      labs(\n        title    = \"Turnout by Treatment, Faceted by Voter Class\",\n        subtitle = \"The Neighbors postcard helps Sometimes Vote voters most; Rarely Vote barely moves\",\n        x = NULL, y = NULL,\n        caption  = \"Source: Gerber, Green, Larimer 2008 via primer.data::shaming\"\n      ) +\n      theme_minimal() +\n      theme(legend.position = \"none\",\n            axis.text.x = element_text(angle = 30, hjust = 1))",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -307,7 +314,7 @@ x |>
   facet_wrap(~ voter_class) +
   labs(
     title    = "Turnout by Treatment, Faceted by Voter Class",
-    subtitle = "The Neighbors postcard helps Sometimes/Always voters most; Rarely Vote barely moves",
+    subtitle = "The Neighbors postcard helps Sometimes Vote voters most; Rarely Vote barely moves",
     x        = NULL,
     y        = NULL,
     caption  = "Source: Gerber, Green, Larimer 2008 via primer.data::shaming"
@@ -454,7 +461,7 @@ pre_tibble <- tibble::tribble(
   "Sandra Patel",     "No",                    "No",                   "No",                  "Yes",            "Yes",                 "Self",        "Rarely Vote"
 )
 
-pre_title_footnote     <- "If all the information in this table were available, we could answer the question: What is the average causal effect of the Neighbors postcard, relative to no postcard, on the probability that a registered voter casts a ballot in the August 2006 Michigan primary?"
+pre_title_footnote     <- "If all the information in this table were available, we could answer the question: What is the average causal effect of the Neighbors postcard, relative to no postcard, on the share of registered voters who cast a ballot in the August 2006 Michigan primary?"
 pre_units_footnote     <- "Each row is one Michigan registered voter at the time of the August 2006 primary. The example rows above use plausible names spanning the relevant range of voter classes; missing rows represent the rest of the universe of about 344,000 registered voters."
 pre_outcome_footnote   <- "Whether the voter cast a ballot in the August 2006 primary, under each of the five possible treatment values. The cross-hatched cells in each row mark the four unobservable counterfactual potential outcomes --- the votes that voter would have cast under the four treatments they did not receive. Only the un-hatched cell in each row corresponds to a value we could ever observe."
 pre_treatment_footnote <- "The five-level postcard treatment that the voter was randomly assigned: No Postcard (control), or one of four social-pressure postcards. The cell shows the value the voter actually received --- which determines which of the five potential-outcome columns is the observable one for that row."
@@ -546,7 +553,7 @@ cat(
 
 ### Exercise 10
 
-The model in this tutorial uses a derived covariate, `voter_class`, built by summing past primary and general turnout in 2000, 2002, and 2004 and binning the total into three categories. In `analysis.qmd`, add a new code chunk that creates a tibble called `x` by taking `shaming`, building a `civ_engage` column from the six 2000/2002/2004 primary and general turnout columns, selecting `primary_06`, `treatment`, `sex`, `age`, and `civ_engage`, dropping missing values, recoding `civ_engage` into a 3-level factor `voter_class` with levels in the order `Rarely Vote`, `Sometimes Vote`, `Always Vote`, recoding `primary_06` as a factor `voted`, and dropping missing values once more. Then on the next line print `head(x)`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+The model in this tutorial uses a derived covariate, `voter_class`, built by summing past primary and general turnout in 2000, 2002, and 2004 and binning the total into three categories. In `analysis.qmd`, add a new code chunk that creates a tibble called `x` by taking `shaming`, building a `civ_engage` column from the six 2000/2002/2004 primary and general turnout columns, selecting `primary_06`, `treatment`, `sex`, `age`, and `civ_engage`, dropping missing values, recoding `civ_engage` into a 3-level factor `voter_class` with levels in the order `Rarely Vote`, `Sometimes Vote`, `Always Vote`, recoding `primary_06` as a factor `voted`, dropping missing values once more, and finishing the pipe with `slice_sample(n = 10000)`. Put `set.seed(10)` on its own line *before* the pipeline so your sample matches the tutorial's (this is the 10,000-voter sample from the Introduction --- it keeps fits and renders fast). Then on the next line print `head(x)`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
 
 ```{r wisdom-10}
 question_text(NULL,
@@ -561,6 +568,7 @@ question_text(NULL,
 
 ```{r wisdom-10-test}
 #| echo: true
+set.seed(10)
 x <- shaming |>
   mutate(civ_engage = primary_00 + primary_02 + primary_04 +
                       general_00 + general_02 + general_04) |>
@@ -572,17 +580,18 @@ x <- shaming |>
     civ_engage %in% c(1, 2) ~ "Rarely Vote"),
     levels = c("Rarely Vote", "Sometimes Vote", "Always Vote"))) |>
   mutate(voted = as.factor(primary_06)) |>
-  drop_na()
+  drop_na() |>
+  slice_sample(n = 10000)
 head(x)
 ```
 
 ###
 
-Two things worth flagging: setting the `levels` of `voter_class` explicitly forces `Rarely Vote` to be the reference category in the regression (rather than alphabetical, which would put `Always Vote` first). And the second `drop_na()` after `case_when()` catches any voter with `civ_engage = 0`, who would otherwise be coded `NA` --- a deliberate choice, since voters with zero past elections are mostly newly registered and respond to GOTV very differently from the rest.
+Two things worth flagging: setting the `levels` of `voter_class` explicitly forces `Rarely Vote` to be the reference category in the regression (rather than alphabetical, which would put `Always Vote` first). And the second `drop_na()` after `case_when()` catches any voter with `civ_engage = 0`, who would otherwise be coded `NA` --- a deliberate choice, since voters with zero past elections are mostly newly registered and respond to GOTV very differently from the rest. The `set.seed()`/`slice_sample()` pair at the edges is the sampling step from the Introduction: the seed pins down *which* 10,000 voters we get, so your numbers and the tutorial's agree.
 
 ### Exercise 11
 
-The pipeline that builds `x` runs every time you render. It's not slow at 344K rows, but `x` will be used by every later modeling exercise, so it earns its own cached create chunk. The next three exercises set that up: clean the chunk, turn caching on, add the cache directory to `.gitignore`.
+The pipeline that builds `x` runs every time you render. It's quick at 10,000 rows, but `x` will be used by every later modeling exercise, so it earns its own cached create chunk. The next three exercises set that up: clean the chunk, turn caching on, add the cache directory to `.gitignore`.
 
 First, clean up. In your chunk from Exercise 10, delete the `head(x)` line at the bottom, leaving just the `x <- shaming |> ...` pipeline. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
 
@@ -597,7 +606,8 @@ question_text(NULL,
 
 ###
 
-<pre><code>x <- shaming |>
+<pre><code>set.seed(10)
+x <- shaming |>
   mutate(civ_engage = primary_00 + primary_02 + primary_04 +
                       general_00 + general_02 + general_04) |>
   select(primary_06, treatment, sex, age, civ_engage) |>
@@ -608,7 +618,8 @@ question_text(NULL,
     civ_engage %in% c(1, 2) ~ "Rarely Vote"),
     levels = c("Rarely Vote", "Sometimes Vote", "Always Vote"))) |>
   mutate(voted = as.factor(primary_06)) |>
-  drop_na()
+  drop_na() |>
+  slice_sample(n = 10000)
 </code></pre>
 
 ###
@@ -617,7 +628,7 @@ A chunk ready to cache should contain only the artifact it builds.
 
 ### Exercise 12
 
-Add `#| cache: true` as the first line inside the chunk. Render the QMD. Rendering creates an `analysis_cache/` directory next to your `analysis.qmd`, which holds the saved tibble so Quarto can reload it on subsequent renders rather than re-running the 344K-row pipeline every time. To confirm the directory is there, run `ls` in the **bash Terminal**. CP/CR.
+Add `#| cache: true` as the first line inside the chunk. Render the QMD. Rendering creates an `analysis_cache/` directory next to your `analysis.qmd`, which holds the saved tibble so Quarto can reload it on subsequent renders rather than re-running the pipeline every time. To confirm the directory is there, run `ls` in the **bash Terminal**. CP/CR.
 
 ```{r wisdom-12}
 question_text(NULL,
@@ -636,7 +647,7 @@ analysis.qmd  analysis_cache  analysis_files  analysis.html
 
 ###
 
-For 344K rows the pipeline runs in about a second, so the savings are modest; the same pattern matters more for the model fits in Courage.
+For 10,000 rows the pipeline runs in well under a second, so the savings are modest; the same pattern matters more for the model fits in Courage. One caching subtlety worth knowing: because the chunk sets the seed *inside* the cached chunk, the saved tibble is always the same 10,000 voters, whether it is rebuilt or reloaded.
 
 ### Exercise 13
 
@@ -669,7 +680,7 @@ Write the first two sentences of the summary paragraph. The first introduces the
 
 ```{r wisdom-14}
 question_text(NULL,
-  message = "Voter mobilization is a perennial campaign question: which messaging --- if any --- gets registered voters who would otherwise stay home to actually show up. Using the 344,084-voter Gerber-Green-Larimer 2006 randomized field experiment in Michigan, we estimate the average causal effect of the Neighbors postcard on the probability that a registered voter casts a ballot in the August 2006 primary.",
+  message = "Voter mobilization is a perennial campaign question: which messaging --- if any --- gets registered voters who would otherwise stay home to actually show up. Using a 10,000-voter random sample from the 344,084-voter Gerber-Green-Larimer 2006 randomized field experiment in Michigan, we estimate the average causal effect of the Neighbors postcard on the share of registered voters who cast a ballot in the August 2006 primary.",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -706,7 +717,7 @@ pre_tibble_j <- tibble::tribble(
   "Sandra Patel",     "No",                    "No",                   "No",                  "Yes",            "Yes",                 "Self",        "Rarely Vote"
 )
 
-pre_title_footnote_j     <- "If all the information in this table were available, we could answer the question: What is the average causal effect of the Neighbors postcard, relative to no postcard, on the probability that a registered voter casts a ballot in the August 2006 Michigan primary?"
+pre_title_footnote_j     <- "If all the information in this table were available, we could answer the question: What is the average causal effect of the Neighbors postcard, relative to no postcard, on the share of registered voters who cast a ballot in the August 2006 Michigan primary?"
 pre_units_footnote_j     <- "Each row is one Michigan registered voter at the August 2006 primary."
 pre_outcome_footnote_j   <- "Whether the voter casts a ballot, under each of the five treatments; hatched cells are unobservable counterfactuals."
 pre_treatment_footnote_j <- "The postcard arm the voter was randomly assigned."
@@ -806,7 +817,7 @@ data_tibble <- tibble::tribble(
 )
 
 data_title_footnote     <- "Public Michigan voter file matched to randomized treatment assignments from Gerber, Green, and Larimer's 2006 social-pressure mailing experiment. Treatment was assigned at the household level by the experimenters; turnout in the August 2006 primary was matched in afterwards from the official voter file."
-data_units_footnote     <- "Each row is one Michigan registered voter who was eligible for the experiment (had voted in the November 2004 general election). The original file has 344,084 voters; we work with the full file because logistic regression with our 17-parameter model fits in about a second."
+data_units_footnote     <- "Each row is one Michigan registered voter who was eligible for the experiment (had voted in the November 2004 general election). The original file has 344,084 voters; we work with a 10,000-voter random sample to keep model fits and renders fast."
 data_outcome_footnote   <- "Whether the voter showed up at the polls for the August 2006 primary, recorded by the state and matched to the experimental sample. Self-reported turnout would be inflated; the public voter-file match is the more reliable measure."
 data_treatment_footnote <- "The five-level postcard treatment, randomly assigned at the household level. About 56% of voters were in the No Postcard arm; the remaining 44% were spread across the four social-pressure arms, roughly equally."
 data_covariate_footnote <- "Voter Class is derived from the voter's turnout in the 2000, 2002, and 2004 primaries and general elections (six elections total). Rarely Vote = 1-2 of those, Sometimes Vote = 3-4, Always Vote = 5-6. Voters with zero past turnout are dropped because they are mostly newly registered and respond to GOTV very differently."
@@ -927,7 +938,7 @@ Specify the unit/time combinations which define each row in this Population Tabl
 
 ```{r justice-4}
 question_text(NULL,
-  message = "Each row is one Michigan registered voter at one point in time. Data rows are the 344,084 voters from the Gerber-Green-Larimer experimental sample, observed in August 2006. Preceptor rows are the same population --- Michigan registered voters at the time of the August 2006 primary --- which means our Data and Preceptor blocks essentially share era and target population. The realistic interpretation gap is between Michigan in 2006 and the campaign-decision context the analyst cares about (e.g., Texas in 2026), which lives outside the immediate Population Table.",
+  message = "Each row is one Michigan registered voter at one point in time. Data rows are our 10,000 randomly sampled voters from the 344,084-voter Gerber-Green-Larimer experimental file, observed in August 2006. Preceptor rows are the same population --- Michigan registered voters at the time of the August 2006 primary --- which means our Data and Preceptor blocks essentially share era and target population. The realistic interpretation gap is between Michigan in 2006 and the campaign-decision context the analyst cares about (e.g., Texas in 2026), which lives outside the immediate Population Table.",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -964,7 +975,7 @@ pop_tibble <- tibble::tribble(
 )
 
 pop_title_footnote     <- "This table combines the Gerber--Green--Larimer experimental data with the Preceptor Table's potential-outcomes view of the same voters, both drawn from the broader universe of Michigan registered voters at the August 2006 primary. The Data block records what the experimenters observed (one potential outcome per voter, given the postcard arm they were assigned to); the Preceptor block records the unobservable truth (all five potential outcomes filled in, the four counterfactual ones hatched). The two blocks share era and target population --- the gap is essentially zero."
-pop_units_footnote     <- "Each row is one voter at one point in time. Data rows: 344,084 Michigan voters from the experimental sample, August 2006. Preceptor rows: the same population, with all five potential outcomes filled in."
+pop_units_footnote     <- "Each row is one voter at one point in time. Data rows: 10,000 Michigan voters sampled at random from the experimental file, August 2006. Preceptor rows: the same population, with all five potential outcomes filled in."
 pop_outcome_footnote   <- "Whether the voter cast a ballot in the August 2006 primary, under each of the five possible treatments. In Data rows, only the value under the voter's actual treatment is observed --- the other four are unknown (`...`). In Preceptor rows, all five are filled in, with the four unobservable counterfactuals hatched. Column labels here are abbreviated to fit; full names are in the Preceptor Table above."
 pop_treatment_footnote <- "The five-level postcard arm the voter was randomly assigned: No Postcard (control), Civic Duty, Hawthorne, Self, or Neighbors."
 pop_covariate_footnote <- "Voter Class is the same derived covariate (Rarely Vote / Sometimes Vote / Always Vote) used in the Preceptor Table; same column meaning across both blocks because both refer to the same voters."
@@ -1109,7 +1120,7 @@ Provide one reason, involving the relationship between the data and the populati
 
 ```{r justice-8}
 question_text(NULL,
-  message = "The experiment was restricted to voters who had cast a ballot in the November 2004 general election. That selection criterion excludes everyone who registered after 2004 (mostly young voters and recent movers) and everyone who was registered but skipped 2004 (a smaller, demographically distinct group). Our 344,084-voter sample is therefore representative of *2004-active Michigan voters* in 2006, not of the full Michigan registered-voter list. If a campaign wants to use the model to estimate the effect of a Neighbors postcard on first-time or low-turnout voters, the Data block doesn't have those voters in any meaningful number.",
+  message = "The experiment was restricted to voters who had cast a ballot in the November 2004 general election. That selection criterion excludes everyone who registered after 2004 (mostly young voters and recent movers) and everyone who was registered but skipped 2004 (a smaller, demographically distinct group). Our sample --- 10,000 voters drawn at random from the 344,084-voter experimental file --- is therefore representative of *2004-active Michigan voters* in 2006, not of the full Michigan registered-voter list. If a campaign wants to use the model to estimate the effect of a Neighbors postcard on first-time or low-turnout voters, the Data block doesn't have those voters in any meaningful number.",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -1169,7 +1180,7 @@ question_text(NULL,
 
 ###
 
-The great advantage of randomization is that it guarantees unconfoundedness for the unit at which assignment happens. Here that unit is the household, not the voter. A more careful analysis would cluster standard errors at the household level; our 95% confidence intervals are very slightly too narrow as a result, though the magnitude is small with 344K voters.
+The great advantage of randomization is that it guarantees unconfoundedness for the unit at which assignment happens. Here that unit is the household, not the voter. A more careful analysis would cluster standard errors at the household level; our 95% confidence intervals are very slightly too narrow as a result, though the magnitude is small --- and smaller still in our 10,000-voter sample, where few sampled voters share a household.
 
 ### Exercise 12
 
@@ -1209,7 +1220,7 @@ While you're here, also add `library(broom)` to the setup chunk in `analysis.qmd
 
 Write one sentence highlighting a potential weakness in your model. So far our summary paragraph looks like this:
 
-> Voter mobilization is a perennial campaign question: which messaging --- if any --- gets registered voters who would otherwise stay home to actually show up. Using the 344,084-voter Gerber-Green-Larimer 2006 randomized field experiment in Michigan, we estimate the average causal effect of the Neighbors postcard on the probability that a registered voter casts a ballot in the August 2006 primary.
+> Voter mobilization is a perennial campaign question: which messaging --- if any --- gets registered voters who would otherwise stay home to actually show up. Using a 10,000-voter random sample from the 344,084-voter Gerber-Green-Larimer 2006 randomized field experiment in Michigan, we estimate the average causal effect of the Neighbors postcard on the share of registered voters who cast a ballot in the August 2006 primary.
 
 Your version will be somewhat different.
 
@@ -1427,11 +1438,11 @@ logistic_reg(engine = "glm") |>
   mutate(across(where(is.numeric), \(v) round(v, 3)))
 ```
 
-Write a sentence interpreting the `treatmentNeighbors` estimate (about 0.43).
+Write a sentence interpreting the `treatmentNeighbors` estimate (about 0.35).
 
 ```{r courage-4}
 question_text(NULL,
-  message = "Comparing two voters who differ only in postcard treatment, the log-odds of voting are about 0.43 higher for a voter who received the Neighbors postcard than for a voter who received no postcard. The 95% confidence interval excludes zero, so we are confident the average causal effect of Neighbors versus No Postcard is positive on the log-odds scale; we will translate that to a probability-scale answer in Temperance.",
+  message = "Comparing two voters who differ only in postcard treatment, the log-odds of voting are about 0.35 higher for a voter who received the Neighbors postcard than for a voter who received no postcard. The 95% confidence interval excludes zero, so we are confident the average causal effect of Neighbors versus No Postcard is positive on the log-odds scale; we will translate that to a probability-scale answer in Temperance.",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -1440,7 +1451,7 @@ question_text(NULL,
 
 ###
 
-Causal language --- *causal effect* --- is appropriate here because random assignment of the postcard treatment earns it. Note that the four `treatment*` coefficients are all *vs. No Postcard*; if you want, say, *Neighbors vs. Self* you would either refit with a different reference category or use `marginaleffects::comparisons()` to compute the contrast directly. Log-odds remains a hard scale to read on its own: a coefficient of 0.43 is a substantial effect, but exactly how big in turnout terms requires the inverse-logit transformation we'll do in Temperance.
+Causal language --- *causal effect* --- is appropriate here because random assignment of the postcard treatment earns it. Note that the four `treatment*` coefficients are all *vs. No Postcard*; if you want, say, *Neighbors vs. Self* you would either refit with a different reference category or use `marginaleffects::comparisons()` to compute the contrast directly. Log-odds remains a hard scale to read on its own: a coefficient of 0.35 is a substantial effect, but exactly how big in turnout terms requires the inverse-logit transformation we'll do in Temperance.
 
 ### Exercise 5
 
@@ -1484,7 +1495,7 @@ Write a sentence interpreting the `age` slope and noting how the `treatmentNeigh
 
 ```{r courage-6}
 question_text(NULL,
-  message = "Comparing two voters in the same treatment arm differing by one year of age, the log-odds of voting are about 0.014 higher for the older voter --- a small per-year effect that compounds: a 70-year-old has roughly 0.014 * 50 = 0.70 higher log-odds than a 20-year-old. The treatmentNeighbors estimate barely moves between the unadjusted and adjusted models (about 0.43 in both), which is exactly what we'd expect from a randomized experiment: random assignment guarantees treatment is balanced on age, so adjustment doesn't change the treatment estimate.",
+  message = "Comparing two voters in the same treatment arm differing by one year of age, the log-odds of voting are about 0.020 higher for the older voter --- a small per-year effect that compounds: a 70-year-old has roughly 0.020 * 50 = 1.0 higher log-odds than a 20-year-old. The treatmentNeighbors estimate barely moves between the unadjusted and adjusted models (about 0.35 in both), which is exactly what we'd expect from a randomized experiment: random assignment guarantees treatment is balanced on age, so adjustment doesn't change the treatment estimate.",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -1518,7 +1529,7 @@ logistic_reg(engine = "glm") |>
 
 ###
 
-The `treatment*voter_class` shorthand expands to `treatment + voter_class + treatment:voter_class` --- the two main effects plus all 4 × 2 = 8 interaction terms. Add the intercept and the two unrelated covariates (`age`, `sex`) and the model has 17 parameters. With 344,084 voters, every coefficient is precisely estimated even at this many parameters.
+The `treatment*voter_class` shorthand expands to `treatment + voter_class + treatment:voter_class` --- the two main effects plus all 4 × 2 = 8 interaction terms. Add the intercept and the two unrelated covariates (`age`, `sex`) and the model has 17 parameters. With 10,000 voters spread across 15 treatment-by-class cells, the main effects are estimated reasonably well but several interaction coefficients come with wide confidence intervals --- one more reason to prefer the aggregated readings `marginaleffects` gives us in Temperance over single coefficients.
 
 ### Exercise 8
 
@@ -1532,11 +1543,11 @@ fit_shaming |>
   mutate(across(where(is.numeric), \(v) round(v, 3)))
 ```
 
-Interpretation in an interaction model is *conditional*: the effect of one variable depends on the value of the other. Write a sentence interpreting the `treatmentNeighbors` main effect of about 0.36 in the final model, being careful to describe what voter class it applies to.
+Interpretation in an interaction model is *conditional*: the effect of one variable depends on the value of the other. Write a sentence interpreting the `treatmentNeighbors` main effect of about 0.05 in the final model, being careful to describe what voter class it applies to.
 
 ```{r courage-8}
 question_text(NULL,
-  message = "The `treatmentNeighbors` main effect of about 0.36 is the log-odds difference between Neighbors and No Postcard for a Rarely Vote voter (the reference level of voter_class), adjusting for age and sex. For Sometimes Vote and Always Vote voters, you have to add the relevant `treatmentNeighbors:voter_class*` interaction term to get the conditional effect: the Neighbors-vs-No-Postcard log-odds difference is about 0.36 + 0.04 = 0.40 for Sometimes Vote, and about 0.36 + 0.01 = 0.37 for Always Vote --- broadly similar, with Sometimes Vote responding marginally more strongly than the other two voter classes.",
+  message = "The `treatmentNeighbors` main effect of about 0.05 is the log-odds difference between Neighbors and No Postcard for a Rarely Vote voter (the reference level of voter_class), adjusting for age and sex --- essentially zero: in our sample, the postcard does little for Rarely Vote voters. For Sometimes Vote and Always Vote voters, you have to add the relevant `treatmentNeighbors:voter_class*` interaction term to get the conditional effect: the Neighbors-vs-No-Postcard log-odds difference is about 0.05 + 0.40 = 0.45 for Sometimes Vote, and about 0.05 + 0.15 = 0.20 for Always Vote. The heterogeneity the EDA hinted at shows up right here in the coefficients.",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -1575,7 +1586,7 @@ In data science, **we deal with words, math, and code, but the most important of
 
 ### Exercise 10
 
-Re-fitting the model on every render is wasteful --- even at 344K rows our fit takes a second or so, time worth saving. `fit_shaming` earns its own cached create chunk. As with `x` earlier, we clean up first, then turn caching on. (No `.gitignore` step this time --- `analysis_cache` is already ignored.)
+Re-fitting the model on every render is wasteful --- the fit is quick at 10,000 rows, but the caching habit pays off as models and datasets grow. `fit_shaming` earns its own cached create chunk. As with `x` earlier, we clean up first, then turn caching on. (No `.gitignore` step this time --- `analysis_cache` is already ignored.)
 
 Clean up. In your chunk from Exercise 9, delete the `fit_shaming` line at the bottom, leaving just the `fit_shaming <- logistic_reg(...) |> fit(...)` assignment. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
 
@@ -1631,17 +1642,17 @@ $$\widehat{P(\text{Voted} = 1)} = \frac{1}{1 + e^{-\eta}}$$
 where the linear predictor $\eta$ is
 
 $$\begin{aligned}
-\eta = \, & -2.43 + 0.012 \cdot \text{Age} + 0.036 \cdot \text{sexMale} \\
-&{} + 0.086 \cdot \text{Civic Duty} + 0.071 \cdot \text{Hawthorne} \\
-&{} + 0.202 \cdot \text{Self} + 0.359 \cdot \text{Neighbors} \\
-&{} + 0.820 \cdot \text{Sometimes Vote} + 1.610 \cdot \text{Always Vote} \\
-&{} + 0.031 \cdot (\text{Civic Duty} \times \text{Sometimes}) + 0.059 \cdot (\text{Hawthorne} \times \text{Sometimes}) \\
-&{} + 0.053 \cdot (\text{Self} \times \text{Sometimes}) + 0.041 \cdot (\text{Neighbors} \times \text{Sometimes}) \\
-&{} - 0.051 \cdot (\text{Civic Duty} \times \text{Always}) + 0.063 \cdot (\text{Hawthorne} \times \text{Always}) \\
-&{} - 0.006 \cdot (\text{Self} \times \text{Always}) + 0.006 \cdot (\text{Neighbors} \times \text{Always})
+\eta = \, & -2.49 + 0.011 \cdot \text{Age} + 0.087 \cdot \text{sexMale} \\
+&{} - 0.327 \cdot \text{Civic Duty} + 0.206 \cdot \text{Hawthorne} \\
+&{} + 0.312 \cdot \text{Self} + 0.046 \cdot \text{Neighbors} \\
+&{} + 0.851 \cdot \text{Sometimes Vote} + 1.780 \cdot \text{Always Vote} \\
+&{} + 0.495 \cdot (\text{Civic Duty} \times \text{Sometimes}) - 0.099 \cdot (\text{Hawthorne} \times \text{Sometimes}) \\
+&{} + 0.015 \cdot (\text{Self} \times \text{Sometimes}) + 0.402 \cdot (\text{Neighbors} \times \text{Sometimes}) \\
+&{} + 0.039 \cdot (\text{Civic Duty} \times \text{Always}) + 0.038 \cdot (\text{Hawthorne} \times \text{Always}) \\
+&{} - 0.257 \cdot (\text{Self} \times \text{Always}) + 0.147 \cdot (\text{Neighbors} \times \text{Always})
 \end{aligned}$$
 
-Each `treatment*` term is a 0/1 dummy: 1 if the voter received that postcard, 0 otherwise. Each `voter_class*` term is also a dummy. The interaction terms are products of two dummies --- 1 only if the voter has both that treatment and that voter class. The intercept (-2.43) is the log-odds for a 0-year-old female Rarely Vote voter assigned No Postcard --- mathematically defined but not a sensible prediction; the intercept is a reference point, not a forecast.
+Each `treatment*` term is a 0/1 dummy: 1 if the voter received that postcard, 0 otherwise. Each `voter_class*` term is also a dummy. The interaction terms are products of two dummies --- 1 only if the voter has both that treatment and that voter class. The intercept (-2.49) is the log-odds for a 0-year-old female Rarely Vote voter assigned No Postcard --- mathematically defined but not a sensible prediction; the intercept is a reference point, not a forecast.
 
 **This is our data generating mechanism.**
 
@@ -1770,14 +1781,14 @@ $$\widehat{P(\text{Voted} = 1)} = \frac{1}{1 + e^{-\eta}}$$
 where the linear predictor $\eta$ is
 
 $$\begin{aligned}
-\eta = \, & -2.43 + 0.012 \cdot \text{Age} + 0.036 \cdot \text{sexMale} \\
-&{} + 0.086 \cdot \text{Civic Duty} + 0.071 \cdot \text{Hawthorne} \\
-&{} + 0.202 \cdot \text{Self} + 0.359 \cdot \text{Neighbors} \\
-&{} + 0.820 \cdot \text{Sometimes Vote} + 1.610 \cdot \text{Always Vote} \\
-&{} + 0.031 \cdot (\text{Civic Duty} \times \text{Sometimes}) + 0.059 \cdot (\text{Hawthorne} \times \text{Sometimes}) \\
-&{} + 0.053 \cdot (\text{Self} \times \text{Sometimes}) + 0.041 \cdot (\text{Neighbors} \times \text{Sometimes}) \\
-&{} - 0.051 \cdot (\text{Civic Duty} \times \text{Always}) + 0.063 \cdot (\text{Hawthorne} \times \text{Always}) \\
-&{} - 0.006 \cdot (\text{Self} \times \text{Always}) + 0.006 \cdot (\text{Neighbors} \times \text{Always})
+\eta = \, & -2.49 + 0.011 \cdot \text{Age} + 0.087 \cdot \text{sexMale} \\
+&{} - 0.327 \cdot \text{Civic Duty} + 0.206 \cdot \text{Hawthorne} \\
+&{} + 0.312 \cdot \text{Self} + 0.046 \cdot \text{Neighbors} \\
+&{} + 0.851 \cdot \text{Sometimes Vote} + 1.780 \cdot \text{Always Vote} \\
+&{} + 0.495 \cdot (\text{Civic Duty} \times \text{Sometimes}) - 0.099 \cdot (\text{Hawthorne} \times \text{Sometimes}) \\
+&{} + 0.015 \cdot (\text{Self} \times \text{Sometimes}) + 0.402 \cdot (\text{Neighbors} \times \text{Sometimes}) \\
+&{} + 0.039 \cdot (\text{Civic Duty} \times \text{Always}) + 0.038 \cdot (\text{Hawthorne} \times \text{Always}) \\
+&{} - 0.257 \cdot (\text{Self} \times \text{Always}) + 0.147 \cdot (\text{Neighbors} \times \text{Always})
 \end{aligned}$$
 
 ### Exercise 1
@@ -1833,7 +1844,7 @@ What is the specific question we are trying to answer?
 
 ```{r temperance-3}
 question_text(NULL,
-  message = "What is the average causal effect of the Neighbors postcard, relative to no postcard, on the probability that a registered voter casts a ballot in the August 2006 Michigan primary?",
+  message = "What is the average causal effect of the Neighbors postcard, relative to no postcard, on the share of registered voters who cast a ballot in the August 2006 Michigan primary?",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -1842,7 +1853,7 @@ question_text(NULL,
 
 ###
 
-A specific question must specify a number to compute. *"How does the postcard treatment affect turnout?"* is too vague. *"The average causal effect of Neighbors versus No Postcard on the probability of voting"* is one specific number we can produce.
+A specific question must specify a number to compute. *"How does the postcard treatment affect turnout?"* is too vague. *"The average causal effect of Neighbors versus No Postcard on the share of registered voters who vote"* is one specific number we can produce.
 
 ### Exercise 4
 
@@ -1866,7 +1877,7 @@ avg_comparisons(extract_fit_engine(fit_shaming), variables = "treatment")
 
 ###
 
-Each row is the average difference in *predicted probability of voting* between that treatment arm and No Postcard, on the response scale (not the log-odds scale of the parameter table). Reading the four contrasts: Neighbors raises turnout by about 8.1 percentage points; Self by about 4.8; Hawthorne by about 2.5; Civic Duty by about 1.8. *Percentage points*, not *percent*: a difference of 8.1 percentage points (from 30% to 38.1% baseline turnout) is about a 27% relative increase, but those are different numbers.
+Each row is the average difference in *predicted probability of voting* between that treatment arm and No Postcard, on the response scale (not the log-odds scale of the parameter table). Reading the four contrasts: Neighbors raises turnout by about 7.2 percentage points; Self by about 5.1; Hawthorne by about 3.1; Civic Duty barely at all (0.1 pp, with an interval spanning zero). *Percentage points*, not *percent*: a difference of 7.2 percentage points (from 29.6% baseline turnout to 36.8%) is about a 24% relative increase, but those are different numbers.
 
 ### Exercise 5
 
@@ -1892,7 +1903,7 @@ avg_comparisons(extract_fit_engine(fit_shaming),
 
 ###
 
-This is the heterogeneous-treatment-effect picture. The Neighbors postcard moves *Rarely Vote* voters by only about 4.4 percentage points, but moves *Sometimes Vote* and *Always Vote* voters by 8.6 and 9.0 percentage points respectively. Counterintuitively, the postcard has a *smaller* effect on the people who needed a nudge most (Rarely Vote) and a *larger* effect on people who were already inclined to vote anyway. The campaign-allocation implication is meaningful: targeting the Sometimes/Always voters with Neighbors is the most cost-effective use of a fixed mailing budget.
+This is the heterogeneous-treatment-effect picture. In our sample, the Neighbors postcard moves *Rarely Vote* voters by only about half a percentage point (an interval spanning zero), moves *Sometimes Vote* voters by about 9.6 percentage points, and lands in between for *Always Vote* voters at about 4.8 percentage points (also spanning zero). Counterintuitively, the postcard does the *least* for the people who needed a nudge most (Rarely Vote). Notice how much wider these class-level intervals are than the overall Neighbors interval: with only about 1,100 Neighbors postcards in our 10,000-voter sample, each class-level cell is small --- subgroup effects always need more data than overall effects. The campaign-allocation implication is still meaningful: targeting middle- and high-propensity voters with Neighbors is the more cost-effective use of a fixed mailing budget.
 
 ### Exercise 6
 
@@ -1951,7 +1962,7 @@ Create a beautiful plot starting from the output of `plot_predictions(..., draw 
 
 ```{r temperance-8}
 question_text(NULL,
-  message = "    plot_predictions(extract_fit_engine(fit_shaming),\n                     condition = c(\"treatment\", \"voter_class\"),\n                     draw = FALSE) |>\n      ggplot(aes(x = treatment, y = estimate, color = voter_class)) +\n      geom_pointrange(aes(ymin = conf.low, ymax = conf.high),\n                      size = 0.7) +\n      scale_x_discrete(limits = c(\"No Postcard\", \"Civic Duty\", \"Hawthorne\",\n                                  \"Self\", \"Neighbors\")) +\n      scale_y_continuous(labels = scales::label_percent(),\n                         limits = c(0, 0.75)) +\n      facet_wrap(~ voter_class) +\n      labs(\n        title    = \"Predicted Turnout by Postcard and Voter Class\",\n        subtitle = \"Neighbors moves Sometimes/Always voters most; Rarely Vote barely budges\",\n        x        = NULL,\n        y        = NULL,\n        color    = \"Voter Class\",\n        caption  = \"Source: Gerber, Green, Larimer 2008 via primer.data::shaming\"\n      ) +\n      theme_minimal() +\n      theme(legend.position = \"none\",\n            axis.text.x     = element_text(angle = 30, hjust = 1))",
+  message = "    plot_predictions(extract_fit_engine(fit_shaming),\n                     condition = c(\"treatment\", \"voter_class\"),\n                     draw = FALSE) |>\n      ggplot(aes(x = treatment, y = estimate, color = voter_class)) +\n      geom_pointrange(aes(ymin = conf.low, ymax = conf.high),\n                      size = 0.7) +\n      scale_x_discrete(limits = c(\"No Postcard\", \"Civic Duty\", \"Hawthorne\",\n                                  \"Self\", \"Neighbors\")) +\n      scale_y_continuous(labels = scales::label_percent(),\n                         limits = c(0, 0.75)) +\n      facet_wrap(~ voter_class) +\n      labs(\n        title    = \"Predicted Turnout by Postcard and Voter Class\",\n        subtitle = \"Neighbors moves Sometimes Vote voters most; Rarely Vote barely budges\",\n        x        = NULL,\n        y        = NULL,\n        color    = \"Voter Class\",\n        caption  = \"Source: Gerber, Green, Larimer 2008 via primer.data::shaming\"\n      ) +\n      theme_minimal() +\n      theme(legend.position = \"none\",\n            axis.text.x     = element_text(angle = 30, hjust = 1))",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -1977,7 +1988,7 @@ plot_predictions(extract_fit_engine(fit_shaming),
   facet_wrap(~ voter_class) +
   labs(
     title    = "Predicted Turnout by Postcard and Voter Class",
-    subtitle = "Neighbors moves Sometimes/Always voters most; Rarely Vote barely budges",
+    subtitle = "Neighbors moves Sometimes Vote voters most; Rarely Vote barely budges",
     x        = NULL,
     y        = NULL,
     color    = "Voter Class",
@@ -2000,7 +2011,7 @@ CP/CR.
 
 ```{r temperance-9}
 question_text(NULL,
-  message = "    > show_file(\"analysis.qmd\", chunk = \"Last\")\n    ```{r}\n    plot_predictions(extract_fit_engine(fit_shaming),\n                     condition = c(\"treatment\", \"voter_class\"),\n                     draw = FALSE) |>\n      ggplot(aes(x = treatment, y = estimate, color = voter_class)) +\n      geom_pointrange(aes(ymin = conf.low, ymax = conf.high), size = 0.7) +\n      scale_x_discrete(limits = c(\"No Postcard\", \"Civic Duty\", \"Hawthorne\",\n                                  \"Self\", \"Neighbors\")) +\n      scale_y_continuous(labels = scales::label_percent(), limits = c(0, 0.75)) +\n      facet_wrap(~ voter_class) +\n      labs(title = \"Predicted Turnout by Postcard and Voter Class\",\n           subtitle = \"Neighbors moves Sometimes/Always voters most; Rarely Vote barely budges\",\n           x = NULL, y = NULL, color = \"Voter Class\",\n           caption = \"Source: Gerber, Green, Larimer 2008 via primer.data::shaming\") +\n      theme_minimal() +\n      theme(legend.position = \"none\", axis.text.x = element_text(angle = 30, hjust = 1))\n    ```",
+  message = "    > show_file(\"analysis.qmd\", chunk = \"Last\")\n    ```{r}\n    plot_predictions(extract_fit_engine(fit_shaming),\n                     condition = c(\"treatment\", \"voter_class\"),\n                     draw = FALSE) |>\n      ggplot(aes(x = treatment, y = estimate, color = voter_class)) +\n      geom_pointrange(aes(ymin = conf.low, ymax = conf.high), size = 0.7) +\n      scale_x_discrete(limits = c(\"No Postcard\", \"Civic Duty\", \"Hawthorne\",\n                                  \"Self\", \"Neighbors\")) +\n      scale_y_continuous(labels = scales::label_percent(), limits = c(0, 0.75)) +\n      facet_wrap(~ voter_class) +\n      labs(title = \"Predicted Turnout by Postcard and Voter Class\",\n           subtitle = \"Neighbors moves Sometimes Vote voters most; Rarely Vote barely budges\",\n           x = NULL, y = NULL, color = \"Voter Class\",\n           caption = \"Source: Gerber, Green, Larimer 2008 via primer.data::shaming\") +\n      theme_minimal() +\n      theme(legend.position = \"none\", axis.text.x = element_text(angle = 30, hjust = 1))\n    ```",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -2017,7 +2028,7 @@ Write the last sentence of your summary paragraph. It describes at least one Qua
 
 ```{r temperance-10}
 question_text(NULL,
-  message = "We estimate that the Neighbors postcard, relative to no postcard, raises the probability of voting by about 8.1 percentage points on average (95% CI: 7.6 to 8.6 pp), with the effect concentrated among Sometimes Vote (8.6 pp) and Always Vote (9.0 pp) voters and notably smaller among Rarely Vote voters (4.4 pp).",
+  message = "We estimate that the Neighbors postcard, relative to no postcard, raises the share of registered voters who cast a ballot by about 7.2 percentage points (95% CI: 4.2 to 10.1 pp), with the effect clearest among Sometimes Vote voters (9.6 pp) and imprecisely estimated for Rarely Vote (0.5 pp) and Always Vote (4.8 pp) voters, whose intervals span zero.",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -2034,7 +2045,7 @@ Write a few sentences explaining why the estimate might be wrong. Suggest altern
 
 ```{r temperance-11}
 question_text(NULL,
-  message = "Three reasons our estimate may be optimistic. First, our 95% confidence intervals are computed at the voter level, but treatment was assigned at the household level --- so the true intervals are mildly wider than what we report. Second, the experiment was conducted in 2006 in Michigan, on voters who had cast a ballot in 2004; the relevance to a 2026 Texas campaign depends on stability holding across both era and geography, and the slope of turnout on Neighbors-style postcards has likely flattened since 2006 as voters have habituated to the technique. Third, we report intent-to-treat (assignment, not delivery) effects --- for the campaign manager weighing the cost-effectiveness of the postcards, this is the right number; for understanding why Neighbors works, it understates the per-recipient effect. A defensible 2026-Texas estimate is a Neighbors effect somewhere between 3 and 8 percentage points, not the 8.1 we measure.",
+  message = "Three reasons our estimate may be optimistic. First, our 95% confidence intervals are computed at the voter level, but treatment was assigned at the household level --- so the true intervals are mildly wider than what we report. Second, the experiment was conducted in 2006 in Michigan, on voters who had cast a ballot in 2004; the relevance to a 2026 Texas campaign depends on stability holding across both era and geography, and the slope of turnout on Neighbors-style postcards has likely flattened since 2006 as voters have habituated to the technique. Third, we report intent-to-treat (assignment, not delivery) effects --- for the campaign manager weighing the cost-effectiveness of the postcards, this is the right number; for understanding why Neighbors works, it understates the per-recipient effect. A defensible 2026-Texas estimate is a Neighbors effect somewhere between 3 and 8 percentage points, not the 7.2 we measure.",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -2081,6 +2092,7 @@ library(primer.data)
 library(broom)
 library(marginaleffects)
 
+set.seed(10)
 x <- shaming |>
   mutate(civ_engage = primary_00 + primary_02 + primary_04 +
                       general_00 + general_02 + general_04) |>
@@ -2092,7 +2104,8 @@ x <- shaming |>
     civ_engage %in% c(1, 2) ~ "Rarely Vote"),
     levels = c("Rarely Vote", "Sometimes Vote", "Always Vote"))) |>
   mutate(voted = as.factor(primary_06)) |>
-  drop_na()
+  drop_na() |>
+  slice_sample(n = 10000)
 
 #| cache: true
 fit_shaming <- logistic_reg(engine = "glm") |>
@@ -2108,13 +2121,13 @@ plot_predictions(extract_fit_engine(fit_shaming),
   scale_y_continuous(labels = scales::label_percent(), limits = c(0, 0.75)) +
   facet_wrap(~ voter_class) +
   labs(title = "Predicted Turnout by Postcard and Voter Class",
-       subtitle = "Neighbors moves Sometimes/Always voters most",
+       subtitle = "Neighbors moves Sometimes Vote voters most",
        x = NULL, y = NULL, color = "Voter Class",
        caption = "Source: Gerber, Green, Larimer 2008 via primer.data::shaming") +
   theme_minimal() +
   theme(legend.position = "none", axis.text.x = element_text(angle = 30, hjust = 1))
 
-Voter mobilization is a perennial campaign question. Using the 344,084-voter Gerber-Green-Larimer 2006 randomized field experiment in Michigan, we estimate the average causal effect of the Neighbors postcard on the probability that a registered voter casts a ballot in the August 2006 primary. One concern is that random assignment happened at the household level, so our 95% intervals are mildly optimistic. We model voter turnout as a Bernoulli variable which is a logistic function of treatment, voter class, the treatment-by-voter-class interaction, age, and sex. We estimate that the Neighbors postcard raises the probability of voting by about 8.1 percentage points on average, with the effect concentrated among Sometimes/Always voters (8-9 pp) and notably smaller among Rarely Vote voters (4 pp).
+Voter mobilization is a perennial campaign question. Using a 10,000-voter random sample from the 344,084-voter Gerber-Green-Larimer 2006 randomized field experiment in Michigan, we estimate the average causal effect of the Neighbors postcard on the share of registered voters who cast a ballot in the August 2006 primary. One concern is that random assignment happened at the household level, so our 95% intervals are mildly optimistic. We model voter turnout as a Bernoulli variable which is a logistic function of treatment, voter class, the treatment-by-voter-class interaction, age, and sex. We estimate that the Neighbors postcard raises the share of registered voters who cast a ballot by about 7.2 percentage points, with the effect clearest among Sometimes Vote voters (about 10 pp) and imprecisely estimated for the other classes.
 </code></pre>
 
 ###
@@ -2184,7 +2197,7 @@ plot_predictions(extract_fit_engine(fit_shaming),
   facet_wrap(~ voter_class) +
   labs(
     title    = "Predicted Turnout by Postcard and Voter Class",
-    subtitle = "Neighbors moves Sometimes/Always voters most; Rarely Vote barely budges",
+    subtitle = "Neighbors moves Sometimes Vote voters most; Rarely Vote barely budges",
     x        = NULL,
     y        = NULL,
     color    = "Voter Class",
@@ -2195,9 +2208,9 @@ plot_predictions(extract_fit_engine(fit_shaming),
         axis.text.x     = element_text(angle = 30, hjust = 1))
 ```
 
-Voter mobilization is a perennial campaign question: which messaging --- if any --- gets registered voters who would otherwise stay home to actually show up. Using the 344,084-voter Gerber-Green-Larimer 2006 randomized field experiment in Michigan, we estimate the average causal effect of the Neighbors postcard on the probability that a registered voter casts a ballot in the August 2006 primary. One concern is that random assignment happened at the household level, not the voter level, so our 95% confidence intervals are mildly optimistic. We model voter turnout as a Bernoulli variable which is a logistic function of treatment, voter class, the treatment-by-voter-class interaction, age, and sex. We estimate that the Neighbors postcard raises the probability of voting by about 8.1 percentage points on average (95% CI: 7.6 to 8.6 pp), with the effect concentrated among Sometimes Vote (8.6 pp) and Always Vote (9.0 pp) voters and notably smaller among Rarely Vote voters (4.4 pp).
+Voter mobilization is a perennial campaign question: which messaging --- if any --- gets registered voters who would otherwise stay home to actually show up. Using a 10,000-voter random sample from the 344,084-voter Gerber-Green-Larimer 2006 randomized field experiment in Michigan, we estimate the average causal effect of the Neighbors postcard on the share of registered voters who cast a ballot in the August 2006 primary. One concern is that random assignment happened at the household level, not the voter level, so our 95% confidence intervals are mildly optimistic. We model voter turnout as a Bernoulli variable which is a logistic function of treatment, voter class, the treatment-by-voter-class interaction, age, and sex. We estimate that the Neighbors postcard raises the share of registered voters who cast a ballot by about 7.2 percentage points (95% CI: 4.2 to 10.1 pp), with the effect clearest among Sometimes Vote voters (9.6 pp) and imprecisely estimated for Rarely Vote (0.5 pp) and Always Vote (4.8 pp) voters, whose intervals span zero.
 
-This finding would inform a campaign-allocation decision: which voters to target with the Neighbors-style postcard, given a fixed mailing budget. The headline implication is counterintuitive --- the people who needed a turnout nudge most (Rarely Vote) are also the ones a postcard moves least, while the people most likely to vote anyway (Always Vote) are the ones whose marginal turnout is most movable by social pressure. A campaign manager who applied this finding directly would mail Neighbors-style postcards to Sometimes/Always voters and skip the Rarely Vote list. The finding does not address every campaign question --- it says nothing about door-knocking, phone banking, digital ads, or how the effect of social-pressure mail interacts with other GOTV tools running simultaneously. But it gives a defensible starting point.
+This finding would inform a campaign-allocation decision: which voters to target with the Neighbors-style postcard, given a fixed mailing budget. The headline implication is counterintuitive --- the people who needed a turnout nudge most (Rarely Vote) are also the ones a postcard moves least, while voters with an established turnout habit are the ones whose marginal turnout social pressure moves most. A campaign manager who applied this finding directly would mail Neighbors-style postcards to the middle- and high-propensity lists and skip the Rarely Vote list. The finding does not address every campaign question --- it says nothing about door-knocking, phone banking, digital ads, or how the effect of social-pressure mail interacts with other GOTV tools running simultaneously. But it gives a defensible starting point.
 
 The world is always more uncertain than our models would have us believe.
 
