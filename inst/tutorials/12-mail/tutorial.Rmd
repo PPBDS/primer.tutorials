@@ -84,6 +84,8 @@ In the R Terminal, run:
 show_file(".gitignore")
 ```
 
+If that fails, it's probably because you haven't loaded `library(tutorial.helpers)` in the R Terminal.
+
 CP/CR.
 
 ```{r introduction-2}
@@ -284,7 +286,7 @@ x <- mail |>
          treatment = fct_relevel(treatment, "No Postcard"))
 ```
 
-Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+Render. Rendering creates an `analysis_cache/` directory next to your `analysis.qmd`. Cached files should never go to GitHub --- they're machine-specific and regenerated on every render --- so add `analysis_cache` to your `.gitignore` on its own line now, before you commit anything. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
 
 ```{r wisdom-2}
 question_text(NULL,
@@ -581,7 +583,7 @@ question_text(NULL,
 
 ###
 
-Read our answer. It will not be the same as yours. You can change your answer to incorporate some of our ideas, but do not copy/paste exactly. Add your two sentences to the summary paragraph in your QMD. Render the QMD, then commit/push.
+Read our answer. It will not be the same as yours. You can change your answer to incorporate some of our ideas, but do not copy/paste exactly. Add your two sentences to the summary paragraph in your QMD. Render the QMD.
 
 
 ## Justice
@@ -1286,7 +1288,9 @@ Here is the parameter table for this first model:
 #| echo: false
 logistic_reg(engine = "glm") |>
   fit(applied_mail ~ treatment, data = x) |>
-  tidy(conf.int = TRUE) |>
+  tidy() |>
+  mutate(conf.low = estimate - qnorm(0.975) * std.error,
+         conf.high = estimate + qnorm(0.975) * std.error) |>
   select(term, estimate, conf.low, conf.high) |>
   mutate(across(where(is.numeric), \(z) round(z, 3)))
 ```
@@ -1339,7 +1343,9 @@ Here is the parameter table for the party-adjusted model:
 #| echo: false
 logistic_reg(engine = "glm") |>
   fit(applied_mail ~ treatment + party, data = x) |>
-  tidy(conf.int = TRUE) |>
+  tidy() |>
+  mutate(conf.low = estimate - qnorm(0.975) * std.error,
+         conf.high = estimate + qnorm(0.975) * std.error) |>
   select(term, estimate, conf.low, conf.high) |>
   mutate(across(where(is.numeric), \(z) round(z, 3)))
 ```
@@ -1391,7 +1397,9 @@ Here is the parameter table for the final model:
 ```{r}
 #| echo: false
 fit_mail |>
-  tidy(conf.int = TRUE) |>
+  tidy() |>
+  mutate(conf.low = estimate - qnorm(0.975) * std.error,
+         conf.high = estimate + qnorm(0.975) * std.error) |>
   select(term, estimate, conf.low, conf.high) |>
   mutate(across(where(is.numeric), \(z) round(z, 3)))
 ```
@@ -1400,7 +1408,7 @@ Write a sentence interpreting the `treatmentNeighborhood` estimate of 0.035 in t
 
 ```{r courage-7}
 question_text(NULL,
-  message = "The causal effect of being sent the Neighborhood postcard, rather than no postcard, is to raise the log-odds of applying for a mail ballot by about 0.035, adjusting for party, age, and sex. The 95% confidence interval (-0.006 to 0.076) still includes zero: whatever this postcard does, it is small.",
+  message = "The causal effect of being sent the Neighborhood postcard, rather than no postcard, is to raise the log-odds of applying for a mail ballot by about 0.035, adjusting for party, age, and sex. The 95% confidence interval (-0.005 to 0.076) still includes zero: whatever this postcard does, it is small.",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -1439,7 +1447,7 @@ Model naming convention: the fitted object starts with `fit_` and keeps that one
 
 ### Exercise 9
 
-Re-fitting a model on 696,638 rows takes a second or two on every render --- worth caching. The next three exercises set that up: clean the chunk, turn caching on, add the cache directory to `.gitignore`.
+Re-fitting a model on 696,638 rows takes a second or two on every render --- worth caching. The next two exercises set that up: clean the chunk, then turn caching on. `.gitignore` already covers `analysis_cache` from Wisdom Exercise 2, so no separate gitignore step is needed here.
 
 First, clean up. In your chunk from Exercise 8, delete the `fit_mail` line at the bottom, leaving just the assignment. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
 
@@ -1487,28 +1495,22 @@ This is the first tutorial where the cache genuinely earns its keep: with two ca
 
 ### Exercise 11
 
-The Source Control change count just jumped, because `analysis_cache/` and everything inside it now look like untracked work to git. Cached files should never go to GitHub --- they're machine-specific and regenerated on every render.
+Notice that the Source Control change count did *not* jump, even though `fit_mail`'s cache just created new files under `analysis_cache/`. That's because you already added `analysis_cache` to `.gitignore` back in Wisdom Exercise 2, when `x` got its own cache --- one line in `.gitignore` covers every cached chunk in the QMD, not just the one that prompted it.
 
-Add `analysis_cache` to your `.gitignore` on its own line. In the R Terminal, run `show_file(".gitignore")`. CP/CR.
+Confirm this. In the R Terminal, run `show_file(".gitignore")`. CP/CR.
 
 ```{r courage-11}
 question_text(NULL,
+  message = "    > show_file(\".gitignore\")\n    analysis_files\n    analysis_cache",
   answer(NULL, correct = TRUE),
-  allow_retry = TRUE,
-  try_again_button = "Edit Answer",
+  allow_retry = FALSE,
   incorrect = NULL,
   rows = 5)
 ```
 
 ###
 
-<pre><code>analysis_files
-analysis_cache
-</code></pre>
-
-###
-
-The Source Control change count should drop back to whatever it was before the render.
+The Source Control change count stayed exactly where it was before the render.
 
 ### Exercise 12
 
@@ -1532,11 +1534,11 @@ Every term is a 0/1 dummy. The intercept (-1.75) is the log-odds of applying for
 
 A data generating mechanism is just a formula --- something we can write down and implement with computer code. Eleven parameters, and the two we actually care about (the postcard terms) are the two smallest in the whole equation. Turning them into probability-scale answers is what `marginaleffects` does in Temperance.
 
-### Exercise 13
+###
 
-In `analysis.qmd`, add a chunk that runs `tidy(fit_mail, conf.int = TRUE)`. This returns 95% intervals for all the parameters in our model. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+In `analysis.qmd`, add a chunk that runs `tidy(fit_mail)` and then adds a 95% confidence interval by hand: `mutate(conf.low = estimate - qnorm(0.975) * std.error, conf.high = estimate + qnorm(0.975) * std.error)`. We compute the interval this way, rather than with `tidy(fit_mail, conf.int = TRUE)`, because the default method profiles the likelihood --- fine on the small tibbles earlier in the Primer, but it takes minutes to finish on a fit with nearly 700,000 rows. The interval below is virtually identical and instant. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
 
-```{r courage-13}
+```{r courage-12}
 question_text(NULL,
   answer(NULL, correct = TRUE),
   allow_retry = TRUE,
@@ -1547,16 +1549,18 @@ question_text(NULL,
 
 ###
 
-```{r courage-13-test}
+```{r courage-12-test}
 #| echo: true
-tidy(fit_mail, conf.int = TRUE)
+tidy(fit_mail) |>
+  mutate(conf.low = estimate - qnorm(0.975) * std.error,
+         conf.high = estimate + qnorm(0.975) * std.error)
 ```
 
 ###
 
 `tidy()` is part of **[broom](https://broom.tidymodels.org/)**, used to summarize information from a wide variety of models. Notice how tight every interval is --- with nearly 700,000 rows, sampling uncertainty is almost gone, and yet the treatment intervals still cross zero. Precision is not the same thing as a big effect.
 
-### Exercise 14
+### Exercise 13
 
 Create a new code chunk in your QMD. Make a nice-looking table from the tibble returned by `tidy()`. Insert your table code, Render the QMD, and in the R Terminal run:
 
@@ -1566,9 +1570,9 @@ show_file("analysis.qmd", chunk = "Last")
 
 CP/CR.
 
-```{r courage-14}
+```{r courage-13}
 question_text(NULL,
-  message = "    > show_file(\"analysis.qmd\", chunk = \"Last\")\n    ```{r}\n    tidy(fit_mail, conf.int = TRUE) |>\n      select(term, estimate, conf.low, conf.high) |>\n      knitr::kable(\n        caption = \"Logistic-regression estimates (log-odds scale) and 95% CIs. Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail\",\n        digits = 3\n      )\n    ```",
+  message = "    > show_file(\"analysis.qmd\", chunk = \"Last\")\n    ```{r}\n    tidy(fit_mail) |>\n      mutate(conf.low = estimate - qnorm(0.975) * std.error,\n             conf.high = estimate + qnorm(0.975) * std.error) |>\n      select(term, estimate, conf.low, conf.high) |>\n      knitr::kable(\n        caption = \"Logistic-regression estimates (log-odds scale) and 95% CIs. Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail\",\n        digits = 3\n      )\n    ```",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -1579,11 +1583,11 @@ question_text(NULL,
 
 A nice table includes a title, a caption with the data source, and reasonable rounding. Three decimals keeps the small treatment coefficients visible without over-precising the party and age terms.
 
-### Exercise 15
+### Exercise 14
 
 Add a sentence to your project summary explaining the model structure.
 
-```{r courage-15}
+```{r courage-14}
 question_text(NULL,
   message = "We model whether a voter applies for a mail ballot as a Bernoulli variable which is a logistic function of treatment assignment, party, age, and sex.",
   answer(NULL, correct = TRUE),
@@ -1594,7 +1598,7 @@ question_text(NULL,
 
 ###
 
-Add your sentence to the summary paragraph. Render the QMD, then commit/push.
+Add your sentence to the summary paragraph. Render the QMD.
 
 
 ## Temperance
@@ -1616,7 +1620,9 @@ fit_mail <- logistic_reg(engine = "glm") |>
 ```{r}
 #| echo: false
 fit_mail |>
-  tidy(conf.int = TRUE) |>
+  tidy() |>
+  mutate(conf.low = estimate - qnorm(0.975) * std.error,
+         conf.high = estimate + qnorm(0.975) * std.error) |>
   select(term, estimate, conf.low, conf.high) |>
   mutate(across(where(is.numeric), \(z) round(z, 3)))
 ```
@@ -1750,7 +1756,8 @@ question_text(NULL,
 
 ```{r temperance-5-test}
 #| echo: true
-avg_comparisons(extract_fit_engine(fit_mail), variables = "treatment")
+comps_raw <- avg_comparisons(extract_fit_engine(fit_mail), variables = "treatment")
+comps_raw
 ```
 
 ###
@@ -1759,7 +1766,7 @@ These two rows are the answer to our question. The Neighborhood postcard raised 
 
 ### Exercise 6
 
-The two effects deserve a picture. In `analysis.qmd`, add a chunk that saves the comparisons to a tibble:
+The two effects deserve a picture, and `comps` will be needed by nearly every chunk from here to the end. As with `x` and `fit_mail` earlier, give it its own chunk with `#| cache: true` from the start, so later renders don't pay the `avg_comparisons()` cost again. In `analysis.qmd`, add a chunk with that option which saves the comparisons to a tibble:
 
 ```
 comps <- avg_comparisons(extract_fit_engine(fit_mail),
@@ -1782,9 +1789,7 @@ question_text(NULL,
 
 ```{r temperance-6-test}
 #| echo: true
-comps <- avg_comparisons(extract_fit_engine(fit_mail),
-                         variables = "treatment") |>
-  as_tibble()
+comps <- as_tibble(comps_raw)
 comps
 ```
 
@@ -1811,9 +1816,7 @@ question_text(NULL,
 #| echo: false
 #| message: false
 #| warning: false
-avg_comparisons(extract_fit_engine(fit_mail),
-                variables = "treatment") |>
-  as_tibble() |>
+comps |>
   mutate(wording = if_else(str_detect(contrast, "Self"), "Self", "Neighborhood")) |>
   ggplot(aes(x = estimate, y = wording)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
@@ -1933,6 +1936,7 @@ x <- mail |>
 fit_mail <- logistic_reg(engine = "glm") |>
   fit(applied_mail ~ treatment + party + age + sex, data = x)
 
+#| cache: true
 comps <- avg_comparisons(extract_fit_engine(fit_mail),
                          variables = "treatment") |>
   as_tibble()
@@ -2008,9 +2012,7 @@ The world confronts us. Make decisions we must.
 #| echo: false
 #| message: false
 #| warning: false
-avg_comparisons(extract_fit_engine(fit_mail),
-                variables = "treatment") |>
-  as_tibble() |>
+comps |>
   mutate(wording = if_else(str_detect(contrast, "Self"), "Self", "Neighborhood")) |>
   ggplot(aes(x = estimate, y = wording)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
