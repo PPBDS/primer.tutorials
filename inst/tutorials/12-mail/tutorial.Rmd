@@ -180,27 +180,25 @@ question_text(NULL,
 
 ###
 
-We will use `applied_mail` as our outcome variable. Below is the share of voters who applied, split by treatment arm.
+We will use `applied_mail` as our outcome variable. Below is how the 696,638 voters in our analysis sample split between applying and not applying.
 
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
 x |>
-  count(treatment, applied_mail) |>
-  group_by(treatment) |>
+  count(applied_mail) |>
   mutate(share = n / sum(n)) |>
-  filter(applied_mail == "Yes") |>
-  ggplot(aes(x = treatment, y = share, fill = treatment)) +
+  ggplot(aes(x = applied_mail, y = share, fill = applied_mail)) +
   geom_col(width = 0.6) +
-  geom_text(aes(label = scales::label_percent(accuracy = 0.1)(share)),
+  geom_text(aes(label = scales::label_percent(accuracy = 1)(share)),
             vjust = -0.5, size = 5) +
   scale_y_continuous(labels = scales::label_percent(),
-                     limits = c(0, 0.25)) +
+                     limits = c(0, 1)) +
   labs(
-    title    = "Share Applying for a Mail Ballot, by Treatment Arm",
-    subtitle = "Both postcard wordings nudge the application rate up by less than half a percentage point",
-    x        = NULL,
+    title    = "Mail-Ballot Applications Among Philadelphia Voters",
+    subtitle = "About one voter in six applied for a mail ballot before the May 2020 deadline",
+    x        = "Applied for a mail ballot",
     y        = NULL,
     caption  = "Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail"
   ) +
@@ -315,11 +313,11 @@ Three moves worth noticing. `drop_na()` removes about 239,000 voters with no rec
 
 ### Exercise 3
 
-The Introduction plot showed application rates by treatment arm overall. Now look at the same comparison *within party*. Write R code that plots the share applying for a mail ballot by treatment arm, faceted by party, with the y-axis labeled as a percentage. Paste the code below.
+The Introduction plot showed the overall split of `applied_mail`. Now look at how it varies with `treatment`. Write R code that plots the share applying for a mail ballot in each treatment arm, with the y-axis labeled as a percentage and each bar labeled with its exact rate --- the differences are far too small to read off bar heights alone. Paste the code below.
 
 ```{r wisdom-3}
 question_text(NULL,
-  message = "    x |>\n      count(party, treatment, applied_mail) |>\n      group_by(party, treatment) |>\n      mutate(share = n / sum(n)) |>\n      filter(applied_mail == \"Yes\") |>\n      ggplot(aes(x = treatment, y = share, fill = treatment)) +\n      geom_col(width = 0.6) +\n      facet_wrap(~ party) +\n      scale_y_continuous(labels = scales::label_percent()) +\n      labs(\n        title    = \"Mail-Ballot Application Rates, by Treatment and Party\",\n        subtitle = \"Democrats apply at twice the rate of Republicans; the postcard bumps are tiny everywhere\",\n        x        = NULL,\n        y        = NULL,\n        caption  = \"Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail\"\n      ) +\n      theme_minimal() +\n      theme(legend.position = \"none\",\n            axis.text.x = element_text(angle = 45, hjust = 1))",
+  message = "    x |>\n      count(treatment, applied_mail) |>\n      group_by(treatment) |>\n      mutate(share = n / sum(n)) |>\n      filter(applied_mail == \"Yes\") |>\n      ggplot(aes(x = treatment, y = share, fill = treatment)) +\n      geom_col(width = 0.6) +\n      geom_text(aes(label = scales::label_percent(accuracy = 0.1)(share)),\n                vjust = -0.5, size = 5) +\n      scale_y_continuous(labels = scales::label_percent(),\n                         limits = c(0, 0.25)) +\n      labs(\n        title    = \"Share Applying for a Mail Ballot, by Treatment Arm\",\n        subtitle = \"Both postcard wordings nudge the application rate up by less than half a percentage point\",\n        x        = NULL,\n        y        = NULL,\n        caption  = \"Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail\"\n      ) +\n      theme_minimal() +\n      theme(legend.position = \"none\",\n            axis.text.y     = element_blank(),\n            axis.ticks.y    = element_blank(),\n            panel.grid      = element_blank())",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -333,29 +331,33 @@ question_text(NULL,
 #| message: false
 #| warning: false
 x |>
-  count(party, treatment, applied_mail) |>
-  group_by(party, treatment) |>
+  count(treatment, applied_mail) |>
+  group_by(treatment) |>
   mutate(share = n / sum(n)) |>
   filter(applied_mail == "Yes") |>
   ggplot(aes(x = treatment, y = share, fill = treatment)) +
   geom_col(width = 0.6) +
-  facet_wrap(~ party) +
-  scale_y_continuous(labels = scales::label_percent()) +
+  geom_text(aes(label = scales::label_percent(accuracy = 0.1)(share)),
+            vjust = -0.5, size = 5) +
+  scale_y_continuous(labels = scales::label_percent(),
+                     limits = c(0, 0.25)) +
   labs(
-    title    = "Mail-Ballot Application Rates, by Treatment and Party",
-    subtitle = "Democrats apply at twice the rate of Republicans; the postcard bumps are tiny everywhere",
+    title    = "Share Applying for a Mail Ballot, by Treatment Arm",
+    subtitle = "Both postcard wordings nudge the application rate up by less than half a percentage point",
     x        = NULL,
     y        = NULL,
     caption  = "Source: 2020 Philadelphia mail-ballot experiment via primer.data::mail"
   ) +
   theme_minimal() +
   theme(legend.position = "none",
-        axis.text.x = element_text(angle = 45, hjust = 1))
+        axis.text.y     = element_blank(),
+        axis.ticks.y    = element_blank(),
+        panel.grid      = element_blank())
 ```
 
 ###
 
-The covariates dwarf the treatment: which party a voter belongs to shifts the application rate by ten percentage points or more, while the postcards move it by a fraction of one. That contrast --- big covariate differences, tiny treatment effects --- is the visual heart of this problem.
+Whether that half-point bump is a real effect or noise is exactly what the model in Courage will decide.
 
 ### Exercise 4
 
@@ -1363,7 +1365,7 @@ question_text(NULL,
 
 ###
 
-Meanwhile, the party coefficients are enormous by comparison --- registered Republicans' log-odds of applying sit about 0.89 *below* Democrats' --- a reminder that in this problem the covariates dwarf the treatment. Note the adjustment clause in the canonical answer: with more than one covariate in the model, *"adjusting for party"* is mandatory.
+Meanwhile, the party coefficients are enormous by comparison --- registered Republicans' log-odds of applying sit about 0.89 *below* Democrats' --- a sign that in this problem the covariates dwarf the treatment. Note the adjustment clause in the canonical answer: with more than one covariate in the model, *"adjusting for party"* is mandatory.
 
 ### Exercise 6
 

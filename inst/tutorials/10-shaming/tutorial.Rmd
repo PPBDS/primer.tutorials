@@ -28,8 +28,8 @@ options(tutorial.exercise.timelimit = 600,
         tutorial.storage = "local")
 
 # We work with a 10,000-row random sample of the 344,084-voter file to keep
-# renders and model fits fast; see the EDA note in the Introduction. The seed
-# makes the sample (and every number in the prose) reproducible.
+# renders and model fits fast; see the sampling note in the Introduction. The
+# seed makes the sample (and every number in the prose) reproducible.
 set.seed(10)
 x <- shaming |>
   mutate(civ_engage = primary_00 + primary_02 + primary_04 +
@@ -191,26 +191,24 @@ question_text(NULL,
 
 We will use `primary_06` as our outcome. One housekeeping note before we look at any data: the full experiment covers 344,084 voters, but throughout this tutorial --- and in your own `analysis.qmd` --- we work with a random sample of 10,000 of them, drawn with `set.seed(10)` so the sample is reproducible. We do this to save you time: at 344,084 rows, some of the model-based computations later in the tutorial take twenty seconds or more per render, and you will be rendering often. The price of the smaller sample is wider confidence intervals than the published full-data results.
 
-The plot below shows the average turnout in the August 2006 primary in our sample, broken out by treatment arm.
-
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
 x |>
-  group_by(treatment) |>
-  summarize(turnout = mean(primary_06), .groups = "drop") |>
-  ggplot(aes(x = treatment, y = turnout, fill = treatment)) +
-  geom_col(width = 0.7) +
-  geom_text(aes(label = scales::label_percent(accuracy = 0.1)(turnout)),
-            vjust = -0.5, size = 4) +
+  count(primary_06) |>
+  mutate(share = n / sum(n),
+         turnout = if_else(primary_06 == 1, "Voted", "Did Not Vote")) |>
+  ggplot(aes(x = turnout, y = share, fill = turnout)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = scales::label_percent(accuracy = 1)(share)),
+            vjust = -0.5, size = 5) +
   scale_y_continuous(labels = scales::label_percent(),
-                     limits = c(0, 0.45)) +
-  scale_x_discrete(limits = c("No Postcard", "Civic Duty", "Hawthorne",
-                              "Self", "Neighbors")) +
+                     limits = c(0, 0.8)) +
+  scale_x_discrete(limits = c("Did Not Vote", "Voted")) +
   labs(
-    title    = "August 2006 Primary Turnout by Postcard Treatment",
-    subtitle = "Neighbors raises turnout by about 8 percentage points; the weaker postcards move it less",
+    title    = "August 2006 Primary Turnout in Our 10,000-Voter Sample",
+    subtitle = "Only about 31% of registered voters cast a ballot; most stayed home",
     x        = NULL,
     y        = NULL,
     caption  = "Source: Gerber, Green, Larimer 2008 via primer.data::shaming"
@@ -287,11 +285,11 @@ The Preceptor Table only includes the variables mentioned in the question. For a
 
 ### Exercise 2
 
-The Introduction plot showed average turnout by treatment, pooled across all voters. Now look at how that picture changes by *voter class* --- a label we will derive shortly from each voter's recent turnout history. Write R code that computes mean turnout by treatment and by voter class, and plots it as a grouped bar chart faceted by voter class. Use `x |>` as the starting tibble (it is already in the tutorial's environment). Paste the code below.
+The Introduction plot showed that only about 31% of the sample voted. Now look at how turnout varies with `treatment`, the five-arm postcard assignment. Write R code that computes mean turnout by treatment arm and plots it as a bar chart, with the arms in their experimental order (No Postcard first, Neighbors last) and the turnout shares labeled as percentages. Use `x |>` as the starting tibble (it is already in the tutorial's environment). Paste the code below.
 
 ```{r wisdom-2}
 question_text(NULL,
-  message = "    x |>\n      group_by(treatment, voter_class) |>\n      summarize(turnout = mean(primary_06), .groups = \"drop\") |>\n      ggplot(aes(x = treatment, y = turnout, fill = treatment)) +\n      geom_col(width = 0.7) +\n      scale_y_continuous(labels = scales::label_percent(),\n                         limits = c(0, 0.7)) +\n      scale_x_discrete(limits = c(\"No Postcard\", \"Civic Duty\", \"Hawthorne\",\n                                  \"Self\", \"Neighbors\")) +\n      facet_wrap(~ voter_class) +\n      labs(\n        title    = \"Turnout by Treatment, Faceted by Voter Class\",\n        subtitle = \"The Neighbors postcard helps Sometimes Vote voters most; Rarely Vote barely moves\",\n        x = NULL, y = NULL,\n        caption  = \"Source: Gerber, Green, Larimer 2008 via primer.data::shaming\"\n      ) +\n      theme_minimal() +\n      theme(legend.position = \"none\",\n            axis.text.x = element_text(angle = 30, hjust = 1))",
+  message = "    x |>\n      group_by(treatment) |>\n      summarize(turnout = mean(primary_06), .groups = \"drop\") |>\n      ggplot(aes(x = treatment, y = turnout, fill = treatment)) +\n      geom_col(width = 0.7) +\n      geom_text(aes(label = scales::label_percent(accuracy = 0.1)(turnout)),\n                vjust = -0.5, size = 4) +\n      scale_y_continuous(labels = scales::label_percent(),\n                         limits = c(0, 0.45)) +\n      scale_x_discrete(limits = c(\"No Postcard\", \"Civic Duty\", \"Hawthorne\",\n                                  \"Self\", \"Neighbors\")) +\n      labs(\n        title    = \"August 2006 Primary Turnout by Postcard Treatment\",\n        subtitle = \"Neighbors raises turnout by about 8 percentage points; the weaker postcards move it less\",\n        x = NULL, y = NULL,\n        caption  = \"Source: Gerber, Green, Larimer 2008 via primer.data::shaming\"\n      ) +\n      theme_minimal() +\n      theme(legend.position = \"none\",\n            axis.text.y     = element_blank(),\n            axis.ticks.y    = element_blank(),\n            panel.grid      = element_blank())",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -305,25 +303,28 @@ question_text(NULL,
 #| message: false
 #| warning: false
 x |>
-  group_by(treatment, voter_class) |>
+  group_by(treatment) |>
   summarize(turnout = mean(primary_06), .groups = "drop") |>
   ggplot(aes(x = treatment, y = turnout, fill = treatment)) +
   geom_col(width = 0.7) +
+  geom_text(aes(label = scales::label_percent(accuracy = 0.1)(turnout)),
+            vjust = -0.5, size = 4) +
   scale_y_continuous(labels = scales::label_percent(),
-                     limits = c(0, 0.7)) +
+                     limits = c(0, 0.45)) +
   scale_x_discrete(limits = c("No Postcard", "Civic Duty", "Hawthorne",
                               "Self", "Neighbors")) +
-  facet_wrap(~ voter_class) +
   labs(
-    title    = "Turnout by Treatment, Faceted by Voter Class",
-    subtitle = "The Neighbors postcard helps Sometimes Vote voters most; Rarely Vote barely moves",
+    title    = "August 2006 Primary Turnout by Postcard Treatment",
+    subtitle = "Neighbors raises turnout by about 8 percentage points; the weaker postcards move it less",
     x        = NULL,
     y        = NULL,
     caption  = "Source: Gerber, Green, Larimer 2008 via primer.data::shaming"
   ) +
   theme_minimal() +
   theme(legend.position = "none",
-        axis.text.x     = element_text(angle = 30, hjust = 1))
+        axis.text.y     = element_blank(),
+        axis.ticks.y    = element_blank(),
+        panel.grid      = element_blank())
 ```
 
 ### Exercise 3
@@ -1510,7 +1511,7 @@ The fact that the treatment estimate is robust to adjustment is itself evidence 
 
 ### Exercise 7
 
-Fit the final model in `analysis.qmd` with the formula `fit(voted ~ age + sex + treatment*voter_class, data = x)`. The `treatment*voter_class` term means *treatment effects are allowed to vary by voter class* --- the kind of heterogeneity the EDA plot in Wisdom hinted at. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+Fit the final model in `analysis.qmd` with the formula `fit(voted ~ age + sex + treatment*voter_class, data = x)`. The `treatment*voter_class` term means *treatment effects are allowed to vary by voter class* --- the postcards may move habitual voters and rare voters by different amounts. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
 
 ```{r courage-7}
 question_text(NULL,
@@ -1549,7 +1550,7 @@ Interpretation in an interaction model is *conditional*: the effect of one varia
 
 ```{r courage-8}
 question_text(NULL,
-  message = "The `treatmentNeighbors` main effect of about 0.05 is the log-odds difference between Neighbors and No Postcard for a Rarely Vote voter (the reference level of voter_class), adjusting for age and sex --- essentially zero: in our sample, the postcard does little for Rarely Vote voters. For Sometimes Vote and Always Vote voters, you have to add the relevant `treatmentNeighbors:voter_class*` interaction term to get the conditional effect: the Neighbors-vs-No-Postcard log-odds difference is about 0.05 + 0.40 = 0.45 for Sometimes Vote, and about 0.05 + 0.15 = 0.20 for Always Vote. The heterogeneity the EDA hinted at shows up right here in the coefficients.",
+  message = "The `treatmentNeighbors` main effect of about 0.05 is the log-odds difference between Neighbors and No Postcard for a Rarely Vote voter (the reference level of voter_class), adjusting for age and sex --- essentially zero: in our sample, the postcard does little for Rarely Vote voters. For Sometimes Vote and Always Vote voters, you have to add the relevant `treatmentNeighbors:voter_class*` interaction term to get the conditional effect: the Neighbors-vs-No-Postcard log-odds difference is about 0.05 + 0.40 = 0.45 for Sometimes Vote, and about 0.05 + 0.15 = 0.20 for Always Vote. This heterogeneity --- the same postcard moving different voter classes by different amounts --- shows up right here in the coefficients.",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,

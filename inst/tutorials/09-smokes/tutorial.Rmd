@@ -154,26 +154,24 @@ question_text(NULL,
 
 ###
 
-We will use `smoke` as our outcome variable. Below is the share of respondents in the sample who answer `Yes`, broken out by sex.
+We will use `smoke` as our outcome variable.
 
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
 smokes |>
-  count(sex, smoke) |>
-  group_by(sex) |>
+  count(smoke) |>
   mutate(share = n / sum(n)) |>
-  filter(smoke == "Yes") |>
-  ggplot(aes(x = sex, y = share, fill = sex)) +
+  ggplot(aes(x = smoke, y = share, fill = smoke)) +
   geom_col(width = 0.6) +
   geom_text(aes(label = scales::label_percent(accuracy = 1)(share)),
             vjust = -0.5, size = 5) +
   scale_y_continuous(labels = scales::label_percent(),
-                     limits = c(0, 0.6)) +
+                     limits = c(0, 0.7)) +
   labs(
-    title    = "Share of Ever-Smokers in Our 1,000-Adult Sample",
-    subtitle = "Men are about 13 percentage points more likely to be ever-smokers than women",
+    title    = "Ever-Smoker Status in Our 1,000-Adult Sample",
+    subtitle = "About 43% of adults have smoked at least 100 cigarettes in their lifetime",
     x        = NULL,
     y        = NULL,
     caption  = "Source: 1,000-row NHANES 2009-2012 cut via primer.tutorials::smokes"
@@ -191,7 +189,7 @@ Specify two different groups of adults which have different values for `sex` and
 
 ```{r introduction-6}
 question_text(NULL,
-  message = "Consider two groups: women aged 30 and men aged 70. The two groups differ both on `sex` (Female vs. Male) and on `age` (30 vs. 70). The plot above already suggests men are more likely than women to be ever-smokers; if smoking propensity also rises with age, the older men in this comparison may be even more likely than the younger women to be ever-smokers.",
+  message = "Consider two groups: women aged 30 and men aged 70. The two groups differ both on `sex` (Female vs. Male) and on `age` (30 vs. 70). If men are more likely than women to be ever-smokers, and if smoking propensity also rises with age, the older men in this comparison may be considerably more likely than the younger women to be ever-smokers.",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -265,11 +263,11 @@ The Preceptor Table only includes the variables mentioned in the question. For a
 
 ### Exercise 3
 
-The Introduction plot showed the share of ever-smokers split by sex. Now look at how `smoke` varies with `age`, our other covariate. Write R code that plots the share of ever-smokers vs. age in five-year bins, faceted by sex, with a smoothed line and the y-axis labeled as a percentage. Paste the code below.
+The Introduction plot showed the overall distribution of `smoke`: about 43% of the sample are ever-smokers. Now look at how that share varies with `sex`, our covariate of interest. Write R code that computes the share of ever-smokers by sex and plots it as a bar chart, with the shares labeled as percentages. Paste the code below.
 
 ```{r wisdom-3}
 question_text(NULL,
-  message = "    smokes |>\n      mutate(age_bin = 5 * (age %/% 5)) |>\n      group_by(sex, age_bin) |>\n      summarize(share_yes = mean(smoke == \"Yes\"), .groups = \"drop\") |>\n      ggplot(aes(x = age_bin, y = share_yes, color = sex)) +\n      geom_point(size = 3) +\n      geom_smooth(se = FALSE, method = \"loess\", linewidth = 1.1) +\n      scale_y_continuous(labels = scales::label_percent(),\n                         limits = c(0, 1)) +\n      facet_wrap(~ sex) +\n      labs(\n        title    = \"Share of Ever-Smokers by Age and Sex\",\n        subtitle = \"Older respondents are more likely to be ever-smokers, especially among men\",\n        x        = \"Age (binned to 5 years)\",\n        y        = NULL,\n        caption  = \"Source: 1,000-row NHANES cut via primer.tutorials::smokes\"\n      ) +\n      theme_minimal() +\n      theme(legend.position = \"none\")",
+  message = "    smokes |>\n      group_by(sex) |>\n      summarize(share_yes = mean(smoke == \"Yes\")) |>\n      ggplot(aes(x = sex, y = share_yes, fill = sex)) +\n      geom_col(width = 0.6) +\n      geom_text(aes(label = scales::label_percent(accuracy = 1)(share_yes)),\n                vjust = -0.5, size = 5) +\n      scale_y_continuous(labels = scales::label_percent(),\n                         limits = c(0, 0.6)) +\n      labs(\n        title    = \"Share of Ever-Smokers by Sex\",\n        subtitle = \"Men are about 13 percentage points more likely to be ever-smokers than women\",\n        x        = NULL,\n        y        = NULL,\n        caption  = \"Source: 1,000-row NHANES 2009-2012 cut via primer.tutorials::smokes\"\n      ) +\n      theme_minimal() +\n      theme(legend.position = \"none\",\n            axis.text.y     = element_blank(),\n            axis.ticks.y    = element_blank(),\n            panel.grid      = element_blank())",
   answer(NULL, correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
@@ -283,24 +281,26 @@ question_text(NULL,
 #| message: false
 #| warning: false
 smokes |>
-  mutate(age_bin = 5 * (age %/% 5)) |>
-  group_by(sex, age_bin) |>
-  summarize(share_yes = mean(smoke == "Yes"), .groups = "drop") |>
-  ggplot(aes(x = age_bin, y = share_yes, color = sex)) +
-  geom_point(size = 3) +
-  geom_smooth(se = FALSE, method = "loess", linewidth = 1.1) +
+  group_by(sex) |>
+  summarize(share_yes = mean(smoke == "Yes")) |>
+  ggplot(aes(x = sex, y = share_yes, fill = sex)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = scales::label_percent(accuracy = 1)(share_yes)),
+            vjust = -0.5, size = 5) +
   scale_y_continuous(labels = scales::label_percent(),
-                     limits = c(0, 1)) +
-  facet_wrap(~ sex) +
+                     limits = c(0, 0.6)) +
   labs(
-    title    = "Share of Ever-Smokers by Age and Sex",
-    subtitle = "Older respondents are more likely to be ever-smokers, especially among men",
-    x        = "Age (binned to 5 years)",
+    title    = "Share of Ever-Smokers by Sex",
+    subtitle = "Men are about 13 percentage points more likely to be ever-smokers than women",
+    x        = NULL,
     y        = NULL,
-    caption  = "Source: 1,000-row NHANES cut via primer.tutorials::smokes"
+    caption  = "Source: 1,000-row NHANES 2009-2012 cut via primer.tutorials::smokes"
   ) +
   theme_minimal() +
-  theme(legend.position = "none")
+  theme(legend.position = "none",
+        axis.text.y     = element_blank(),
+        axis.ticks.y    = element_blank(),
+        panel.grid      = element_blank())
 ```
 
 ### Exercise 4
