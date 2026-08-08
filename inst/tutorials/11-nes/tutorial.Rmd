@@ -1320,11 +1320,17 @@ The savings here are modest --- this fit takes well under a second --- but the s
 
 With the parameters estimated, we can write the fitted model as a concrete formula. The linear predictors for the two non-reference candidates are:
 
-$$\log\!\left[\frac{P(\text{Clinton})}{P(\text{Bush})}\right] = 0.455 - 0.255 \cdot \text{sexMale}$$
+$$\log\!\left[\frac{\hat{P}(\text{Clinton})}{\hat{P}(\text{Bush})}\right] = 0.455 - 0.255 \cdot \text{sexMale}$$
 
-$$\log\!\left[\frac{P(\text{Perot})}{P(\text{Bush})}\right] = -0.852 + 0.420 \cdot \text{sexMale}$$
+$$\log\!\left[\frac{\hat{P}(\text{Perot})}{\hat{P}(\text{Bush})}\right] = -0.852 + 0.420 \cdot \text{sexMale}$$
 
 `sexMale` is a dummy variable: 1 for Male, 0 for Female. Each equation is a log-odds *relative to Bush*, the reference category: the first says women (sexMale = 0) favor Clinton over Bush, and less so for men; the second says men favor Perot over Bush more than women do.
+
+Three differences from the abstract form. First, the parameters are replaced by their best estimates. Second, the randomness is gone --- this version of the DGM answers an expected-value question, so the randomness sits to the side in the multinomial draw until a question needs it. Third, the probabilities have hats, because hats mark estimated values. When a question asks about an individual voter's actual vote, the DGM supplies it as a single draw from the three fitted probabilities:
+
+$$Y \sim \text{Multinomial}(\hat{\rho}_{\text{Clinton}}, \hat{\rho}_{\text{Bush}}, \hat{\rho}_{\text{Perot}})$$
+
+The randomness enters only at this final draw: two voters of the same sex share the same three probabilities, but not necessarily the same vote.
 
 **This is our data generating mechanism.** A data generating mechanism is just a formula --- something we can write down and implement with computer code. The multinomial wrapper turns these two Bush-relative log-odds into three probabilities that sum to one for every voter. Translating the formulas into those probabilities is what `marginaleffects` does in Temperance.
 
@@ -1421,9 +1427,13 @@ fit_nes |>
 
 **As a mathematical formula:**
 
-$$\log\!\left[\frac{P(\text{Clinton})}{P(\text{Bush})}\right] = 0.455 - 0.255 \cdot \text{sexMale}
+$$\log\!\left[\frac{\hat{P}(\text{Clinton})}{\hat{P}(\text{Bush})}\right] = 0.455 - 0.255 \cdot \text{sexMale}
 \qquad
-\log\!\left[\frac{P(\text{Perot})}{P(\text{Bush})}\right] = -0.852 + 0.420 \cdot \text{sexMale}$$
+\log\!\left[\frac{\hat{P}(\text{Perot})}{\hat{P}(\text{Bush})}\right] = -0.852 + 0.420 \cdot \text{sexMale}$$
+
+$$Y \sim \text{Multinomial}(\hat{\rho}_{\text{Clinton}}, \hat{\rho}_{\text{Bush}}, \hat{\rho}_{\text{Perot}})$$
+
+The formulas give expected values --- three fitted probabilities per voter. The randomness enters only at the final draw of one vote from those probabilities: voters of the same sex share probabilities, not votes.
 
 Remember that Temperance interprets the data generating mechanism and then uses it to answer, with the help of graphics, the question(s) with which we began. Humility reminds us that this answer is always false.
 
@@ -1507,6 +1517,8 @@ predictions(extract_fit_engine(fit_nes),
 ###
 
 For a multinomial model, `predictions()` returns one row per covariate combination *per outcome category* --- six rows here: two sexes times three candidates, with the `group` column naming the candidate. Reading them: women split 52.5% Clinton / 33.3% Bush / 14.2% Perot, while men split 42.5% / 34.8% / 22.6%. Each sex's three probabilities sum to one.
+
+One DGM answers many questions. Ask it for an expected value and it is a deterministic formula: same sex in, same three probabilities out. Ask it how one particular voter will vote and the randomness matters: the DGM must make its multinomial draw, and two voters of the same sex can vote differently. A multinomial DGM even answers on three scales --- Bush-relative log-odds (the parameter table), probability (these predictions), or class (a Clinton/Bush/Perot call by highest probability). The question, not habit, picks the mode.
 
 ### Exercise 4
 

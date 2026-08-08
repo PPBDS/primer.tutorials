@@ -1322,6 +1322,12 @@ $$\widehat{P(\text{Ever Smoked} = \text{Yes})} = \frac{1}{1 + e^{-(-0.875 + 0.00
 
 `sexMale` is a dummy variable: 1 for Male, 0 for Female. The intercept (-0.875) is the log-odds of being an ever-smoker for a 0-year-old Female (an extrapolation: the data only includes adults aged 20--80, so the intercept is mathematically defined but not a sensible prediction on its own). The coefficient on `Age` (0.007) is the per-year change in log-odds; the coefficient on `sexMale` (0.545) is the offset between Female and Male, adjusting for age.
 
+Three differences from the abstract form. First, the parameters are replaced by their best estimates. Second, the randomness is gone --- this version of the DGM answers an expected-value question, so the randomness sits to the side in the Bernoulli draw until a question needs it. Third, the left-hand side has a hat, because hats mark estimated values. When a question asks about an individual's actual outcome, the DGM supplies it as a draw:
+
+$$Y \sim \text{Bernoulli}(\hat{\rho})$$
+
+with $\hat{\rho}$ the fitted probability above. The randomness enters only at this final draw: two adults with the same age and sex share a probability, not an outcome.
+
 **This is our data generating mechanism.** A data generating mechanism is just a formula, something we can write down and implement with computer code. The non-linearity in logistic regression --- the $1/(1 + e^{-\eta})$ wrapper --- is what makes log-odds coefficients hard to read on the outcome scale. Translating coefficients back to probabilities is what `marginaleffects` does in Temperance.
 
 ### Exercise 12
@@ -1441,6 +1447,10 @@ fit_smokes |>
 
 $$\widehat{P(\text{Ever Smoked} = \text{Yes})} = \frac{1}{1 + e^{-(-0.875 + 0.007 \cdot \text{Age} + 0.545 \cdot \text{sexMale})}}$$
 
+$$Y \sim \text{Bernoulli}(\hat{\rho})$$
+
+The formula gives an expected value --- a fitted probability $\hat{\rho}$. The randomness enters only at the final Bernoulli draw: adults with identical covariates share a probability, not an outcome.
+
 Remember that Temperance interprets the data generating mechanism and then uses it to answer, with the help of graphics, the question(s) with which we began. Humility reminds us that this answer is always false.
 
 ### Exercise 1
@@ -1525,6 +1535,8 @@ predictions(extract_fit_engine(fit_smokes),
 ###
 
 `predictions()` returns the model's predicted probability for each combination of covariate values. Reading the four rows above: a 30-year-old woman has a predicted probability of 0.34 of being an ever-smoker; a 70-year-old man has a predicted probability of 0.54. The difference is 0.20, or 20 percentage points --- the answer to our specific question.
+
+One DGM answers many questions. Ask it for an expected value and it is a deterministic formula: same age and sex in, same probability out. Ask it whether one particular adult is an ever-smoker and the randomness matters: the DGM must make its Bernoulli draw, and two identical adults can end up with different outcomes. A logistic DGM even answers on three scales --- log-odds (the parameter table), probability (these predictions), or class (an ever-smoker/never-smoker call by highest probability). The question, not habit, picks the mode.
 
 ### Exercise 4
 
