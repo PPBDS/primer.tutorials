@@ -1,0 +1,1373 @@
+---
+title: DGM Ordered
+author: David Kane
+tutorial:
+  id: dgm-ordered
+  version: 1.0.0
+output:
+  learnr::tutorial:
+    df_print: default
+    progressive: true
+    allow_skip: true
+runtime: shiny_prerendered
+description: 'Learn to fit and interpret ordered (ordinal) regression models using tidymodels and marginaleffects, applied to diamond cut grades.'
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(tutorial.helpers)
+library(knitr)
+library(tidyverse)
+library(tidymodels)
+library(ordered)
+library(marginaleffects)
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = '90%')
+options(tutorial.exercise.timelimit = 600,
+        tutorial.storage = "local")
+
+build_equation <- function(fit, cutpoint) {
+  coefs <- tidy(fit)
+  slopes <- coefs |> filter(coef.type == "coefficient")
+  zeta <- round(coefs$estimate[coefs$term == cutpoint], 2)
+  below <- strsplit(cutpoint, "\\|")[[1]][1]
+  terms <- paste0(
+    ifelse(slopes$estimate >= 0, "- ", "+ "),
+    round(abs(slopes$estimate), 2), " \\times \\text{", slopes$term, "}",
+    collapse = " "
+  )
+  paste0("$$\\log\\left(\\frac{P(\\text{cut} \\le \\text{", below,
+         "})}{P(\\text{cut} > \\text{", below, "})}\\right) = ",
+         zeta, " ", terms, "$$")
+}
+
+mod_ordered <- ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ carat + depth + table, data = diamonds)
+
+mod_engine <- extract_fit_engine(mod_ordered)
+```
+
+```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
+```
+
+## Introduction
+###
+
+The `diamonds` dataset records 53,940 diamonds from a large online retailer — the weight (`carat`), the price, and the physical proportions of each stone, along with three quality grades: `cut`, `color`, and `clarity`.
+
+This tutorial asks a simple question: **can we predict a diamond's cut grade from how it's built?**
+
+`cut` is not a plain category. Its five levels run from worst to best — Fair, Good, Very Good, Premium, Ideal — and that ordering is information a model can use. We use two packages to build and interpret such a model. **[tidymodels](https://www.tidymodels.org/)** fits it. **[marginaleffects](https://marginaleffects.com/)** interprets it — turning raw coefficients into predicted probabilities that are immediately understandable.
+
+Interpreting a model with **marginaleffects** almost always comes down to one distinction: **marginal** vs. **conditional**. A marginal prediction runs the model on every *real* diamond in the dataset and averages the results (the `by` argument). A conditional prediction builds one or more *hypothetical* diamonds, holding some variables fixed and varying others (the `condition` argument). So every time you see `by`, you are averaging over real diamonds, and every time you see `condition`, you are looking at a hypothetical.
+
+Every dataset is a shadow cast by some real process — a **data generating mechanism**, or DGM — never the thing itself. Two moves lie ahead: *Courage*, proposing a structure and fitting it to real data (Tidymodels), and *Temperance*, using that fitted machine — with humility — to answer the question we started with (Marginal Effects).
+
+### Exercise 1
+
+You should be connected to a repo named `dgm-ordered`. If you are not, create one and connect to it.
+
+Create a new file, `analysis.qmd`, with the title `"Diamond Cut"` and your name as the author. Add `execute: echo: false` to the YAML header. In a bash Terminal, render it:
+
+```
+quarto render analysis.qmd
+```
+
+Open `analysis.html` with Live Server. Create a `.gitignore` with `analysis_files` on the first line. Commit and push.
+
+In the R Terminal, run:
+
+```
+show_file(".gitignore")
+```
+
+CP/CR.
+
+```{r introduction-1}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+```
+analysis_files
+```
+
+###
+
+Every dataset comes from somewhere. `diamonds` is a snapshot of one online retailer's inventory, collected around 2008 — its prices are 2008 US dollars, and its diamonds are the ones that particular retailer chose to stock.
+
+### Exercise 2
+
+In a new code chunk in `analysis.qmd`, load the libraries you'll need. Add `#| message: false`. Render.
+
+```
+#| message: false
+library(tidyverse)
+library(tidymodels)
+library(ordered)
+library(marginaleffects)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r introduction-2}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+<pre><code>#| message: false
+library(tidyverse)
+library(tidymodels)
+library(ordered)
+library(marginaleffects)
+</code></pre>
+
+###
+
+One newcomer in that list: **[ordered](https://cran.r-project.org/package=ordered)** is a small extension package that teaches tidymodels how to fit ordinal models — without it, the model specification you'll use in the next section has no engine to run on. Under the hood the actual fitting is done by the **[MASS](https://cran.r-project.org/package=MASS)** package, which has shipped with R itself for decades. `diamonds` needs no loading of its own: it comes with **ggplot2**, which `library(tidyverse)` attaches.
+
+### Exercise 3
+
+In a new code chunk, print the first 10 rows of `diamonds`, narrowed to the four columns this tutorial uses. Render.
+
+```
+diamonds |>
+  select(cut, carat, depth, table) |>
+  head(10)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r introduction-3}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+```{r introduction-3-test}
+#| echo: true
+diamonds |>
+  select(cut, carat, depth, table) |>
+  head(10)
+```
+
+###
+
+`cut` is the outcome we want to predict — printed as `<ord>`, an *ordered* factor, not the plain `<fct>` you saw for penguin species. The three predictors are physical measurements: `carat` is weight, while `depth` and `table` describe the stone's proportions — total height and top-facet width, each expressed as a percentage of the diamond's width. Proportions are what cut grading is mostly about.
+
+### Exercise 4
+
+Ask AI to create a boxplot of `table` by `cut`, directly in your file. Render.
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r introduction-4}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+Here's our version, for comparison — yours doesn't need to match exactly, just the same idea:
+
+```{r introduction-4-test}
+#| echo: true
+diamonds |>
+  ggplot(aes(x = cut, y = table)) +
+  geom_boxplot() +
+  labs(
+    title = "Table Percentage by Cut Grade",
+    subtitle = "Ideal diamonds cluster tightly near 56%; Fair diamonds spread widely",
+    x = "Cut grade",
+    y = "Table (% of width)"
+  )
+```
+
+###
+
+Ideal diamonds sit lowest and tightest — median table of 56, in a narrow band — while Fair diamonds spread far wider. But the pattern is not perfectly clean: Premium's median (59) is actually the highest of the five. A model that uses `table` will capture the overall tendency, not a tidy staircase, and that mismatch between a noisy picture and a one-number coefficient is worth remembering when we interpret the fit.
+
+### Exercise 5
+
+Commit and push, with a message like "Add diamonds data and initial exploration." In the bash Terminal, run:
+
+```
+git log -1
+```
+
+CP/CR.
+
+```{r introduction-5}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```
+commit a1b2c3d4e5f6...
+Author: David Kane
+Date:   Sat Aug 15 2026
+
+    Add diamonds data and initial exploration
+```
+
+###
+
+Before we fit anything, it's worth asking where these grades came from. Every `cut` value was assigned by a human grader applying one lab's standards to one retailer's stock — not handed down by nature. Whatever our model learns, it learns about *that grading process* as much as about diamonds themselves.
+
+## Tidymodels
+###
+
+Every dataset is produced by some real-world process — a **data generating mechanism**, or DGM. Building one means committing to a structure, choosing a method for estimating it, and fitting it to data: Structure → Method → Fitting. `cut` is a category whose five levels have a natural order — Fair below Good below Very Good below Premium below Ideal — so the structure here is `ordinal_reg()`.
+
+The order matters. A multinomial model would treat the five grades as interchangeable labels and estimate a separate set of coefficients for each; an ordered model uses the ranking itself, estimating a *single* set of coefficients plus a set of thresholds between adjacent grades. Fewer moving parts, and a model that cannot accidentally claim a diamond is likely Ideal and likely Fair but unlikely anything in between.
+
+There is no single "correct" DGM for a given question. Which right-hand-side variables to include is a judgment call — one we will make, and remake, several times in this section.
+
+### Exercise 1
+
+In a new code chunk, count the diamonds in each cut grade. Render.
+
+```
+diamonds |>
+  count(cut)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r tidymodels-1}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+```{r tidymodels-1-test}
+#| echo: true
+diamonds |>
+  count(cut)
+```
+
+###
+
+The rows print in grade order — Fair first, Ideal last — because `cut` is an ordered factor, not alphabetically the way a plain character column would. Ideal alone accounts for 21,551 diamonds, about 40% of the dataset, while Fair has just 1,610: modern cutting machinery makes high grades cheap to achieve, and retailers stock what sells.
+
+### Exercise 2
+
+Update your chunk to inspect how R stores this ordering: print the class of `cut` and its levels. Render.
+
+```
+class(diamonds$cut)
+levels(diamonds$cut)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r tidymodels-2}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+```{r tidymodels-2-test}
+#| echo: true
+class(diamonds$cut)
+levels(diamonds$cut)
+```
+
+###
+
+The class is `"ordered" "factor"` — an ordered factor *is* a factor, with one extra promise: the levels are listed worst-to-best, and comparisons like `Fair < Ideal` are meaningful. That promise is exactly what `ordinal_reg()` will rely on. If `cut` were stored as plain text, we would have to build the ordered factor ourselves before modeling.
+
+### Exercise 3
+
+In a new code chunk, specify an ordinal regression model with `ordinal_reg()`, set its engine to `"polr"` with `set_engine()`, passing `Hess = TRUE`, and fit it with just one predictor: `cut ~ table`, using `diamonds`. Print the result. Render.
+
+```
+ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ table, data = diamonds)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r tidymodels-3}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+```{r tidymodels-3-test}
+#| echo: true
+ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ table, data = diamonds)
+```
+
+###
+
+`ordinal_reg()` proposes the structure — five ordered categories. `set_engine("polr", Hess = TRUE)` picks the method: `polr` is *proportional odds logistic regression*, and anything after the engine name is handed straight through to the engine itself. Here `Hess = TRUE` tells it to keep the numerical machinery needed for standard errors — every engine has its own dials, and `set_engine()` is where you reach them. This chunk is now your **working chunk** — you'll keep editing this same formula over the next few exercises.
+
+### Exercise 4
+
+Update your working chunk to pipe the fitted model into `tidy(conf.int = TRUE)`. Render.
+
+```
+ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ table, data = diamonds) |>
+  tidy(conf.int = TRUE)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r tidymodels-4}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+```{r tidymodels-4-test}
+#| echo: true
+ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ table, data = diamonds) |>
+  tidy(conf.int = TRUE)
+```
+
+###
+
+The `coef.type` column splits this table in two. One `coefficient` row — the slope on `table`, about −0.46, interval excluding zero — and four `scale` rows: `Fair|Good`, `Good|Very Good`, `Very Good|Premium`, `Premium|Ideal`. Those are the **cutpoints**, the estimated thresholds between adjacent grades. Five ordered levels, one slope, four thresholds — that's the entire anatomy of an ordered model.
+
+### Exercise 5
+
+A one-variable DGM ignores the other proportion measurement. Edit the formula in your working chunk to add `depth`, and narrow the output to the columns that matter for judging variables. Render.
+
+```
+ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ table + depth, data = diamonds) |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r tidymodels-5}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+```{r tidymodels-5-test}
+#| echo: true
+ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ table + depth, data = diamonds) |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high)
+```
+
+###
+
+Both intervals exclude zero — `depth` earns its place. Notice the `table` slope moved from −0.46 to −0.60 when `depth` entered: the two proportions are correlated, so each coefficient is re-estimated holding the other fixed. No p-value, no test statistic: we keep a variable if its interval excludes zero, and both do here.
+
+### Exercise 6
+
+Proportions aren't the whole story — cutters also face a trade-off with weight. Edit the formula once more to add `carat`. Render.
+
+```
+ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ table + depth + carat, data = diamonds) |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r tidymodels-6}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+```{r tidymodels-6-test}
+#| echo: true
+ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ table + depth + carat, data = diamonds) |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high)
+```
+
+###
+
+`carat` comes in at about −0.14, interval (−0.17, −0.11) — comfortably excluding zero. The sign tells a story from the cutting room: holding proportions fixed, heavier diamonds tend to carry *worse* cut grades. Rough stones are cut to preserve weight, because weight sells; a cutter who could achieve Ideal proportions by grinding away another tenth of a carat often chooses not to.
+
+### Exercise 7
+
+What about price? It's the most obvious column in the dataset. Edit the formula to add `price` — and drop the `conf.int = TRUE` and `select()` steps for a moment, so you can see every column `tidy()` reports. Render.
+
+```
+ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ table + depth + carat + price, data = diamonds) |>
+  tidy()
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r tidymodels-7}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+```{r tidymodels-7-test}
+#| echo: true
+#| warning: false
+ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ table + depth + carat + price, data = diamonds) |>
+  tidy()
+```
+
+###
+
+Something broke. `carat` and `price` report `NaN` — not-a-number — for their standard errors and statistics, and the `Fair|Good` cutpoint claims a z-statistic of roughly negative one *million*. (Asking for confidence intervals on this fit fails outright.) The cause is **scale**: `price` runs from \$326 to \$18,823 while `table` and `depth` live between about 43 and 95. `polr`'s optimizer estimates all coefficients on one shared logit scale, and when one predictor's units are a thousand times larger than the others', the numerical machinery that produces standard errors falls apart. A linear model would have shrugged this off; engines have quirks, and this is `polr`'s.
+
+### Exercise 8
+
+The fix for a scale problem is to change the scale. Edit the formula to use `I(price/1000)` — price in thousands of dollars — instead of raw `price`. Render.
+
+```
+ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ table + depth + carat + I(price/1000), data = diamonds) |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r tidymodels-8}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+```{r tidymodels-8-test}
+#| echo: true
+ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ table + depth + carat + I(price/1000), data = diamonds) |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high)
+```
+
+###
+
+Rescaled, everything is clean: the price coefficient is about 0.13 per thousand dollars, interval (0.12, 0.14), well clear of zero. And yet we are going to **discard this variable anyway**. A DGM's right-hand side should hold things that *generate* the outcome — and price does not generate cut. It's the other way around: a diamond is graded first and priced afterward, so price is a downstream consequence of cut, not a cause of it. A coefficient can be precisely estimated and still belong to a model that tells the story backwards. The interval-excludes-zero check is necessary; it is not sufficient.
+
+### Exercise 9
+
+We tried several candidate DGMs in this section, and none of them got a permanent name until now. Edit your working chunk one last time: drop the price term, remove the `tidy()`/`select()` steps, and assign the result to `mod_ordered`. Print it. Render.
+
+```
+mod_ordered <- ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ carat + depth + table, data = diamonds)
+
+mod_ordered
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r tidymodels-9}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+```{r tidymodels-9-test}
+#| echo: true
+mod_ordered <- ordinal_reg() |>
+  set_engine("polr", Hess = TRUE) |>
+  fit(cut ~ carat + depth + table, data = diamonds)
+
+mod_ordered
+```
+
+###
+
+From here on, you never touch this formula again. `mod_ordered` is the fixed, saved model every later exercise addresses — the candidates you discarded never got a permanent name at all, which was deliberate: there are always more DGMs you *could* fit than you actually will, and we never know for certain which one is true. We just use our best judgment — guided by which intervals exclude zero, and by which direction the causal arrows actually point.
+
+### Exercise 10
+
+Add `#| cache: true` to the top of your `mod_ordered` chunk, and add `*_cache/` to your `.gitignore`. In the R Terminal, run:
+
+```
+show_file(".gitignore")
+```
+
+CP/CR.
+
+```{r tidymodels-10}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+```
+analysis_files
+*_cache/
+```
+
+###
+
+Fitting `mod_ordered` runs an iterative optimizer over all 53,940 diamonds, and caching means it only reruns when the code producing it actually changes — not every time you edit unrelated text. The cache directory itself is regenerated every render, so it's excluded from git rather than committed.
+
+### Exercise 11
+
+Once you have a fitted model, always look at its equation — that IS the fitted DGM. An ordered model with five levels has four equations, one per cutpoint, each giving the log-odds of being *at or below* a grade boundary. Add this function in a new chunk, then loop over the cutpoints to print all four. Add `#| results: asis` to the top of the chunk.
+
+```
+#| results: asis
+build_equation <- function(fit, cutpoint) {
+  coefs <- tidy(fit)
+  slopes <- coefs |> filter(coef.type == "coefficient")
+  zeta <- round(coefs$estimate[coefs$term == cutpoint], 2)
+  below <- strsplit(cutpoint, "\\|")[[1]][1]
+  terms <- paste0(
+    ifelse(slopes$estimate >= 0, "- ", "+ "),
+    round(abs(slopes$estimate), 2), " \\times \\text{", slopes$term, "}",
+    collapse = " "
+  )
+  paste0("$$\\log\\left(\\frac{P(\\text{cut} \\le \\text{", below,
+         "})}{P(\\text{cut} > \\text{", below, "})}\\right) = ",
+         zeta, " ", terms, "$$")
+}
+
+for (cp in tidy(mod_ordered) |> filter(coef.type == "scale") |> pull(term)) {
+  cat(build_equation(mod_ordered, cp))
+}
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r tidymodels-11}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 20)
+```
+
+###
+
+```{r tidymodels-11-test}
+#| echo: true
+#| results: asis
+for (cp in tidy(mod_ordered) |> filter(coef.type == "scale") |> pull(term)) {
+  cat(build_equation(mod_ordered, cp))
+}
+```
+
+###
+
+Look closely: all four equations share the *same* three slope terms — only the leading number, the cutpoint, changes. That is the **proportional odds** assumption, and it is what "ordered" buys you. One dial (the weighted sum of carat, depth, and table) slides a diamond up or down the whole quality scale, and the four cutpoints mark where the grade boundaries sit. A multinomial model of the same outcome would instead estimate four *separate* sets of slopes, one per non-reference level, ignoring the ordering entirely.
+
+### Exercise 12
+
+One more piece of setup. In a new code chunk, extract the engine-level fit from `mod_ordered` with `extract_fit_engine()`, assign it to `mod_engine`, and print its class. Render.
+
+```
+mod_engine <- extract_fit_engine(mod_ordered)
+class(mod_engine)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r tidymodels-12}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+```{r tidymodels-12-test}
+#| echo: true
+mod_engine <- extract_fit_engine(mod_ordered)
+class(mod_engine)
+```
+
+###
+
+`mod_ordered` is a tidymodels wrapper; inside it sits the object the engine actually built — a `polr` fit. For most model types **marginaleffects** happily accepts the wrapper, but for this one it needs the engine-level object to compute uncertainty. `extract_fit_engine()` is the general-purpose escape hatch: whenever a downstream tool wants the raw engine fit, this is how you hand it over. Every **marginaleffects** call in the next section uses `mod_engine`.
+
+### Exercise 13
+
+Commit and push, with a message like "Fit ordered regression model for diamond cut." In the bash Terminal, run:
+
+```
+git log -1
+```
+
+CP/CR.
+
+```{r tidymodels-13}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```
+commit b2c3d4e5f6a7...
+Author: David Kane
+Date:   Sat Aug 15 2026
+
+    Fit ordered regression model for diamond cut
+```
+
+###
+
+`mod_ordered` is not the answer to anything by itself — it's the machine we built so we can answer questions, which is exactly what the next section does with it.
+
+## Marginal Effects
+###
+
+In this section we cover five functions from [**marginaleffects**](https://marginaleffects.com/): `predictions()`, `avg_predictions()`, `comparisons()`, `avg_comparisons()`, and `plot_predictions()`. Recall from the Introduction: `by` averages over real diamonds (marginal), `condition` builds hypothetical diamonds (conditional). Keep asking yourself, for every function call in this section, which one you're looking at.
+
+One mechanical note: for this engine, probabilities are requested with `type = "probs"` — each engine names its prediction types slightly differently (the multinomial engine calls the same thing `"prob"`), and **marginaleffects** passes the name through to the engine.
+
+A common beginner mistake is treating the printed coefficients from Tidymodels as the answer itself. They are not — nobody asks "what is the log-odds coefficient on table?" They ask real questions: what grade is this diamond likely to get, or how does predicted cut change as proportions change? The fitted model is a machine for answering those questions; the functions below are how you ask them.
+
+### Exercise 1
+
+In a new code chunk, run `predictions()` for one hypothetical diamond — half a carat, 61.5% depth, 57% table — using `mod_engine` and `type = "probs"`. Render.
+
+```
+predictions(mod_engine, type = "probs",
+  newdata = data.frame(carat = 0.5, depth = 61.5, table = 57))
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r marginal-effects-1}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+```{r marginal-effects-1-test}
+#| echo: true
+predictions(mod_engine, type = "probs",
+  newdata = data.frame(carat = 0.5, depth = 61.5, table = 57))
+```
+
+###
+
+`predictions()` returns one row per grade per case for an ordered model — five rows here, not one, with the `Group` column tracking which grade each belongs to. This near-typical diamond is most likely Ideal (about 49%), then Premium (31%), with the probabilities fading smoothly down the scale to Fair at under 1%. This is a **conditional** prediction — no real diamond needs to match these measurements exactly.
+
+### Exercise 2
+
+Update your chunk to compare two hypothetical diamonds that differ *only* in table — 55% versus 60% — with carat and depth held identical. Render.
+
+```
+predictions(mod_engine, type = "probs",
+  newdata = data.frame(carat = 0.5, depth = 61.5, table = c(55, 60)))
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r marginal-effects-2}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 12)
+```
+
+###
+
+```{r marginal-effects-2-test}
+#| echo: true
+predictions(mod_engine, type = "probs",
+  newdata = data.frame(carat = 0.5, depth = 61.5, table = c(55, 60)))
+```
+
+###
+
+Ten rows — five grades for each of the two cases. The counterfactual is dramatic: at 55% table this diamond is Ideal with probability .76; widen the table to 60% and Ideal collapses to .14, with the mass sliding down into Premium and Very Good. Two percentage points of table are the difference between a top grade and a middling one. That is what a slope of −0.6 per point *means* in practice.
+
+### Exercise 3
+
+Update your chunk to predict grade probabilities for the first actual diamond in the dataset, and separately check how many rows `predictions()` returns for the whole dataset with no `newdata` at all. Render.
+
+```
+predictions(mod_engine, type = "probs", newdata = diamonds[1, ])
+
+preds_all <- predictions(mod_engine, type = "probs") |> as_tibble()
+nrow(preds_all)
+nrow(diamonds)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r marginal-effects-3}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 12)
+```
+
+###
+
+```{r marginal-effects-3-test}
+#| echo: true
+predictions(mod_engine, type = "probs", newdata = diamonds[1, ])
+
+preds_all <- predictions(mod_engine, type = "probs") |> as_tibble()
+nrow(preds_all)
+nrow(diamonds)
+```
+
+###
+
+The first diamond in the dataset — 0.23 carats, 61.5% depth, 55% table — is actually graded Ideal, and the model agrees at 77%. Without `newdata`, `predictions()` defaults to running on every row it was fit on: 269,700 rows from 53,940 diamonds, five grade rows per real diamond, not one. `as_tibble()` turns the result into something you can wrangle with ordinary **dplyr** verbs.
+
+### Exercise 4
+
+Update your chunk to run `avg_predictions(mod_engine, type = "probs")` with no `by` argument, and compare it to the raw proportion of each grade in the data. Render.
+
+```
+avg_predictions(mod_engine, type = "probs")
+diamonds |> count(cut) |> mutate(prop = n / sum(n))
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r marginal-effects-4}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+```{r marginal-effects-4-test}
+#| echo: true
+avg_predictions(mod_engine, type = "probs")
+diamonds |> count(cut) |> mutate(prop = n / sum(n))
+```
+
+###
+
+Close but not identical — about .420 predicted vs. .400 actual for Ideal, .030 vs. .030 for Fair. `avg_predictions()` with no `by` is a **marginal** prediction: run the model on every real diamond, then average within grade. For an OLS linear model that average is exactly guaranteed to match the training data; for a maximum-likelihood model like this one, it is only approximately close — a useful sanity check, not an algebraic identity.
+
+### Exercise 5
+
+Update your chunk to use `avg_predictions()` with `by = "clarity"` — a variable that is not in the model at all. Render.
+
+```
+avg_predictions(mod_engine, type = "probs", by = "clarity")
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r marginal-effects-5}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 12)
+```
+
+###
+
+```{r marginal-effects-5-test}
+#| echo: true
+avg_predictions(mod_engine, type = "probs", by = "clarity")
+```
+
+###
+
+`clarity` never appears in `mod_ordered`, yet `by = "clarity"` works — **marginaleffects** just averages predictions within whatever groups it finds in the data. And the pattern it surfaces is real: the average predicted probability of Ideal climbs steadily from .27 for the worst clarity grade (I1) to .56 for the best (IF). Quality dimensions travel together — the rough stones worth cutting carefully are the clear ones — so a model that never saw clarity still predicts better cuts for clearer diamonds, purely through the proportions they share.
+
+### Exercise 6
+
+Now build a **conditional** prediction on purpose, using `datagrid()`: three hypothetical diamonds at 0.5, 1, and 2 carats, with `depth` and `table` held at their typical values automatically. Render.
+
+```
+predictions(mod_engine, type = "probs",
+  newdata = datagrid(carat = c(0.5, 1, 2)))
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r marginal-effects-6}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 12)
+```
+
+###
+
+```{r marginal-effects-6-test}
+#| echo: true
+predictions(mod_engine, type = "probs",
+  newdata = datagrid(carat = c(0.5, 1, 2)))
+```
+
+###
+
+`datagrid()` fixes every variable you don't mention — depth lands at 61.7, table at 57.5 — and varies only the ones you specify. Ideal probability drifts from .39 at half a carat down to .34 at two carats: the weight-retention effect, isolated. This is the **conditional** counterpart to `avg_predictions()` with a `by` argument — no real diamond needs to exist at any of these three weights.
+
+### Exercise 7
+
+A prediction says what the model expects; a **comparison** says how much that expectation changes when a predictor changes. In a new code chunk, use `comparisons()` to compute the predicted change in each grade's probability when `table` is one point wider, holding each diamond's other measurements at their own real values. Render.
+
+```
+cmp <- comparisons(mod_engine, type = "probs",
+  variables = list(table = 1))
+nrow(cmp)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r marginal-effects-7}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+```{r marginal-effects-7-test}
+#| echo: true
+cmp <- comparisons(mod_engine, type = "probs",
+  variables = list(table = 1))
+nrow(cmp)
+```
+
+###
+
+269,700 rows again — one per grade per real diamond. Each row is the predicted change in one grade's probability for one specific diamond if its table were one point wider, everything else about that diamond held fixed. Far too many numbers to read; the next exercise averages them.
+
+### Exercise 8
+
+Update your chunk to use `avg_comparisons()` instead, to see the average predicted change across all real diamonds. Render.
+
+```
+avg_comparisons(mod_engine, type = "probs",
+  variables = list(table = 1))
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r marginal-effects-8}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+```{r marginal-effects-8-test}
+#| echo: true
+avg_comparisons(mod_engine, type = "probs",
+  variables = list(table = 1))
+```
+
+###
+
+One extra point of table costs Ideal about 10.7 points of probability on average, redistributed down the scale — Very Good gains 4.6, Good 4.0, Fair 1.8. The five changes sum to (approximately) zero, since the five probabilities themselves always sum to 1. This is the coefficient from Tidymodels translated into units a person can use: not log-odds, but probability points per table point.
+
+### Exercise 9
+
+Update your chunk to ask the same question about weight: the average change in each grade's probability if every diamond were one carat heavier. Render.
+
+```
+avg_comparisons(mod_engine, type = "probs",
+  variables = list(carat = 1))
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r marginal-effects-9}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+```{r marginal-effects-9-test}
+#| echo: true
+avg_comparisons(mod_engine, type = "probs",
+  variables = list(carat = 1))
+```
+
+###
+
+A full extra carat — quadrupling a half-carat stone's weight — shifts Ideal down by only about 2.6 points. Compare that to the 10.7 points a single point of table costs: proportions dominate weight in this DGM. The weight-retention effect is real and statistically solid, but modest next to what the geometry itself does.
+
+### Exercise 10
+
+Ask your AI assistant to write `plot_predictions()` code that visualizes how predicted grade probability changes with `table`, using `mod_engine`, `type = "probs"`, and `condition = c("table", "group")`, with a title, axis labels, and percent-formatted y-axis. Paste the code it gives you into a new chunk. Render, and adjust the AI's code if it does not match the pattern below — in particular, `"group"` must be in `condition`, or the five grades' probabilities plot as one meaningless zigzag instead of five separate curves.
+
+```
+plot_predictions(mod_engine, type = "probs",
+  condition = c("table", "group")) +
+  labs(
+    title = "Predicted cut probability by table percentage",
+    x = "Table (% of width)",
+    y = "Predicted probability",
+    color = "Cut", fill = "Cut"
+  ) +
+  scale_y_continuous(labels = scales::percent)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r marginal-effects-10}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+```{r marginal-effects-10-test}
+#| echo: true
+plot_predictions(mod_engine, type = "probs",
+  condition = c("table", "group")) +
+  labs(
+    title = "Predicted cut probability by table percentage",
+    x = "Table (% of width)",
+    y = "Predicted probability",
+    color = "Cut", fill = "Cut"
+  ) +
+  scale_y_continuous(labels = scales::percent)
+```
+
+###
+
+Read the curves left to right and watch the ordering constraint at work: at narrow tables Ideal dominates; as table widens, the probability mass hands off smoothly to Premium, then Very Good, then Good, then Fair — each grade peaking in sequence, never out of order. A multinomial model's curves are free to cross in any pattern; an ordered model's curves *must* pass the probability down the scale like this. That monotone hand-off is the visual signature of proportional odds.
+
+### Exercise 11
+
+Ask your AI assistant to extend that plot to show predicted grade probability across both `table` and `carat`, using `condition = c("table", "carat", "group")`. Paste its code into a new chunk. Render, and adjust if needed.
+
+```
+plot_predictions(mod_engine, type = "probs",
+  condition = c("table", "carat", "group")) +
+  labs(
+    title = "Predicted cut probability by table and carat",
+    x = "Table (% of width)",
+    y = "Predicted probability",
+    color = "Carat", fill = "Carat"
+  ) +
+  scale_y_continuous(labels = scales::percent)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r marginal-effects-11}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+```{r marginal-effects-11-test}
+#| echo: true
+plot_predictions(mod_engine, type = "probs",
+  condition = c("table", "carat", "group")) +
+  labs(
+    title = "Predicted cut probability by table and carat",
+    x = "Table (% of width)",
+    y = "Predicted probability",
+    color = "Carat", fill = "Carat"
+  ) +
+  scale_y_continuous(labels = scales::percent)
+```
+
+###
+
+With a second continuous variable in `condition`, **marginaleffects** varies the first (`table`) continuously and shows the second at five representative values — Tukey's five-number summary of `carat` — faceted by grade because `group` is still in `condition`. The carat curves sit close together within each facet: another view of the same fact the comparisons found, that weight nudges the grade while table drives it.
+
+### Exercise 12
+
+Now plot a **marginal** quantity instead of a conditional one: use `plot_predictions()` with `by = c("clarity", "group")` to visualize average predicted grade probability per clarity grade. Render.
+
+```
+plot_predictions(mod_engine, type = "probs", by = c("clarity", "group")) +
+  labs(
+    title = "Average predicted cut probability by clarity",
+    x = "Clarity grade",
+    y = "Average predicted probability",
+    color = "Cut", fill = "Cut"
+  ) +
+  scale_y_continuous(labels = scales::percent)
+```
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r marginal-effects-12}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+```{r marginal-effects-12-test}
+#| echo: true
+plot_predictions(mod_engine, type = "probs", by = c("clarity", "group")) +
+  labs(
+    title = "Average predicted cut probability by clarity",
+    x = "Clarity grade",
+    y = "Average predicted probability",
+    color = "Cut", fill = "Cut"
+  ) +
+  scale_y_continuous(labels = scales::percent)
+```
+
+###
+
+Same function, same package — but passing `by` instead of `condition` switches `plot_predictions()` from a hypothetical relationship to an average over real diamonds, grouped by clarity. `condition` (the previous two exercises) is a conditional, counterfactual view; `by` (this exercise) is a marginal, descriptive one — the same numbers from the `avg_predictions(by = "clarity")` table earlier, drawn as a picture.
+
+### Exercise 13
+
+Commit and push, with a message like "Add marginaleffects predictions, comparisons, and plots." In the bash Terminal, run:
+
+```
+git log -1
+```
+
+CP/CR.
+
+```{r marginal-effects-13}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```
+commit c3d4e5f6a7b8...
+Author: David Kane
+Date:   Sat Aug 15 2026
+
+    Add marginaleffects predictions, comparisons, and plots
+```
+
+###
+
+You have now used `predictions()`, `avg_predictions()`, `comparisons()`, `avg_comparisons()`, and `plot_predictions()` on an ordered regression model, and drawn the marginal/conditional line clearly in both table and plot form. The same functions work identically on linear, logistic, and multinomial models — only the number of rows per case, and the engine's name for its prediction type, changes.
+
+## Summary
+###
+
+You have built an analysis page that fits an ordered regression model and visualizes its predictions. Now wire it into a navigable Quarto website and publish it.
+
+### Exercise 1
+
+Create a `_quarto.yml` file at the top level of your repo with the following contents:
+
+```
+project:
+  type: website
+
+website:
+  title: "Diamond Cut"
+  navbar:
+    left:
+      - href: analysis.qmd
+        text: Analysis
+      - href: about.qmd
+        text: About
+
+format:
+  html:
+    theme: cosmo
+```
+
+In the bash Terminal, run:
+
+```
+quarto render
+ls
+```
+
+In the R Terminal, run `show_file("_quarto.yml")`. CP/CR.
+
+```{r summary-1}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 15)
+```
+
+###
+
+<pre><code>project:
+  type: website
+
+website:
+  title: "Diamond Cut"
+  navbar:
+    left:
+      - href: analysis.qmd
+        text: Analysis
+      - href: about.qmd
+        text: About
+
+format:
+  html:
+    theme: cosmo
+</code></pre>
+
+###
+
+`_quarto.yml` turns a folder of `.qmd` files into a navigable website. Without it, each page renders independently.
+
+### Exercise 2
+
+Create `about.qmd` with a YAML title of `"About"`, your name, and today's date. Also clean up `analysis.qmd` so it contains only: a setup chunk, the final `mod_ordered` model chunk, the equation loop, the `mod_engine` chunk, and the final three `plot_predictions()` visualizations from the Marginal Effects section (the table plot, the table-and-carat plot, and the by-clarity plot). Remove all intermediate output. Render.
+
+In the R Terminal, run `show_file("about.qmd")`, then `show_file("analysis.qmd")`. CP/CR both.
+
+```{r summary-2}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 12)
+```
+
+###
+
+```
+---
+title: "About"
+---
+
+David Kane, August 2026.
+```
+
+###
+
+Your `analysis.qmd` should now have exactly seven code chunks — setup, the `mod_ordered` model, the equation loop, the `mod_engine` extraction, and the three `plot_predictions()` calls from the Marginal Effects section.
+
+###
+
+An About page tells visitors who made the site and when.
+
+### Exercise 3
+
+Before publishing, preview the site locally. In the bash Terminal, run:
+
+```
+quarto preview
+```
+
+Click through the navbar in the browser preview and confirm both pages load with no errors. In the bash Terminal, stop the preview and CP/CR the first few lines of terminal output from the `quarto preview` command.
+
+```{r summary-3}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+```
+Preparing to preview
+Watching files for changes
+GET: /
+GET: /analysis.html
+GET: /about.html
+Browse at http://localhost:6274/
+```
+
+(your port number and exact lines may differ — that's fine, just confirm you see similar output with no error lines)
+
+###
+
+`quarto preview` builds the site and opens a live-reloading local server — catching broken links or missing pages before they go live is much cheaper than catching them after publishing.
+
+### Exercise 4
+
+Publish the website to GitHub Pages. In the bash Terminal, run:
+
+```
+quarto publish gh-pages
+```
+
+Copy/paste the resulting URL below.
+
+```{r summary-4}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+`quarto publish gh-pages` without a filename publishes the whole website. Both pages are now live, linked by the navigation bar.
+
+### Exercise 5
+
+Commit and push any remaining changes. Copy/paste the URL to your GitHub repo.
+
+```{r summary-5}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+The same pattern you used here — `ordinal_reg() |> set_engine() |> fit()` followed by `predictions()`, `avg_predictions()`, `comparisons()`, `avg_comparisons()`, and `plot_predictions()`, always keeping marginal and conditional straight, always showing every equation the model fit — applies to linear, logistic, and multinomial regression too. What ordered regression adds is the ordering itself: one set of slopes, a ladder of cutpoints, and curves that must hand probability down the scale in sequence.
+
+```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
+```
