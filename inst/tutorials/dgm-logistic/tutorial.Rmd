@@ -3,7 +3,7 @@ title: DGM Logistic
 author: Var Kurapati
 tutorial:
   id: dgm-logistic
-  version: 1.0.0
+  version: 1.1.0
 output:
   learnr::tutorial:
     df_print: default
@@ -37,11 +37,15 @@ mod_logistic <- logistic_reg() |>
 ## Introduction
 ###
 
-Of 1,470 employees at a company, 237 left — an attrition rate of about 16%. The `attrition` dataset records, for each employee, whether they left and a set of features about their job: income, tenure, whether they work overtime, and more.
+The `attrition` dataset records 1,470 employees at a large company — their income, tenure, overtime status, and whether they left. Of the 1,470, 237 left — an attrition rate of about 16%.
 
 This tutorial asks a simple question: **can we predict whether an employee will leave from their income, tenure, and overtime status?**
 
-We use two packages. **[tidymodels](https://www.tidymodels.org/)** fits the model. **[marginaleffects](https://marginaleffects.com/)** uses it to answer questions — turning coefficients into predicted probabilities.
+`Attrition` is not a number — it is a yes/no outcome, and that is information a model can use. We use two packages to build and interpret such a model. **[tidymodels](https://www.tidymodels.org/)** fits it. **[marginaleffects](https://marginaleffects.com/)** interprets it — turning raw log-odds coefficients into predicted probabilities that are immediately understandable.
+
+Interpreting a model with **marginaleffects** almost always comes down to one distinction: **marginal** vs. **conditional**. A marginal prediction runs the model on every *real* employee in the dataset and averages the results (the `by` argument). A conditional prediction builds one or more *hypothetical* employees, holding some variables fixed and varying others (the `condition` argument). So every time you see `by`, you are averaging over real employees, and every time you see `condition`, you are looking at a hypothetical.
+
+Every dataset is a shadow cast by some real process — a **data generating mechanism**, or DGM — never the thing itself. Two moves lie ahead: *Courage*, proposing a structure and fitting it to real data (Tidymodels), and *Temperance*, using that fitted machine — with humility — to answer the question we started with (Marginal Effects).
 
 ### Exercise 1
 
@@ -71,6 +75,8 @@ analysis_files
 ```
 
 ###
+
+Every dataset comes from somewhere. `attrition` is a synthetic dataset modeled after a real IBM HR survey — the employees are fictional, but the patterns in the data reflect real workforce research.
 
 ### Exercise 2
 
@@ -104,15 +110,11 @@ library(marginaleffects)
 
 ###
 
-<!-- Treat each tutorial as independent and avoid saying something like "same three libraries as last time." Every word matters and student's time is valuable. Marginaleffects does not interpret is uses model to answer the question. Maybe explain data generating model instead. -->
-
-`tidymodels` builds the data generating mechanism — the process we believe produced this data. `marginaleffects` uses that mechanism to answer questions. `tidyverse` covers plotting and data wrangling.
+`attrition` comes with **modeldata**, which `library(tidymodels)` attaches. The data is a shadow of the IBM workforce; the DGM we build will be our best account of the process that cast it.
 
 ### Exercise 3
 
-<!-- Too vague maybe. "Give more verbage and tell to use AI or give code to copy paste." -->
-
-In a new code chunk, print the first 10 rows of `attrition`. Render.
+In a new code chunk, print the first 10 rows of `attrition`, narrowed to the four columns this tutorial uses. Render.
 
 ```
 attrition |>
@@ -142,13 +144,11 @@ attrition |>
 
 ###
 
-`attrition` has 31 columns. This tutorial uses four: `Attrition` (Yes/No — the outcome), `MonthlyIncome` (dollars), `YearsAtCompany`, and `OverTime` (Yes/No).
+`Attrition` is the outcome we want to predict — `Yes` means the employee left, `No` means they stayed. `MonthlyIncome` is in dollars. `YearsAtCompany` is tenure. `OverTime` is a yes/no indicator of whether the employee works overtime.
 
 ### Exercise 4
 
-<!-- Don't need to paste its code into the chunk. They are having the code edit the files in the vscode."" -->
-
-Ask AI to create a boxplot showing `Attrition` on the Y axis and `MonthlyIncome` on the X axis directly in your file. Render.
+Ask AI to create a bar chart of attrition rate by overtime status. Paste its code into a new chunk. Render.
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
 
@@ -162,28 +162,28 @@ question_text(NULL,
 
 ###
 
-Here's our version, for comparison — yours doesn't need to match exactly, just the same idea:
+Here's our version, for comparison:
 
 ```{r introduction-4-test}
 #| echo: true
 attrition |>
-  ggplot(aes(x = MonthlyIncome, y = Attrition)) +
-  geom_boxplot() +
+  count(OverTime, Attrition) |>
+  group_by(OverTime) |>
+  mutate(prop = n / sum(n)) |>
+  filter(Attrition == "Yes") |>
+  ggplot(aes(x = OverTime, y = prop)) +
+  geom_col(fill = "steelblue") +
+  scale_y_continuous(labels = scales::percent) +
   labs(
-    title = "Employees who left tend to earn less",
-    x = "Monthly income ($)",
-    y = "Attrition"
-  ) +
-  scale_x_continuous(labels = scales::dollar)
+    title = "Employees who work overtime are more likely to leave",
+    x = "Overtime",
+    y = "Attrition rate"
+  )
 ```
 
 ###
 
-Employees who left earn less, on average, than employees who stayed — a visible gap between the two boxes. `Attrition` is binary, which rules out a linear model: a dollar amount could in principle be any number, but attrition can only be Yes or No. That's exactly the kind of outcome logistic regression is built for.
-
-###
-
-By convention, the outcome goes on the Y axis and a predictor goes on the X axis — that's why `Attrition` sits on Y here and `MonthlyIncome` is X.
+Employees who work overtime leave at about 30% — nearly three times the rate of those who don't. The pattern is clear in the raw data, but a model lets us ask: how much of this gap remains after controlling for income and tenure?
 
 ### Exercise 5
 
@@ -207,42 +207,36 @@ question_text(NULL,
 ###
 
 ```
-commit d4e5f6a7b8c9...
+commit a1b2c3d4e5f6...
 Author: Var Kurapati
 Date:   Mon Aug 03 2026
-
     Add attrition data and initial exploration
 ```
 
 ###
 
-<!-- INCORPORATE MORE OF THE ESSAY HERE. -->
-
-The `attrition` dataset is a snapshot of one company's employees at one point in time — a shadow cast by real hiring, management, and quitting decisions, not a random sample of every workplace. Whatever this model learns describes *this* company's patterns, not employment in general. Keep that question — how did this data come to be? — in mind as we build a model in the next section.
+Before we fit anything, it's worth asking where this data came from. Whatever `mod_logistic` learns, it learns about *this* synthetic dataset — not real employees anywhere. Keep asking, as we build the model ahead: *How did this data come to be?*
 
 ## Tidymodels
 ###
 
-Data doesn't speak for itself — every dataset is the output of some real process, and reasoning backward from the numbers to that process is the whole job.
+Every dataset is produced by some real-world process — a **data generating mechanism**, or DGM. Building one means committing to a structure, choosing a method for estimating it, and fitting it to data: **Structure → Method → Fitting**. `Attrition` is a yes/no outcome, so the structure here is `logistic_reg()`.
 
-`Attrition` is binary — Yes or No — so the structure here is different from a linear model. Instead of predicting a number directly, logistic regression predicts the **log-odds** of the outcome, using this general form:
+The equation a logistic regression fits looks like this:
 
-$$\log\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \cdots$$
+$$\log\left(\frac{P(\text{Attrition} = \text{Yes})}{1 - P(\text{Attrition} = \text{Yes})}\right) = \beta_0 + \beta_1 \times \text{MonthlyIncome} + \beta_2 \times \text{YearsAtCompany} + \beta_3 \times \text{OverTimeYes}$$
 
-where $p$ is the probability of the outcome (here, `Attrition = Yes`). The right-hand side looks just like linear regression — a sum of coefficients times variables — but the left-hand side transforms a probability (which must stay between 0 and 1) into something that can range over all real numbers. That transformation is what makes this a different structure from last time, even though the fitting steps — Structure → Method → Fitting — are the same.
+The left-hand side is a log-odds — a number that runs from negative infinity to positive infinity. `predictions()` will convert it back into a probability between 0 and 1.
 
 There is no single "correct" DGM for a given question. Which right-hand-side variables to include is a judgment call — one we will make, and remake, several times in this section.
 
-###
-
-One way to picture this DGM as a story: each employee has some true likelihood of leaving. Overtime, low pay, and short tenure can push that likelihood up. Whether they actually leave reflects that likelihood, plus randomness — two employees who look identical on paper can still make different choices.
-
 ### Exercise 1
 
-In a new code chunk, specify a logistic regression model with `logistic_reg()`. Render.
+In a new code chunk, count how many employees are in each attrition category, and the attrition rate by overtime status. Render.
 
 ```
-logistic_reg()
+attrition |> count(Attrition)
+attrition |> count(OverTime, Attrition)
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -253,31 +247,28 @@ question_text(NULL,
   allow_retry = TRUE,
   try_again_button = "Edit Answer",
   incorrect = NULL,
-  rows = 4)
+  rows = 6)
 ```
 
 ###
 
 ```{r tidymodels-1-test}
 #| echo: true
-logistic_reg()
+attrition |> count(Attrition)
+attrition |> count(OverTime, Attrition)
 ```
 
 ###
 
-`logistic_reg()` proposes the structure — a binary outcome predicted by a linear combination of predictors, on the log-odds scale. It hasn't touched data yet.
-
-###
-
-Committing to a structure means committing to what kind of machine you believe generated the data — a Yes/No outcome demands `logistic_reg()`, the same way a dollar amount demanded `linear_reg()` last time.
+Only 237 of 1,470 employees left — 16%. That imbalance matters: a model that always predicted "No" would be right 84% of the time without learning anything at all.
 
 ### Exercise 2
 
-Update your chunk to pipe into `set_engine("glm")`. Render.
+In a new code chunk, specify a logistic regression with `logistic_reg()` and pipe it into `set_engine("glm")`. Print the result. Render.
 
 ```
 logistic_reg() |>
-set_engine("glm")
+  set_engine("glm")
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -301,27 +292,11 @@ logistic_reg() |>
 
 ###
 
-<!-- True knowledge drop but too much for students. We don't want to overwhelm them with too much information. ANd teach them new stuff that isn't included in the essays."" -->
-
-`set_engine("glm")` picks the method. It's a separate decision from the structure, same as `"lm"` was for linear regression.
-
-###
-
-Method means choosing how to estimate: find the single best-fitting version of the mechanism, or keep a whole range of plausible versions. `"glm"` picks the first.
-
-###
-
-The DGM — the real process out there — and the procedure we use to estimate it are two different things. That's why tidymodels keeps `logistic_reg()` and `set_engine()` as separate steps.
+`logistic_reg()` proposes the **structure**: a binary outcome modeled as a probability. `set_engine("glm")` picks the **method**: R's classical maximum-likelihood fitting. These are separate decisions — the DGM and our procedure for estimating it are separate things.
 
 ### Exercise 3
 
-Update your chunk to pipe into `fit(Attrition ~ MonthlyIncome, data = attrition)`. Render.
-
-```
-logistic_reg() |>
-set_engine("glm") |>
-fit(Attrition ~ MonthlyIncome, data = attrition)
-```
+Update your chunk to pipe into `fit(Attrition ~ OverTime, data = attrition)` — just one predictor for now. Then pipe the result into `tidy(conf.int = TRUE)` and `select(term, estimate, conf.low, conf.high)`. Render.
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
 
@@ -331,7 +306,7 @@ question_text(NULL,
   allow_retry = TRUE,
   try_again_button = "Edit Answer",
   incorrect = NULL,
-  rows = 6)
+  rows = 8)
 ```
 
 ###
@@ -340,23 +315,26 @@ question_text(NULL,
 #| echo: true
 logistic_reg() |>
   set_engine("glm") |>
-  fit(Attrition ~ MonthlyIncome, data = attrition)
+  fit(Attrition ~ OverTime, data = attrition) |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high)
 ```
 
 ###
 
-`fit()` is where the mechanism meets real data. Only once it's fit is the DGM actually usable — everything before this step was just proposing a machine, not building one. This chunk is now your **working chunk** — you'll keep editing this same formula over the next few exercises.
+`fit()` is where the mechanism meets real data — step three of Structure → Method → Fitting. The `OverTimeYes` coefficient is about 1.38 in log-odds, with an interval well clear of zero: working overtime is associated with higher odds of leaving.
 
 ### Exercise 4
 
-Update your working chunk to pipe the fitted model into `tidy(conf.int = TRUE)`, then `select(term, estimate, conf.low, conf.high)`. Render.
+Edit the formula to add `MonthlyIncome` and `YearsAtCompany`. Render.
 
 ```
 logistic_reg() |>
-set_engine("glm") |>
-fit(Attrition ~ MonthlyIncome, data = attrition) |>
-tidy(conf.int = TRUE) |>
-select(term, estimate, conf.low, conf.high)
+  set_engine("glm") |>
+  fit(Attrition ~ MonthlyIncome + YearsAtCompany + OverTime,
+      data = attrition) |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high)
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -376,25 +354,27 @@ question_text(NULL,
 #| echo: true
 logistic_reg() |>
   set_engine("glm") |>
-  fit(Attrition ~ MonthlyIncome, data = attrition) |>
+  fit(Attrition ~ MonthlyIncome + YearsAtCompany + OverTime,
+      data = attrition) |>
   tidy(conf.int = TRUE) |>
   select(term, estimate, conf.low, conf.high)
 ```
 
 ###
 
-No p-value, no test statistic. We keep a variable if its confidence interval excludes zero. `MonthlyIncome`'s does — its estimate is negative, meaning higher income is associated with lower log-odds of leaving.
+All three intervals exclude zero — by this heuristic, all three predictors earn their place. `MonthlyIncome` is negative: higher earners are less likely to leave. `YearsAtCompany` is also negative: more tenured employees are less likely to leave.
 
 ### Exercise 5
 
-Edit the formula in your working chunk to add `YearsAtCompany`. Render.
+What about job satisfaction? Edit the formula to add `JobSatisfaction`. Render.
 
 ```
 logistic_reg() |>
-set_engine("glm") |>
-fit(Attrition ~ MonthlyIncome + YearsAtCompany, data = attrition) |>
-tidy(conf.int = TRUE) |>
-select(term, estimate, conf.low, conf.high)
+  set_engine("glm") |>
+  fit(Attrition ~ MonthlyIncome + YearsAtCompany + OverTime + JobSatisfaction,
+      data = attrition) |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high)
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -414,25 +394,26 @@ question_text(NULL,
 #| echo: true
 logistic_reg() |>
   set_engine("glm") |>
-  fit(Attrition ~ MonthlyIncome + YearsAtCompany, data = attrition) |>
+  fit(Attrition ~ MonthlyIncome + YearsAtCompany + OverTime + JobSatisfaction,
+      data = attrition) |>
   tidy(conf.int = TRUE) |>
   select(term, estimate, conf.low, conf.high)
 ```
 
 ###
 
-Both intervals exclude zero — `YearsAtCompany` earns its place. Longer-tenured employees are less likely to leave, holding income fixed.
+`JobSatisfaction` is categorical, so it produces one row per level — and the intervals are mixed: some levels clearly exclude zero, others don't. This is exactly the "many possible DGMs" problem: there's no automatic rule that resolves it. For this tutorial, we'll make the judgment call to go back to the three-variable model as our final DGM.
 
 ### Exercise 6
 
-Edit the formula again to add `Department`. Render.
+Edit your working chunk one last time: remove `JobSatisfaction`, remove the `tidy()`/`select()` steps, and assign the result to `mod_logistic`. Print it. Render.
 
 ```
-logistic_reg() |>
-set_engine("glm") |>
-fit(Attrition ~ MonthlyIncome + YearsAtCompany + Department, data = attrition) |>
-tidy(conf.int = TRUE) |>
-select(term, estimate, conf.low, conf.high)
+mod_logistic <- logistic_reg() |>
+  set_engine("glm") |>
+  fit(Attrition ~ MonthlyIncome + YearsAtCompany + OverTime,
+      data = attrition)
+mod_logistic
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -443,109 +424,25 @@ question_text(NULL,
   allow_retry = TRUE,
   try_again_button = "Edit Answer",
   incorrect = NULL,
-  rows = 12)
+  rows = 8)
 ```
 
 ###
 
 ```{r tidymodels-6-test}
 #| echo: true
-logistic_reg() |>
+mod_logistic <- logistic_reg() |>
   set_engine("glm") |>
-  fit(Attrition ~ MonthlyIncome + YearsAtCompany + Department, data = attrition) |>
-  tidy(conf.int = TRUE) |>
-  select(term, estimate, conf.low, conf.high)
+  fit(Attrition ~ MonthlyIncome + YearsAtCompany + OverTime,
+      data = attrition)
+mod_logistic
 ```
 
 ###
 
-`Department` has three levels, so it produces two rows (each compared to a reference department) — and both intervals include zero. Once income and tenure are accounted for, which department someone works in doesn't add anything. We'll drop it.
-
-###
-
-This is the "many possible DGMs" problem in action — no automatic rule tells you to drop `Department`, only the judgment call that its intervals add nothing.
+From here on, you never touch this formula again. `mod_logistic` is the fixed, saved model every later exercise addresses — the candidates you discarded never got a permanent name at all, which was deliberate: there are always more DGMs you *could* fit than you actually will, and we never know for certain which one is true.
 
 ### Exercise 7
-
-Edit the formula once more: remove `Department`, add `OverTime` instead. Render.
-
-```
-logistic_reg() |>
-set_engine("glm") |>
-fit(Attrition ~ MonthlyIncome + YearsAtCompany + OverTime, data = attrition) |>
-tidy(conf.int = TRUE) |>
-select(term, estimate, conf.low, conf.high)
-```
-
-In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
-
-```{r tidymodels-7}
-question_text(NULL,
-  answer(NULL, correct = TRUE),
-  allow_retry = TRUE,
-  try_again_button = "Edit Answer",
-  incorrect = NULL,
-  rows = 12)
-```
-
-###
-
-```{r tidymodels-7-test}
-#| echo: true
-logistic_reg() |>
-  set_engine("glm") |>
-  fit(Attrition ~ MonthlyIncome + YearsAtCompany + OverTime, data = attrition) |>
-  tidy(conf.int = TRUE) |>
-  select(term, estimate, conf.low, conf.high)
-```
-
-###
-
-`OverTime`'s interval is nowhere near zero, and the estimate is large and positive — working overtime is strongly associated with higher odds of leaving. Unlike `Department`, this one clearly belongs in the final model.
-
-###
-
-A coefficient like this one can't tell you whether overtime causes attrition or whether it's the other way around. Only knowing how the data came to be can answer that.
-
-### Exercise 8
-
-Edit your working chunk one last time: remove the `tidy()`/`select()` steps, and assign the result to `mod_logistic`. Print it. Render.
-
-```
-mod_logistic <- logistic_reg() |>
-set_engine("glm") |>
-fit(Attrition ~ MonthlyIncome + YearsAtCompany + OverTime, data = attrition)
-
-mod_logistic
-```
-
-In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
-
-```{r tidymodels-8}
-question_text(NULL,
-  answer(NULL, correct = TRUE),
-  allow_retry = TRUE,
-  try_again_button = "Edit Answer",
-  incorrect = NULL,
-  rows = 8)
-```
-
-###
-
-```{r tidymodels-8-test}
-#| echo: true
-mod_logistic <- logistic_reg() |>
-  set_engine("glm") |>
-  fit(Attrition ~ MonthlyIncome + YearsAtCompany + OverTime, data = attrition)
-
-mod_logistic
-```
-
-###
-
-From here on, you never touch this formula again. `mod_logistic` is the fixed, saved model every later question in this tutorial addresses.
-
-### Exercise 9
 
 Add `#| cache: true` to the top of your `mod_logistic` chunk, and add `*_cache/` to your `.gitignore`. In the R Terminal, run:
 
@@ -555,7 +452,7 @@ show_file(".gitignore")
 
 CP/CR.
 
-```{r tidymodels-9}
+```{r tidymodels-7}
 question_text(NULL,
   answer(NULL, correct = TRUE),
   allow_retry = TRUE,
@@ -573,24 +470,24 @@ analysis_files
 
 ###
 
-Fitting `mod_logistic` runs over all 1,470 rows, and caching means it only reruns when the code producing it actually changes — not every time you edit unrelated text. The cache directory itself is regenerated every render, so it's excluded from git rather than committed.
+Structure → Method → Fitting. You have now completed all three steps. `mod_logistic` is your fitted DGM — the machine every later question will be addressed to.
 
-### Exercise 10
+### Exercise 8
 
-This exercise assumes `mod_logistic` is exactly the final fitted model you saved. In a new code chunk, run the following to see its coefficients as odds ratios. Render.
+In a new code chunk, run the following to see `mod_logistic`'s coefficients. Render.
 
 ```
 mod_logistic |>
-tidy(conf.int = TRUE, exponentiate = TRUE) |>
-select(term, estimate, conf.low, conf.high) |>
-mutate(across(where(is.numeric), \(x) round(x, 3)))
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high) |>
+  mutate(across(where(is.numeric), \(x) round(x, 4)))
 ```
 
-As you can see, the odds ratio for `OverTimeYes` is about 3.98. What does that mean?
+The coefficient on `OverTimeYes` is about 1.38. What does that mean?
 
-```{r tidymodels-10}
+```{r tidymodels-8}
 question_text(NULL,
-  answer("Employees who work overtime have odds of leaving that are about 3.98 times the odds for employees who don't, holding income and tenure fixed — an increase of roughly 298%, with a 95% confidence interval of about 196% to 434%.", correct = TRUE),
+  answer("Employees who work overtime have higher log-odds of leaving than those who don't, by about 1.38 — holding income and tenure fixed. The confidence interval (0.90 to 1.86) excludes zero, so we can be reasonably confident the direction is positive.", correct = TRUE),
   allow_retry = FALSE,
   incorrect = NULL,
   rows = 6)
@@ -598,33 +495,32 @@ question_text(NULL,
 
 ###
 
-```{r tidymodels-10-test}
+```{r tidymodels-8-test}
 #| echo: true
 mod_logistic |>
-  tidy(conf.int = TRUE, exponentiate = TRUE) |>
+  tidy(conf.int = TRUE) |>
   select(term, estimate, conf.low, conf.high) |>
-  mutate(across(where(is.numeric), \(x) round(x, 3)))
+  mutate(across(where(is.numeric), \(x) round(x, 4)))
 ```
 
 ###
 
-Here's the answer, using the numbers above:
+Here's the answer:
 
-> Employees who work overtime have odds of leaving that are about 3.98 times the odds for employees who don't, holding income and tenure fixed — an increase of roughly 298%, with a 95% confidence interval of about 196% to 434%.
-
-(These numbers come directly from your own `mod_logistic` — they should match exactly, since the same formula fit on the same data always produces the same coefficients. If yours look different, double check the formula you saved.)
+> Employees who work overtime have higher log-odds of leaving than those who don't, by about 1.38 — holding income and tenure fixed. The confidence interval (0.90 to 1.86) excludes zero, so we can be reasonably confident the direction is positive.
 
 ###
 
-`exponentiate = TRUE` converts a log-odds coefficient into an odds ratio, which is far easier to talk about than raw log-odds. An odds ratio above 1 means higher odds; below 1 means lower odds. Notice the shape of this answer: it's a ratio of odds, holding other variables fixed — not a claim that overtime *causes* anyone in particular to quit, only that the two groups' odds differ by about that much.
+For a logistic model, coefficient interpretation stops at the sign and whether the interval excludes zero. We can say overtime is associated with higher odds of leaving — we cannot easily say *how much* higher without converting to probabilities, which is exactly what the next section does.
 
-### Exercise 11
+### Exercise 9
 
-Using the same table from Exercise 10: at $1,000 increments, the odds ratio for `MonthlyIncome` is about 0.897. What does that mean?
+The coefficient on `MonthlyIncome` is about −0.0001. What does that mean?
 
-```{r tidymodels-11}
+```{r tidymodels-9}
 question_text(NULL,
-answer("Each additional $1,000 in monthly income is associated with roughly a 10% decrease in the odds of leaving, holding tenure and overtime fixed, with a 95% confidence interval of about 6% to 14% decrease.", correct = TRUE),  allow_retry = FALSE,
+  answer("Higher monthly income is associated with lower log-odds of leaving — the coefficient is negative, and the confidence interval excludes zero. The exact magnitude is hard to interpret from the raw log-odds.", correct = TRUE),
+  allow_retry = FALSE,
   incorrect = NULL,
   rows = 6)
 ```
@@ -633,23 +529,21 @@ answer("Each additional $1,000 in monthly income is associated with roughly a 10
 
 Here's the answer:
 
-> Each additional $1,000 in monthly income is associated with roughly a 10% decrease in the odds of leaving, holding tenure and overtime fixed, with a 95% confidence interval of about 6% to 14% decrease.
+> Higher monthly income is associated with lower log-odds of leaving — the coefficient is negative, and the confidence interval excludes zero. The exact magnitude is hard to interpret from the raw log-odds.
 
 ###
 
-At $1 increments this same coefficient was about 1.000 — the same number, just rescaled. Always check what unit a coefficient is expressed in before deciding whether it looks "small."
+Use that same pattern — sign, whether the interval excludes zero, no claim about magnitude — whenever you're asked to interpret a coefficient in a logistic model. The fitted DGM is not the answer to anything by itself; it is the machine we built so we can answer questions.
 
-### Exercise 12
+### Exercise 10
 
-Words, math, and code are the three languages of data science. Now write the math. Add the equation for `mod_logistic` as a LaTeX math block above the model chunk:
+Add the equation for `mod_logistic` as a LaTeX math block above the model chunk:
 
-$$\log\left(\frac{P(\text{Attrition} = \text{Yes})}{1 - P(\text{Attrition} = \text{Yes})}\right) = -1.2767 - 0.0001 \times \text{MonthlyIncome} - 0.0454 \times \text{YearsAtCompany} + 1.3803 \times \text{OverTimeYes}$$
+$$\log\left(\frac{P(\text{Attrition} = \text{Yes})}{1 - P(\text{Attrition} = \text{Yes})}\right) = -1.277 - 0.0001 \times \text{MonthlyIncome} - 0.045 \times \text{YearsAtCompany} + 1.380 \times \text{OverTimeYes}$$
 
-Render.
+Render. In the R Terminal, run `show_file("analysis.qmd")`. CP/CR just the equation line and the `mod_logistic` chunk right below it.
 
-In the R Terminal, run `show_file("analysis.qmd")`. This prints the whole file, since the equation isn't inside a code chunk. From that output, CP/CR just the equation line and the `mod_logistic` chunk right below it — not the whole file.
-
-```{r tidymodels-12}
+```{r tidymodels-10}
 question_text(NULL,
   answer(NULL, correct = TRUE),
   allow_retry = TRUE,
@@ -662,23 +556,20 @@ question_text(NULL,
 
 The relevant part of your output should look like this:
 
-<pre><code>$$\log\left(\frac{P(\text{Attrition} = \text{Yes})}{1 - P(\text{Attrition} = \text{Yes})}\right) = -1.2767 - 0.0001 \times \text{MonthlyIncome} - 0.0454 \times \text{YearsAtCompany} + 1.3803 \times \text{OverTimeYes}$$
+<pre><code>$$\log\left(\frac{P(\text{Attrition} = \text{Yes})}{1 - P(\text{Attrition} = \text{Yes})}\right) = -1.277 - 0.0001 \times \text{MonthlyIncome} - 0.045 \times \text{YearsAtCompany} + 1.380 \times \text{OverTimeYes}$$
 
 #| cache: true
 mod_logistic <- logistic_reg() |>
   set_engine("glm") |>
   fit(Attrition ~ MonthlyIncome + YearsAtCompany + OverTime, data = attrition)
-
 mod_logistic
 </code></pre>
 
-Once rendered, the equation appears as a typeset formula, not raw text with dollar signs and backslashes. If it doesn't, check for a blank line above and below the block in your `.qmd`.
-
 ###
 
-This is the same general form shown at the start of this section — $\log(p / (1-p)) = \beta_0 + \beta_1 x_1 + \cdots$ — now with real, fitted numbers in place of the Greek letters. Unlike a linear equation, you can't plug numbers in and read off a dollar amount directly: the left-hand side is a log-odds, which has to be converted back into a probability. That conversion is exactly what the next section does.
+This equation IS the fitted DGM. Unlike a linear equation, you can't plug numbers in and read off a probability directly — the left-hand side is a log-odds, which has to be converted back into a probability. That conversion is exactly what the next section does.
 
-### Exercise 13
+### Exercise 11
 
 Commit and push, with a message like "Fit final logistic regression DGM for employee attrition." In the bash Terminal, run:
 
@@ -688,7 +579,7 @@ git log -1
 
 CP/CR.
 
-```{r tidymodels-13}
+```{r tidymodels-11}
 question_text(NULL,
   answer(NULL, correct = TRUE),
   allow_retry = TRUE,
@@ -700,46 +591,37 @@ question_text(NULL,
 ###
 
 ```
-commit e5f6a7b8c9d0...
+commit b2c3d4e5f6a7...
 Author: Var Kurapati
 Date:   Mon Aug 03 2026
-
     Fit final logistic regression DGM for employee attrition
 ```
 
 ###
 
-Across this whole section, you never touched the formula for `mod_logistic` again after Exercise 8. The next section uses this exact fitted model, never refitting it, only asking it new questions — the same discipline as before, applied to a different kind of DGM.
+`mod_logistic` is not the answer to anything by itself — it's the machine we built so we can answer questions, which is exactly what the next section does with it.
 
 ## Marginal Effects
 ###
 
 We built the DGM with *Courage*. Now we practice *Temperance*: using it — with humility — to answer the question we started with.
 
-Using a model with **marginaleffects** to answer questions still comes down to one distinction: **marginal** vs. **conditional**.
+Interpreting a model with **marginaleffects** almost always comes down to one distinction: **marginal** vs. **conditional**. So every time you see `by`, you are averaging over real employees, and every time you see `condition`, you are looking at a hypothetical.
 
-So every time you see `by`, you are averaging over real employees, and every time you see `condition`, you are looking at a hypothetical.
+If Tidymodels was Structure → Method → Fitting, this section is **Question → Units → Answer**: pose the question as a quantity, specify which units you're asking about, then run the machine.
 
-If Tidymodels was Structure → Method → Fitting, this section is Question → Units → Answer: pose the question as a quantity, specify which units you're asking about, then run the machine.
-
-The one thing that changes for a logistic model: `predictions()` no longer hands back a dollar amount. It hands back a **probability**, between 0 and 1.
-
-###
-
-`mod_logistic` is not the answer to anything. Nobody asks what its coefficients are — people ask what to expect for an employee, or how much overtime changes their odds. The model is the machine; this section is how we run it.
-
-###
-
-In this section we cover three functions: `predictions()`, `avg_predictions()`, and `plot_predictions()`. Keep asking yourself, for every function call, which one you're looking at.
+In this section we cover five functions from [**marginaleffects**](https://marginaleffects.com/): `predictions()`, `avg_predictions()`, `comparisons()`, `avg_comparisons()`, and `plot_predictions()`. The one thing that changes for a logistic model: every prediction comes back as one row per outcome category, so you'll filter to `group == "Yes"` to keep just the probability of leaving.
 
 ### Exercise 1
 
-A question like "will this employee leave?" isn't something a machine can answer directly — it has to become a number first. In a new code chunk, run `predictions()` for one hypothetical employee: $4,000/month, 3 years at the company, no overtime. Add `type = "class"`. Render.
+In a new code chunk, run `predictions()` for one hypothetical employee: $4,000/month, 3 years at the company, no overtime. Add `type = "class"`. Render.
 
 ```
 predictions(mod_logistic,
-newdata = data.frame(MonthlyIncome = 4000, YearsAtCompany = 3, OverTime = "No"),
-type = "class")
+  newdata = data.frame(MonthlyIncome = 4000,
+                       YearsAtCompany = 3,
+                       OverTime = "No"),
+  type = "class")
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -758,17 +640,15 @@ question_text(NULL,
 ```{r predictions-1-test}
 #| echo: true
 predictions(mod_logistic,
-  newdata = data.frame(MonthlyIncome = 4000, YearsAtCompany = 3, OverTime = "No"),
+  newdata = data.frame(MonthlyIncome = 4000,
+                       YearsAtCompany = 3,
+                       OverTime = "No"),
   type = "class")
 ```
 
 ###
 
-Check the `estimate` column — it just says "No," with no number attached at all. This is a **conditional** prediction; no real employee has to match this exact combination.
-
-###
-
-A bare Yes/No hides something important: how close was that call? The next exercise finds out.
+The `estimate` column just says "No" — the machine's best guess for this hypothetical employee. This is a **conditional** prediction; no real employee has to match this exact combination.
 
 ### Exercise 2
 
@@ -776,8 +656,10 @@ Update your chunk to change `type = "class"` to `type = "prob"`. Render.
 
 ```
 predictions(mod_logistic,
-newdata = data.frame(MonthlyIncome = 4000, YearsAtCompany = 3, OverTime = "No"),
-type = "prob")
+  newdata = data.frame(MonthlyIncome = 4000,
+                       YearsAtCompany = 3,
+                       OverTime = "No"),
+  type = "prob")
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -796,22 +678,28 @@ question_text(NULL,
 ```{r predictions-2-test}
 #| echo: true
 predictions(mod_logistic,
-  newdata = data.frame(MonthlyIncome = 4000, YearsAtCompany = 3, OverTime = "No"),
+  newdata = data.frame(MonthlyIncome = 4000,
+                       YearsAtCompany = 3,
+                       OverTime = "No"),
   type = "prob")
 ```
 
 ###
 
-Now the `estimate` column reads 0.136 — a 13.6% predicted probability of leaving. Same prediction, same employee — the confident-sounding "No" from the last exercise was actually a fairly close call once you see the number behind it.
+Now there are two rows — one for each outcome category — and the `estimate` column shows the predicted probability: about 13.6% chance of leaving. The confident-sounding "No" from Exercise 1 was actually a fairly close call once you see the number behind it.
 
 ### Exercise 3
 
-Now run `class()` on that same result, with `type = "prob"` added. Render.
+Update your chunk to compare two employees: the same $4,000/month, 3-year employee, once with `OverTime = "No"` and once with `OverTime = "Yes"`. Add `type = "prob"`, then pipe to `filter(group == "Yes")`. Render.
 
 ```
-class(predictions(mod_logistic,
-newdata = data.frame(MonthlyIncome = 4000, YearsAtCompany = 3, OverTime = "No"),
-type = "prob"))
+predictions(mod_logistic,
+  newdata = data.frame(
+    MonthlyIncome  = c(4000, 4000),
+    YearsAtCompany = c(3, 3),
+    OverTime       = c("No", "Yes")),
+  type = "prob") |>
+  filter(group == "Yes")
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -822,44 +710,35 @@ question_text(NULL,
   allow_retry = TRUE,
   try_again_button = "Edit Answer",
   incorrect = NULL,
-  rows = 4)
+  rows = 8)
 ```
 
 ###
 
 ```{r predictions-3-test}
 #| echo: true
-class(predictions(mod_logistic,
-  newdata = data.frame(MonthlyIncome = 4000, YearsAtCompany = 3, OverTime = "No"),
-  type = "prob"))
+predictions(mod_logistic,
+  newdata = data.frame(
+    MonthlyIncome  = c(4000, 4000),
+    YearsAtCompany = c(3, 3),
+    OverTime       = c("No", "Yes")),
+  type = "prob") |>
+  filter(group == "Yes")
 ```
 
 ###
 
-```
-[1] "predictions" "data.frame"
-```
-
-###
-
-`predictions()` always returns this same class, regardless of what kind of model produced it or how many rows it has — you can pipe it to `as_tibble()`, `filter()`, or `ggplot()` the same way.
-
-###
-
-A good machine doesn't just hand back a number — the `conf.low`/`conf.high` columns are the machine telling you how sure it is.
+Same income and tenure, only `OverTime` differs — the entire gap between the two rows is the `OverTimeYes` coefficient converted from log-odds into probability. This is the counterfactual question: same employee, two worlds, one with overtime and one without.
 
 ### Exercise 4
 
-Update your chunk to compare two employees: the same $4,000/month, 3-year employee, once with `OverTime = "No"` and once with `OverTime = "Yes"`. Add `type = "prob"`, then pipe to `filter(group == "Yes")` to keep just the probability of leaving for each employee. Render.
+Update your chunk to predict the probability for the first actual employee in the dataset. Pass only the three columns the model uses. Add `type = "prob"` and `filter(group == "Yes")`. Render.
 
 ```
 predictions(mod_logistic,
-newdata = data.frame(
-MonthlyIncome = c(4000, 4000),
-YearsAtCompany = c(3, 3),
-OverTime = c("No", "Yes")),
-type = "prob") |>
-filter(group == "Yes")
+  newdata = attrition[1, c("MonthlyIncome", "YearsAtCompany", "OverTime")],
+  type = "prob") |>
+  filter(group == "Yes")
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -870,7 +749,7 @@ question_text(NULL,
   allow_retry = TRUE,
   try_again_button = "Edit Answer",
   incorrect = NULL,
-  rows = 8)
+  rows = 5)
 ```
 
 ###
@@ -878,35 +757,22 @@ question_text(NULL,
 ```{r predictions-4-test}
 #| echo: true
 predictions(mod_logistic,
-  newdata = data.frame(
-    MonthlyIncome  = c(4000, 4000),
-    YearsAtCompany = c(3, 3),
-    OverTime       = c("No", "Yes")),
+  newdata = attrition[1, c("MonthlyIncome", "YearsAtCompany", "OverTime")],
   type = "prob") |>
   filter(group == "Yes")
 ```
 
 ###
 
-`type = "prob"` returns a row for every outcome category — as the last exercise showed, that's two rows per employee here. `filter(group == "Yes")` is the pattern this tutorial will use from here on: keep only the row for the outcome you actually care about, collapsing back to one row per unit. Check the `estimate` column above — same income and tenure, only `OverTime` differs, so the entire gap between the two rows is the `OverTimeYes` coefficient, converted from log-odds into something you can read directly.
-
-###
-
-A prediction asks the machine for one outcome. A comparison — like the gap you just found between these two rows — asks it twice and subtracts.
+This employee's outcome is already known — so why predict it? Because the fitted DGM earns its keep on someone not in the data, or on a real person with one thing changed. Looking up a known value is never the reason to call `predictions()`.
 
 ### Exercise 5
 
-Update your chunk to pipe the result to `as_tibble()`, after the `filter()` step. Render.
+Update your chunk to use `avg_predictions()` with `by = "OverTime"` and `type = "prob"`, filtered to `group == "Yes"`. Render.
 
 ```
-predictions(mod_logistic,
-newdata = data.frame(
-MonthlyIncome = c(4000, 4000),
-YearsAtCompany = c(3, 3),
-OverTime = c("No", "Yes")),
-type = "prob") |>
-filter(group == "Yes") |>
-as_tibble()
+avg_predictions(mod_logistic, by = "OverTime", type = "prob") |>
+  filter(group == "Yes")
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -917,36 +783,30 @@ question_text(NULL,
   allow_retry = TRUE,
   try_again_button = "Edit Answer",
   incorrect = NULL,
-  rows = 8)
+  rows = 5)
 ```
 
 ###
 
 ```{r predictions-5-test}
 #| echo: true
-predictions(mod_logistic,
-  newdata = data.frame(
-    MonthlyIncome  = c(4000, 4000),
-    YearsAtCompany = c(3, 3),
-    OverTime       = c("No", "Yes")),
-  type = "prob") |>
-  filter(group == "Yes") |>
-  as_tibble()
+avg_predictions(mod_logistic, by = "OverTime", type = "prob") |>
+  filter(group == "Yes")
 ```
 
 ###
 
-`as_tibble()` converts the **marginaleffects** output into a standard tibble — the `filter()` step ahead of it is what keeps this readable.
+This is a **marginal** prediction — run the model on every real employee, then average within overtime groups. The gap between the two rows is the overtime effect, averaged over the actual income and tenure distribution of real employees in each group.
 
 ### Exercise 6
 
-Update your chunk to predict the probability for the first actual employee in the dataset. Instead of passing the whole row, select just the three columns the model actually uses — `attrition` has 31 columns, and passing all of them to a classification model's `predictions()` can blow up memory trying to account for every unused category. Add `type = "prob"` and the same `filter(group == "Yes")` pattern. Render.
+Now build a **conditional** prediction using `datagrid()`: three hypothetical employees at $3,000, $6,000, and $9,000 monthly income, with tenure and overtime held at their typical values. Add `type = "prob"` and filter to `group == "Yes"`. Render.
 
 ```
 predictions(mod_logistic,
-newdata = attrition[1, c("MonthlyIncome", "YearsAtCompany", "OverTime")],
-type = "prob") |>
-filter(group == "Yes")
+  newdata = datagrid(MonthlyIncome = c(3000, 6000, 9000)),
+  type = "prob") |>
+  filter(group == "Yes")
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -957,7 +817,7 @@ question_text(NULL,
   allow_retry = TRUE,
   try_again_button = "Edit Answer",
   incorrect = NULL,
-  rows = 5)
+  rows = 8)
 ```
 
 ###
@@ -965,28 +825,24 @@ question_text(NULL,
 ```{r predictions-6-test}
 #| echo: true
 predictions(mod_logistic,
-  newdata = attrition[1, c("MonthlyIncome", "YearsAtCompany", "OverTime")],
+  newdata = datagrid(MonthlyIncome = c(3000, 6000, 9000)),
   type = "prob") |>
   filter(group == "Yes")
 ```
 
 ###
 
-This employee has about a 30.5% predicted probability of leaving. Check that against whether they actually left (`attrition$Attrition[1]`) — the model doesn't predict certainty, only a probability. Unlike the linear model's dollar-valued residual, there's no simple "gap" to subtract here: the outcome is binary, while the prediction is a number between 0 and 1. A well-built model gives higher probabilities to employees who actually left than to those who didn't, on average — but for any one person, being "right" or "wrong" isn't really the right way to think about it.
-
-###
-
-This employee's outcome is already known — so why predict it? Because `predictions()` earns its keep on someone not in the data, or on a real person with one thing changed. Looking up a known value is never the reason to call it.
+`datagrid()` fixes every variable you don't mention at a representative value and varies only the ones you specify. This is the **conditional** counterpart to `avg_predictions()` — no real employee needs to exist at any of these three incomes.
 
 ### Exercise 7
 
-`newdata` is optional. Update your chunk to call `predictions(mod_logistic, type = "prob")` with no `newdata` argument, filter to `group == "Yes"`, pipe to `as_tibble()`, and print `nrow()`. Render.
+A prediction says what the model expects; a **comparison** says how much that expectation changes when a predictor changes. In a new code chunk, use `comparisons()` to compute the predicted change in attrition probability when `OverTime` switches from "No" to "Yes", for every real employee. Add `type = "prob"`. Render.
 
 ```
-predictions(mod_logistic, type = "prob") |>
-  filter(group == "Yes") |>
-  as_tibble() |>
-  nrow()
+cmp <- comparisons(mod_logistic,
+  variables = "OverTime",
+  type = "prob")
+nrow(cmp)
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -1004,31 +860,25 @@ question_text(NULL,
 
 ```{r predictions-7-test}
 #| echo: true
-predictions(mod_logistic, type = "prob") |>
-  filter(group == "Yes") |>
-  as_tibble() |>
-  nrow()
+cmp <- comparisons(mod_logistic,
+  variables = "OverTime",
+  type = "prob")
+nrow(cmp)
 ```
 
 ###
 
-Without `newdata`, `predictions()` runs on every row of the data the model was fit on. Without the `filter()`, you'd get 2,940 rows — two per employee, one for each outcome category, exactly like every hypothetical unit you've predicted on so far. With the filter, it drops back to 1,470 — one probability-of-leaving per real employee, matching the count from the Introduction.
-
-###
-
-The last exercise predicted for someone hypothetical. This one predicted for every real employee. Both are just "specifying the units" — the same choice, made differently.
-
-###
-
-`avg_predictions(mod_logistic, type = "prob")` with no `by` argument averages the model's predicted probabilities across every real employee — that average is guaranteed to match the actual attrition rate in the data.
+2,940 rows — two per employee, one per outcome category, just like `predictions()`. Each row is the predicted change in one outcome category's probability for one specific employee if their overtime status were switched from No to Yes. Far too many numbers to read; the next exercise averages them.
 
 ### Exercise 8
 
-Update your chunk to use `avg_predictions()` with `by = "OverTime"` and `type = "prob"`, filtered to `group == "Yes"`, to get the average predicted probability of leaving for each overtime group. Render.
+Update your chunk to use `avg_comparisons()` instead, filtered to `group == "Yes"`. Render.
 
 ```
-avg_predictions(mod_logistic, by = "OverTime", type = "prob") |>
-filter(group == "Yes")
+avg_comparisons(mod_logistic,
+  variables = "OverTime",
+  type = "prob") |>
+  filter(group == "Yes")
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -1039,30 +889,32 @@ question_text(NULL,
   allow_retry = TRUE,
   try_again_button = "Edit Answer",
   incorrect = NULL,
-  rows = 5)
+  rows = 8)
 ```
 
 ###
 
 ```{r predictions-8-test}
 #| echo: true
-avg_predictions(mod_logistic, by = "OverTime", type = "prob") |>
+avg_comparisons(mod_logistic,
+  variables = "OverTime",
+  type = "prob") |>
   filter(group == "Yes")
 ```
 
 ###
 
-Compare the two `estimate` values above — employees who work overtime should show a noticeably higher average predicted probability of leaving than those who don't. `by` doesn't care whether the grouping variable is a predictor in the model or not; here it happens to be one, which is perfectly normal. It's still the same operation as always: predict for every real employee, then average within groups.
+About 15 percentage points — switching from no overtime to overtime is associated with an average increase of about 15 points in the predicted probability of leaving. This is the `OverTimeYes` coefficient from Tidymodels translated into units a person can use: not log-odds, but probability points.
 
 ### Exercise 9
 
-Now build a **conditional** prediction on purpose, using `datagrid()`: three hypothetical employees at $3,000, $6,000, and $9,000 monthly income, with tenure and overtime status held at their typical values automatically. Add `type = "prob"` and filter to `group == "Yes"`. Render.
+Update your chunk to ask the same question about income: the average predicted change in attrition probability for a $1,000 increase in monthly income. Add `type = "prob"` and filter to `group == "Yes"`. Render.
 
 ```
-predictions(mod_logistic,
-newdata = datagrid(MonthlyIncome = c(3000, 6000, 9000)),
-type = "prob") |>
-filter(group == "Yes")
+avg_comparisons(mod_logistic,
+  variables = list(MonthlyIncome = 1000),
+  type = "prob") |>
+  filter(group == "Yes")
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -1080,37 +932,35 @@ question_text(NULL,
 
 ```{r predictions-9-test}
 #| echo: true
-predictions(mod_logistic,
-  newdata = datagrid(MonthlyIncome = c(3000, 6000, 9000)),
+avg_comparisons(mod_logistic,
+  variables = list(MonthlyIncome = 1000),
   type = "prob") |>
   filter(group == "Yes")
 ```
 
 ###
 
-`datagrid()` fixes every variable you don't mention at a representative value — the mean for numeric variables (`YearsAtCompany`), the most common category for factor variables (`OverTime`) — and varies only the ones you specify. This is the **conditional** counterpart to `avg_predictions()`'s **marginal** view — no real employee needs to exist at any of these three incomes.
-
-###
-
-This is "specify the units" again, just with a whole grid of hypothetical people instead of one.
+About −1.4 percentage points per $1,000 — a modest effect compared to the 15-point gap from overtime. The income effect is real and statistically solid, but small next to what overtime does in this DGM.
 
 ### Exercise 10
 
-Ask your AI assistant to write code using `plot_predictions(mod_logistic, condition = "MonthlyIncome", type = "prob", draw = FALSE)` — with `type = "prob"` added — piped into a `filter(group == "Yes")` step and then `ggplot()`, to visualize how predicted probability of leaving varies with `MonthlyIncome`, with a shaded confidence band, a title, axis labels, and a percent-formatted y-axis. Render.
+Ask your AI assistant to write `plot_predictions()` code that visualizes how predicted attrition probability varies with `MonthlyIncome`, using `mod_logistic`, `type = "prob"`, and `condition = "MonthlyIncome"` with `draw = FALSE`, piped into a `filter(group == "Yes")` step then `ggplot()`. Render.
 
 ```
-plot_predictions(mod_logistic, condition = list(MonthlyIncome = seq(1000, 20000, by = 500)), type = "prob", draw = FALSE) |>
-filter(group == "Yes") |>
-ggplot(aes(x = MonthlyIncome, y = estimate)) +
-geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
-geom_line() +
-labs(
-title = "Predicted attrition probability decreases with income",
-x = "Monthly income ($)",
-y = "Predicted probability of leaving"
-) +
-scale_x_continuous(labels = scales::dollar) +
-scale_y_continuous(labels = scales::percent)
+plot_predictions(mod_logistic,
+  condition = "MonthlyIncome",
+  type = "prob", draw = FALSE) |>
+  filter(group == "Yes") |>
+  ggplot(aes(x = MonthlyIncome, y = estimate)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
+  geom_line() +
+  labs(
+    title = "Predicted attrition probability decreases with income",
+    x = "Monthly income ($)",
+    y = "Predicted probability of leaving"
+  ) +
+  scale_x_continuous(labels = scales::dollar) +
+  scale_y_continuous(labels = scales::percent)
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -1128,12 +978,9 @@ question_text(NULL,
 
 ```{r predictions-10-test}
 #| echo: true
-grid9 <- data.frame(
-  MonthlyIncome  = seq(1000, 20000, by = 500),
-  YearsAtCompany = mean(attrition$YearsAtCompany),
-  OverTime       = "No")
-
-predictions(mod_logistic, newdata = grid9, type = "prob") |>
+plot_predictions(mod_logistic,
+  condition = "MonthlyIncome",
+  type = "prob", draw = FALSE) |>
   filter(group == "Yes") |>
   ggplot(aes(x = MonthlyIncome, y = estimate)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
@@ -1149,32 +996,28 @@ predictions(mod_logistic, newdata = grid9, type = "prob") |>
 
 ###
 
-`draw = FALSE` hands back the raw numbers behind the plot rather than a finished plot to edit — but now with two rows per income value (one per `Group`) rather than one, which is exactly why the `filter()` step comes before `ggplot()` this time, not after. Without it, both the "stayed" and "left" curves would plot on top of each other with no way to tell them apart. The curve bends rather than running in a straight line, unlike the linear model's plot: probabilities are squeezed between 0 and 1, so the same-sized change in log-odds produces a smaller change in probability out at the extremes than it does in the middle.
-
-###
-
-This whole plot is "run the machine and summarize" — a grid of hypothetical incomes fed through `predictions()`, drawn as a picture instead of a table.
+`plot_predictions()` draws the machine's answers. With `condition = "MonthlyIncome"`, the machine runs on hypothetical employees with `YearsAtCompany` and `OverTime` held at their typical values. The curve bends rather than running in a straight line — probabilities are squeezed between 0 and 1, so the same change in log-odds produces a smaller change in probability at the extremes.
 
 ### Exercise 11
 
-Ask your AI assistant to extend that plot to show predicted probability across both `MonthlyIncome` and `OverTime`, using `condition = c("MonthlyIncome", "OverTime")` with `type = "prob"` and `draw = FALSE`, filtered to `group == "Yes"`, then piped into `ggplot()` — color the lines by `OverTime`. Render.
+Ask your AI assistant to extend that plot to show predicted attrition probability across both `MonthlyIncome` and `OverTime`, using `condition = c("MonthlyIncome", "OverTime")` — color the lines by `OverTime`. Render.
 
 ```
-grid10 <- tidyr::crossing(MonthlyIncome = seq(1000, 20000, by = 500), OverTime = c("No", "Yes")) |> dplyr::mutate(YearsAtCompany = mean(attrition$YearsAtCompany))
-
-predictions(mod_logistic, newdata = grid10, type = "prob") |>
+plot_predictions(mod_logistic,
+  condition = c("MonthlyIncome", "OverTime"),
+  type = "prob", draw = FALSE) |>
   filter(group == "Yes") |>
-ggplot(aes(x = MonthlyIncome, y = estimate, color = OverTime)) +
-geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = OverTime),
-alpha = 0.15, color = NA) +
-geom_line() +
-labs(
-title = "Predicted attrition probability by income and overtime",
-x = "Monthly income ($)",
-y = "Predicted probability of leaving"
-) +
-scale_x_continuous(labels = scales::dollar) +
-scale_y_continuous(labels = scales::percent)
+  ggplot(aes(x = MonthlyIncome, y = estimate, color = OverTime)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = OverTime),
+    alpha = 0.15, color = NA) +
+  geom_line() +
+  labs(
+    title = "Predicted attrition probability by income and overtime",
+    x = "Monthly income ($)",
+    y = "Predicted probability of leaving"
+  ) +
+  scale_x_continuous(labels = scales::dollar) +
+  scale_y_continuous(labels = scales::percent)
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -1192,9 +1035,9 @@ question_text(NULL,
 
 ```{r predictions-11-test}
 #| echo: true
-grid10 <- tidyr::crossing(MonthlyIncome = seq(1000, 20000, by = 500), OverTime = c("No", "Yes")) |> dplyr::mutate(YearsAtCompany = mean(attrition$YearsAtCompany))
-
-predictions(mod_logistic, newdata = grid10, type = "prob") |>
+plot_predictions(mod_logistic,
+  condition = c("MonthlyIncome", "OverTime"),
+  type = "prob", draw = FALSE) |>
   filter(group == "Yes") |>
   ggplot(aes(x = MonthlyIncome, y = estimate, color = OverTime)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = OverTime),
@@ -1211,23 +1054,25 @@ predictions(mod_logistic, newdata = grid10, type = "prob") |>
 
 ###
 
-When two variables are passed to `condition`, `plot_predictions()` varies the first continuously and holds the second at its distinct values — that's what `color = OverTime` splits into two separate curves. Compare where the overtime curve sits relative to the no-overtime curve at every income level in your own plot above.
+When two variables are passed to `condition`, **marginaleffects** varies the first continuously and shows the second at its distinct values — that's what `color = OverTime` splits into two separate curves. The gap between the curves is the overtime effect, which the `avg_comparisons()` exercises measured as about 15 percentage points.
 
 ### Exercise 12
 
-Now plot a **marginal** quantity instead of a conditional one: use `plot_predictions()` with `by = "OverTime"`, `type = "prob"`, and `draw = FALSE`, filtered to `group == "Yes"`, piped into `ggplot()`, to visualize average predicted probability by overtime group. Render.
+Now plot a **marginal** quantity instead: use `plot_predictions()` with `by = "OverTime"`, `type = "prob"`, and `draw = FALSE`, filtered to `group == "Yes"`, to visualize average predicted attrition probability by overtime group. Render.
 
 ```
-plot_predictions(mod_logistic, by = "OverTime", type = "prob", draw = FALSE) |>
-filter(group == "Yes") |>
-ggplot(aes(x = OverTime, y = estimate)) +
-geom_pointrange(aes(ymin = conf.low, ymax = conf.high)) +
-labs(
-title = "Average predicted attrition probability by overtime status",
-x = NULL,
-y = "Average predicted probability of leaving"
-) +
-scale_y_continuous(labels = scales::percent)
+plot_predictions(mod_logistic,
+  by = "OverTime",
+  type = "prob", draw = FALSE) |>
+  filter(group == "Yes") |>
+  ggplot(aes(x = OverTime, y = estimate)) +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high)) +
+  labs(
+    title = "Average predicted attrition probability by overtime status",
+    x = NULL,
+    y = "Average predicted probability of leaving"
+  ) +
+  scale_y_continuous(labels = scales::percent)
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -1245,7 +1090,9 @@ question_text(NULL,
 
 ```{r predictions-12-test}
 #| echo: true
-plot_predictions(mod_logistic, by = "OverTime", type = "prob", draw = FALSE) |>
+plot_predictions(mod_logistic,
+  by = "OverTime",
+  type = "prob", draw = FALSE) |>
   filter(group == "Yes") |>
   ggplot(aes(x = OverTime, y = estimate)) +
   geom_pointrange(aes(ymin = conf.low, ymax = conf.high)) +
@@ -1259,11 +1106,11 @@ plot_predictions(mod_logistic, by = "OverTime", type = "prob", draw = FALSE) |>
 
 ###
 
-Same function, same package — but passing `by` instead of `condition` switches from a hypothetical relationship to an average over real employees, grouped by overtime status. `condition` is a conditional, counterfactual view; `by` is a marginal, descriptive one — the same two numbers `avg_predictions()` gave you earlier, now as a picture.
+Same function, same package — but passing `by` instead of `condition` switches from a hypothetical relationship to an average over real employees, grouped by overtime status. `condition` is a conditional, counterfactual view; `by` is a marginal, descriptive one — the same two numbers `avg_predictions()` gave you earlier, drawn as a picture.
 
 ### Exercise 13
 
-Commit and push, with a message like "Add marginaleffects predictions and plots." In the bash Terminal, run:
+Commit and push, with a message like "Add marginaleffects predictions, comparisons, and plots." In the bash Terminal, run:
 
 ```
 git log -1
@@ -1285,18 +1132,13 @@ question_text(NULL,
 ```
 commit f6a7b8c9d0e1...
 Author: Var Kurapati
-Date: Mon Aug 03 2026
-
-Add marginaleffects predictions and plots
+Date:   Mon Aug 03 2026
+    Add marginaleffects predictions, comparisons, and plots
 ```
 
 ###
 
-You have now used `predictions()`, `avg_predictions()`, and `plot_predictions()` on a logistic regression model, and seen the one real structural difference from linear regression: every prediction comes back as one row per outcome category, filtered down to the one you care about. The same three functions work identically on multinomial and ordinal models — except there, `filter(group == "Yes")` won't be enough, since there are more than two categories to choose from.
-
-###
-
-Tidymodels built the machine — Structure → Method → Fitting. Marginaleffects runs it — Question → Units → Answer. Mixing those up is the most common beginner mistake.
+You have now used `predictions()`, `avg_predictions()`, `comparisons()`, `avg_comparisons()`, and `plot_predictions()` on a logistic regression model. The same five functions work identically on multinomial and ordered models — except there, filtering by `group` becomes more interesting, since there are more than two categories to choose from.
 
 ## Summary
 ###
@@ -1364,11 +1206,11 @@ format:
 
 ###
 
-Without `_quarto.yml`, `analysis.qmd` and `about.qmd` are just two disconnected pages with no way to click between them — this file is what turns them into one site.
+`_quarto.yml` turns a folder of `.qmd` files into a navigable website. Without it, each page renders independently.
 
 ### Exercise 2
 
-Create `about.qmd` with a YAML title of `"About"`, your name, and today's date. Clean up `analysis.qmd` so it contains only: a setup chunk, the final `mod_logistic` model chunk, its equation, and the final three visualizations from the Marginal Effects plotting exercises. Remove all intermediate output. Render.
+Create `about.qmd` with a YAML title of `"About"`, your name, and today's date. Clean up `analysis.qmd` so it contains only: a setup chunk, the final `mod_logistic` model chunk with its equation, and the final three `plot_predictions()` visualizations. Remove all intermediate output. Render.
 
 In the R Terminal, run `show_file("about.qmd")`, then `show_file("analysis.qmd")`. CP/CR both.
 
@@ -1393,11 +1235,15 @@ Var Kurapati, August 2026.
 
 ###
 
-Your `analysis.qmd` should now have exactly five code chunks — setup, the `mod_logistic` model, and the three `plot_predictions()` calls from the plotting exercises — plus one math block.
+Your `analysis.qmd` should now have exactly five code chunks — setup, the `mod_logistic` model, and the three `plot_predictions()` calls — plus one math block.
+
+###
+
+An About page tells visitors who made the site and when.
 
 ### Exercise 3
 
-Preview the site locally. In the bash Terminal, run:
+Before publishing, preview the site locally. In the bash Terminal, run:
 
 ```
 quarto preview
@@ -1416,18 +1262,18 @@ question_text(NULL,
 
 ###
 
+```
 Preparing to preview
 Watching files for changes
 GET: /
 GET: /analysis.html
 GET: /about.html
 Browse at http://localhost:3417/
-
-(your port number and exact lines may differ — that's fine)
+```
 
 ###
 
-Catching broken links or missing pages before they go live is much cheaper than catching them after publishing.
+`quarto preview` builds the site and opens a live-reloading local server — catching broken links or missing pages before they go live is much cheaper than catching them after publishing.
 
 ### Exercise 4
 
@@ -1450,7 +1296,7 @@ question_text(NULL,
 
 ###
 
-Both pages are now live, linked by the navigation bar.
+`quarto publish gh-pages` without a filename publishes the whole website. Both pages are now live, linked by the navigation bar.
 
 ### Exercise 5
 
@@ -1467,11 +1313,7 @@ question_text(NULL,
 
 ###
 
-The same pattern you used here — `logistic_reg() |> set_engine() |> fit()` followed by `predictions()`, `avg_predictions()`, and `plot_predictions()`, always keeping marginal and conditional straight — applies to multinomial and ordinal regression too. The interface never changes; only the structure, and what the predictions mean, does.
-
-###
-
-Structure → Method → Fitting built the DGM. Question → Units → Answer ran it. Every tutorial in this series is just those six words, pointed at a different kind of outcome.
+The same pattern you used here — `logistic_reg() |> set_engine() |> fit()` followed by `predictions()`, `avg_predictions()`, `comparisons()`, `avg_comparisons()`, and `plot_predictions()`, always keeping marginal and conditional straight — applies to multinomial and ordered regression too. Structure → Method → Fitting built the DGM. Question → Units → Answer ran it. Every tutorial in this series is just those six words, pointed at a different kind of outcome.
 
 ```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
 ```
