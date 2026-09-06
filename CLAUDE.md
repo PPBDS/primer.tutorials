@@ -2,6 +2,8 @@
 
 You are authoring a **Primer learnr tutorial** — the `inst/tutorials/<NN-name>/tutorial.Rmd` files in this package.
 
+**One exception:** `inst/tutorials/getting-started-tutorial/tutorial.qmd` is a **learnr2** tutorial (Quarto + `quarto-live` + WebR), imported from [`PPBDS/learnr2`](https://github.com/PPBDS/learnr2). It is invisible to `learnr::available_tutorials()` / `learnr::run_tutorial()` and to `tutorial.helpers::return_tutorial_paths()` (all glob `Rmd$`), so the `student-env-render` CI job does not cover it — the separate `learnr2-tutorial-render` job does, via `learnr2::run_tutorial("getting-started-tutorial", package = "primer.tutorials")`. Don't touch it when following the `.Rmd` authoring guide below; see [`PPBDS/learnr2`'s `AGENTS.md`](https://github.com/PPBDS/learnr2/blob/main/AGENTS.md) ("Dropping one `.qmd` into an otherwise-`.Rmd` package") for how it works.
+
 **This package lives in its own repo, but its authoring guide does not.** The package was split out of [`PPBDS/primer`](https://github.com/PPBDS/primer) (2026-07) so that installs stop downloading the whole book; the curriculum index and the detailed guide (`guide/`) stayed in that repo, because they also serve the book chapters. Authoring a tutorial therefore needs BOTH repos:
 
 - If `PPBDS/primer` is checked out as a **sibling** (`../primer/`), read the files there — that is David's normal setup.

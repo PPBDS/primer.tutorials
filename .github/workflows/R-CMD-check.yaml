@@ -69,3 +69,52 @@ jobs:
           paths <- tutorial.helpers::return_tutorial_paths(package = "primer.tutorials")
           tutorial.helpers::knit_tutorials(paths)
         shell: Rscript {0}
+
+  # student-env-render above renders every LEARNR (.Rmd) tutorial, but it
+  # cannot see getting-started-tutorial: that one is a LEARNR2 (.qmd)
+  # tutorial (Quarto + quarto-live + WebR), and both of the finders that
+  # job relies on skip .qmd silently --
+  # tutorial.helpers::return_tutorial_paths() globs list.files(pattern =
+  # "Rmd$"), and learnr::available_tutorials() only lists .Rmd dirs. So the
+  # .qmd is neither knit nor flagged; it just goes uncovered.
+  #
+  # This job renders it the one way that works: learnr2::run_tutorial(),
+  # which copies the tutorial dir, vendors the quarto-live extension into it
+  # (add_live_extension()), and calls quarto::quarto_render() directly. A
+  # broken .qmd now fails CI like any other tutorial. Kept separate from
+  # student-env-render because learnr2 is a Suggests dep pulled from
+  # PPBDS/learnr2 via Remotes, not part of the hard-deps-only student image.
+  learnr2-tutorial-render:
+    runs-on: ubuntu-latest
+    name: render the learnr2 (.qmd) getting-started tutorial
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: local::., github::PPBDS/learnr2
+          needs: check
+
+      - name: Render getting-started-tutorial with learnr2
+        run: |
+          html <- learnr2::run_tutorial(
+            "getting-started-tutorial",
+            package = "primer.tutorials",
+            open = FALSE
+          )
+          stopifnot(file.exists(html))
+          cat("Rendered OK:", html, "\n")
+        shell: Rscript {0}
