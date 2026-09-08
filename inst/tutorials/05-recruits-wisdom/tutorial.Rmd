@@ -1,0 +1,449 @@
+---
+title: "Recruits: Wisdom"
+author: David Kane
+tutorial:
+  id: 05-recruits-wisdom
+output:
+  learnr::tutorial:
+    progressive: yes
+    allow_skip: yes
+runtime: shiny_prerendered
+description: "Tutorial #05 (Wisdom) for Preceptor's Primer"
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(tutorial.helpers)
+library(gt)
+
+library(tidyverse)
+library(primer.tutorials)
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "90%")
+options(tutorial.exercise.timelimit = 600,
+        tutorial.storage = "local")
+```
+
+```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
+```
+
+
+## Introduction
+###
+
+This tutorial supports the [Recruits](https://ppbds.github.io/primer/05-recruits.html) chapter of [*Preceptor's Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
+
+The world confronts us. Make decisions we must.
+
+Imagine that you are a logistics analyst at U.S. Marine Corps Supply, planning next year's bootcamp uniform order. The Quartermaster General has a big-picture goal --- every recruit kitted out at the right size on day one, within a fixed procurement budget --- and trusts you to figure out what to order and in what quantities. Many models would inform the order: distributions of height, weight, chest, foot length; the male-female mix in incoming recruits; the size-tail dynamics that drive how many extra-large uniforms to keep in inventory. This tutorial builds just one of them: the average height of male and female recruits. The number alone won't determine the order, but the height-by-sex split is one good input to the larger forecast. There are many decisions to make.
+
+###
+
+This is the first of four Recruits tutorials, one per Cardinal Virtue: **Wisdom** (the question, the Preceptor Table, and a first look at the data), **Justice** (an audit of assumptions and the choice of model family), **Courage** (building the data generating mechanism), and **Temperance** (the answer, with its uncertainty). You will build one `analysis.qmd` across all four.
+
+### Exercise 1
+
+You should be connected to a repo named `recruits`. If you are not, create one and connect to it now. Create a new Quarto document titled `"Recruits"` with yourself as the author, save it as `analysis.qmd`, render it, and open `analysis.html` with Live Server so the rendered HTML auto-refreshes on every later render.
+
+Put `library(tidyverse)` and `library(primer.tutorials)` in a setup chunk with `#| message: false`, and add
+
+```
+execute:
+  echo: false
+```
+
+to the YAML header. Create a `.gitignore` file with `analysis_files` on the first line followed by a blank line. Commit and push. Use AI however you like.
+
+In the R Terminal, run `show_file(".gitignore")`. If that fails, it is probably because you have not yet loaded `library(tutorial.helpers)` in the R Terminal.
+
+"CP/CR" is short for *copy/paste the **c**ommand and the **r**esponse*. CP/CR.
+
+```{r introduction-1}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+Rendering a QMD converts the code and prose into an HTML document that shows only what you want readers to see --- in this case, the eventual plot and summary paragraph, with the code hidden. Professional data-science deliverables almost never show raw code; the code is the path, not the destination.
+
+### Exercise 2
+
+Add a code chunk to `analysis.qmd` that prints the `recruits` tibble (just `recruits` on its own line). Render, and copy the first few rows from the rendered HTML below.
+
+```{r introduction-2}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+The `recruits` tibble is a 50-row teaching cut of NHANES --- the National Health and Nutrition Examination Survey, conducted by the Centers for Disease Control and Prevention --- restricted to ages 18--27 and to the columns `height` (centimeters), `sex`, and `age`. It has 40 male and 10 female rows. That split is deliberately uneven, not a reflection of the real male/female mix among recruits; it will matter for the precision of the two group means in Temperance.
+
+NHANES also intentionally oversamples some demographic groups --- older adults, racial and ethnic minorities --- so each subgroup has enough observations to study on its own. The raw survey is not representative of the general population; NHANES uses weighting to correct for this. Our `recruits` sample inherits and amplifies these issues, which we flag in Justice.
+
+
+## Wisdom
+###
+
+Data science starts with some broad questions and a data set which might help us to answer them.
+
+The specific question: *What is the average height of male and female USMC recruits?*
+
+We will work from the `recruits` tibble in the **[primer.tutorials](https://github.com/PPBDS/primer.tutorials)** package --- a teaching cut of the National Health and Nutrition Examination Survey (NHANES), conducted by the Centers for Disease Control and Prevention, drawn from the `nhanes` tibble of the **[primer.data](https://github.com/PPBDS/primer.data)** package.
+
+### Exercise 1
+
+In your own words, describe the key components of Wisdom when working on a data science problem.
+
+```{r wisdom-1}
+question_text(NULL,
+  message = "Wisdom begins with a question and then moves on to the creation of a Preceptor Table and an examination of our data.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+> *The combination of some data and an aching desire for an answer does not ensure that a reasonable answer can be extracted from a given body of data.* --- John W. Tukey
+
+### Exercise 2
+
+Define a Preceptor Table.
+
+```{r wisdom-2}
+question_text(NULL,
+  message = "A Preceptor Table is the smallest possible table of data with rows and columns such that, if there is no missing data, we can easily calculate the quantity of interest.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+The Preceptor Table does not include all the covariates which you will eventually include in your model. It only includes, along with the outcome(s), covariates which are mentioned in your question.
+
+### Exercise 3
+
+Our first look at the data always starts with the outcome variable. Write R code that plots the distribution of `height` in `recruits` as a density plot, with a descriptive title, subtitle, axis labels, and caption. Paste the code below and run it.
+
+```{r wisdom-3}
+question_text(NULL,
+  message = "    recruits |>\n      ggplot(aes(x = height)) +\n      geom_density(fill = \"grey70\", color = \"grey30\") +\n      labs(\n        title = \"Height in Our 50-Recruit Sample\",\n        subtitle = \"A broad, asymmetric peak with a heavy left shoulder --- a hint that sex matters for height\",\n        x = \"Height (cm)\", y = NULL,\n        caption = \"Source: 50-row sample from NHANES via primer.tutorials::recruits\"\n      ) +\n      theme_minimal() +\n      theme(axis.text.y  = element_blank(),\n            axis.ticks.y = element_blank())",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+recruits |>
+  ggplot(aes(x = height)) +
+  geom_density(fill = "grey70", color = "grey30") +
+  labs(
+    title = "Height in Our 50-Recruit Sample",
+    subtitle = "A broad, asymmetric peak with a heavy left shoulder --- a hint that sex matters for height",
+    x = "Height (cm)",
+    y = NULL,
+    caption = "Source: 50-row sample from NHANES via primer.tutorials::recruits"
+  ) +
+  theme_minimal() +
+  theme(axis.text.y  = element_blank(),
+        axis.ticks.y = element_blank())
+```
+
+### Exercise 4
+
+Now look at how `height` varies with `sex`. Write R code that plots the individual `height` values in `recruits` as a jitter plot, with `sex` on the x-axis and `height` on the y-axis, with a descriptive title, subtitle, axis labels, and caption. Paste the code below and run it.
+
+```{r wisdom-4}
+question_text(NULL,
+  message = "    recruits |>\n      ggplot(aes(x = sex, y = height)) +\n      geom_jitter(width = 0.15, alpha = 0.5) +\n      labs(\n        title = \"Height by Sex in Our 50-Recruit Sample\",\n        subtitle = \"Male recruits average about 9 cm taller, and there are far fewer women\",\n        x = \"Sex\", y = \"Height (cm)\",\n        caption = \"Source: 50-row sample from NHANES via primer.tutorials::recruits\"\n      ) +\n      theme_minimal()",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+recruits |>
+  ggplot(aes(x = sex, y = height)) +
+  geom_jitter(width = 0.15, alpha = 0.5) +
+  labs(
+    title = "Height by Sex in Our 50-Recruit Sample",
+    subtitle = "Male recruits average about 9 cm taller, and there are far fewer women",
+    x = "Sex",
+    y = "Height (cm)",
+    caption = "Source: 50-row sample from NHANES via primer.tutorials::recruits"
+  ) +
+  theme_minimal()
+```
+
+### Exercise 5
+
+Describe the key components of Preceptor Tables in general, without worrying about this specific problem. Use words like "units," "outcomes," and "covariates."
+
+```{r wisdom-5}
+question_text(NULL,
+  message = "The rows of the Preceptor Table are the units. The outcome is at least one of the columns. If the problem is causal, there will be at least two (potential) outcome columns. The other columns are covariates. If the problem is causal, at least one of the covariates will be considered a treatment.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+This problem is predictive, so there is only one outcome column: `height`. We compare average heights between male and female young adults.
+
+### Exercise 6
+
+What are the units for this problem?
+
+```{r wisdom-6}
+question_text(NULL,
+  message = "Each row represents one USMC recruit expected to enlist during the coming year. There are roughly 5,000 such recruits per year.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+Specifying the Preceptor Table forces us to think clearly about the units and outcomes implied by the question. No data science project follows a single direction. We always backtrack. There is always dialogue. We model units, but we only really care about aggregates.
+
+### Exercise 7
+
+What is the outcome variable for this problem?
+
+```{r wisdom-7}
+question_text(NULL,
+  message = "Keep track of two 'outcome' variables: the one in our Preceptor Table and the one in our data. In this case, they share the name `height` --- both refer to a young adult's standing height in centimeters --- though the *measurement procedure* behind each column differs.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+The outcome variable that we really care about is often not the outcome variable which our data includes. This compromise --- working with what we have rather than what we really want --- is a part of most data science work in the real world.
+
+### Exercise 8
+
+What is a covariate which you think might be useful for this problem, regardless of whether or not it might be included in the data?
+
+```{r wisdom-8}
+question_text(NULL,
+  message = "Age at enlistment is a candidate. Height is nearly-but-not-quite stable by the age-18 window we care about, so a recruit ten years older is almost the same height as a fresh one. Another candidate is race or ethnicity, since height distributions vary across ancestry groups.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+The term "covariates" is used in at least three ways in data science. First, it is all the variables which *might* be useful, regardless of whether or not we have the data. Second, it is all the variables for which we have data. Third, it is the set of variables in the data which we end up using in the model.
+
+### Exercise 9
+
+What are the treatments, if any, for this problem?
+
+```{r wisdom-9}
+question_text(NULL,
+  message = "There are no treatments in this problem because we are building a predictive model. Nothing in `recruits` can be manipulated --- we cannot assign a recruit a different sex or a different height. Predictive models have covariates, not treatments.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+Remember that a treatment is just another covariate which, for the purposes of this specific problem, we are assuming can be manipulated --- thereby creating two or more different potential outcomes for each unit. Predictive models have no such variable.
+
+### Exercise 10
+
+What moment in time does the Preceptor Table refer to?
+
+```{r wisdom-10}
+question_text(NULL,
+  message = "The coming year --- specifically, the moment at which each recruit arrives at bootcamp and has their height recorded at enlistment.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+A Preceptor Table can never really refer to an exact instant in time since nothing is instantaneous in this fallen world. In practice, the Preceptor Table's "moment" is a narrow window: recruit intake for a single calendar year.
+
+### Exercise 11
+
+Describe in words the Preceptor Table for this problem.
+
+```{r wisdom-11}
+question_text(NULL,
+  message = "The Preceptor Table has three columns: one identifying each USMC recruit, one for `height`, and one for `sex`. Each row represents one recruit expected to enlist during the coming year.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r}
+#| echo: false
+#| results: asis
+pre_tibble <- tibble::tribble(
+  ~`Recruit`,       ~`Height (cm)`, ~`Sex`,
+  "Maya Castillo",  "150",          "Female",
+  "Tyler Brooks",   "170",          "Male",
+  "...",            "...",          "...",
+  "Grace Sullivan", "160",          "Female"
+)
+
+pre_title_footnote     <- "A Preceptor Table is the smallest table such that, if every cell were filled with its true value, answering the question 'What is the average height of male and female USMC recruits?' would be easy."
+pre_units_footnote     <- "Each row is one USMC recruit expected to enlist during the coming year. The example rows use plausible names; missing rows represent the other roughly 5,000 recruits not shown."
+pre_outcome_footnote   <- "Height in centimeters, measured at enlistment."
+pre_covariate_footnote <- "Sex, taking values 'Male' or 'Female', as recorded at enlistment."
+
+pre_gt_html <- gt::gt(pre_tibble, id = "preceptor_tbl") |>
+  gt::tab_header(title = "Preceptor Table") |>
+  gt::tab_spanner(label = "Unit",      id = "unit_span",
+                  columns = c(`Recruit`)) |>
+  gt::tab_spanner(label = "Outcome",   id = "outcome_span",
+                  columns = c(`Height (cm)`)) |>
+  gt::tab_spanner(label = "Covariate", id = "covariates_span",
+                  columns = c(`Sex`)) |>
+  gt::cols_align(align = "left" , columns = c(`Recruit`, `Sex`)) |>
+  gt::cols_align(align = "right", columns = c(`Height (cm)`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "covariates_span"))
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(align = "right"),
+    locations = gt::cells_column_spanners(spanners = "outcome_span")
+  ) |>
+  gt::tab_footnote(footnote = pre_title_footnote,
+                   locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pre_units_footnote,
+                   locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pre_outcome_footnote,
+                   locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pre_covariate_footnote,
+                   locations = gt::cells_column_spanners(spanners = "covariates_span")) |>
+  gt::opt_css(
+    css = "
+      #preceptor_tbl .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  pre_gt_html,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+### Exercise 12
+
+Because `recruits` is already prepared (filtered to ages 18--27, restricted to `height`, `sex`, and `age`, and missing rows dropped), there is no data-prep code to write. Take a moment to verify the breakdown that matters most for what comes next. In `analysis.qmd`, add a chunk that runs `recruits |> count(sex)`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r wisdom-12}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r wisdom-12-test}
+#| echo: true
+recruits |> count(sex)
+```
+
+###
+
+The split between sexes is deliberate: 40 male rows and 10 female. We did not choose this to reflect the male/female proportions among real USMC recruits, but to make a particular feature of the model visible later --- when we estimate the average height for each group, the larger group will give a tighter estimate (smaller confidence interval) than the smaller group.
+
+> *You can never look at the data too much.* --- Mark Engerman
+
+### Exercise 13
+
+We will be creating a summary paragraph over the course of these tutorials. Write the first two sentences. The first sentence is a general statement about the overall topic, mentioning the general class of outcome and at least one covariate. The second sentence introduces the data source and the specific question --- when/where gathered, how many observations, who collected it.
+
+```{r wisdom-13}
+question_text(NULL,
+  message = "People vary in height, and that variation is strongly patterned by sex. Using data from the National Health and Nutrition Examination Survey (NHANES) conducted by the Centers for Disease Control and Prevention, we seek to estimate the average height of male and female USMC recruits for the coming year.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Read our answer. It will not be the same as yours. You can change your answer to incorporate some of our ideas, but do not copy/paste our answer exactly. Add your two sentences to the summary paragraph portion of your QMD. Render the QMD, then commit and push.
+
+
+## Summary
+###
+
+This tutorial covered the **Wisdom** stage of the [Recruits](https://ppbds.github.io/primer/05-recruits.html) chapter of [*Preceptor's Primer for Bayesian Data Science*](https://ppbds.github.io/primer/).
+
+Wisdom begins with a question --- *What is the average height of male and female USMC recruits?* --- and then builds a Preceptor Table and examines the data. The Preceptor Table for this problem has one row per recruit expected to enlist in the coming year and three columns: the recruit, `height`, and `sex`. A first look at the `recruits` data --- a density plot of `height` and a jitter plot of `height` by `sex` --- shows male recruits averaging about 9 cm taller, with far fewer women in the sample.
+
+The **Justice** tutorial audits the assumptions behind this setup and chooses the model's functional form.
+
+The world is always more uncertain than our models would have us believe.
+
+```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
+```

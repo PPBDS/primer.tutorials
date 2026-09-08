@@ -1,0 +1,628 @@
+---
+title: "Recruits: Justice"
+author: David Kane
+tutorial:
+  id: 05-recruits-justice
+output:
+  learnr::tutorial:
+    progressive: yes
+    allow_skip: yes
+runtime: shiny_prerendered
+description: "Tutorial #05 (Justice) for Preceptor's Primer"
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(tutorial.helpers)
+library(gt)
+
+library(tidyverse)
+library(primer.tutorials)
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "90%")
+options(tutorial.exercise.timelimit = 600,
+        tutorial.storage = "local")
+```
+
+```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
+```
+
+
+## Introduction
+###
+
+This tutorial supports the [Recruits](https://ppbds.github.io/primer/05-recruits.html) chapter of [*Preceptor's Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
+
+The world confronts us. Make decisions we must.
+
+Imagine that you are a logistics analyst at U.S. Marine Corps Supply, planning next year's bootcamp uniform order. The Quartermaster General has a big-picture goal --- every recruit kitted out at the right size on day one, within a fixed procurement budget --- and trusts you to figure out what to order and in what quantities. Many models would inform the order: distributions of height, weight, chest, foot length; the male-female mix in incoming recruits; the size-tail dynamics that drive how many extra-large uniforms to keep in inventory. This tutorial builds just one of them: the average height of male and female recruits. The number alone won't determine the order, but the height-by-sex split is one good input to the larger forecast. There are many decisions to make.
+
+###
+
+This is the second of four Recruits tutorials, one per Cardinal Virtue. **Wisdom** produced the question --- *What is the average height of male and female USMC recruits next year?* --- along with the Preceptor Table and a first look at the `recruits` data. **Justice**, here, audits the assumptions that let us treat the data and the Preceptor Table as two views of one population, and then chooses the functional form of the model.
+
+Here is the Preceptor Table from Wisdom --- the smallest table such that, if every cell were filled in, the question would be easy to answer:
+
+```{r}
+#| echo: false
+#| results: asis
+pre_tibble_recap <- tibble::tribble(
+  ~`Recruit`,       ~`Height (cm)`, ~`Sex`,
+  "Maya Castillo",  "150",          "Female",
+  "Tyler Brooks",   "170",          "Male",
+  "...",            "...",          "...",
+  "Grace Sullivan", "160",          "Female"
+)
+
+pre_title_footnote_recap     <- "A Preceptor Table is the smallest table such that, if every cell were filled with its true value, answering the question 'What is the average height of male and female USMC recruits?' would be easy."
+pre_units_footnote_recap     <- "Each row is one USMC recruit expected to enlist during the coming year. Missing rows represent the other recruits not shown."
+pre_outcome_footnote_recap   <- "Height in centimeters, measured at enlistment."
+pre_covariate_footnote_recap <- "Sex, taking values 'Male' or 'Female', as recorded at enlistment."
+
+pre_gt_html_recap <- gt::gt(pre_tibble_recap, id = "preceptor_tbl_recap") |>
+  gt::tab_header(title = "Preceptor Table") |>
+  gt::tab_spanner(label = "Unit",      id = "unit_span",
+                  columns = c(`Recruit`)) |>
+  gt::tab_spanner(label = "Outcome",   id = "outcome_span",
+                  columns = c(`Height (cm)`)) |>
+  gt::tab_spanner(label = "Covariate", id = "covariates_span",
+                  columns = c(`Sex`)) |>
+  gt::cols_align(align = "left" , columns = c(`Recruit`, `Sex`)) |>
+  gt::cols_align(align = "right", columns = c(`Height (cm)`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "covariates_span"))
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(align = "right"),
+    locations = gt::cells_column_spanners(spanners = "outcome_span")
+  ) |>
+  gt::tab_footnote(footnote = pre_title_footnote_recap,
+                   locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pre_units_footnote_recap,
+                   locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pre_outcome_footnote_recap,
+                   locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pre_covariate_footnote_recap,
+                   locations = gt::cells_column_spanners(spanners = "covariates_span")) |>
+  gt::opt_css(
+    css = "
+      #preceptor_tbl_recap .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  pre_gt_html_recap,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+### Exercise 1
+
+You should be connected to a repo named `recruits`, with an `analysis.qmd` you started in the Wisdom tutorial. If you are starting fresh here: create the repo and connect to it, create a Quarto document titled `"Recruits"` with yourself as author, save it as `analysis.qmd`, put `library(tidyverse)` and `library(primer.tutorials)` in a setup chunk with `#| message: false`, add
+
+```
+execute:
+  echo: false
+```
+
+to the YAML header, render, and open `analysis.html` with Live Server.
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "setup")`. CP/CR.
+
+```{r introduction-1}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+The `recruits` tibble is a 50-row teaching cut of NHANES: 40 male and 10 female young adults aged 18--27, with columns `height` (centimeters), `sex`, and `age`.
+
+### Exercise 2
+
+Add a code chunk to `analysis.qmd` that runs `recruits |> count(sex)`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r introduction-2}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r introduction-2-test}
+#| echo: true
+recruits |> count(sex)
+```
+
+###
+
+40 male rows and 10 female. NHANES intentionally oversamples some demographic groups so each subgroup can be studied on its own, and our `recruits` sample amplifies that: we drew 40 men and 10 women rather than matching their representation in NHANES. Both are representativeness concerns, which the exercises below name.
+
+
+## Justice
+###
+
+Wisdom gives us the Preceptor Table and the data.
+
+```{r}
+#| echo: false
+#| results: asis
+pre_tibble_j <- tibble::tribble(
+  ~`Recruit`,       ~`Height (cm)`, ~`Sex`,
+  "Maya Castillo",  "150",          "Female",
+  "Tyler Brooks",   "170",          "Male",
+  "...",            "...",          "...",
+  "Grace Sullivan", "160",          "Female"
+)
+
+pre_title_footnote_j     <- "A Preceptor Table is the smallest table such that, if every cell were filled with its true value, answering the question 'What is the average height of male and female USMC recruits?' would be easy."
+pre_units_footnote_j     <- "Each row is one USMC recruit expected to enlist during the coming year. Missing rows represent the other recruits not shown."
+pre_outcome_footnote_j   <- "Height in centimeters, measured at enlistment."
+pre_covariate_footnote_j <- "Sex, taking values 'Male' or 'Female', as recorded at enlistment."
+
+pre_gt_html_j <- gt::gt(pre_tibble_j, id = "preceptor_tbl_justice") |>
+  gt::tab_header(title = "Preceptor Table") |>
+  gt::tab_spanner(label = "Unit",      id = "unit_span",
+                  columns = c(`Recruit`)) |>
+  gt::tab_spanner(label = "Outcome",   id = "outcome_span",
+                  columns = c(`Height (cm)`)) |>
+  gt::tab_spanner(label = "Covariate", id = "covariates_span",
+                  columns = c(`Sex`)) |>
+  gt::cols_align(align = "left" , columns = c(`Recruit`, `Sex`)) |>
+  gt::cols_align(align = "right", columns = c(`Height (cm)`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "covariates_span"))
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(align = "right"),
+    locations = gt::cells_column_spanners(spanners = "outcome_span")
+  ) |>
+  gt::tab_footnote(footnote = pre_title_footnote_j,
+                   locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pre_units_footnote_j,
+                   locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pre_outcome_footnote_j,
+                   locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pre_covariate_footnote_j,
+                   locations = gt::cells_column_spanners(spanners = "covariates_span")) |>
+  gt::opt_css(
+    css = "
+      #preceptor_tbl_justice .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  pre_gt_html_j,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+
+```{r}
+#| echo: false
+#| results: asis
+data_tibble <- tibble::tribble(
+  ~`Respondent`, ~`Age`, ~`Height (cm)`, ~`Sex`,
+  "Emily Tran",      "21",   "162",          "Female",
+  "James Okafor",    "25",   "178",          "Male",
+  "Rachel Goldberg", "19",   "159",          "Female",
+  "...",             "...",  "...",          "...",
+  "Tyler Brooks",    "23",   "170",          "Male"
+)
+
+data_title_footnote     <- "National Health and Nutrition Examination Survey (NHANES), Centers for Disease Control and Prevention. Continuous survey data, 1999--present. We restrict to respondents aged 18 through 27 with non-missing height and sex --- about 1,300 rows. The original survey used a complex, stratified, multistage sampling design; we ignore the survey weights."
+data_units_footnote     <- "Each row is one NHANES participant examined between 1999 and the most recent release cycle. NHANES public files are anonymized, so the example rows use invented but plausible names."
+data_outcome_footnote   <- "Height in centimeters, measured by a trained examiner in NHANES's Mobile Examination Center using a fixed stadiometer. Each participant is measured once per survey visit with shoes removed."
+data_covariate_footnote <- "Sex, recorded by the NHANES interviewer as 'Male' or 'Female'. NHANES does not separately record gender identity; the two-category coding dates from survey waves going back decades."
+
+data_gt_html <- gt::gt(data_tibble, id = "data_tbl") |>
+  gt::tab_header(title = "Data: NHANES Young Adults, Ages 18–27") |>
+  gt::tab_spanner(label = "Unit",      id = "unit_span",
+                  columns = c(`Respondent`, `Age`)) |>
+  gt::tab_spanner(label = "Outcome",   id = "outcome_span",
+                  columns = c(`Height (cm)`)) |>
+  gt::tab_spanner(label = "Covariate", id = "covariates_span",
+                  columns = c(`Sex`)) |>
+  gt::cols_align(align = "left" , columns = c(`Respondent`, `Sex`)) |>
+  gt::cols_align(align = "right", columns = c(`Age`, `Height (cm)`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "covariates_span"))
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(align = "right"),
+    locations = gt::cells_column_spanners(spanners = "outcome_span")
+  ) |>
+  gt::tab_footnote(footnote = data_title_footnote,
+                   locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = data_units_footnote,
+                   locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = data_outcome_footnote,
+                   locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = data_covariate_footnote,
+                   locations = gt::cells_column_spanners(spanners = "covariates_span")) |>
+  gt::opt_css(
+    css = "
+      #data_tbl .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  data_gt_html,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+### Exercise 1
+
+In your own words, describe the components of Justice when working on a data science problem.
+
+```{r justice-1}
+question_text(NULL,
+  message = "Justice reviews the Population Table and selects the formula for the data generating mechanism.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Justice is about concerns that you (or your critics) might have, reasons why the model you create might not work as well as you hope. The exercises that follow walk through several such concerns by name. Justice also picks the formula for the data generating mechanism --- different outcome variables call for different formulas, a piece that gets more technical names in later tutorials.
+
+### Exercise 2
+
+In your own words, define "validity" as we use the term.
+
+```{r justice-2}
+question_text(NULL,
+  message = "Validity is the consistency, or lack thereof, in the columns of the data set and the corresponding columns in the Preceptor Table.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Validity is always about the columns in the Preceptor Table and the data. Just because columns from these two different tables have the same name does not mean that they are the same thing.
+
+### Exercise 3
+
+Provide one reason why the assumption of validity might not hold for the outcome variable `height` or for one of the covariates. Use the words "column" or "columns" in your answer.
+
+```{r justice-3}
+question_text(NULL,
+  message = "The `height` column in the data is recorded by NHANES's trained examiners using a fixed stadiometer, with shoes removed. The `height` column in the Preceptor Table is recorded at USMC enlistment with whatever instrument the recruiting office has on hand --- possibly with shoes on, possibly under different instructions. Even though both columns are labeled 'Height (cm),' the two measurement procedures are not the same, so the columns may not represent the same underlying quantity.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+In order to consider the Preceptor Table and the data to be drawn from the same population, the columns from one must have a *valid correspondence* with the columns in the other. Validity, if true (or at least reasonable), allows us to construct the Population Table, which is the first step in Justice.
+
+### Exercise 4
+
+In your own words, define a Population Table.
+
+```{r justice-4}
+question_text(NULL,
+  message = "The Population Table includes a row for each unit/time combination in the underlying population from which both the Preceptor Table and the data are drawn.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+The Population Table is almost always much bigger than the combination of the Preceptor Table and the data, because if we can really assume that both are part of the same population, then that population must cover a broad universe of time and units.
+
+### Exercise 5
+
+Specify the unit/time combinations which define each row in this Population Table.
+
+```{r justice-5}
+question_text(NULL,
+  message = "Each row is one young adult (aged 18--27) in a given year. Data rows are NHANES participants examined between 1999 and the most recent release. Preceptor rows are the ~5,000 USMC recruits expected to enlist in the coming year. Other rows cover all the young adults alive during the overlapping span who appear in neither table.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r}
+#| echo: false
+#| results: asis
+pop_tibble <- tibble::tribble(
+  ~Source    , ~`Young Adult`    , ~`Year`, ~`Height (cm)`, ~`Sex`   ,
+  "..."      , "..."             , "..."  , "..."         , "..."    ,
+  "Data"     , "Emily Tran"      , "2002" , "162"         , "Female" ,
+  "Data"     , "James Okafor"    , "2005" , "178"         , "Male"   ,
+  "Data"     , "..."             , "..."  , "..."         , "..."    ,
+  "Data"     , "Tyler Brooks"    , "2024" , "170"         , "Male"   ,
+  "..."      , "..."             , "..."  , "..."         , "..."    ,
+  "Preceptor", "Maya Castillo"   , "2026" , "150"         , "Female" ,
+  "Preceptor", "Tyler Brooks"    , "2026" , "170"         , "Male"   ,
+  "Preceptor", "..."             , "..."  , "..."         , "..."    ,
+  "Preceptor", "Grace Sullivan"  , "2026" , "160"         , "Female" ,
+  "..."      , "..."             , "..."  , "..."         , "..."
+)
+
+pop_title_footnote     <- "This table combines NHANES adult-height data from 1999 onward with the Preceptor Table's 2026 USMC recruits, drawn from the same broader population of US young adults aged 18--27."
+pop_units_footnote     <- "Each row is one young adult at one point in time. Data rows are NHANES survey participants between the ages of 18 and 27. Preceptor rows are the ~5,000 USMC recruits expected to enlist in the coming year. Tyler Brooks appears in both blocks --- surveyed by NHANES in 2024 at age 23, enlisting in 2026 at 25. Same person, different times, different rows."
+pop_outcome_footnote   <- "Height in centimeters. NHANES measures height directly in the Mobile Examination Center; USMC records height at enlistment. The two measurement procedures are close enough that we treat them as the same column, subject to the validity concern raised in Exercise 3."
+pop_covariate_footnote <- "Sex, recorded as Male or Female in both data sources."
+
+pop_gt_html <- gt::gt(pop_tibble, id = "population_tbl") |>
+  gt::tab_header(title = "Population Table") |>
+  gt::tab_spanner(label = "Unit/Time", id = "unit_span",
+                  columns = c(`Young Adult`, `Year`)) |>
+  gt::tab_spanner(label = "Outcome"  , id = "outcome_span",
+                  columns = c(`Height (cm)`)) |>
+  gt::tab_spanner(label = "Covariate", id = "covariates_span",
+                  columns = c(`Sex`)) |>
+  gt::cols_align(align = "left" , columns = c(`Source`, `Young Adult`, `Sex`)) |>
+  gt::cols_align(align = "right", columns = c(`Year`, `Height (cm)`)) |>
+  gt::fmt_markdown(columns = gt::everything()) |>
+  gt::tab_options(
+    heading.title.font.size   = "1.5em",
+    heading.title.font.weight = "bolder",
+    column_labels.font.weight = "normal"
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_spanners()
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(align = "left"),
+    locations = gt::cells_column_spanners(spanners = c("unit_span", "covariates_span"))
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_text(align = "right"),
+    locations = gt::cells_column_spanners(spanners = "outcome_span")
+  ) |>
+  gt::tab_footnote(footnote = pop_title_footnote,
+                   locations = gt::cells_title()) |>
+  gt::tab_footnote(footnote = pop_units_footnote,
+                   locations = gt::cells_column_spanners(spanners = "unit_span")) |>
+  gt::tab_footnote(footnote = pop_outcome_footnote,
+                   locations = gt::cells_column_spanners(spanners = "outcome_span")) |>
+  gt::tab_footnote(footnote = pop_covariate_footnote,
+                   locations = gt::cells_column_spanners(spanners = "covariates_span")) |>
+  gt::opt_css(
+    css = "
+      #population_tbl .gt_footnote {
+        max-width: 1px;
+        word-break: break-word;
+      }
+    "
+  ) |>
+  gt::as_raw_html(inline_css = FALSE)
+
+cat(
+  "```{=html}\n",
+  '<div style="display: inline-block; width: auto; max-width: 100%;">',
+  pop_gt_html,
+  "</div>\n",
+  "```\n",
+  sep = ""
+)
+```
+
+### Exercise 6
+
+In your own words, define the assumption of "stability" when employed in the context of data science.
+
+```{r justice-6}
+question_text(NULL,
+  message = "Stability means that the relationship between the columns in the Population Table is the same for three categories of rows: the data, the Preceptor Table, and the larger population from which both are drawn.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+The most natural way for stability to fail is *time*. Our data was gathered in earlier NHANES cycles, but our recruits will enlist next year. Stability holds only if the world that produced the data behaves the same as the world the recruits enter. That's not guaranteed here: NHANES spans 25 years, and compared to next year's recruit cohort, that's a long enough window for the relationship between sex and adult height to drift.
+We will sharpen this idea --- the *parameters* of the model, not the levels of any single variable --- in the next exercise.
+
+### Exercise 7
+
+Provide one reason why the assumption of stability might not be true in this case.
+
+```{r justice-7}
+question_text(NULL,
+  message = "The *intercept* of the height-on-sex regression --- the expected height of a female young adult --- has likely drifted upward over the 25-year span of NHANES, while the *slope* (the male-female height gap, the `sexMale` coefficient) has stayed roughly constant. By 2026 the underlying $\\beta_0$ for our recruits is probably a centimeter or two higher than the average across NHANES's reporting years. That is a *parameter* shift; if it is large enough, stability is violated. The fact that average heights in the population have changed is not by itself the issue --- a distribution change in `height` is something a stable model can absorb. What stability requires is that $\\beta_0$ and $\\beta_1$ stay put.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+A common confusion is to point at any change between two eras and call it a stability violation. It isn't. The distribution of `height` in the population may have shifted upward; the spread of heights may have narrowed; the mix of ethnicities in the recruiting pool may differ from NHANES participants. None of those, on their own, is a stability violation. What stability requires is that the *parameters* of our model --- $\beta_0$ and $\beta_1$ --- be the same in the data, in the Preceptor Table, and in the broader population. Distribution shifts are everywhere; parameter shifts are what hurt us.
+
+### Exercise 8
+
+We use our data to make inferences about the overall population. We use information about the population to make inferences about the Preceptor Table: Data → Population → Preceptor Table. In your own words, define the assumption of "representativeness."
+
+```{r justice-8}
+question_text(NULL,
+  message = "Representativeness, or the lack thereof, concerns two relationships among the rows in the Population Table. The first is between the data and the other rows. The second is between the other rows and the Preceptor Table.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Ideally, we would like both the Preceptor Table and our data to be random samples from the population. Sadly, this is almost never the case.
+
+### Exercise 9
+
+We do not use the data directly to estimate missing values in the Preceptor Table. Instead, we use the data to learn about the overall population. Provide one reason, involving the relationship between the data and the population, why the assumption of representativeness might not be true in this case.
+
+```{r justice-9}
+question_text(NULL,
+  message = "NHANES is a voluntary survey. People who agree to participate (and who show up for the Mobile Examination Center visit) are not a random sample of US young adults --- they skew toward people with time, transportation, and some trust in government research. On top of that, the `recruits` tibble we are fitting on is itself a non-random subsample of NHANES: 40 male rows and 10 female rows, deliberately unbalanced. Both layers --- the survey participation and our 40/10 choice --- mean the data we model is not a random sample of US young adults.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+When representativeness is violated, our parameter estimates *might* be biased --- not "will be," because by pure luck a non-representative sample can still produce the right number, but we have no principled reason to expect that to happen. There is a *second* representativeness relationship --- between the population and the Preceptor Table --- that later tutorials will exercise; for now, the data ↔ population link is what we focus on.
+
+### Exercise 10
+
+A statistical model consists of two parts: the probability family and the link function. The probability family is the probability distribution that generates the randomness in our data. Our outcome variable is `height` --- continuous. What probability family should we use?
+
+```{r justice-10}
+question_text(NULL,
+  message = "Normal: $Y \\sim N(\\mu, \\sigma^2)$. The Normal distribution is the standard choice for continuous outcomes.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+While you're here, also add `library(tidymodels)` to the setup chunk in `analysis.qmd` so the rest of Courage can call `linear_reg()` and `fit()`.
+
+### Exercise 11
+
+The link function is the mathematical formula that links our data to the unknown parameters. What is the link function for a continuous outcome?
+
+```{r justice-11}
+question_text(NULL,
+  message = "Linear: $\\mu = \\beta_0 + \\beta_1 X_1 + \\ldots + \\beta_n X_n$. Our model will be a linear regression.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 4)
+```
+
+###
+
+While you're here, also add `library(broom)` to the setup chunk in `analysis.qmd` so we can call `tidy()` on the fitted model in Courage.
+
+### Exercise 12
+
+Write one sentence highlighting a potential weakness in your model. Derive it from possible problems with the assumptions above. We will add this to our summary paragraph. So far our version of the summary paragraph looks like this:
+
+> People vary in height, and that variation is strongly patterned by sex. Using data from the National Health and Nutrition Examination Survey (NHANES) conducted by the Centers for Disease Control and Prevention, we seek to estimate the average height of male and female USMC recruits for the coming year.
+
+Your version will be somewhat different.
+
+```{r justice-12}
+question_text(NULL,
+  message = "One concern is that USMC recruits are more physically fit than the general young-adult population and so may be systematically taller, meaning that the NHANES-based estimates probably understate recruit heights.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Add a weakness sentence to the summary paragraph in your QMD. You can modify your paragraph, but don't copy/paste our answer exactly. Render the QMD, then commit/push.
+
+
+## Summary
+###
+
+This tutorial covered the **Justice** stage of the [Recruits](https://ppbds.github.io/primer/05-recruits.html) chapter of [*Preceptor's Primer for Bayesian Data Science*](https://ppbds.github.io/primer/).
+
+Justice audits the assumptions that let us treat the data and the Preceptor Table as two views of one population:
+
+- **Validity** --- do the `height` and `sex` columns mean the same thing in the data (NHANES examiners, fixed stadiometer) as in the Preceptor Table (USMC enlistment)?
+- **Stability** --- are the *parameters* of the height-on-sex regression the same across the 25-year span of NHANES and next year's recruit cohort?
+- **Representativeness** --- is the data a fair draw from the population, given that NHANES is voluntary and our 40/10 male-female split is deliberately unbalanced?
+
+Justice also chose the model's functional form: because `height` is continuous, a Normal probability family with a linear link --- an ordinary linear regression, written abstractly as
+
+$$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_n X_n + \epsilon$$
+
+with $\epsilon \sim N(0, \sigma^2)$. The **Courage** tutorial fills in the covariates and estimates the parameters.
+
+The world is always more uncertain than our models would have us believe.
+
+```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
+```

@@ -1,0 +1,536 @@
+---
+title: "Recruits: Temperance"
+author: David Kane
+tutorial:
+  id: 05-recruits-temperance
+output:
+  learnr::tutorial:
+    progressive: yes
+    allow_skip: yes
+runtime: shiny_prerendered
+description: "Tutorial #05 (Temperance) for Preceptor's Primer"
+---
+
+```{r setup, include = FALSE}
+library(learnr)
+library(tutorial.helpers)
+
+library(tidyverse)
+library(tidymodels)
+library(primer.tutorials)
+library(broom)
+library(marginaleffects)
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "90%")
+options(tutorial.exercise.timelimit = 600,
+        tutorial.storage = "local")
+
+fit_recruits <- linear_reg() |>
+  set_engine("lm") |>
+  fit(height ~ sex, data = recruits)
+```
+
+```{r info-section, child = system.file("child_documents/info_section.Rmd", package = "tutorial.helpers")}
+```
+
+
+## Introduction
+###
+
+This tutorial supports the [Recruits](https://ppbds.github.io/primer/05-recruits.html) chapter of [*Preceptor's Primer for Bayesian Data Science: Using the Cardinal Virtues for Inference*](https://ppbds.github.io/primer/) by [David Kane](https://davidkane.info/).
+
+The world confronts us. Make decisions we must.
+
+Imagine that you are a logistics analyst at U.S. Marine Corps Supply, planning next year's bootcamp uniform order. The Quartermaster General has a big-picture goal --- every recruit kitted out at the right size on day one, within a fixed procurement budget --- and trusts you to figure out what to order and in what quantities. Many models would inform the order: distributions of height, weight, chest, foot length; the male-female mix in incoming recruits; the size-tail dynamics that drive how many extra-large uniforms to keep in inventory. This tutorial builds just one of them: the average height of male and female recruits. The number alone won't determine the order, but the height-by-sex split is one good input to the larger forecast. There are many decisions to make.
+
+###
+
+This is the last of four Recruits tutorials, one per Cardinal Virtue. **Wisdom** produced the question and the Preceptor Table; **Justice** audited the assumptions and chose a linear model with normal errors; **Courage** fit the data generating mechanism and saved it as `fit_recruits`:
+
+$$\widehat{\text{height}} = 165.9 + 8.9 \cdot \text{sexMale}$$
+
+with residuals drawn from $N(0, 41.0)$ --- a residual standard deviation of about 6.4 cm. In words: we model height as a normally distributed variable which is a linear function of sex.
+
+Here is the summary paragraph so far, built up across the first three tutorials:
+
+> People vary in height, and that variation is strongly patterned by sex. Using data from the National Health and Nutrition Examination Survey (NHANES) conducted by the Centers for Disease Control and Prevention, we seek to estimate the average height of male and female USMC recruits for the coming year. One concern is that USMC recruits are more physically fit than the general young-adult population and so may be systematically taller, meaning that the NHANES-based estimates probably understate recruit heights. We model height as a normally distributed variable which is a linear function of sex.
+
+**Temperance** interprets that mechanism and uses it --- with humility --- to answer the question.
+
+### Exercise 1
+
+You should be connected to a repo named `recruits`, with an `analysis.qmd` you have been building through the Wisdom, Justice, and Courage tutorials. Its setup chunk should have `library(tidyverse)`, `library(tidymodels)`, `library(primer.tutorials)`, and `library(broom)`, and it should contain a cached chunk that assigns `fit_recruits`.
+
+In the R Terminal, run `show_file("analysis.qmd", chunk = "fit_recruits")` (or, if your chunk is unlabeled, `show_file("analysis.qmd")` and find the `fit_recruits` chunk). CP/CR.
+
+```{r introduction-1}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+<pre><code>#| cache: true
+fit_recruits <- linear_reg() |>
+  set_engine("lm") |>
+  fit(height ~ sex, data = recruits)
+</code></pre>
+
+### Exercise 2
+
+Confirm the fitted mechanism is what Courage produced. Add a chunk that runs `tidy(fit_recruits, conf.int = TRUE)`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r introduction-2}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r introduction-2-test}
+#| echo: true
+tidy(fit_recruits, conf.int = TRUE)
+```
+
+###
+
+The intercept is about 165.9 cm (the expected height of a female recruit) and the `sexMale` coefficient is about 8.9 cm, with a 95% interval of roughly [4.3, 13.4]. These are the parameter values Temperance now puts to work.
+
+
+## Temperance
+###
+
+Courage provides the data generating mechanism. We can express the DGM in four ways:
+
+**In words:** We model height as a normally distributed variable which is a linear function of sex.
+
+**In R code:**
+
+```r
+fit_recruits <- linear_reg() |>
+  set_engine("lm") |>
+  fit(height ~ sex, data = recruits)
+```
+
+**In a parameter table:**
+
+```{r}
+#| echo: false
+fit_recruits |>
+  tidy(conf.int = TRUE) |>
+  select(term, estimate, conf.low, conf.high) |>
+  mutate(across(where(is.numeric), \(x) round(x, 1)))
+```
+
+**As a mathematical formula:**
+
+$$\widehat{\text{height}} = 165.9 + 8.9 \cdot \text{sexMale}$$
+
+with residuals drawn from $N(0, 41.0)$ --- a residual standard deviation of about 6.4 cm. The hatted equation is the expected-value mode of the DGM --- plug in a sex, get an expected height --- while the residuals line keeps the draw mode's randomness at hand for questions about individual recruits.
+
+### Exercise 1
+
+In your own words, describe the use of Temperance in data science.
+
+```{r temperance-1}
+question_text(NULL,
+  message = "Temperance interprets the data generating mechanism and then uses it to answer, with the help of graphics, the question(s) with which we began. Humility reminds us that this answer is always false.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+The fitted DGM is not the answer to anything. Nobody ever asked, *"What are the parameters of a linear regression relating height to sex?"* The questions people actually ask sound like: *What height should we expect for a male recruit? How much taller, on average, are male recruits than female recruits?*
+
+Answering a question with a DGM takes three conceptual moves. First, **pose the question as a quantity** the machine can produce --- a *prediction* (the expected outcome for a specified unit) or a *comparison* (run the machine twice and report the difference). Second, **specify the units** --- one imaginary recruit, every recruit in the sample, a grid of hypothetical recruits. Third, **run the machine and summarize**, uncertainty included. **Question &rarr; Units &rarr; Answer.** The tool for these moves is the **[marginaleffects](https://marginaleffects.com/)** package.
+
+### Exercise 2
+
+In the end, we don't really care about parameters, much less how to interpret them. Parameters are *imaginary*, like unicorns. We care about answers to our questions. *In the modern world, all parameters are nuisance parameters.*
+
+If you do not already have **marginaleffects** installed, run `install.packages("marginaleffects")` in the R Terminal. Then add `library(marginaleffects)` to the setup chunk in `analysis.qmd` and render. In the R Terminal, run `show_file("analysis.qmd", chunk = "setup")`. CP/CR.
+
+```{r temperance-2}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+<pre><code>
+#| message: false
+library(tidyverse)
+library(tidymodels)
+library(primer.tutorials)
+library(broom)
+library(marginaleffects)
+</code></pre>
+
+###
+
+Be modest in the claims you make. When you state a conclusion, ask whether a different, equally plausible mechanism could have produced the same data. If it could, your conclusion is weaker than it looks. Yet decisions made with a flawed model are almost always better than decisions made without one.
+
+### Exercise 3
+
+What is the specific question we are trying to answer?
+
+```{r temperance-3}
+question_text(NULL,
+  message = "What is the expected height of male and female USMC recruits next year?",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 3)
+```
+
+###
+
+Vague curiosity --- *"does sex matter for height?"* --- has to become a number the machine can produce. Our question asks for two numbers: an expected height for male recruits and an expected height for female recruits, each with a measure of uncertainty. That is a *prediction* question, posed as a quantity.
+
+### Exercise 4
+
+In `analysis.qmd`, add a chunk that runs `predictions(fit_recruits)`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r temperance-4}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r temperance-4-test}
+#| echo: true
+predictions(fit_recruits)
+```
+
+###
+
+`predictions()` runs the machine: it returns the expected outcome for each unit you give it, with uncertainty attached. With no `newdata`, it runs on every row of the data the model was fit on --- one prediction per recruit, so 50 rows for our 50-row sample. Each row's `estimate` is that recruit's model-predicted height. Notice already that the standard error column has just two distinct values --- about 1.01 for male rows and about 2.02 for female rows. We will come back to that.
+
+###
+
+One DGM answers many questions. Ask it for an expected value and it is a deterministic formula: same sex in, same number out --- which is why these 50 rows show only two distinct estimates. Ask it what will happen to a single recruit and the randomness matters: the DGM must draw from its residual distribution, and two recruits of the same sex can end up with very different heights. The question, not habit, picks the mode.
+
+### Exercise 5
+
+Every marginaleffects call is either **marginal** --- run the machine on real recruits and average within groups --- or **conditional** --- run it on one representative, hypothetical recruit. The first uses `by`; the second uses `condition`.
+
+Add a chunk that runs `avg_predictions(fit_recruits, by = "sex")`. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r temperance-5}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r temperance-5-test}
+#| echo: true
+avg_predictions(fit_recruits, by = "sex")
+```
+
+###
+
+`by` is always the same operation: run the model on every real recruit, then average within groups. This is a **marginal** prediction --- it uses the actual distribution of recruits in each group. The two rows it returns --- an average predicted height of about 166 cm for female recruits and about 175 cm for male recruits --- are the answer to the question we started with.
+
+### Exercise 6
+
+Modify the chunk to run `plot_predictions(fit_recruits, condition = "sex")` instead. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r temperance-6}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r temperance-6-test}
+#| echo: true
+plot_predictions(fit_recruits, condition = "sex")
+```
+
+###
+
+With `condition`, the machine is run on imaginary recruits --- one representative recruit per sex, with any other variables held at typical values --- so the plot shows **conditional** expectations. Our model has only one covariate, so the conditional picture here nearly matches the marginal `avg_predictions(by = "sex")` numbers from the previous exercise; with more covariates the two can differ meaningfully.
+
+You should see two point estimates with 95% confidence intervals. The Female interval is visibly wider than the Male interval. That is the consequence of having drawn 10 female rows but 40 male rows: the standard error of a group mean shrinks roughly with the square root of the group's sample size, so quadrupling the sample size halves the standard error, and the female interval ends up about twice as wide.
+
+### Exercise 7
+
+Modify the previous chunk to add `draw = FALSE` to the `plot_predictions()` call. Render. In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
+
+```{r temperance-7}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+```{r temperance-7-test}
+#| echo: true
+plot_predictions(fit_recruits, condition = "sex", draw = FALSE)
+```
+
+###
+
+Because `plot_predictions()` returns a ggplot object, you can continue with ggplot commands like `labs()`. But it can be useful to see the underlying values in the tibble and build your own plot directly.
+
+### Exercise 8
+
+Create a beautiful plot starting from the output of `plot_predictions(fit_recruits, condition = "sex", draw = FALSE)`. Do this in your QMD (much easier than typing in the R Terminal directly). Title: the key variables. Subtitle: the key takeaway. Caption: data source. Axis labels: human-readable with units.
+
+Paste the plot code below.
+
+```{r temperance-8}
+question_text(NULL,
+  message = "    plot_predictions(fit_recruits, condition = \"sex\", draw = FALSE) |>\n      ggplot(aes(x = sex, y = estimate)) +\n      geom_pointrange(aes(ymin = conf.low, ymax = conf.high),\n                      color = \"grey20\", size = 1.1) +\n      labs(\n        title = \"Forecast Height for USMC Recruits\",\n        subtitle = \"Male recruits are expected to be about 9 cm taller\",\n        x = \"Sex\",\n        y = \"Expected Height (cm)\",\n        caption = \"Source: 50-row sample from NHANES via primer.tutorials::recruits\"\n      ) +\n      theme_minimal()",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 12)
+```
+
+###
+
+Here is our version:
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+plot_predictions(fit_recruits, condition = "sex", draw = FALSE) |>
+  ggplot(aes(x = sex, y = estimate)) +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high),
+                  color = "grey20", size = 1.1) +
+  labs(
+    title = "Forecast Height for USMC Recruits",
+    subtitle = "Male recruits are expected to be about 9 cm taller than female recruits",
+    x = "Sex",
+    y = "Expected Height (cm)",
+    caption = "Source: 50-row sample from NHANES via primer.tutorials::recruits"
+  ) +
+  theme_minimal()
+```
+
+Data science often involves this back-and-forth style of work. First, make a single chunk of code --- say, a new plot --- work well. This requires interactive work between the QMD and the R Terminal. Second, ensure that the entire QMD runs correctly on its own.
+
+### Exercise 9
+
+Finalize the new graphics chunk in your QMD. Render to ensure it all works. In the R Terminal, run:
+
+```
+show_file("analysis.qmd", chunk = "Last")
+```
+
+CP/CR.
+
+```{r temperance-9}
+question_text(NULL,
+  message = "    > show_file(\"analysis.qmd\", chunk = \"Last\")\n    ```{r}\n    plot_predictions(fit_recruits, condition = \"sex\", draw = FALSE) |>\n      ggplot(aes(x = sex, y = estimate)) +\n      geom_pointrange(aes(ymin = conf.low, ymax = conf.high)) +\n      labs(\n        title = \"Forecast Height for USMC Recruits\",\n        subtitle = \"Male recruits are expected to be about 9 cm taller\",\n        x = \"Sex\", y = \"Expected Height (cm)\",\n        caption = \"Source: 50-row sample from NHANES via primer.tutorials::recruits\"\n      ) +\n      theme_minimal()\n    ```",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 8)
+```
+
+###
+
+The picture is only as trustworthy as the mechanism behind it. A beautiful graphic tells a story, but that story rests on assumptions --- validity, stability, representativeness --- that are never completely true. No `fit()` on the sample alone can rescue you from a misunderstood mechanism.
+
+### Exercise 10
+
+Write the last sentence of your summary paragraph. It describes at least one Quantity of Interest and a measure of uncertainty. It is OK if this QoI differs from the one you began with.
+
+```{r temperance-10}
+question_text(NULL,
+  message = "We estimate that the average male USMC recruit will be about 175 cm tall and the average female recruit about 166 cm, with the female interval visibly wider than the male interval because we have far fewer female observations in our sample.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 5)
+```
+
+###
+
+Add a final sentence to your summary paragraph, but don't copy/paste our answer exactly. Render the QMD.
+
+### Exercise 11
+
+Write a few sentences explaining why the estimates for the quantities of interest, and the uncertainty, might be wrong. Suggest alternative estimates and a wider confidence interval if warranted.
+
+```{r temperance-11}
+question_text(NULL,
+  message = "USMC recruits are more physically fit and probably taller than the general young-adult population measured by NHANES. A better point estimate would nudge male recruit heights upward by a centimeter or two and female recruit heights similarly. The confidence intervals should be wider than what the model reports --- our 50-row sample is small (only 10 of those rows are female), and the bigger sources of uncertainty (the NHANES-to-USMC validity gap and the voluntary-participation representativeness gap) aren't captured by the model's standard error.",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 6)
+```
+
+###
+
+Always go back to your Preceptor Table --- the information which, if you had it, would make answering your question easy. In almost all real-world cases, the Preceptor Table and the data are fairly different. So, even a perfectly estimated statistical model is rarely as useful as we might like.
+
+### Exercise 12
+
+Rearrange the material in your QMD so the order is graphic, then summary paragraph. The chunk that creates `fit_recruits` must occur before the chunk that creates the graphic. You can keep or discard the math at your discretion. Render the QMD. In the R Terminal, run:
+
+```
+show_file("analysis.qmd")
+```
+
+CP/CR.
+
+```{r temperance-12}
+question_text(NULL,
+  answer(NULL, correct = TRUE),
+  allow_retry = TRUE,
+  try_again_button = "Edit Answer",
+  incorrect = NULL,
+  rows = 10)
+```
+
+###
+
+<pre><code>
+---
+title: "Recruits"
+author: "&lt;your name&gt;"
+execute:
+  echo: false
+---
+
+#| message: false
+library(tidyverse)
+library(tidymodels)
+library(primer.tutorials)
+library(broom)
+library(marginaleffects)
+
+#| cache: true
+fit_recruits <- linear_reg() |>
+  set_engine("lm") |>
+  fit(height ~ sex, data = recruits)
+
+plot_predictions(fit_recruits, condition = "sex", draw = FALSE) |>
+  ggplot(aes(x = sex, y = estimate)) +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high)) +
+  labs(
+    title = "Forecast Height for USMC Recruits",
+    subtitle = "Male recruits are expected to be about 9 cm taller",
+    x = "Sex", y = "Expected Height (cm)",
+    caption = "Source: 50-row sample from NHANES via primer.tutorials::recruits"
+  ) +
+  theme_minimal()
+
+People vary in height, and that variation is strongly patterned by sex. Using a 50-row teaching sample drawn from the National Health and Nutrition Examination Survey (NHANES, conducted by the Centers for Disease Control and Prevention), we seek to estimate the average height of male and female USMC recruits for the coming year. One concern is that USMC recruits are more physically fit than the general young-adult population and so may be systematically taller, meaning that the NHANES-based estimates probably understate recruit heights. We model height as a normally distributed variable which is a linear function of sex. We estimate that the average male recruit will be about 175 cm tall and the average female recruit about 166 cm, with confidence intervals that are visibly wider for the female estimate because there are only ten female rows in our sample.
+</code></pre>
+
+###
+
+This is the version of your QMD file at which your teacher is most likely to look closely.
+
+### Exercise 13
+
+Publish your rendered QMD to GitHub Pages. In the bash Terminal (not the R Terminal!), run:
+
+```
+quarto publish gh-pages analysis.qmd
+```
+
+Copy/paste the resulting URL below.
+
+```{r temperance-13}
+question_text(NULL,
+  message = "https://<your-github-username>.github.io/recruits/analysis.html",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 2)
+```
+
+###
+
+Commit/push everything.
+
+### Exercise 14
+
+Copy/paste the URL to your GitHub repo.
+
+```{r temperance-14}
+question_text(NULL,
+  message = "https://github.com/<your-github-username>/recruits",
+  answer(NULL, correct = TRUE),
+  allow_retry = FALSE,
+  incorrect = NULL,
+  rows = 2)
+```
+
+###
+
+A fitted DGM is a machine for generating answers, and using it well means asking well: pose the question as a quantity, specify the units --- real or imaginary --- whose outcomes you care about, then run the machine and draw the picture. If all our assumptions were correct, our DGM would be true, and there would be no better way to predict the future. Sadly, that is only ever the case with toy examples involving coins and dice.
+
+The world confronts us. Make decisions we must.
+
+
+## Summary
+###
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+plot_predictions(fit_recruits, condition = "sex", draw = FALSE) |>
+  ggplot(aes(x = sex, y = estimate)) +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high),
+                  color = "grey20", size = 1.1) +
+  labs(
+    title = "Forecast Height for USMC Recruits",
+    subtitle = "Male recruits are expected to be about 9 cm taller than female recruits",
+    x = "Sex",
+    y = "Expected Height (cm)",
+    caption = "Source: 50-row sample from NHANES via primer.tutorials::recruits"
+  ) +
+  theme_minimal()
+```
+
+People vary in height, and that variation is strongly patterned by sex. Using a 50-row teaching sample drawn from the National Health and Nutrition Examination Survey (NHANES, conducted by the Centers for Disease Control and Prevention), we seek to estimate the average height of male and female USMC recruits for the coming year. One concern is that USMC recruits are more physically fit than the general young-adult population and so may be systematically taller, meaning that the NHANES-based estimates probably understate recruit heights. We model height as a normally distributed variable which is a linear function of sex. We estimate that the average male recruit will be about 175 cm tall and the average female recruit about 166 cm, with the female interval visibly wider than the male interval because we have only ten female rows in our sample.
+
+This forecast would help you estimate how many small-versus-large uniforms to order. It does not address every question the logistics office will face --- it says nothing about weight, shoulder width, or inseam. But it gives a defensible starting point.
+
+The world is always more uncertain than our models would have us believe.
+
+```{r download-answers, child = system.file("child_documents/download_answers.Rmd", package = "tutorial.helpers")}
+```
