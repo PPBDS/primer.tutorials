@@ -610,7 +610,7 @@ Interpreting a model with **marginaleffects** almost always comes down to one di
 
 If Tidymodels was Structure → Method → Fitting, this section is **Question → Units → Answer**: pose the question as a quantity, specify which units you're asking about, then run the machine.
 
-In this section we cover four functions from [**marginaleffects**](https://marginaleffects.com/): `predictions()`, `avg_predictions()`, `comparisons()`, and `avg_comparisons()` --- and build every plot directly from their output with `ggplot()`. The one thing that changes for a logistic model: every prediction comes back as one row per outcome category, so you'll filter to `group == "Yes"` to keep just the probability of leaving.
+In this section we cover four functions from [**marginaleffects**](https://marginaleffects.com/): `predictions()`, `avg_predictions()`, `comparisons()`, and `avg_comparisons()` --- and build every plot directly from their output with `ggplot()`. The one thing that changes for a logistic model: a prediction comes back as one row per outcome category, so the printed tables filter to `group == "Yes"` to keep just the probability of leaving. The plotting exercises instead run these functions on `extract_fit_engine(mod_logistic)` --- the underlying `glm` --- whose `type = "response"` scale is that probability directly, with no `group` column to filter.
 
 ### Exercise 1
 
@@ -768,11 +768,10 @@ This employee's outcome is already known — so why predict it? Because the fitt
 
 ### Exercise 5
 
-Update your chunk to use `avg_predictions()` with `by = "OverTime"` and `type = "prob"`, filtered to `group == "Yes"`. Render.
+Update your chunk to use `avg_predictions()` with `by = "OverTime"`, run on `extract_fit_engine(mod_logistic)` --- the underlying `glm`, whose predictions are the probability of leaving directly, so there is no `group` column to filter. Render.
 
 ```
-avg_predictions(mod_logistic, by = "OverTime", type = "prob") |>
-  filter(group == "Yes")
+avg_predictions(extract_fit_engine(mod_logistic), by = "OverTime")
 ```
 
 In the R Terminal, run `show_file("analysis.qmd", chunk = "Last")`. CP/CR.
@@ -790,13 +789,12 @@ question_text(NULL,
 
 ```{r predictions-5-test}
 #| echo: true
-avg_predictions(mod_logistic, by = "OverTime", type = "prob") |>
-  filter(group == "Yes")
+avg_predictions(extract_fit_engine(mod_logistic), by = "OverTime")
 ```
 
 ###
 
-This is a **marginal** prediction — run the model on every real employee, then average within overtime groups. The gap between the two rows is the overtime effect, averaged over the actual income and tenure distribution of real employees in each group.
+This is a **marginal** prediction — run the model on every real employee, then average within overtime groups. The gap between the two rows is the overtime effect, averaged over the actual income and tenure distribution of real employees in each group. We call `avg_predictions()` on `extract_fit_engine(mod_logistic)`, the raw `glm` behind the tidymodels wrapper: **marginaleffects** returns the grouping column and the response-scale probability more cleanly from the engine object, which matters once we start plotting.
 
 ### Exercise 6
 
@@ -944,7 +942,7 @@ About −1.4 percentage points per $1,000 — a modest effect compared to the 15
 
 ### Exercise 10
 
-Ask your AI assistant to write code that visualizes how predicted attrition probability varies with `MonthlyIncome`. Build a grid of hypothetical employees --- `MonthlyIncome` swept across its range, `YearsAtCompany` at its mean, `OverTime` set to `"No"` --- pass it to `predictions()` on `mod_logistic` with `type = "prob"`, then `filter(group == "Yes")` and `ggplot()`. Render.
+Ask your AI assistant to write code that visualizes how predicted attrition probability varies with `MonthlyIncome`. Build a grid of hypothetical employees --- `MonthlyIncome` swept across its range, `YearsAtCompany` at its mean, `OverTime` set to `"No"` --- pass it to `predictions()` on `extract_fit_engine(mod_logistic)` with `type = "response"`, then `ggplot()`. Render.
 
 ```
 grid <- tibble(
@@ -954,8 +952,7 @@ grid <- tibble(
   OverTime       = "No"
 )
 
-predictions(mod_logistic, newdata = grid, type = "prob") |>
-  filter(group == "Yes") |>
+predictions(extract_fit_engine(mod_logistic), newdata = grid, type = "response") |>
   ggplot(aes(x = MonthlyIncome, y = estimate)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
   geom_line() +
@@ -990,8 +987,7 @@ grid <- tibble(
   OverTime       = "No"
 )
 
-predictions(mod_logistic, newdata = grid, type = "prob") |>
-  filter(group == "Yes") |>
+predictions(extract_fit_engine(mod_logistic), newdata = grid, type = "response") |>
   ggplot(aes(x = MonthlyIncome, y = estimate)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
   geom_line() +
@@ -1006,7 +1002,7 @@ predictions(mod_logistic, newdata = grid, type = "prob") |>
 
 ###
 
-The grid holds `YearsAtCompany` and `OverTime` fixed while `MonthlyIncome` sweeps its range; `predictions()` then runs the machine on each hypothetical employee. The curve bends rather than running in a straight line — probabilities are squeezed between 0 and 1, so the same change in log-odds produces a smaller change in probability at the extremes.
+The grid holds `YearsAtCompany` and `OverTime` fixed while `MonthlyIncome` sweeps its range; `predictions()` on `extract_fit_engine(mod_logistic)` --- the raw `glm` --- runs the machine on each hypothetical employee and returns the probability of leaving directly on the response scale. The curve bends rather than running in a straight line — probabilities are squeezed between 0 and 1, so the same change in log-odds produces a smaller change in probability at the extremes.
 
 ### Exercise 11
 
@@ -1020,8 +1016,7 @@ grid <- expand_grid(
 ) |>
   mutate(YearsAtCompany = mean(attrition$YearsAtCompany))
 
-predictions(mod_logistic, newdata = grid, type = "prob") |>
-  filter(group == "Yes") |>
+predictions(extract_fit_engine(mod_logistic), newdata = grid, type = "response") |>
   ggplot(aes(x = MonthlyIncome, y = estimate, color = OverTime)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = OverTime),
     alpha = 0.15, color = NA) +
@@ -1057,8 +1052,7 @@ grid <- expand_grid(
 ) |>
   mutate(YearsAtCompany = mean(attrition$YearsAtCompany))
 
-predictions(mod_logistic, newdata = grid, type = "prob") |>
-  filter(group == "Yes") |>
+predictions(extract_fit_engine(mod_logistic), newdata = grid, type = "response") |>
   ggplot(aes(x = MonthlyIncome, y = estimate, color = OverTime)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = OverTime),
     alpha = 0.15, color = NA) +
@@ -1078,7 +1072,7 @@ predictions(mod_logistic, newdata = grid, type = "prob") |>
 
 ### Exercise 12
 
-Now plot a **marginal** quantity instead: use `avg_predictions()` with `by = "OverTime"` on `extract_fit_engine(mod_logistic)` (the underlying `glm`, whose response scale is already the probability of leaving), piped into `ggplot()`, to visualize average predicted attrition probability by overtime group. Render.
+Now plot a **marginal** quantity instead: use `avg_predictions()` with `by = "OverTime"` on `extract_fit_engine(mod_logistic)`, as in Exercise 5, piped into `ggplot()`, to visualize average predicted attrition probability by overtime group. Render.
 
 ```
 avg_predictions(extract_fit_engine(mod_logistic), by = "OverTime") |>
@@ -1120,7 +1114,7 @@ avg_predictions(extract_fit_engine(mod_logistic), by = "OverTime") |>
 
 ###
 
-`avg_predictions()` with `by` runs the model on every real employee and averages within groups — a marginal, descriptive view, in contrast to the conditional, counterfactual grids of the previous two exercises. Passing `extract_fit_engine(mod_logistic)` hands **marginaleffects** the underlying `glm`, whose predictions are already on the probability scale, so no `type` or `group` filtering is needed here. These are the same two numbers `avg_predictions()` gave you earlier, now drawn as a picture.
+`avg_predictions()` with `by` runs the model on every real employee and averages within groups — a marginal, descriptive view, in contrast to the conditional, counterfactual grids of the previous two exercises. These are the same two numbers you computed in Exercise 5, now drawn as a picture.
 
 ### Exercise 13
 
