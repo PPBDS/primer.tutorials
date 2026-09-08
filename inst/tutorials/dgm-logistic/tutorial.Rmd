@@ -944,12 +944,12 @@ About −1.4 percentage points per $1,000 — a modest effect compared to the 15
 
 ### Exercise 10
 
-Ask your AI assistant to write `plot_predictions()` code that visualizes how predicted attrition probability varies with `MonthlyIncome`, using `mod_logistic`, `type = "prob"`, and `condition = "MonthlyIncome"` with `draw = FALSE`, piped into a `filter(group == "Yes")` step then `ggplot()`. Render.
+Ask your AI assistant to write code that visualizes how predicted attrition probability varies with `MonthlyIncome`. Use `predictions()` on `mod_logistic` with `type = "prob"` and a `datagrid()` that sweeps `MonthlyIncome` across its range, piped into a `filter(group == "Yes")` step then `ggplot()`. Render.
 
 ```
-plot_predictions(mod_logistic,
-  condition = "MonthlyIncome",
-  type = "prob", draw = FALSE) |>
+predictions(mod_logistic,
+  newdata = datagrid(MonthlyIncome = \(x) seq(min(x), max(x), length.out = 100)),
+  type = "prob") |>
   filter(group == "Yes") |>
   ggplot(aes(x = MonthlyIncome, y = estimate)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
@@ -978,9 +978,9 @@ question_text(NULL,
 
 ```{r predictions-10-test}
 #| echo: true
-plot_predictions(mod_logistic,
-  condition = "MonthlyIncome",
-  type = "prob", draw = FALSE) |>
+predictions(mod_logistic,
+  newdata = datagrid(MonthlyIncome = \(x) seq(min(x), max(x), length.out = 100)),
+  type = "prob") |>
   filter(group == "Yes") |>
   ggplot(aes(x = MonthlyIncome, y = estimate)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
@@ -996,16 +996,18 @@ plot_predictions(mod_logistic,
 
 ###
 
-`plot_predictions()` draws the machine's answers. With `condition = "MonthlyIncome"`, the machine runs on hypothetical employees with `YearsAtCompany` and `OverTime` held at their typical values. The curve bends rather than running in a straight line — probabilities are squeezed between 0 and 1, so the same change in log-odds produces a smaller change in probability at the extremes.
+`datagrid()` builds a row of hypothetical employees across the income range, with `YearsAtCompany` and `OverTime` held at their typical values; `predictions()` then runs the machine on each. The curve bends rather than running in a straight line — probabilities are squeezed between 0 and 1, so the same change in log-odds produces a smaller change in probability at the extremes.
 
 ### Exercise 11
 
-Ask your AI assistant to extend that plot to show predicted attrition probability across both `MonthlyIncome` and `OverTime`, using `condition = c("MonthlyIncome", "OverTime")` — color the lines by `OverTime`. Render.
+Ask your AI assistant to extend that plot to show predicted attrition probability across both `MonthlyIncome` and `OverTime`. Add `OverTime = c("No", "Yes")` to the `datagrid()` call and color the lines by `OverTime`. Render.
 
 ```
-plot_predictions(mod_logistic,
-  condition = c("MonthlyIncome", "OverTime"),
-  type = "prob", draw = FALSE) |>
+predictions(mod_logistic,
+  newdata = datagrid(
+    MonthlyIncome = \(x) seq(min(x), max(x), length.out = 100),
+    OverTime = c("No", "Yes")),
+  type = "prob") |>
   filter(group == "Yes") |>
   ggplot(aes(x = MonthlyIncome, y = estimate, color = OverTime)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = OverTime),
@@ -1035,9 +1037,11 @@ question_text(NULL,
 
 ```{r predictions-11-test}
 #| echo: true
-plot_predictions(mod_logistic,
-  condition = c("MonthlyIncome", "OverTime"),
-  type = "prob", draw = FALSE) |>
+predictions(mod_logistic,
+  newdata = datagrid(
+    MonthlyIncome = \(x) seq(min(x), max(x), length.out = 100),
+    OverTime = c("No", "Yes")),
+  type = "prob") |>
   filter(group == "Yes") |>
   ggplot(aes(x = MonthlyIncome, y = estimate, color = OverTime)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = OverTime),
@@ -1054,7 +1058,7 @@ plot_predictions(mod_logistic,
 
 ###
 
-When two variables are passed to `condition`, **marginaleffects** varies the first continuously and shows the second at its distinct values — that's what `color = OverTime` splits into two separate curves. The gap between the curves is the overtime effect, which the `avg_comparisons()` exercises measured as about 15 percentage points.
+Adding `OverTime` to the `datagrid()` crosses the income grid with both overtime values, so `predictions()` returns one curve per overtime status — that's what `color = OverTime` splits apart. The gap between the curves is the overtime effect, which the `avg_comparisons()` exercises measured as about 15 percentage points.
 
 ### Exercise 12
 
@@ -1210,7 +1214,7 @@ format:
 
 ### Exercise 2
 
-Create `about.qmd` with a YAML title of `"About"`, your name, and today's date. Clean up `analysis.qmd` so it contains only: a setup chunk, the final `mod_logistic` model chunk with its equation, and the final three `plot_predictions()` visualizations. Remove all intermediate output. Render.
+Create `about.qmd` with a YAML title of `"About"`, your name, and today's date. Clean up `analysis.qmd` so it contains only: a setup chunk, the final `mod_logistic` model chunk with its equation, and the final three prediction visualizations (the two `predictions()` plots and the `plot_predictions()` plot). Remove all intermediate output. Render.
 
 In the R Terminal, run `show_file("about.qmd")`, then `show_file("analysis.qmd")`. CP/CR both.
 
@@ -1235,7 +1239,7 @@ Var Kurapati, August 2026.
 
 ###
 
-Your `analysis.qmd` should now have exactly five code chunks — setup, the `mod_logistic` model, and the three `plot_predictions()` calls — plus one math block.
+Your `analysis.qmd` should now have exactly five code chunks — setup, the `mod_logistic` model, and the three prediction plots — plus one math block.
 
 ###
 
