@@ -1,11 +1,12 @@
 #' Teaching cut of NHANES young-adult heights
 #'
 #' A 50-row sample drawn from the National Health and Nutrition Examination
-#' Survey (NHANES, via [primer.data::nhanes]) for the `05-recruits`
-#' tutorial. Restricted to ages 18--27 and to the columns relevant for the
-#' tutorial's question. The split between sexes (40 male, 10 female) is
+#' Survey (NHANES, via [primer.data::nhanes]) for the `05-recruits-*`
+#' tutorials (`05-recruits-wisdom`, `-justice`, `-courage`, `-temperance`).
+#' Restricted to ages 18--27 and to the columns relevant for the
+#' tutorials' question. The split between sexes (40 male, 10 female) is
 #' deliberately uneven so the two group means have visibly different
-#' standard errors --- a feature the tutorial's Temperance section asks
+#' standard errors --- a feature the `05-recruits-temperance` tutorial asks
 #' students to notice and explain.
 #'
 #' @format A tibble with 50 rows and 3 variables:
