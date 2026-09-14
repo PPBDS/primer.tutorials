@@ -1095,11 +1095,19 @@ Same `by` argument, same marginal logic as `avg_predictions()` — `comparisons(
 
 ### Exercise 11
 
-Ask your AI assistant to write `plot_predictions()` code that visualizes how predicted species probability changes with `bill_length_mm`, using `type = "prob"` and `condition = c("bill_length_mm", "group")`, with a title, axis labels, and percent-formatted y-axis. Paste the code it gives you into a new chunk. Render, and adjust the AI's code if it does not match the pattern below — in particular, `"group"` must be in `condition`, or the three species' probabilities plot as one meaningless zigzag instead of three separate curves.
+Ask your AI assistant to write code that visualizes how predicted species probability changes with `bill_length_mm`. Build a grid of hypothetical penguins — `bill_length_mm` swept across its range, `flipper_length_mm` at its mean — pass it to `predictions()` on `extract_fit_engine(mod_multinomial)` with `type = "probs"`, then `ggplot()`, coloring by `group`. Render.
 
 ```
-plot_predictions(mod_multinomial, type = "prob",
-  condition = c("bill_length_mm", "group")) +
+grid <- tibble(
+  bill_length_mm = seq(min(penguins_clean$bill_length_mm),
+                       max(penguins_clean$bill_length_mm), length.out = 100),
+  flipper_length_mm = mean(penguins_clean$flipper_length_mm)
+)
+
+predictions(extract_fit_engine(mod_multinomial), newdata = grid, type = "probs") |>
+  ggplot(aes(x = bill_length_mm, y = estimate, color = group, fill = group)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, color = NA) +
+  geom_line() +
   labs(
     title = "Predicted species probability by bill length",
     x = "Bill length (mm)",
@@ -1124,8 +1132,16 @@ question_text(NULL,
 
 ```{r marginal-effects-11-test}
 #| echo: true
-plot_predictions(mod_multinomial, type = "prob",
-  condition = c("bill_length_mm", "group")) +
+grid <- tibble(
+  bill_length_mm = seq(min(penguins_clean$bill_length_mm),
+                       max(penguins_clean$bill_length_mm), length.out = 100),
+  flipper_length_mm = mean(penguins_clean$flipper_length_mm)
+)
+
+predictions(extract_fit_engine(mod_multinomial), newdata = grid, type = "probs") |>
+  ggplot(aes(x = bill_length_mm, y = estimate, color = group, fill = group)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, color = NA) +
+  geom_line() +
   labs(
     title = "Predicted species probability by bill length",
     x = "Bill length (mm)",
@@ -1137,15 +1153,25 @@ plot_predictions(mod_multinomial, type = "prob",
 
 ###
 
-`condition` fixes `flipper_length_mm` at its mean and shows how each species' predicted probability changes as bill length varies — three curves, one per species, because `group` is in `condition`. Without `group`, **marginaleffects** cannot tell the three species' probabilities apart, and connects points across species in whatever order they happen to come out.
+The grid holds `flipper_length_mm` fixed at its mean while `bill_length_mm` sweeps its range; `predictions()` on `extract_fit_engine(mod_multinomial)` — the raw `nnet::multinom` fit — runs the machine on each hypothetical penguin and returns one row per species per grid point, distinguished by the `group` column. That's what `color = group` splits into three curves. Without a `group` column, **ggplot** would have no way to tell the three species' probabilities apart.
 
 ### Exercise 12
 
-Ask your AI assistant to extend that plot to show predicted species probability across both `bill_length_mm` and `flipper_length_mm`, using `condition = c("bill_length_mm", "flipper_length_mm", "group")`. Paste its code into a new chunk. Render, and adjust if needed.
+Ask your AI assistant to extend that plot to show predicted species probability across both `bill_length_mm` and `flipper_length_mm`. Rebuild the grid with `expand_grid()` so the bill-length sweep is crossed with five representative flipper lengths — `fivenum(penguins_clean$flipper_length_mm)`, Tukey's five-number summary — color by those flipper values, and facet by `group`. Render.
 
 ```
-plot_predictions(mod_multinomial, type = "prob",
-  condition = c("bill_length_mm", "flipper_length_mm", "group")) +
+grid <- expand_grid(
+  bill_length_mm = seq(min(penguins_clean$bill_length_mm),
+                       max(penguins_clean$bill_length_mm), length.out = 100),
+  flipper_length_mm = fivenum(penguins_clean$flipper_length_mm)
+)
+
+predictions(extract_fit_engine(mod_multinomial), newdata = grid, type = "probs") |>
+  ggplot(aes(x = bill_length_mm, y = estimate,
+    color = factor(flipper_length_mm), fill = factor(flipper_length_mm))) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, color = NA) +
+  geom_line() +
+  facet_wrap(~ group) +
   labs(
     title = "Predicted species probability by bill and flipper length",
     x = "Bill length (mm)",
@@ -1170,8 +1196,18 @@ question_text(NULL,
 
 ```{r marginal-effects-12-test}
 #| echo: true
-plot_predictions(mod_multinomial, type = "prob",
-  condition = c("bill_length_mm", "flipper_length_mm", "group")) +
+grid <- expand_grid(
+  bill_length_mm = seq(min(penguins_clean$bill_length_mm),
+                       max(penguins_clean$bill_length_mm), length.out = 100),
+  flipper_length_mm = fivenum(penguins_clean$flipper_length_mm)
+)
+
+predictions(extract_fit_engine(mod_multinomial), newdata = grid, type = "probs") |>
+  ggplot(aes(x = bill_length_mm, y = estimate,
+    color = factor(flipper_length_mm), fill = factor(flipper_length_mm))) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, color = NA) +
+  geom_line() +
+  facet_wrap(~ group) +
   labs(
     title = "Predicted species probability by bill and flipper length",
     x = "Bill length (mm)",
@@ -1183,7 +1219,7 @@ plot_predictions(mod_multinomial, type = "prob",
 
 ###
 
-With a second continuous variable in `condition`, **marginaleffects** varies the first (`bill_length_mm`) continuously and shows the second at five representative values — Tukey's five-number summary: 172, 190, 197, 213, and 231mm here — faceted by species because `group` is still in `condition`. Longer flippers shift the Adelie/Chinstrap crossover toward higher bill lengths.
+`expand_grid()` crosses the bill-length sweep with five representative flipper lengths — Tukey's five-number summary, 172, 190, 197, 213, and 231mm — and `facet_wrap(~ group)` splits the result by species. Longer flippers shift the Adelie/Chinstrap crossover toward higher bill lengths.
 
 ### Exercise 13
 
